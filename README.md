@@ -1,4 +1,4 @@
-# 📦 Pode-Deixar
+# Pode-Deixar
 # Visão Geral
 
 O Pode-Deixar é uma plataforma distribuída de orquestração de serviços locais, projetada para gerenciar todo o ciclo de vida de operações entre demanda e execução. A solução centraliza a gestão de solicitações de serviço, agendamentos, fluxos operacionais e controle de prestadores em um ambiente único, escalável e orientado a domínio.
