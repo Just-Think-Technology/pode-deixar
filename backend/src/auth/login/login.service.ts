@@ -224,7 +224,7 @@ export class LoginService {
       type: 'access',
     };
     return this.jwtService.signAsync(payload, {
-      secret: this.configService.get<string>('JWT_ACCESS_SECRET') || 'access-secret-key',
+      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       expiresIn: '15m',
     });
   }
@@ -236,7 +236,7 @@ export class LoginService {
       jti: crypto.randomUUID(),
     };
     return this.jwtService.signAsync(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET') || 'refresh-secret-key',
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: '7d',
     });
   }
