@@ -7,7 +7,6 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor(private configService: ConfigService) {
-    console.log('SMTP_HOST:', this.configService.get('SMTP_HOST'));
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>('SMTP_HOST'),
       port: this.configService.get<number>('SMTP_PORT') || 587,
@@ -23,7 +22,7 @@ export class EmailService {
     const verificationUrl = `${this.configService.get<string>('FRONTEND_URL')}/verify-email?token=${token}`;
 
     await this.transporter.sendMail({
-      from: this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
+      from: this.configService.get<string>('SMTP_FROM'),
       to: email,
       subject: 'Verify Your Email Address',
       html: `
@@ -42,7 +41,7 @@ export class EmailService {
     const resetUrl = `${this.configService.get<string>('FRONTEND_URL')}/reset-password?token=${token}`;
 
     await this.transporter.sendMail({
-      from: this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
+      from: this.configService.get<string>('SMTP_FROM'),
       to: email,
       subject: 'Reset Your Password',
       html: `

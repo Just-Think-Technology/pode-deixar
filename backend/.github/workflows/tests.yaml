@@ -14,9 +14,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: root
-          POSTGRES_DB: auth_test
+          POSTGRES_USER: ${{ secrets.TEST_POSTGRES_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_POSTGRES_PASSWORD || 'root' }}
+          POSTGRES_DB: ${{ secrets.TEST_POSTGRES_DB || 'auth_test' }}
         ports:
           - 5432:5432
         options: >-
@@ -26,7 +26,15 @@ jobs:
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://postgres:root@localhost:5432/auth_test
+      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || 'postgresql://postgres:root@localhost:5432/auth_test' }}
+      JWT_ACCESS_SECRET: ${{ secrets.TEST_JWT_ACCESS_SECRET || 'test-access-secret-key-change-in-production' }}
+      JWT_REFRESH_SECRET: ${{ secrets.TEST_JWT_REFRESH_SECRET || 'test-refresh-secret-key-change-in-production' }}
+      SMTP_HOST: ${{ secrets.TEST_SMTP_HOST || 'sandbox.smtp.mailtrap.io' }}
+      SMTP_PORT: ${{ secrets.TEST_SMTP_PORT || '587' }}
+      SMTP_USER: ${{ secrets.TEST_SMTP_USER || 'test-user' }}
+      SMTP_PASS: ${{ secrets.TEST_SMTP_PASS || 'test-pass' }}
+      SMTP_FROM: ${{ secrets.TEST_SMTP_FROM || 'noreply@test.com' }}
+      FRONTEND_URL: ${{ secrets.TEST_FRONTEND_URL || 'http://localhost:3000' }}
 
     steps:
       - name: Checkout repository
