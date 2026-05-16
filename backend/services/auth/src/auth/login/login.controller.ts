@@ -19,11 +19,14 @@ import {
 } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { LoginService } from './login.service';
-import { LoginDto } from '../dto/login.dto';
-import { RefreshTokenDto } from '../dto/refresh-token.dto';
-import { JwtAuthGuard } from '../jwt-auth.guard';
-import { RolesGuard } from '../roles.guard';
-import { Roles } from '../roles.decorator';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { JwtAuthGuard } from '../shared/jwt-auth.guard';
+import { RolesGuard } from '../shared/roles.guard';
+import { Roles } from '../shared/roles.decorator';
+import getLogger from '@pode-deixar/common/shared-logger';
+
+const logger = getLogger('auth-service');
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
@@ -71,6 +74,9 @@ export class LoginController {
     @Headers('x-forwarded-for') ip?: string,
     @Headers('user-agent') userAgent?: string,
   ) {
+    try {
+      logger.info('auth.endpoint', `Login called for ${dto.email}`);
+    } catch (e) {}
     return this.loginService.login(dto, ip, userAgent);
   }
 
@@ -95,6 +101,7 @@ export class LoginController {
   })
   @ApiBody({ type: RefreshTokenDto })
   async refreshToken(@Body() dto: RefreshTokenDto) {
+    try { logger.info('auth.endpoint', `Refresh token requested`); } catch (e) {}
     return this.loginService.refreshToken(dto);
   }
 
@@ -113,6 +120,7 @@ export class LoginController {
     required: true,
   })
   async logout(@Request() req: any) {
+    try { logger.info('auth.endpoint', `Logout requested for user ${req.user?.id}`); } catch (e) {}
     return this.loginService.logout(req.user.id);
   }
 
@@ -149,6 +157,7 @@ export class LoginController {
     required: true,
   })
   async getProfile(@Request() req: any) {
+    try { logger.info('auth.endpoint', `Profile requested for user ${req.user?.id}`); } catch (e) {}
     const profile = await this.loginService.getProfile(req.user.id);
     return { user: profile };
   }

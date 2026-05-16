@@ -16,9 +16,12 @@ import {
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { UseGuards } from '@nestjs/common';
 import { RegisterService } from './register.service';
-import { RegisterDto } from '../dto/register.dto';
-import { ResendVerificationDto } from '../dto/resend-verification.dto';
-import { VerifyEmailDto } from '../dto/verify-email.dto';
+import { RegisterDto } from './dto/register.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import getLogger from '@pode-deixar/common/shared-logger';
+
+const logger = getLogger('auth-service');
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
@@ -65,6 +68,7 @@ export class RegisterController {
     @Body() dto: RegisterDto,
     @Headers('x-forwarded-for') ip?: string,
   ) {
+    try { logger.info('auth.endpoint', `Register called for ${dto.email}`); } catch (e) {}
     return this.registerService.register(dto, ip);
   }
 
@@ -87,6 +91,7 @@ export class RegisterController {
   })
   @ApiBody({ type: VerifyEmailDto })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
+    try { logger.info('auth.endpoint', `Verify email requested`); } catch (e) {}
     return this.registerService.verifyEmail(dto);
   }
 
@@ -109,6 +114,7 @@ export class RegisterController {
   })
   @ApiBody({ type: ResendVerificationDto })
   async resendVerificationEmail(@Body() dto: ResendVerificationDto) {
+    try { logger.info('auth.endpoint', `Resend verification requested for ${dto.email}`); } catch (e) {}
     return this.registerService.resendVerificationEmail(dto);
   }
 }
