@@ -1,5 +1,5 @@
 {
-  "name": "auth",
+  "name": "@pode-deixar/auth",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@pode-deixar/common": "*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
@@ -43,7 +44,8 @@
     "sanitize-html": "^2.17.3",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^8.3.2",
-    "winston": "^3.15.0"
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

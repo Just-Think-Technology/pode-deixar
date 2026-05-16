@@ -5,9 +5,9 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
-import { LoginDto } from '../dto/login.dto';
-import { RefreshTokenDto } from '../dto/refresh-token.dto';
-import { AuthLoggerService } from '../auth-logger.service';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { AuthLoggerService } from '../shared/auth-logger.service';
 import { PasswordService } from '../shared/password.service';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
@@ -175,10 +175,17 @@ export class LoginService {
   }
 
   async logout(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
     await this.prisma.user.update({
       where: { id: userId },
       data: { refreshToken: null },
     });
+
+    this.authLogger.logLogout(userId, user?.email);
 
     return { message: 'Logged out successfully' };
   }

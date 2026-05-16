@@ -4,11 +4,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { RegisterDto } from '../dto/register.dto';
-import { ResendVerificationDto } from '../dto/resend-verification.dto';
-import { VerifyEmailDto } from '../dto/verify-email.dto';
-import { AuthLoggerService } from '../auth-logger.service';
-import { EmailService } from '../email.service';
+import { RegisterDto } from './dto/register.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { AuthLoggerService } from '../shared/auth-logger.service';
+import { EmailService } from '../shared/email.service';
 import { PasswordService } from '../shared/password.service';
 import { v4 as uuidv4 } from 'uuid';
 

@@ -4,11 +4,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ForgotPasswordDto } from '../dto/forgot-password.dto';
-import { ResetPasswordDto } from '../dto/reset-password.dto';
-import { ChangePasswordDto } from '../dto/change-password.dto';
-import { AuthLoggerService } from '../auth-logger.service';
-import { EmailService } from '../email.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { AuthLoggerService } from '../shared/auth-logger.service';
+import { EmailService } from '../shared/email.service';
 import { PasswordService } from '../shared/password.service';
 import { v4 as uuidv4 } from 'uuid';
 
