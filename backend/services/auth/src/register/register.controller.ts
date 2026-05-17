@@ -12,7 +12,7 @@ const logger = getLogger('register');
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
-@ApiTags('auth')
+@ApiTags('Cadastro')
 export class RegisterController {
   constructor(private readonly registerService: RegisterService) {}
 
@@ -34,7 +34,7 @@ export class RegisterController {
     return this.registerService.verifyEmail(dto);
   }
 
-  @Post('resend-verification')
+  @Post('resend-email-verification')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend email verification link' })
   @ApiBody({ type: ResendVerificationDto })

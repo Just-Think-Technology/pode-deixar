@@ -110,7 +110,7 @@ describe('Security and Edge Cases', () => {
       const { accessToken } = await registerAndLogin(app, user, prisma);
 
       const response = await request(app.getHttpServer())
-        .get('/auth/profile')
+        .get('/auth/default-profile')
         .set(bearerAuth(accessToken))
         .expect(200);
 
@@ -182,7 +182,7 @@ describe('Security and Edge Cases', () => {
       'should reject malformed token "%s" with 401',
       async (token) => {
         const response = await request(app.getHttpServer())
-          .get('/auth/profile')
+          .get('/auth/default-profile')
           .set('Authorization', `Bearer ${token}`)
           .expect(401);
 
@@ -197,7 +197,7 @@ describe('Security and Edge Cases', () => {
         '.wrong-signature';
 
       const response = await request(app.getHttpServer())
-        .get('/auth/profile')
+        .get('/auth/default-profile')
         .set('Authorization', tokenWithBadSig) // intentionally no "Bearer " prefix to test raw header rejection
         .expect(401);
 

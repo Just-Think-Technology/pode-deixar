@@ -42,7 +42,12 @@ export class PasswordManagementService {
       this.authLogger.logPasswordReset(dto.email, false);
     }
 
-    return { message: 'If the email exists, a password reset link has been sent' };
+    return {
+      message: 'If the email exists, a password reset link has been sent',
+      ...(process.env.NODE_ENV !== 'production' && {
+        reset_password_token: resetToken,
+      }),
+    };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
