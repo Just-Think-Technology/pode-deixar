@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import getLogger from './shared-logger';
+import getLogger from '../shared/shared-logger';
 
-const logger = getLogger('auth-service');
+const logger = getLogger('email');
 
 @Injectable()
 export class EmailService {

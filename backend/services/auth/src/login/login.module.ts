@@ -4,8 +4,8 @@ import { LoginService } from './login.service';
 import { LoginController } from './login.controller';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthLoggerService } from '../common/auth-logger.service';
-import { PasswordService } from '../common/password.service';
+import { AuthLoggerService } from '../shared/auth-logger.service';
+import { PasswordService } from '../password/password.service';
 
 @Module({
   imports: [ConfigModule, JwtModule.registerAsync({

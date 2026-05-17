@@ -15,7 +15,6 @@ import {
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-
 describe('GET /auth/admin', () => {
   let app: INestApplication;
   let prisma: PrismaService;

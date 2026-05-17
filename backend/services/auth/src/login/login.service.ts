@@ -7,8 +7,8 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { AuthLoggerService } from '../common/auth-logger.service';
-import { PasswordService } from '../common/password.service';
+import { AuthLoggerService } from '../shared/auth-logger.service';
+import { PasswordService } from '../password/password.service';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 
@@ -79,6 +79,8 @@ export class LoginService {
     }
 
     if (!user.emailVerified) {
+      this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
+      this.authLogger.logSecurityEvent('email_not_verified', { email: dto.email, ip });
       throw new ForbiddenException('Please verify your email before logging in');
     }
 
@@ -202,6 +204,8 @@ export class LoginService {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
+
+    this.authLogger.logProfileAccess(user.id);
 
     return {
       id: user.id,

@@ -3,9 +3,9 @@ import { PasswordManagementService } from './password-management.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import getLogger from '../common/shared-logger';
+import getLogger from '../shared/shared-logger';
 
-const logger = getLogger('auth-service');
+const logger = getLogger('password');
 
 @Controller('auth/password')
 export class PasswordController {

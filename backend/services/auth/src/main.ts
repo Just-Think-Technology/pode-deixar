@@ -1,13 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import 'dotenv/config';
+import createLogger from '@pode-deixar/logger';
+
+const logger = createLogger('auth-service');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: new Logger(),
+    logger: false,
   });
 
   // Security headers
@@ -72,7 +75,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
 
-  Logger.log(`Auth service is running on: http://localhost:${port}`, 'Bootstrap');
-  Logger.log(`API Documentation: http://localhost:${port}/api`, 'Bootstrap');
+  logger.info('bootstrap', `Auth service is running on: http://localhost:${port}`);
+  logger.info('bootstrap', `API Documentation: http://localhost:${port}/api`);
 }
 bootstrap();

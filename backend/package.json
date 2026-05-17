@@ -10,10 +10,17 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "dependencies": {
-    "winston": "^3.19.0",
-    "winston-daily-rotate-file": "^5.0.0"
+  "workspaces": [
+    "shared/*",
+    "services/*"
+  ],
+  
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   },
 
-  "workspaces": ["services/*"]
+  "dependencies": {
+    "pino": "^8.18.0",
+    "pino-pretty": "^10.0.0"
+  }
 }

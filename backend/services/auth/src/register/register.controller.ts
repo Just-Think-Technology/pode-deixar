@@ -6,9 +6,9 @@ import { RegisterService } from './register.service';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import getLogger from '../common/shared-logger';
+import getLogger from '../shared/shared-logger';
 
-const logger = getLogger('auth-service');
+const logger = getLogger('register');
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
