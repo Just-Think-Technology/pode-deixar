@@ -9,7 +9,7 @@ on:
     paths:
       - 'backend/**'
 jobs:
-  auth-backend-tests:
+  autha-backend-tests:
     runs-on: ubuntu-latest
     services:
       postgres:
