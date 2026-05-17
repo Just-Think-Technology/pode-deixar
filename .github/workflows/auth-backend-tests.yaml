@@ -9,7 +9,7 @@ on:
     paths:
       - 'backend/**'
 jobs:
-  test:
+  auth-backend-tests:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -56,11 +56,11 @@ jobs:
 
       - name: Generate Prisma Client
         working-directory: backend/services/auth
-        run: npx prisma generate --schema=./prisma/schema.prisma
+        run: npx prisma generate
 
       - name: Run Prisma migrations
         working-directory: backend/services/auth
-        run: npx prisma migrate deploy --schema=./prisma/schema.prisma
+        run: npx prisma migrate deploy
 
       - name: Run tests
         working-directory: backend/services/auth
