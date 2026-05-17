@@ -16,7 +16,7 @@ const EXPIRED_JWT =
   '.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9' +
   '.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
 
-describe('GET /auth/profile', () => {
+describe('GET /auth/default-profile', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
 
@@ -35,7 +35,7 @@ describe('GET /auth/profile', () => {
     const { accessToken } = await registerAndLogin(app, user, prisma);
 
     const response = await request(app.getHttpServer())
-      .get('/auth/profile')
+      .get('/auth/default-profile')
       .set(bearerAuth(accessToken))
       .expect(200);
 
@@ -50,14 +50,14 @@ describe('GET /auth/profile', () => {
   });
 
   it('should reject unauthenticated request with 401', async () => {
-    const response = await request(app.getHttpServer()).get('/auth/profile').expect(401);
+    const response = await request(app.getHttpServer()).get('/auth/default-profile').expect(401);
 
     expect(response.body).toHaveProperty('message');
   });
 
   it('should reject an invalid token with 401', async () => {
     const response = await request(app.getHttpServer())
-      .get('/auth/profile')
+      .get('/auth/default-profile')
       .set('Authorization', 'Bearer invalid-token')
       .expect(401);
 
@@ -66,7 +66,7 @@ describe('GET /auth/profile', () => {
 
   it('should reject an expired token with 401', async () => {
     const response = await request(app.getHttpServer())
-      .get('/auth/profile')
+      .get('/auth/default-profile')
       .set(bearerAuth(EXPIRED_JWT))
       .expect(401);
 

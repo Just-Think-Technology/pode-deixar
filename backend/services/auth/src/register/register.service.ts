@@ -55,6 +55,7 @@ export class RegisterService {
         postalCode: true,
         emailVerified: true,
         createdAt: true,
+        emailVerificationToken: true,
       },
     });
 
@@ -82,6 +83,9 @@ export class RegisterService {
         email_verified: user.emailVerified,
         created_at: user.createdAt,
       },
+      ...(process.env.NODE_ENV !== 'production' && {
+        email_verification_token: user.emailVerificationToken,
+      }),
     };
   }
 
@@ -128,6 +132,11 @@ export class RegisterService {
       this.authLogger.logResendVerification(dto.email, false);
     }
 
-    return { message: 'If the email exists, a new verification link has been sent' };
+    return {
+      message: 'If the email exists, a new verification link has been sent',
+      ...(process.env.NODE_ENV !== 'production' && {
+        email_verification_token: emailVerificationToken,
+      }),
+    };
   }
 }

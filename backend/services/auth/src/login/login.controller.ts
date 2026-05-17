@@ -23,7 +23,7 @@ const logger = getLogger('login');
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
-@ApiTags('auth')
+@ApiTags('Acesso')
 export class LoginController {
   constructor(private readonly loginService: LoginService) {}
 
@@ -36,15 +36,17 @@ export class LoginController {
     return this.loginService.login(dto, ip, userAgent);
   }
 
-  @Post('refresh')
+  @ApiTags('Acesso')
+  @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiOperation({ summary: 'Refresh token' })
   @ApiBody({ type: RefreshTokenDto })
   async refreshToken(@Body() dto: RefreshTokenDto) {
     try { logger.info('auth.endpoint', `Refresh token requested`); } catch (e) {}
     return this.loginService.refreshToken(dto);
   }
 
+  @ApiTags('Acesso')
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -54,26 +56,5 @@ export class LoginController {
   async logout(@Request() req: any) {
     try { logger.info('auth.endpoint', `Logout requested for user ${req.user?.id}`); } catch (e) {}
     return this.loginService.logout(req.user.id);
-  }
-
-  @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiBearerAuth()
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token', required: true })
-  async getProfile(@Request() req: any) {
-    try { logger.info('auth.endpoint', `Profile requested for user ${req.user?.id}`); } catch (e) {}
-    const profile = await this.loginService.getProfile(req.user.id);
-    return { user: profile };
-  }
-
-  @Get('admin')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Admin-only endpoint' })
-  @ApiBearerAuth()
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token', required: true })
-  async adminOnly() {
-    return { message: 'This is admin only data' };
   }
 }

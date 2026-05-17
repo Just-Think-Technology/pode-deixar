@@ -35,7 +35,7 @@ describe('Password Reset Flow', () => {
     await verifyEmailViaApi(app, user.email, prisma);
 
     await request(app.getHttpServer())
-      .post('/auth/password/forgot')
+      .post('/auth/forgot-password')
       .send({ email: user.email })
       .expect(200);
 
@@ -49,14 +49,14 @@ describe('Password Reset Flow', () => {
 
   // ─── POST /auth/forgot-password ────────────────────────────────────────────
 
-  describe('POST /auth/password/forgot', () => {
+  describe('POST /auth/forgot-password', () => {
     it('should respond with a generic success message (no email enumeration)', async () => {
       const user = createTestUser();
       await registerUser(app, user);
       await verifyEmailViaApi(app, user.email, prisma);
 
       const response = await request(app.getHttpServer())
-        .post('/auth/password/forgot')
+        .post('/auth/forgot-password')
         .send({ email: user.email })
         .expect(200);
 
@@ -68,14 +68,14 @@ describe('Password Reset Flow', () => {
 
     it('should reject an invalid email format with 400', async () => {
       await request(app.getHttpServer())
-        .post('/auth/password/forgot')
+        .post('/auth/forgot-password')
         .send({ email: 'invalid-email' })
         .expect(400);
     });
 
     it('should reject a missing email with 400', async () => {
       await request(app.getHttpServer())
-        .post('/auth/password/forgot')
+        .post('/auth/forgot-password')
         .send({})
         .expect(400);
     });
@@ -83,13 +83,13 @@ describe('Password Reset Flow', () => {
 
   // ─── POST /auth/reset-password ─────────────────────────────────────────────
 
-  describe('POST /auth/password/reset', () => {
+  describe('POST /auth/reset-password', () => {
     it('should reset password and allow login with the new password', async () => {
       const { user, resetToken } = await setupResetFlow();
       const newPassword = 'NewPassword123!';
 
       await request(app.getHttpServer())
-        .post('/auth/password/reset')
+        .post('/auth/reset-password')
         .send({ token: resetToken, newPassword })
         .expect(200);
 
@@ -99,7 +99,7 @@ describe('Password Reset Flow', () => {
 
     it('should reject an invalid token with 400', async () => {
       await request(app.getHttpServer())
-        .post('/auth/password/reset')
+        .post('/auth/reset-password')
         .send({ token: 'invalid-token', newPassword: 'NewPassword123!' })
         .expect(400);
     });
@@ -108,7 +108,7 @@ describe('Password Reset Flow', () => {
       const { resetToken } = await setupResetFlow();
 
       await request(app.getHttpServer())
-        .post('/auth/password/reset')
+        .post('/auth/reset-password')
         .send({ token: resetToken, newPassword: 'weak' })
         .expect(400);
     });
@@ -117,7 +117,7 @@ describe('Password Reset Flow', () => {
       const { resetToken } = await setupResetFlow();
 
       await request(app.getHttpServer())
-        .post('/auth/password/reset')
+        .post('/auth/reset-password')
         .send({ token: resetToken })
         .expect(400);
     });
@@ -131,7 +131,7 @@ describe('Password Reset Flow', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .post('/auth/password/reset')
+        .post('/auth/reset-password')
         .send({ token: resetToken, newPassword: 'NewPassword123!' })
         .expect(400);
 

@@ -15,7 +15,7 @@ import {
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-describe('GET /auth/admin', () => {
+describe('GET /auth/admin-profile', () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
@@ -41,7 +41,7 @@ describe('GET /auth/admin', () => {
       const accessToken = loginResponse.body.access_token;
 
       const response = await request(app.getHttpServer())
-        .get('/auth/admin')
+        .get('/auth/admin-profile')
         .set(bearerAuth(accessToken))
         .expect(200);
 
@@ -55,7 +55,7 @@ describe('GET /auth/admin', () => {
       const { accessToken } = await registerAndLogin(app, user, prisma);
 
       const response = await request(app.getHttpServer())
-        .get('/auth/admin')
+        .get('/auth/admin-profile')
         .set(bearerAuth(accessToken))
         .expect(403);
 
@@ -67,7 +67,7 @@ describe('GET /auth/admin', () => {
       const { accessToken } = await registerAndLogin(app, user, prisma);
 
       const response = await request(app.getHttpServer())
-        .get('/auth/admin')
+        .get('/auth/admin-profile')
         .set(bearerAuth(accessToken))
         .expect(403);
 
@@ -77,14 +77,14 @@ describe('GET /auth/admin', () => {
 
   describe('Unauthenticated access', () => {
     it('should deny access without a token with 401', async () => {
-      const response = await request(app.getHttpServer()).get('/auth/admin').expect(401);
+      const response = await request(app.getHttpServer()).get('/auth/admin-profile').expect(401);
 
       expect(response.body).toHaveProperty('message');
     });
 
     it('should deny access with a malformed token with 401', async () => {
       const response = await request(app.getHttpServer())
-        .get('/auth/admin')
+        .get('/auth/admin-profile')
         .set('Authorization', 'Bearerinvalid-token')
         .expect(401);
 
