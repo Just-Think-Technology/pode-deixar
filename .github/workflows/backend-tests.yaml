@@ -1,18 +1,16 @@
 name: Run testes on PR, merge or push to main or develop
-
 on:
   push:
     branches: [main, develop]
+    paths:
+      - 'backend/**'
   pull_request:
     branches: [main, develop]
-
+    paths:
+      - 'backend/**'
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-
     services:
       postgres:
         image: postgres:16
@@ -27,7 +25,6 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
-
     env:
       DATABASE_URL: postgresql://postgres:root@localhost:5432/auth_test
       JWT_ACCESS_SECRET: ${{ secrets.TEST_JWT_ACCESS_SECRET || 'test-access-secret-key-change-in-production' }}
@@ -38,7 +35,6 @@ jobs:
       SMTP_PASS: ${{ secrets.TEST_SMTP_PASS || 'test-pass' }}
       SMTP_FROM: ${{ secrets.TEST_SMTP_FROM || 'noreply@test.com' }}
       FRONTEND_URL: ${{ secrets.TEST_FRONTEND_URL || 'http://localhost:3000' }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -51,13 +47,21 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
+        working-directory: backend
         run: npm install
 
+      - name: Build shared logger
+        working-directory: backend/shared/logger
+        run: npx tsc
+
       - name: Generate Prisma Client
+        working-directory: backend/services/auth
         run: npx prisma generate
 
       - name: Run Prisma migrations
+        working-directory: backend/services/auth
         run: npx prisma migrate deploy
 
       - name: Run tests
+        working-directory: backend/services/auth
         run: npm run test -- --runInBand --coverage
