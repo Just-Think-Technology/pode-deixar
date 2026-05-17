@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "shared/logger" },
+    { "path": "services/auth" }
+  ]
+}

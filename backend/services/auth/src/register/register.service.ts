@@ -7,9 +7,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import { AuthLoggerService } from '../common/auth-logger.service';
-import { EmailService } from '../common/email.service';
-import { PasswordService } from '../common/password.service';
+import { AuthLoggerService } from '../shared/auth-logger.service';
+import { EmailService } from '../send_email/email.service';
+import { PasswordService } from '../password/password.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -87,20 +87,34 @@ export class RegisterService {
 
   async verifyEmail(dto: VerifyEmailDto) {
     const user = await this.prisma.user.findFirst({ where: { emailVerificationToken: dto.token } });
-    if (!user) throw new BadRequestException('Invalid verification token');
-    if (user.emailVerified) throw new BadRequestException('Email already verified');
+    if (!user) {
+      this.authLogger.logEmailVerificationTokenFailure(dto.token, 'invalid token');
+      throw new BadRequestException('Invalid verification token');
+    }
+    if (user.emailVerified) {
+      this.authLogger.logEmailVerification(user.email, false, 'already verified');
+      throw new BadRequestException('Email already verified');
+    }
     if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+      this.authLogger.logEmailVerification(user.email, false, 'token expired');
       throw new BadRequestException('Verification token has expired. Please request a new verification email.');
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null } });
+    this.authLogger.logEmailVerification(user.email, true);
     return { message: 'Email verified successfully' };
   }
 
   async resendVerificationEmail(dto: ResendVerificationDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (!user) return { message: 'If the email exists, a new verification link has been sent' };
-    if (user.emailVerified) throw new BadRequestException('Email is already verified');
+    if (!user) {
+      this.authLogger.logResendVerification(dto.email, false);
+      return { message: 'If the email exists, a new verification link has been sent' };
+    }
+    if (user.emailVerified) {
+      this.authLogger.logResendVerification(dto.email, false);
+      throw new BadRequestException('Email is already verified');
+    }
 
     const emailVerificationToken = uuidv4();
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -108,8 +122,10 @@ export class RegisterService {
 
     try {
       await this.emailService.sendEmailVerification(dto.email, emailVerificationToken);
+      this.authLogger.logResendVerification(dto.email, true);
     } catch (error) {
       this.authLogger.logSecurityEvent('email_send_failed', { email: dto.email, type: 'verification', error: error.message });
+      this.authLogger.logResendVerification(dto.email, false);
     }
 
     return { message: 'If the email exists, a new verification link has been sent' };

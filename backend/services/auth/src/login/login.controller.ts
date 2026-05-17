@@ -14,12 +14,12 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { LoginService } from './login.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { RolesGuard } from '../common/roles.guard';
-import { Roles } from '../common/roles.decorator';
-import getLogger from '../common/shared-logger';
+import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
+import { RolesGuard } from '../roles/roles.guard';
+import { Roles } from '../roles/roles.decorator';
+import getLogger from '../shared/shared-logger';
 
-const logger = getLogger('auth-service');
+const logger = getLogger('login');
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)

@@ -1,8 +1,8 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import getLogger from './shared-logger';
+import getLogger from '../shared/shared-logger';
 
-const logger = getLogger('auth-service');
+const logger = getLogger('jwt');
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
