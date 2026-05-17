@@ -43,22 +43,27 @@ function createLogger(serviceName, featureName, options = {}) {
     const logsParentDir = options.logsParentDir ?? 'logs';
     const currentDir = path_1.default.basename(__dirname) === 'dist' ? path_1.default.resolve(__dirname, '..') : __dirname;
     const logsRoot = path_1.default.resolve(currentDir, '..', '..', logsParentDir, serviceName);
-    ensureDir(logsRoot);
+    const isTest = process.env.NODE_ENV === 'test';
+    if (!isTest)
+        ensureDir(logsRoot);
     const date = formatDate(new Date());
-    const filePrefix = featureName ? `${featureName}` : `general_${serviceName}`;
+    const filePrefix = featureName ? `${featureName}` : `general`;
     const filePath = path_1.default.join(logsRoot, `${date}-${filePrefix}.log`);
     setImmediate(() => cleanupOldLogs(logsRoot, options.retainDays ?? 14));
     const streams = [];
-    const fileStream = fs_1.default.createWriteStream(filePath, { flags: 'a' });
-    const prettyFile = (0, pino_pretty_1.default)({
-        colorize: false,
-        translateTime: 'yyyy-mm-dd HH:MM:ss.l',
-        ignore: 'pid,hostname',
-        destination: fileStream,
-        sync: true,
-    });
-    streams.push({ level: level, stream: prettyFile });
-    if (!isProd) {
+    if (!isTest) {
+        const fileStream = fs_1.default.createWriteStream(filePath, { flags: 'a' });
+        const prettyFile = (0, pino_pretty_1.default)({
+            colorize: false,
+            translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+            ignore: 'pid,hostname',
+            destination: fileStream,
+            sync: true,
+        });
+        streams.push({ level: level, stream: prettyFile });
+        setImmediate(() => cleanupOldLogs(logsRoot, options.retainDays ?? 14));
+    }
+    if (!isProd || isTest) {
         const prettyStdout = (0, pino_pretty_1.default)({
             colorize: true,
             translateTime: 'yyyy-mm-dd HH:MM:ss.l',
