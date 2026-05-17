@@ -9,4 +9,9 @@ module.exports = {
   testTimeout: 30000,
   verbose: true,
   globalTeardown: '<rootDir>/test/global-teardown.ts',
+  testEnvironmentOptions: {
+    env: {
+      NODE_ENV: 'test',
+    },
+  },
 };

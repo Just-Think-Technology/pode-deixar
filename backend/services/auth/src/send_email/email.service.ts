@@ -26,7 +26,7 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: this.configService.get<string>('SMTP_FROM'),
+        from: this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
         to: email,
         subject: 'Verify Your Email Address',
         html: `
@@ -50,7 +50,7 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: this.configService.get<string>('SMTP_FROM'),
+        from: this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
         to: email,
         subject: 'Reset Your Password',
         html: `

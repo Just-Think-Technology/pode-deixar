@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { EmailService } from '../src/auth/email.service';
+import { EmailService } from '../src/send_email/email.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

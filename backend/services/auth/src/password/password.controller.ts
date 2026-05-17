@@ -1,9 +1,12 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Request } from '@nestjs/common';
+import { Controller, Post, Put, Body, HttpCode, HttpStatus, Request } from '@nestjs/common';
 import { PasswordManagementService } from './password-management.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import getLogger from '../shared/shared-logger';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
+
 
 const logger = getLogger('password');
 
@@ -25,7 +28,8 @@ export class PasswordController {
     return this.passwordService.resetPassword(dto);
   }
 
-  @Post('change')
+  @Put('change')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async change(@Request() req: any, @Body() dto: ChangePasswordDto) {
     try { logger.info('auth.endpoint', `Change password requested for user ${req.user?.id}`); } catch (e) {}

@@ -52,27 +52,31 @@ export function createLogger(serviceName: string, featureName?: string, options:
   const logsParentDir = options.logsParentDir ?? 'logs';
   const currentDir = path.basename(__dirname) === 'dist' ? path.resolve(__dirname, '..') : __dirname;
   const logsRoot = path.resolve(currentDir, '..', '..', logsParentDir, serviceName);
-  ensureDir(logsRoot);
+  const isTest = process.env.NODE_ENV === 'test';
+  if (!isTest) ensureDir(logsRoot);
 
   const date = formatDate(new Date());
-  const filePrefix = featureName ? `${featureName}` : `general_${serviceName}`;
+  const filePrefix = featureName ? `${featureName}` : `general`;
   const filePath = path.join(logsRoot, `${date}-${filePrefix}.log`);
 
   setImmediate(() => cleanupOldLogs(logsRoot, options.retainDays ?? 14));
 
   const streams: pino.StreamEntry[] = [];
 
-  const fileStream = fs.createWriteStream(filePath, { flags: 'a' });
-  const prettyFile = pinoPretty({
-    colorize: false,
-    translateTime: 'yyyy-mm-dd HH:MM:ss.l',
-    ignore: 'pid,hostname',
-    destination: fileStream,
-    sync: true,
-  });
-  streams.push({ level: level as pino.Level, stream: prettyFile });
+  if (!isTest) {
+    const fileStream = fs.createWriteStream(filePath, { flags: 'a' });
+    const prettyFile = pinoPretty({
+      colorize: false,
+      translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+      ignore: 'pid,hostname',
+      destination: fileStream,
+      sync: true,
+    });
+    streams.push({ level: level as pino.Level, stream: prettyFile });
+    setImmediate(() => cleanupOldLogs(logsRoot, options.retainDays ?? 14));
+  }
 
-  if (!isProd) {
+  if (!isProd || isTest) {
     const prettyStdout = pinoPretty({
       colorize: true,
       translateTime: 'yyyy-mm-dd HH:MM:ss.l',

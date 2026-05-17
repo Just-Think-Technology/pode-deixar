@@ -11,7 +11,7 @@ import {
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-describe('PUT /auth/change-password', () => {
+describe('PUT /auth/password/change', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
 
@@ -33,7 +33,7 @@ describe('PUT /auth/change-password', () => {
       const { accessToken } = await registerAndLogin(app, user, prisma);
 
       const response = await request(app.getHttpServer())
-        .put('/auth/change-password')
+        .put('/auth/password/change')
         .set(bearerAuth(accessToken))
         .send({ currentPassword: user.password, newPassword: NEW_PASSWORD })
         .expect(200);
@@ -51,7 +51,7 @@ describe('PUT /auth/change-password', () => {
       const { accessToken } = await registerAndLogin(app, user, prisma);
 
       const response = await request(app.getHttpServer())
-        .put('/auth/change-password')
+        .put('/auth/password/change')
         .set(bearerAuth(accessToken))
         .send({ currentPassword: 'WrongPassword123!', newPassword: NEW_PASSWORD })
         .expect(400);
@@ -63,7 +63,7 @@ describe('PUT /auth/change-password', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .put('/auth/change-password')
+        .put('/auth/password/change')
         .send({ currentPassword: user.password, newPassword: NEW_PASSWORD })
         .expect(401);
 
@@ -74,7 +74,7 @@ describe('PUT /auth/change-password', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .put('/auth/change-password')
+        .put('/auth/password/change')
         .set('Authorization', 'Bearerinvalid-token')
         .send({ currentPassword: user.password, newPassword: NEW_PASSWORD })
         .expect(401);
@@ -89,7 +89,7 @@ describe('PUT /auth/change-password', () => {
       const { accessToken } = await registerAndLogin(app, user, prisma);
 
       const response = await request(app.getHttpServer())
-        .put('/auth/change-password')
+        .put('/auth/password/change')
         .set(bearerAuth(accessToken))
         .send({ currentPassword: user.password, newPassword: 'weak' })
         .expect(400);
@@ -102,7 +102,7 @@ describe('PUT /auth/change-password', () => {
       const { accessToken } = await registerAndLogin(app, user, prisma);
 
       await request(app.getHttpServer())
-        .put('/auth/change-password')
+        .put('/auth/password/change')
         .set(bearerAuth(accessToken))
         .send({ newPassword: NEW_PASSWORD })
         .expect(400);
@@ -113,7 +113,7 @@ describe('PUT /auth/change-password', () => {
       const { accessToken } = await registerAndLogin(app, user, prisma);
 
       await request(app.getHttpServer())
-        .put('/auth/change-password')
+        .put('/auth/password/change')
         .set(bearerAuth(accessToken))
         .send({ currentPassword: user.password })
         .expect(400);
