@@ -1,5 +1,2 @@
-# Ignore logs directory
-backend/logs/
-
 # Node modules
 node_modules/
