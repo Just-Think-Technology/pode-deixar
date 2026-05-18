@@ -9,6 +9,11 @@ import {
   MaxLength
 } from 'class-validator';
 
+export enum PublicRole {
+  CLIENT = 'CLIENT',
+  PROVIDER = 'PROVIDER',
+}
+
 export class RegisterDto {
   @ApiProperty({ description: 'User\'s complete name', example: 'John Doe' })
   @IsString()
@@ -43,7 +48,7 @@ export class RegisterDto {
   @IsNotEmpty()
   postal_code: string;
 
-  @ApiProperty({ description: 'User role', enum: ['CLIENT', 'PROVIDER'], example: 'CLIENT' })
-  @IsEnum(['CLIENT', 'PROVIDER'])
-  role: 'CLIENT' | 'PROVIDER';
+  @ApiProperty({ description: 'User role', enum: PublicRole, example: PublicRole.CLIENT })
+  @IsEnum(PublicRole, { message: 'role must be CLIENT or PROVIDER' })
+  role: PublicRole;
 }
