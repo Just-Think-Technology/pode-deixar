@@ -10,14 +10,23 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor(private configService: ConfigService) {
+    const host = this.configService.get<string>('SMTP_HOST');
+    const port = Number(this.configService.get<string>('SMTP_PORT')) || 587;
+    const user = this.configService.get<string>('SMTP_USER');
+    const pass = this.configService.get<string>('SMTP_PASS');
+
+    if (!host || !user || !pass) {
+      logger.warn(
+        'auth.email',
+        'SMTP not fully configured (SMTP_HOST, SMTP_USER, SMTP_PASS required)',
+      );
+    }
+
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST'),
-      port: this.configService.get<number>('SMTP_PORT') || 587,
-      secure: false,
-      auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASS'),
-      },
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
     });
   }
 
