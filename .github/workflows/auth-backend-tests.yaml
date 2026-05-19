@@ -55,6 +55,11 @@ jobs:
       NODE_ENV: test
 
     steps:
+      - name: Debug secrets
+        run: |
+          echo "JWT_ACCESS_SECRET exists = ${{ secrets.JWT_ACCESS_SECRET != '' }}"
+          echo "NODE_ENV = $NODE_ENV"
+          
       - name: Checkout repository
         uses: actions/checkout@v4
 
