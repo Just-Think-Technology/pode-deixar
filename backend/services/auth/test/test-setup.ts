@@ -1,5 +1,3 @@
-import * as dotenv from 'dotenv'
-dotenv.config({ path: '.env' })
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -10,7 +8,6 @@ import { EmailService } from '../src/send_email/email.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 // --- Types ---
-
 export interface TestUser {
   complete_name: string;
   email: string;
