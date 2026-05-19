@@ -1,45 +1,64 @@
-name: Run testes on PR, merge or push to main or develop
+name: Run tests on PR, merge or push to main or develop
+
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
     paths:
-      - 'backend/**'
+      - "backend/**"
+
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
     paths:
-      - 'backend/**'
+      - "backend/**"
+
 jobs:
   auth-backend-tests:
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:16
+
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: root
           POSTGRES_DB: auth_test
+
         ports:
           - 5432:5432
+
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+
     env:
       DATABASE_URL: postgresql://postgres:root@localhost:5432/auth_test
-      JWT_ACCESS_SECRET: ${{ secrets.TEST_JWT_ACCESS_SECRET || 'test-access-secret-key-change-in-production' }}
-      JWT_REFRESH_SECRET: ${{ secrets.TEST_JWT_REFRESH_SECRET || 'test-refresh-secret-key-change-in-production' }}
-      SMTP_HOST: ${{ secrets.TEST_SMTP_HOST || 'sandbox.smtp.mailtrap.io' }}
-      SMTP_PORT: ${{ secrets.TEST_SMTP_PORT || '587' }}
-      SMTP_USER: ${{ secrets.TEST_SMTP_USER || 'test-user' }}
-      SMTP_PASS: ${{ secrets.TEST_SMTP_PASS || 'test-pass' }}
-      SMTP_FROM: ${{ secrets.TEST_SMTP_FROM || 'noreply@test.com' }}
-      FRONTEND_URL: ${{ secrets.TEST_FRONTEND_URL || 'http://localhost:3000' }}
+      DIRECT_URL: postgresql://postgres:root@localhost:5432/auth_test
+
+      JWT_ACCESS_SECRET: ${{ secrets.TEST_JWT_ACCESS_SECRET }}
+      JWT_REFRESH_SECRET: ${{ secrets.TEST_JWT_REFRESH_SECRET }}
+
+      SMTP_HOST: ${{ secrets.TEST_SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.TEST_SMTP_PORT }}
+      SMTP_USER: ${{ secrets.TEST_SMTP_USER }}
+      SMTP_PASS: ${{ secrets.TEST_SMTP_PASS }}
+      SMTP_FROM: ${{ secrets.TEST_SMTP_FROM }}
+
+      FRONTEND_URL: ${{ secrets.TEST_FRONTEND_URL }}
+
+      NODE_ENV: test
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -48,7 +67,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: backend
-        run: npm install
+        run: npm ci
 
       - name: Build shared logger
         working-directory: backend/shared/logger
