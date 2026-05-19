@@ -41,20 +41,25 @@ jobs:
       DATABASE_URL: postgresql://postgres:root@localhost:5432/auth_test
       DIRECT_URL: postgresql://postgres:root@localhost:5432/auth_test
 
-      JWT_ACCESS_SECRET: ${{ secrets.TEST_JWT_ACCESS_SECRET }}
-      JWT_REFRESH_SECRET: ${{ secrets.TEST_JWT_REFRESH_SECRET }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
 
-      SMTP_HOST: ${{ secrets.TEST_SMTP_HOST }}
-      SMTP_PORT: ${{ secrets.TEST_SMTP_PORT }}
-      SMTP_USER: ${{ secrets.TEST_SMTP_USER }}
-      SMTP_PASS: ${{ secrets.TEST_SMTP_PASS }}
-      SMTP_FROM: ${{ secrets.TEST_SMTP_FROM }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      SMTP_FROM: ${{ secrets.SMTP_FROM }}
 
-      FRONTEND_URL: ${{ secrets.TEST_FRONTEND_URL }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
 
       NODE_ENV: test
 
     steps:
+      - name: Debug secrets
+        run: |
+          echo "JWT_ACCESS_SECRET exists = ${{ secrets.JWT_ACCESS_SECRET != '' }}"
+          echo "NODE_ENV = $NODE_ENV"
+          
       - name: Checkout repository
         uses: actions/checkout@v4
 
