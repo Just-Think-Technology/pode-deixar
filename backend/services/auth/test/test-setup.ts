@@ -1,3 +1,5 @@
+import * as dotenv from 'dotenv'
+dotenv.config({ path: '.env' })
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -7,7 +9,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { EmailService } from '../src/send_email/email.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types ---
 
 export interface TestUser {
   complete_name: string;
@@ -29,7 +31,7 @@ export interface TestAppSetup {
   prisma: PrismaService;
 }
 
-// ─── User Factories ───────────────────────────────────────────────────────────
+// --- User Factories ---
 
 /**
  * Creates a unique test user to avoid email collisions across parallel runs.
@@ -52,7 +54,7 @@ export const createProviderUser = (overrides: Partial<TestUser> = {}): TestUser 
 export const createAdminUser = (overrides: Partial<TestUser> = {}): TestUser =>
   createTestUser({ complete_name: 'Admin User', role: 'ADMIN', ...overrides });
 
-// ─── App Lifecycle ────────────────────────────────────────────────────────────
+// --- App Lifecycle ---
 
 /**
  * Bootstraps the NestJS app for E2E tests.
@@ -91,7 +93,7 @@ export async function setupTestApp(): Promise<TestAppSetup> {
   return { app, prisma };
 }
 
-// ─── Auth Flow Helpers ────────────────────────────────────────────────────────
+// --- Auth Flow Helpers ---
 
 /**
  * Registers a user via the API and asserts HTTP 201.
