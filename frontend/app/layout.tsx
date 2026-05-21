@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -26,7 +27,10 @@ export default function RootLayout({
             <body
                 className={`${poppins.variable} antialiased`}
             >
-                <TooltipProvider>{children}</TooltipProvider>
+                <TooltipProvider>
+                    {children}
+                    <Toaster richColors position="top-center" />
+                </TooltipProvider>
             </body>
         </html>
     );

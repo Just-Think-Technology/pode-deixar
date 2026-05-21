@@ -1,3 +1,5 @@
+import type { PublicRole } from "@/lib/auth/types";
+
 export type AuthRole = "client" | "worker";
 
 export type AuthRoleConfig = {
@@ -11,6 +13,8 @@ export type AuthRoleConfig = {
     registerHref: string;
     loginLabel: string;
     registerLabel: string;
+    postLoginHref: string;
+    postRegisterLoginHref: string;
     accentClassName: string;
     accentBgClassName: string;
     hoverClassName: string;
@@ -28,6 +32,8 @@ export const authRoleConfig: Record<AuthRole, AuthRoleConfig> = {
         registerHref: "/register/client",
         loginLabel: "Entrar como cliente",
         registerLabel: "Criar conta de cliente",
+        postLoginHref: "/client/home",
+        postRegisterLoginHref: "/login/client",
         accentClassName: "text-primary",
         accentBgClassName: "bg-primary/10",
         hoverClassName: "hover:border-primary/40 hover:bg-primary/5",
@@ -43,6 +49,8 @@ export const authRoleConfig: Record<AuthRole, AuthRoleConfig> = {
         registerHref: "/register/worker",
         loginLabel: "Entrar como profissional",
         registerLabel: "Criar conta de profissional",
+        postLoginHref: "/worker/dashboard",
+        postRegisterLoginHref: "/login/worker",
         accentClassName: "text-secondary",
         accentBgClassName: "bg-secondary/10",
         hoverClassName: "hover:border-secondary/40 hover:bg-secondary/5",
@@ -53,4 +61,20 @@ export const authRoles = [authRoleConfig.client, authRoleConfig.worker];
 
 export function isAuthRole(role: string): role is AuthRole {
     return role === "client" || role === "worker";
+}
+
+export function expectedRoleForAuthRoute(role: AuthRole): PublicRole {
+    return role === "client" ? "CLIENT" : "PROVIDER";
+}
+
+export function assertLoginRole(
+    userRole: string,
+    expected: PublicRole,
+    roleLabel: string,
+): void {
+    if (userRole !== expected) {
+        throw new Error(
+            `Esta conta não é de ${roleLabel.toLowerCase()}. Use a página de login correta.`,
+        );
+    }
 }
