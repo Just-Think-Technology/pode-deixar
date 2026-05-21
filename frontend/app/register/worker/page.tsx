@@ -1,6 +1,5 @@
-import AuthFormPage from "@/components/pages/auth-form-page";
-import { authRoleConfig } from "@/components/pages/auth-router-data";
+import { WorkerRegisterForm } from "@/components/pages/auth-form-page";
 
 export default function WorkerRegisterPage() {
-    return <AuthFormPage mode="register" role={authRoleConfig.worker} />;
+    return <WorkerRegisterForm />;
 }
