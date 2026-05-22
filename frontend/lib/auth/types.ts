@@ -13,6 +13,14 @@ export type LoginPayload = {
   rememberMe?: boolean;
 };
 
+export type ForgotPasswordPayload = {
+  email: string;
+};
+
+export type forgotPasswordResponse = {
+  message: string;
+};
+
 export type LoginResponse = {
   message: string;
   access_token: string;

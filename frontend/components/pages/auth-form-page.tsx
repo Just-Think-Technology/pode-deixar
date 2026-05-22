@@ -120,6 +120,14 @@ function EmailField({ error }: { error?: string }) {
     );
 }
 
+function LinkForgotPasswordField() {
+    return (
+        <div className="flex justify-center">
+            <Link href="/forgot-password" className="text-sm text-primary hover:underline">Esqueceu sua senha?</Link>
+        </div>
+    );
+}
+
 function PasswordField({
     autoComplete,
     error,
@@ -186,6 +194,7 @@ function RememberMeField() {
     );
 }
 
+
 type AuthFormActionsProps = {
     submitLabel: string;
     loading: boolean;
@@ -227,34 +236,34 @@ function useAuthFormSubmit() {
 
     const wrapSubmit =
         (handler: (form: HTMLFormElement) => Promise<void>) =>
-        async (event: FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            setError(null);
-            setFieldErrors({});
-            setLoading(true);
-            try {
-                await handler(event.currentTarget);
-            } catch (err) {
-                const message = getApiErrorMessage(err);
-                const mapped = mapApiErrorToFieldErrors(err);
+            async (event: FormEvent<HTMLFormElement>) => {
+                event.preventDefault();
+                setError(null);
+                setFieldErrors({});
+                setLoading(true);
+                try {
+                    await handler(event.currentTarget);
+                } catch (err) {
+                    const message = getApiErrorMessage(err);
+                    const mapped = mapApiErrorToFieldErrors(err);
 
-                if (mapped) {
-                    setFieldErrors(mapped);
-                } else {
-                    setError(message);
-                }
+                    if (mapped) {
+                        setFieldErrors(mapped);
+                    } else {
+                        setError(message);
+                    }
 
-                if (isEmailNotVerifiedError(err)) {
-                    toast.error("Verifique seu e-mail antes de entrar.", {
-                        description: "Acesse o link enviado ou a página de verificação.",
-                    });
-                } else {
-                    toast.error(message);
+                    if (isEmailNotVerifiedError(err)) {
+                        toast.error("Verifique seu e-mail antes de entrar.", {
+                            description: "Acesse o link enviado ou a página de verificação.",
+                        });
+                    } else {
+                        toast.error(message);
+                    }
+                } finally {
+                    setLoading(false);
                 }
-            } finally {
-                setLoading(false);
-            }
-        };
+            };
 
     return { loading, error, fieldErrors, wrapSubmit, setFieldErrors, setError };
 }
@@ -338,8 +347,8 @@ export function ClientLoginForm() {
             subtitle="Entre para acompanhar suas solicitações e conversas."
             alternateHref={role.registerHref}
             alternateText="Ainda não tem conta?"
-            alternateLabel={role.registerLabel}
-        >
+            alternateLabel={role.registerLabel}>
+
             <form className="space-y-6" onSubmit={onSubmit}>
                 <FieldGroup>
                     <EmailField error={fieldErrors.email} />
@@ -347,7 +356,9 @@ export function ClientLoginForm() {
                     <RememberMeField />
                 </FieldGroup>
                 <AuthFormActions submitLabel="Entrar" loading={loading} error={error} />
+                <LinkForgotPasswordField />
             </form>
+            
         </AuthFormShell>
     );
 }
@@ -367,13 +378,14 @@ export function WorkerLoginForm() {
 
     return (
         <AuthFormShell
+
             role={role}
             title={role.loginLabel}
-            subtitle="Entre para acompanhar suas solicitações e conversas."
+            subtitle="Digite seu e-mail para receber um link de recuperação de senha."
             alternateHref={role.registerHref}
             alternateText="Ainda não tem conta?"
-            alternateLabel={role.registerLabel}
-        >
+            alternateLabel={role.registerLabel}>
+
             <form className="space-y-6" onSubmit={onSubmit}>
                 <FieldGroup>
                     <EmailField error={fieldErrors.email} />
@@ -381,7 +393,9 @@ export function WorkerLoginForm() {
                     <RememberMeField />
                 </FieldGroup>
                 <AuthFormActions submitLabel="Entrar" loading={loading} error={error} />
+                <LinkForgotPasswordField />
             </form>
+
         </AuthFormShell>
     );
 }
