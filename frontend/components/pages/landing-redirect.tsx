@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ROLE_HOME_HREF } from "@/lib/auth/require-role";
 import { getAuthSession } from "@/lib/auth/session";
 
-/** Redirects authenticated users from landing to their home area. */
 export default function LandingRedirect() {
   const router = useRouter();
 
