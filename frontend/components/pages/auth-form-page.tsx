@@ -131,25 +131,33 @@ function EmailField({ error }: { error?: string }) {
     );
 }
 
-function PasswordField({
+export function PasswordField({
     autoComplete,
     error,
+    name = "password",
+    label = "Senha",
+    placeholder = "Digite sua senha",
 }: {
     autoComplete: "current-password" | "new-password";
     error?: string;
+    name?: string;
+    label?: string;
+    placeholder?: string;
 }) {
+    const fieldId = name;
+
     return (
         <Field>
-            <FieldLabel htmlFor="password">Senha</FieldLabel>
+            <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
             <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                    id="password"
-                    name="password"
+                    id={fieldId}
+                    name={name}
                     type="password"
                     required
                     autoComplete={autoComplete}
-                    placeholder="Digite sua senha"
+                    placeholder={placeholder}
                     className="h-11 pl-9"
                     aria-invalid={!!error}
                 />
@@ -203,13 +211,13 @@ function RememberMeField() {
 type AuthFormActionsProps = {
     submitLabel: string;
     loading: boolean;
-    error: string | null;
+    error?: string | null;
 };
 
-function AuthFormActions({
+export function AuthFormActions({
     submitLabel,
     loading,
-    error,
+    error = null,
 }: AuthFormActionsProps) {
     return (
         <div className="space-y-4">
