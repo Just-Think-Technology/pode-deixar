@@ -1,6 +1,12 @@
 "use server";
 
-import type { LoginResponse } from "@/lib/auth/types";
+import { login } from "@/api/login";
+import { resetPassword } from "@/api/reset-password";
+import type {
+  LoginResponse,
+  PublicRole,
+  ResetPasswordPayload,
+} from "@/lib/auth/types";
 
 import {
   clearAuthSession,
@@ -19,4 +25,19 @@ export async function clearAuthSessionAction(): Promise<void> {
 export async function getAuthUserAction() {
   const session = await getAuthSession();
   return session?.user ?? null;
+}
+
+export async function resetPasswordAction(
+  payload: ResetPasswordPayload,
+): Promise<{ role: PublicRole }> {
+  const resetResult = await resetPassword(payload);
+
+  const loginData = await login({
+    email: resetResult.user.email,
+    password: payload.newPassword,
+  });
+
+  await saveAuthSession(loginData);
+
+  return { role: loginData.user.role };
 }
