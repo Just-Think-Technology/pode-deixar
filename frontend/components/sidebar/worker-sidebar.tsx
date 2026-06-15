@@ -5,8 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
+import { clearAuthSessionAction } from "@/lib/auth/actions";
 import { workerNavItems } from "@/lib/navigation";
-import { clearAuthSession, getAuthSession } from "@/lib/auth/session";
+import type { AuthUser } from "@/lib/auth/types";
 import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
@@ -22,19 +23,23 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-export default function WorkerSidebar() {
+type WorkerSidebarProps = {
+  user: AuthUser;
+};
+
+export default function WorkerSidebar({ user }: WorkerSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const session = getAuthSession();
-  const initials = session?.user.complete_name
-    ?.split(" ")
+
+  const initials = user.complete_name
+    .split(" ")
     .map((n) => n[0])
     .slice(0, 2)
     .join("")
-    .toUpperCase() ?? "PR";
+    .toUpperCase();
 
-  function handleLogout() {
-    clearAuthSession();
+  async function handleLogout() {
+    await clearAuthSessionAction();
     router.push("/select-user");
   }
 
@@ -94,8 +99,8 @@ export default function WorkerSidebar() {
             <AvatarFallback className="bg-secondary/10 text-secondary">{initials}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-medium">{session?.user.complete_name}</p>
-            <p className="truncate text-xs text-muted-foreground">{session?.user.email}</p>
+            <p className="truncate text-sm font-medium">{user.complete_name}</p>
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
           </div>
           <button
             type="button"

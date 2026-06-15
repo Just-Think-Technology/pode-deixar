@@ -62,7 +62,13 @@ export class PasswordManagementService {
     await this.prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword, passwordResetToken: null, passwordResetExpires: null, failedLoginAttempts: 0, lockoutUntil: null } });
     this.authLogger.logPasswordResetComplete(user.email);
 
-    return { message: 'Password reset successfully' };
+    return {
+      message: 'Password reset successfully',
+      user: {
+        email: user.email,
+        role: user.role,
+      },
+    };
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
