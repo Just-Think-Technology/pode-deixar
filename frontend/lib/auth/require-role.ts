@@ -1,5 +1,4 @@
 import type { PublicRole } from "@/lib/auth/types";
-import { getAccessToken } from "@/lib/auth/session";
 
 export type AppArea = "client" | "worker";
 
@@ -26,11 +25,7 @@ export function getAreaForRole(role: PublicRole): AppArea {
   return role === "CLIENT" ? "client" : "worker";
 }
 
-
-export function getRoleFromAccessToken(): PublicRole | null {
-  const token = getAccessToken();
-  if (!token) return null;
-
+export function decodeAccessTokenRole(token: string): PublicRole | null {
   try {
     const payload = token.split(".")[1];
     if (!payload) return null;

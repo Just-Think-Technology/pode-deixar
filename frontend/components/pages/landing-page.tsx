@@ -594,7 +594,7 @@ function Footer() {
 
 export default function LandingPage() {
     return (
-        <div className="min-h-screen font-poppins">
+        <div className="min-h-screen">
             <Navbar />
             <main>
                 <HeroSection />

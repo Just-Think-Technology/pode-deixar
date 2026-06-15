@@ -1,17 +1,34 @@
-import RequireRole from "@/components/auth/require-role";
+import { redirect } from "next/navigation";
+
 import AppShell from "@/components/layouts/app-shell";
 import ClientSidebar from "@/components/sidebar/client-sidebar";
+import {
+  AREA_REQUIRED_ROLE,
+  getLoginHrefForArea,
+  ROLE_LOGIN_HREF,
+} from "@/lib/auth/require-role";
+import { clearAuthSession, getAuthSession } from "@/lib/auth/session.server";
 
-export default function ClientAreaLayout({
+export default async function ClientAreaLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getAuthSession();
+  const requiredRole = AREA_REQUIRED_ROLE.client;
+
+  if (!session?.user.role) {
+    redirect(getLoginHrefForArea("client"));
+  }
+
+  if (session.user.role !== requiredRole) {
+    await clearAuthSession();
+    redirect(ROLE_LOGIN_HREF[session.user.role]);
+  }
+
   return (
-    <RequireRole area="client">
-      <AppShell sidebar={<ClientSidebar />} hideInsetHeader>
-        {children}
-      </AppShell>
-    </RequireRole>
+    <AppShell sidebar={<ClientSidebar user={session.user} />} hideInsetHeader>
+      {children}
+    </AppShell>
   );
 }

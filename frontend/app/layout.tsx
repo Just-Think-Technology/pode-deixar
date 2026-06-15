@@ -23,10 +23,8 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="pt-BR">
-            <body
-                className={`${poppins.variable} antialiased`}
-            >
+        <html lang="pt-BR" className={poppins.variable}>
+            <body className={`${poppins.className} font-sans antialiased`}>
                 <TooltipProvider>
                     {children}
                     <Toaster richColors position="top-center" />
