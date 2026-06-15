@@ -20,7 +20,13 @@ import AuthBackground from "@/components/pages/auth-background";
 import AuthLogo from "@/components/pages/auth-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +36,7 @@ import {
     mapApiErrorToFieldErrors,
 } from "@/lib/auth/errors";
 import { parseLoginForm, parseRegisterForm } from "@/lib/auth/map-form";
-import { saveAuthSession } from "@/lib/auth/session";
+import { saveAuthSessionAction } from "@/lib/auth/actions";
 import type { PublicRole } from "@/lib/auth/types";
 import { validateLogin, validateRegister } from "@/lib/auth/validation";
 
@@ -79,7 +85,9 @@ function AuthFormShell({
                         <CardTitle className="text-2xl font-semibold tracking-tight sm:text-3xl">
                             {title}
                         </CardTitle>
-                        <CardDescription className="max-w-sm">{subtitle}</CardDescription>
+                        <CardDescription className="max-w-sm">
+                            {subtitle}
+                        </CardDescription>
                     </CardHeader>
 
                     <CardContent className="px-6 pb-6 sm:px-8 sm:pb-8">
@@ -87,7 +95,10 @@ function AuthFormShell({
 
                         <div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
                             {alternateText}{" "}
-                            <Link href={alternateHref} className="font-semibold text-primary hover:underline">
+                            <Link
+                                href={alternateHref}
+                                className="font-semibold text-primary hover:underline"
+                            >
                                 {alternateLabel}
                             </Link>
                         </div>
@@ -120,33 +131,33 @@ function EmailField({ error }: { error?: string }) {
     );
 }
 
-function LinkForgotPasswordField() {
-    return (
-        <div className="flex justify-center">
-            <Link href="/forgot-password" className="text-sm text-primary hover:underline">Esqueceu sua senha?</Link>
-        </div>
-    );
-}
-
-function PasswordField({
+export function PasswordField({
     autoComplete,
     error,
+    name = "password",
+    label = "Senha",
+    placeholder = "Digite sua senha",
 }: {
     autoComplete: "current-password" | "new-password";
     error?: string;
+    name?: string;
+    label?: string;
+    placeholder?: string;
 }) {
+    const fieldId = name;
+
     return (
         <Field>
-            <FieldLabel htmlFor="password">Senha</FieldLabel>
+            <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
             <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                    id="password"
-                    name="password"
+                    id={fieldId}
+                    name={name}
                     type="password"
                     required
                     autoComplete={autoComplete}
-                    placeholder="Digite sua senha"
+                    placeholder={placeholder}
                     className="h-11 pl-9"
                     aria-invalid={!!error}
                 />
@@ -187,30 +198,42 @@ function RememberMeField() {
                 value="true"
                 className="size-4 rounded border border-input accent-primary"
             />
-            <Label htmlFor="rememberMe" className="cursor-pointer text-sm font-normal">
+            <Label
+                htmlFor="rememberMe"
+                className="cursor-pointer text-sm font-normal"
+            >
                 Manter conectado
             </Label>
         </div>
     );
 }
 
-
 type AuthFormActionsProps = {
     submitLabel: string;
     loading: boolean;
-    error: string | null;
+    error?: string | null;
 };
 
-function AuthFormActions({ submitLabel, loading, error }: AuthFormActionsProps) {
+export function AuthFormActions({
+    submitLabel,
+    loading,
+    error = null,
+}: AuthFormActionsProps) {
     return (
         <div className="space-y-4">
             {error && (
-                <p className="text-center text-sm text-destructive" role="alert">
+                <p
+                    className="text-center text-sm text-destructive"
+                    role="alert"
+                >
                     {error}
                     {error.toLowerCase().includes("verif") && (
                         <>
                             {" "}
-                            <Link href="/verify-email" className="font-semibold underline">
+                            <Link
+                                href="/verify-email"
+                                className="font-semibold underline"
+                            >
                                 Verificar e-mail
                             </Link>
                         </>
@@ -236,36 +259,44 @@ function useAuthFormSubmit() {
 
     const wrapSubmit =
         (handler: (form: HTMLFormElement) => Promise<void>) =>
-            async (event: FormEvent<HTMLFormElement>) => {
-                event.preventDefault();
-                setError(null);
-                setFieldErrors({});
-                setLoading(true);
-                try {
-                    await handler(event.currentTarget);
-                } catch (err) {
-                    const message = getApiErrorMessage(err);
-                    const mapped = mapApiErrorToFieldErrors(err);
+        async (event: FormEvent<HTMLFormElement>) => {
+            event.preventDefault();
+            setError(null);
+            setFieldErrors({});
+            setLoading(true);
+            try {
+                await handler(event.currentTarget);
+            } catch (err) {
+                const message = getApiErrorMessage(err);
+                const mapped = mapApiErrorToFieldErrors(err);
 
-                    if (mapped) {
-                        setFieldErrors(mapped);
-                    } else {
-                        setError(message);
-                    }
-
-                    if (isEmailNotVerifiedError(err)) {
-                        toast.error("Verifique seu e-mail antes de entrar.", {
-                            description: "Acesse o link enviado ou a página de verificação.",
-                        });
-                    } else {
-                        toast.error(message);
-                    }
-                } finally {
-                    setLoading(false);
+                if (mapped) {
+                    setFieldErrors(mapped);
+                } else {
+                    setError(message);
                 }
-            };
 
-    return { loading, error, fieldErrors, wrapSubmit, setFieldErrors, setError };
+                if (isEmailNotVerifiedError(err)) {
+                    toast.error("Verifique seu e-mail antes de entrar.", {
+                        description:
+                            "Acesse o link enviado ou a página de verificação.",
+                    });
+                } else {
+                    toast.error(message);
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+    return {
+        loading,
+        error,
+        fieldErrors,
+        wrapSubmit,
+        setFieldErrors,
+        setError,
+    };
 }
 
 function useLoginHandler(authRole: AuthRole) {
@@ -278,12 +309,14 @@ function useLoginHandler(authRole: AuthRole) {
         const validation = validateLogin(payload);
 
         if (!validation.ok) {
-            throw Object.assign(new Error("validation"), { fieldErrors: validation.errors });
+            throw Object.assign(new Error("validation"), {
+                fieldErrors: validation.errors,
+            });
         }
 
         const data = await login(payload);
         assertLoginRole(data.user.role, expectedRole, role.label);
-        saveAuthSession(data);
+        await saveAuthSessionAction(data);
         toast.success(data.message);
         router.push(role.postLoginHref);
     };
@@ -298,7 +331,9 @@ function useRegisterHandler(authRole: AuthRole, publicRole: PublicRole) {
         const validation = validateRegister(payload);
 
         if (!validation.ok) {
-            throw Object.assign(new Error("validation"), { fieldErrors: validation.errors });
+            throw Object.assign(new Error("validation"), {
+                fieldErrors: validation.errors,
+            });
         }
 
         const data = await register(payload);
@@ -316,9 +351,12 @@ function handleValidationError(
         err instanceof Error &&
         err.message === "validation" &&
         "fieldErrors" in err &&
-        typeof (err as Error & { fieldErrors: Record<string, string> }).fieldErrors === "object"
+        typeof (err as Error & { fieldErrors: Record<string, string> })
+            .fieldErrors === "object"
     ) {
-        const { fieldErrors } = err as Error & { fieldErrors: Record<string, string> };
+        const { fieldErrors } = err as Error & {
+            fieldErrors: Record<string, string>;
+        };
         setFieldErrors(fieldErrors);
         const first = Object.values(fieldErrors)[0];
         if (first) toast.error(first);
@@ -329,14 +367,22 @@ function handleValidationError(
 
 export function ClientLoginForm() {
     const role = authRoleConfig.client;
-    const { loading, error, fieldErrors, wrapSubmit, setFieldErrors, setError } = useAuthFormSubmit();
+    const {
+        loading,
+        error,
+        fieldErrors,
+        wrapSubmit,
+        setFieldErrors,
+        setError,
+    } = useAuthFormSubmit();
     const loginHandler = useLoginHandler("client");
 
     const onSubmit = wrapSubmit(async (form) => {
         try {
             await loginHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError)) throw err;
+            if (!handleValidationError(err, setFieldErrors, setError))
+                throw err;
         }
     });
 
@@ -347,69 +393,110 @@ export function ClientLoginForm() {
             subtitle="Entre para acompanhar suas solicitações e conversas."
             alternateHref={role.registerHref}
             alternateText="Ainda não tem conta?"
-            alternateLabel={role.registerLabel}>
-
+            alternateLabel={role.registerLabel}
+        >
             <form className="space-y-6" onSubmit={onSubmit}>
                 <FieldGroup>
                     <EmailField error={fieldErrors.email} />
-                    <PasswordField autoComplete="current-password" error={fieldErrors.password} />
+                    <PasswordField
+                        autoComplete="current-password"
+                        error={fieldErrors.password}
+                    />
                     <RememberMeField />
                 </FieldGroup>
-                <AuthFormActions submitLabel="Entrar" loading={loading} error={error} />
-                <LinkForgotPasswordField />
+                <AuthFormActions
+                    submitLabel="Entrar"
+                    loading={loading}
+                    error={error}
+                />
             </form>
-            
+            <div className=" pt-6 text-center text-sm text-muted-foreground">
+                <Link
+                    href="/forgot-password"
+                    className="font-semibold text-primary hover:underline"
+                >
+                    Esqueceu sua senha?
+                </Link>
+            </div>
         </AuthFormShell>
     );
 }
 
 export function WorkerLoginForm() {
     const role = authRoleConfig.worker;
-    const { loading, error, fieldErrors, wrapSubmit, setFieldErrors, setError } = useAuthFormSubmit();
+    const {
+        loading,
+        error,
+        fieldErrors,
+        wrapSubmit,
+        setFieldErrors,
+        setError,
+    } = useAuthFormSubmit();
     const loginHandler = useLoginHandler("worker");
 
     const onSubmit = wrapSubmit(async (form) => {
         try {
             await loginHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError)) throw err;
+            if (!handleValidationError(err, setFieldErrors, setError))
+                throw err;
         }
     });
 
     return (
         <AuthFormShell
-
             role={role}
             title={role.loginLabel}
-            subtitle="Digite seu e-mail para receber um link de recuperação de senha."
+            subtitle="Entre para acompanhar suas solicitações e conversas."
             alternateHref={role.registerHref}
             alternateText="Ainda não tem conta?"
-            alternateLabel={role.registerLabel}>
-
+            alternateLabel={role.registerLabel}
+        >
             <form className="space-y-6" onSubmit={onSubmit}>
                 <FieldGroup>
                     <EmailField error={fieldErrors.email} />
-                    <PasswordField autoComplete="current-password" error={fieldErrors.password} />
+                    <PasswordField
+                        autoComplete="current-password"
+                        error={fieldErrors.password}
+                    />
                     <RememberMeField />
                 </FieldGroup>
-                <AuthFormActions submitLabel="Entrar" loading={loading} error={error} />
-                <LinkForgotPasswordField />
+                <AuthFormActions
+                    submitLabel="Entrar"
+                    loading={loading}
+                    error={error}
+                />
             </form>
-
+            <div className=" pt-6 text-center text-sm text-muted-foreground">
+                <Link
+                    href="/forgot-password"
+                    className="font-semibold text-primary hover:underline"
+                >
+                    Esqueceu sua senha?
+                </Link>
+            </div>
         </AuthFormShell>
     );
 }
 
 export function ClientRegisterForm() {
     const role = authRoleConfig.client;
-    const { loading, error, fieldErrors, wrapSubmit, setFieldErrors, setError } = useAuthFormSubmit();
+    const {
+        loading,
+        error,
+        fieldErrors,
+        wrapSubmit,
+        setFieldErrors,
+        setError,
+    } = useAuthFormSubmit();
     const registerHandler = useRegisterHandler("client", "CLIENT");
 
     const onSubmit = wrapSubmit(async (form) => {
         try {
             await registerHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError)) throw err;
+            if (!handleValidationError(err, setFieldErrors, setError))
+                throw err;
         }
     });
 
@@ -425,7 +512,9 @@ export function ClientRegisterForm() {
             <form className="space-y-6" onSubmit={onSubmit}>
                 <FieldGroup>
                     <Field>
-                        <FieldLabel htmlFor="complete_name">Nome completo</FieldLabel>
+                        <FieldLabel htmlFor="complete_name">
+                            Nome completo
+                        </FieldLabel>
                         <Input
                             id="complete_name"
                             name="complete_name"
@@ -455,9 +544,14 @@ export function ClientRegisterForm() {
                         <FieldError message={fieldErrors.phone} />
                     </Field>
                     <PostalCodeField error={fieldErrors.postal_code} />
-                    <PasswordField autoComplete="new-password" error={fieldErrors.password} />
+                    <PasswordField
+                        autoComplete="new-password"
+                        error={fieldErrors.password}
+                    />
                     <Field>
-                        <FieldLabel htmlFor="confirm-password">Confirmar senha</FieldLabel>
+                        <FieldLabel htmlFor="confirm-password">
+                            Confirmar senha
+                        </FieldLabel>
                         <Input
                             id="confirm-password"
                             name="confirm-password"
@@ -471,7 +565,11 @@ export function ClientRegisterForm() {
                         <FieldError message={fieldErrors["confirm-password"]} />
                     </Field>
                 </FieldGroup>
-                <AuthFormActions submitLabel="Criar conta" loading={loading} error={error} />
+                <AuthFormActions
+                    submitLabel="Criar conta"
+                    loading={loading}
+                    error={error}
+                />
             </form>
         </AuthFormShell>
     );
@@ -479,14 +577,22 @@ export function ClientRegisterForm() {
 
 export function WorkerRegisterForm() {
     const role = authRoleConfig.worker;
-    const { loading, error, fieldErrors, wrapSubmit, setFieldErrors, setError } = useAuthFormSubmit();
+    const {
+        loading,
+        error,
+        fieldErrors,
+        wrapSubmit,
+        setFieldErrors,
+        setError,
+    } = useAuthFormSubmit();
     const registerHandler = useRegisterHandler("worker", "PROVIDER");
 
     const onSubmit = wrapSubmit(async (form) => {
         try {
             await registerHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError)) throw err;
+            if (!handleValidationError(err, setFieldErrors, setError))
+                throw err;
         }
     });
 
@@ -502,7 +608,9 @@ export function WorkerRegisterForm() {
             <form className="space-y-6" onSubmit={onSubmit}>
                 <FieldGroup>
                     <Field>
-                        <FieldLabel htmlFor="complete_name">Nome completo</FieldLabel>
+                        <FieldLabel htmlFor="complete_name">
+                            Nome completo
+                        </FieldLabel>
                         <Input
                             id="complete_name"
                             name="complete_name"
@@ -532,9 +640,14 @@ export function WorkerRegisterForm() {
                         <FieldError message={fieldErrors.phone} />
                     </Field>
                     <PostalCodeField error={fieldErrors.postal_code} />
-                    <PasswordField autoComplete="new-password" error={fieldErrors.password} />
+                    <PasswordField
+                        autoComplete="new-password"
+                        error={fieldErrors.password}
+                    />
                     <Field>
-                        <FieldLabel htmlFor="confirm-password">Confirmar senha</FieldLabel>
+                        <FieldLabel htmlFor="confirm-password">
+                            Confirmar senha
+                        </FieldLabel>
                         <Input
                             id="confirm-password"
                             name="confirm-password"
@@ -548,7 +661,11 @@ export function WorkerRegisterForm() {
                         <FieldError message={fieldErrors["confirm-password"]} />
                     </Field>
                 </FieldGroup>
-                <AuthFormActions submitLabel="Criar conta" loading={loading} error={error} />
+                <AuthFormActions
+                    submitLabel="Criar conta"
+                    loading={loading}
+                    error={error}
+                />
             </form>
         </AuthFormShell>
     );

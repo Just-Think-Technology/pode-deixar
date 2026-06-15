@@ -9,7 +9,7 @@ type AuthBackgroundProps = {
 
 export default function AuthBackground({ children, className }: AuthBackgroundProps) {
     return (
-        <div className={cn("relative min-h-screen overflow-hidden bg-background font-poppins", className)}>
+        <div className={cn("relative min-h-screen overflow-hidden bg-background", className)}>
             <div className="pointer-events-none absolute -left-28 -top-28 size-[34rem] rounded-full bg-primary/18 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-32 -right-24 size-[30rem] rounded-full bg-secondary/16 blur-3xl" />
             <div className="pointer-events-none absolute left-1/2 top-1/3 size-[24rem] -translate-x-1/2 rounded-full bg-accent/14 blur-3xl" />

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { clearAuthSessionAction } from "@/lib/auth/actions";
 import { clientNavItems } from "@/lib/navigation";
-import { clearAuthSession } from "@/lib/auth/session";
+import type { AuthUser } from "@/lib/auth/types";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -22,12 +23,23 @@ import { cn } from "@/lib/utils";
 
 const PLACEHOLDER_ROUTES = ["/client/search", "/client/orders", "/client/quotes", "/client/chat", "/client/profile"];
 
-export default function ClientSidebar() {
+type ClientSidebarProps = {
+  user: AuthUser;
+};
+
+export default function ClientSidebar({ user }: ClientSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  function handleLogout() {
-    clearAuthSession();
+  const initials = user.complete_name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  async function handleLogout() {
+    await clearAuthSessionAction();
     router.push("/select-user");
   }
 
@@ -77,12 +89,13 @@ export default function ClientSidebar() {
         <div className="mb-3 flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
           <Avatar className="size-9 shrink-0">
             <AvatarFallback className="bg-muted text-sm font-medium text-muted-foreground">
-              C
+              {initials}
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm font-medium text-foreground group-data-[collapsible=icon]:hidden">
-            Cliente
-          </span>
+          <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <p className="truncate text-sm font-medium">{user.complete_name}</p>
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          </div>
         </div>
         <Button
           type="button"

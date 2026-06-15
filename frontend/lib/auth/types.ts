@@ -21,6 +21,19 @@ export type forgotPasswordResponse = {
   message: string;
 };
 
+export type ResetPasswordPayload = {
+  token: string;
+  newPassword: string;
+};
+
+export type ResetPasswordResponse = {
+  message: string;
+  user: {
+    email: string;
+    role: PublicRole;
+  };
+};
+
 export type LoginResponse = {
   message: string;
   access_token: string;
