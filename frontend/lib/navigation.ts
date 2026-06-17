@@ -22,7 +22,11 @@ export type NavItem = {
 export const clientNavItems: NavItem[] = [
   { title: "Início", href: "/client/home", icon: Home, enabled: true },
   { title: "Buscar", href: "/client/search", icon: Search, enabled: true },
+<<<<<<< HEAD
   { title: "Solicitações", href: "/client/orders", icon: ClipboardList, enabled: true },
+=======
+  { title: "Solicitações", href: "/client/orders", icon: ClipboardList, enabled: false, badge: "Em breve" },
+>>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
   { title: "Orçamentos", href: "/client/quotes", icon: FileText, enabled: false, badge: "Em breve" },
   { title: "Mensagens", href: "/client/chat", icon: MessageSquare, enabled: false, badge: "Em breve" },
   { title: "Perfil", href: "/client/profile", icon: User, enabled: false, badge: "Em breve" },

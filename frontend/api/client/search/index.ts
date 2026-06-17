@@ -1,13 +1,19 @@
+<<<<<<< HEAD
 import { apiFetchAuth, ApiError } from "@/api/client";
 import { mockSearchProfessionals } from "@/mock/client/search";
 import type {
   ProviderSearchResult,
+=======
+import { mockSearchProfessionals } from "@/mock/client/search";
+import type {
+>>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
   SearchProfessionalsPayload,
   SearchProfessionalsResponse,
 } from "@/lib/client/search/types";
 
 export type { SearchProfessionalsPayload, SearchProfessionalsResponse };
 
+<<<<<<< HEAD
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 type SearchProvidersApiResponse = {
@@ -70,3 +76,20 @@ export async function searchProfessionals(
 
   return normalizeSearchResponse(response);
 }
+=======
+/**
+ * POST /client/professionals/search
+ * Body: { query?: string; categoryId?: string }
+ */
+export async function searchProfessionals(
+  payload: SearchProfessionalsPayload,
+): Promise<SearchProfessionalsResponse> {
+  // TODO(backend): substituir mock quando POST /client/professionals/search estiver pronto
+  return mockSearchProfessionals(payload);
+
+  // return apiFetch<SearchProfessionalsResponse>("/client/professionals/search", {
+  //   method: "POST",
+  //   body: JSON.stringify(payload),
+  // });
+}
+>>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)

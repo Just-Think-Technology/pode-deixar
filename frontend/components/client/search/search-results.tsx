@@ -3,10 +3,17 @@
 import EmptyState from "@/components/shared/empty-state";
 import ProfessionalCard from "@/components/shared/professional-card";
 import { Skeleton } from "@/components/ui/skeleton";
+<<<<<<< HEAD
 import type { ProviderSearchResult } from "@/lib/client/search/types";
 
 type SearchResultsProps = {
   professionals: ProviderSearchResult[];
+=======
+import type { MockProfessional } from "@/mock/types";
+
+type SearchResultsProps = {
+  professionals: MockProfessional[];
+>>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
   total: number;
   isLoading: boolean;
   hasSearched: boolean;

@@ -1,6 +1,9 @@
 "use client";
 
+<<<<<<< HEAD
 import { CategoryIcon } from "@/lib/client/search/category-icons";
+=======
+>>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
 import type { PopularCategory } from "@/lib/client/search/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -16,6 +19,11 @@ export default function CategoryCard({
   isSelected = false,
   onSelect,
 }: CategoryCardProps) {
+<<<<<<< HEAD
+=======
+  const Icon = category.icon;
+
+>>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
   return (
     <button
       type="button"
@@ -35,10 +43,14 @@ export default function CategoryCard({
               category.iconBgClassName,
             )}
           >
+<<<<<<< HEAD
             <CategoryIcon
               iconKey={category.iconKey}
               className={cn("size-6", category.iconClassName)}
             />
+=======
+            <Icon className={cn("size-6", category.iconClassName)} />
+>>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
           </div>
           <span className="text-sm font-medium text-foreground">{category.label}</span>
         </CardContent>
