@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
-import 'dotenv/config';
 import createLogger from '@pode-deixar/logger';
 
 const logger = createLogger('auth-service');
