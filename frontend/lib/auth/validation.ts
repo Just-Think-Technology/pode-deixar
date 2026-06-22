@@ -1,4 +1,9 @@
-import type { LoginPayload, RegisterPayload, ValidationResult } from "@/lib/auth/types";
+import type {
+  LoginPayload,
+  RegisterPayload,
+  UpdateWorkerProfilePayload,
+  ValidationResult,
+} from "@/lib/auth/types";
 
 const NAME_REGEX = /^[\p{L}\s'-]+$/u;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
@@ -59,6 +64,35 @@ export function validateRegister(payload: RegisterPayload): ValidationResult {
     errors["confirm-password"] = "Confirmação de senha é obrigatória";
   } else if (payload.password !== payload.confirm_password) {
     errors["confirm-password"] = "As senhas não coincidem";
+  }
+
+  return Object.keys(errors).length > 0 ? fail(errors) : { ok: true };
+}
+
+export function validateWorkerProfileUpdate(
+  payload: UpdateWorkerProfilePayload,
+): ValidationResult {
+  const errors: Record<string, string> = {};
+
+  const name = payload.complete_name?.trim() ?? "";
+  if (name.length < 3 || name.length > 50) {
+    errors.complete_name = "Nome deve ter entre 3 e 50 caracteres";
+  } else if (!NAME_REGEX.test(name)) {
+    errors.complete_name = "Nome contém caracteres inválidos";
+  }
+
+  if (!payload.email?.trim()) {
+    errors.email = "E-mail é obrigatório";
+  } else if (!EMAIL_REGEX.test(payload.email)) {
+    errors.email = "E-mail inválido";
+  }
+
+  if (!payload.phone?.trim()) {
+    errors.phone = "Telefone é obrigatório";
+  }
+
+  if (!payload.postal_code?.trim()) {
+    errors.postal_code = "CEP é obrigatório";
   }
 
   return Object.keys(errors).length > 0 ? fail(errors) : { ok: true };

@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import type { AuthSession, LoginResponse } from "@/lib/auth/types";
+import type { AuthSession, AuthUser, LoginResponse } from "@/lib/auth/types";
 
 const AUTH_SESSION_COOKIE = "auth_session";
 
@@ -53,4 +53,23 @@ export async function getAccessToken(): Promise<string | null> {
 export async function clearAuthSession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(AUTH_SESSION_COOKIE);
+}
+
+export async function updateAuthSessionUser(
+  partial: Pick<AuthUser, "complete_name" | "email">,
+): Promise<void> {
+  const session = await getAuthSession();
+  if (!session) return;
+
+  const updated: AuthSession = {
+    ...session,
+    user: { ...session.user, ...partial },
+  };
+
+  const cookieStore = await cookies();
+  cookieStore.set(
+    AUTH_SESSION_COOKIE,
+    JSON.stringify(updated),
+    cookieOptions(session.expires_in),
+  );
 }
