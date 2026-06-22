@@ -14,7 +14,7 @@ import { ResponseLoggerInterceptor } from './shared/response-logger.interceptor'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'test' ? [] : ['.env'],
+      envFilePath: process.env.NODE_ENV === 'test' ? [] : ['.env.stg'],
     }),
     ThrottlerModule.forRoot([
       {

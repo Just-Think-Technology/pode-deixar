@@ -1,60 +1,111 @@
-# Pode-Deixar
-# Visão Geral
+# Pode Deixar
 
-O Pode-Deixar é uma plataforma distribuída de orquestração de serviços locais, projetada para gerenciar todo o ciclo de vida de operações entre demanda e execução. A solução centraliza a gestão de solicitações de serviço, agendamentos, fluxos operacionais e controle de prestadores em um ambiente único, escalável e orientado a domínio.
+> Plataforma digital para contratação de serviços que conecta clientes e prestadores em um ambiente seguro, transparente e organizado.
 
-A arquitetura do sistema é baseada em microserviços e segue princípios de Domain-Driven Design, com separação clara de responsabilidades entre os componentes. O objetivo da plataforma é atuar como uma camada de orquestração entre usuários, prestadores e processos operacionais, garantindo consistência, rastreabilidade e eficiência na execução de serviços.
+## Sobre o Projeto
 
-# Arquitetura
+O Pode Deixar é uma plataforma desenvolvida para modernizar a forma como serviços são contratados e gerenciados. A solução conecta clientes que precisam realizar tarefas com profissionais qualificados, centralizando todo o processo em um único ambiente digital.
 
-A arquitetura do Pode-Deixar é estruturada com base em um modelo distribuído, utilizando microserviços independentes que se comunicam via APIs REST e, quando necessário, por meio de eventos assíncronos. O sistema segue uma abordagem API-first, permitindo desacoplamento entre frontend e backend, além de facilitar escalabilidade horizontal.
+A plataforma foi criada para oferecer mais praticidade, segurança e transparência durante a contratação de serviços, permitindo que clientes encontrem prestadores, solicitem orçamentos, acompanhem negociações, realizem pagamentos e avaliem os serviços prestados.
 
-Cada serviço possui sua própria responsabilidade de domínio e persistência isolada, seguindo o padrão Database per Service. A comunicação entre serviços pode ocorrer de forma síncrona via HTTP ou de forma assíncrona através de mensageria, garantindo flexibilidade e resiliência operacional.
+Seu objetivo é facilitar a conexão entre quem precisa de um serviço e quem possui as habilidades para executá-lo, tornando essa relação mais prática, eficiente e confiável.
 
-# Identity & Access Management (IAM)
+---
 
-O serviço de autenticação do Pode-Deixar é responsável pela gestão centralizada de identidade e controle de acesso em toda a plataforma. Ele gerencia o ciclo de vida de autenticação dos usuários, incluindo login, emissão de tokens, validação de sessões e autorização de requisições.
+## Objetivos
 
-O modelo de segurança é baseado em JWT e controle de acesso baseado em papéis (RBAC), garantindo segregação de permissões entre diferentes tipos de usuários, como clientes, prestadores e administradores. Este serviço atua como componente crítico de segurança dentro da arquitetura distribuída.
+- Facilitar a contratação de serviços por meio de uma experiência digital centralizada.
+- Conectar clientes e prestadores em um ambiente confiável.
+- Garantir mais segurança e transparência durante todo o processo de negociação.
+- Promover uma experiência intuitiva para todos os usuários.
+- Construir um sistema baseado em reputação e confiança.
+- Possibilitar a evolução contínua da plataforma através de uma arquitetura escalável.
 
-# Service Scheduling
+---
 
-O serviço de agendamento é responsável pela gestão de horários e alocação de prestadores dentro da plataforma. Ele controla a criação, atualização e cancelamento de agendamentos, além de validar disponibilidade e evitar conflitos de agenda.
+## Funcionalidades
 
-Este módulo também se integra com regras de negócio do domínio, garantindo consistência na distribuição de serviços e otimização da utilização dos prestadores.
+### Gestão de Usuários
 
-# Service Request
+- Cadastro e autenticação de usuários.
+- Perfis distintos para clientes e prestadores.
+- Gerenciamento de informações pessoais e profissionais.
 
-O serviço de solicitações gerencia o ciclo de vida completo das demandas criadas dentro da plataforma. Ele é responsável por registrar novas solicitações, classificar o tipo de serviço, atribuir prestadores e acompanhar o status de execução.
+### Busca de Prestadores
 
-Esse componente funciona como o núcleo operacional da plataforma, conectando a entrada de demanda com a execução do serviço.
+- Pesquisa de profissionais por categoria de serviço.
+- Visualização de perfis profissionais.
+- Consulta de avaliações e histórico de reputação.
 
-# Workflow Engine
+### Solicitação de Orçamentos
 
-O motor de workflows é responsável pela orquestração dos processos internos da plataforma. Ele define e executa fluxos de trabalho baseados em regras de negócio, controlando estados, transições e automações entre serviços.
+- Criação de solicitações personalizadas.
+- Envio e recebimento de propostas.
+- Processo de negociação entre cliente e prestador.
 
-Esse componente permite a criação de processos dinâmicos e escaláveis, garantindo que operações complexas possam ser executadas de forma estruturada e rastreável.
+### Contratação de Serviços
 
-# Operations Management
+- Contratação de serviços com preço fixo.
+- Contratação baseada em propostas personalizadas.
+- Acompanhamento do status dos serviços.
 
-O módulo de gestão operacional é responsável pelo monitoramento e controle das atividades em execução dentro da plataforma. Ele fornece visibilidade sobre serviços ativos, desempenho de prestadores e indicadores operacionais.
+### Pagamentos
 
-Além disso, esse componente também realiza auditoria de eventos e suporta análise de métricas para tomada de decisão operacional.
+- Intermediação financeira realizada pela plataforma.
+- Registro e rastreabilidade das transações.
+- Maior segurança para clientes e prestadores.
 
-# Frontend
+### Avaliações e Reputação
 
-O frontend do Pode-Deixar é uma aplicação cliente responsável pela camada de apresentação da plataforma. Ele consome APIs dos microserviços e fornece uma interface unificada para gestão de agendamentos, solicitações, workflows e operações.
+- Sistema de avaliações após a conclusão dos serviços.
+- Construção da reputação profissional dos prestadores.
+- Auxílio na tomada de decisão para futuras contratações.
 
-A aplicação é desacoplada do backend e segue uma arquitetura baseada em API-first, garantindo flexibilidade, escalabilidade e facilidade de manutenção. O foco principal da interface é oferecer uma experiência operacional eficiente, com suporte a fluxos em tempo real e alta responsividade.
+---
 
-# Comunicação entre Serviços
+## Arquitetura da Solução
 
-A comunicação entre os serviços do Pode-Deixar ocorre por meio de APIs REST para operações síncronas e por eventos para processos assíncronos. Essa abordagem híbrida permite desacoplamento entre domínios, maior escalabilidade e melhor resiliência em cenários de carga elevada ou falhas parciais.
+O projeto foi concebido utilizando uma arquitetura baseada em microsserviços, permitindo maior escalabilidade, flexibilidade e facilidade de manutenção.
 
-# Segurança
+### Microsserviços previstos
 
-A segurança da plataforma é baseada em autenticação via JWT, controle de acesso baseado em papéis e comunicação segura entre serviços via HTTPS. O serviço de IAM atua como ponto central de validação de identidade e autorização, garantindo que todas as requisições sejam devidamente autenticadas e autorizadas antes de acessar recursos protegidos.
+- Autenticação e gerenciamento de usuários
+- Gestão de prestadores e perfis profissionais
+- Gestão de serviços e propostas
+- Contratações e acompanhamento de tarefas
+- Pagamentos e transações financeiras
+- Avaliações e reputação
 
-# Objetivo
+---
 
-O objetivo do Pode-Deixar é fornecer uma infraestrutura robusta para orquestração de serviços locais, reduzindo a complexidade operacional, automatizando fluxos de trabalho e centralizando a gestão de prestadores e demandas em um sistema escalável e observável.
+## Tecnologias Utilizadas
+
+### Backend
+
+- NestJS
+- APIs REST
+- JWT
+
+### Frontend
+
+- Next.js
+- React
+
+### Banco de Dados
+
+- PostgreSQL
+
+### Infraestrutura
+
+- Railway
+
+---
+
+## Roadmap
+
+- Planos de destaque para prestadores
+- Sistema avançado de recomendações
+- Aplicativo mobile
+- Integrações com gateways de pagamento
+- Dashboards e métricas para profissionais
+- Recursos de comunicação em tempo real

@@ -5,12 +5,13 @@
   "main": "index.js",
   "scripts": {
     "dev": "npm run start:dev -w @pode-deixar/auth",
-    "build": "npm run build -w @pode-deixar/auth",
+    "build": "npm run prisma:generate && npm run build -w @pode-deixar/auth",
     "start": "npm run start -w @pode-deixar/auth",
     "start:prod": "npm run start:prod -w @pode-deixar/auth",
     "test": "npm run test -w @pode-deixar/auth",
     "prisma:generate": "npm run prisma:generate -w @pode-deixar/auth",
-    "prisma:migrate": "npm run prisma:migrate -w @pode-deixar/auth"
+    "prisma:migrate": "npm run prisma:migrate -w @pode-deixar/auth",
+    "postinstall": "npm run prisma:generate"
   },
   "keywords": [],
   "author": "",
