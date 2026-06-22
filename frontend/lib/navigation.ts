@@ -33,5 +33,5 @@ export const workerNavItems: NavItem[] = [
   { title: "Serviços", href: "/worker/services", icon: Briefcase, enabled: false, badge: "Em breve" },
   { title: "Solicitações", href: "/worker/requests", icon: Inbox, enabled: false, badge: "Em breve" },
   { title: "Chat", href: "/worker/chat", icon: MessageSquare, enabled: false, badge: "Em breve" },
-  { title: "Perfil", href: "/worker/profile", icon: User, enabled: false, badge: "Em breve" },
+  { title: "Perfil", href: "/worker/profile", icon: User, enabled: true },
 ];

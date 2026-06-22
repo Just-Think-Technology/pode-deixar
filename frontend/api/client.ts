@@ -46,3 +46,17 @@ export async function apiFetch<T>(
 
   return data as T;
 }
+
+export async function apiFetchAuth<T>(
+  path: string,
+  accessToken: string,
+  options?: RequestInit,
+): Promise<T> {
+  return apiFetch<T>(path, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...options?.headers,
+    },
+  });
+}
