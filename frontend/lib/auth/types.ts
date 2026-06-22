@@ -96,3 +96,40 @@ export type ResendVerificationResponse = {
 export type ValidationResult =
   | { ok: true }
   | { ok: false; errors: Record<string, string> };
+
+export type UserProfile = AuthUser & {
+  phone: string;
+  postal_code: string;
+  email_verified: boolean;
+  created_at: string;
+  last_login_at: string | null;
+};
+
+export type ProfileResponse = { user: UserProfile };
+
+export type UpdateWorkerProfilePayload = {
+  complete_name: string;
+  email: string;
+  phone: string;
+  postal_code: string;
+  biography?: string;
+};
+
+export type UpdateProfileResponse = {
+  message: string;
+  user?: UserProfile;
+};
+
+export type RequestEmailChangePayload = {
+  email: string;
+};
+
+export type RequestEmailChangeResponse = {
+  message: string;
+};
+
+export type UpdateWorkerProfileResult = {
+  message: string;
+  emailChanged: boolean;
+  user: UserProfile;
+};
