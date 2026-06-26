@@ -60,4 +60,40 @@ export class UsersLoggerService {
   logSecurityEvent(event: string, meta: Record<string, unknown>) {
     this.logger.warn(event, `Security event: ${event}`, meta);
   }
+
+  logServiceCreated(providerProfileId: string, serviceId: string, ip?: string) {
+    this.logger.info(
+      "service_created",
+      `Service created for provider ${providerProfileId}`,
+      {
+        providerProfileId,
+        serviceId,
+        ip,
+      },
+    );
+  }
+
+  logServiceUpdated(providerProfileId: string, serviceId: string, ip?: string) {
+    this.logger.info(
+      "service_updated",
+      `Service updated for provider ${providerProfileId}`,
+      {
+        providerProfileId,
+        serviceId,
+        ip,
+      },
+    );
+  }
+
+  logServiceDeleted(providerProfileId: string, serviceId: string, ip?: string) {
+    this.logger.info(
+      "service_deleted",
+      `Service deactivated for provider ${providerProfileId}`,
+      {
+        providerProfileId,
+        serviceId,
+        ip,
+      },
+    );
+  }
 }
