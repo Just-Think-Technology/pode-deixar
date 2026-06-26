@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+  PROVIDER
+}
+
+model User {
+  id              String           @id @default(uuid()) @map("id")
+  completeName    String           @map("complete_name")
+  email           String           @unique
+  role            Role             @default(CLIENT)
+  phone           String
+  postalCode      String           @map("postal_code")
+  clientProfile   ClientProfile?
+  providerProfile ProviderProfile?
+
+  @@map("users")
+}
+
+model ClientProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  avatarUrl   String?  @map("avatar_url")
+  preferences Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("client_profiles")
+}
+
+model ProviderProfile {
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  avatarUrl    String?  @map("avatar_url")
+  bio          String?
+  hourlyRate   Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  skills       String[] @default([])
+  portfolio    Json?    @default("[]")
+  rating       Float    @default(0)
+  totalReviews Int      @default(0) @map("total_reviews")
+  isAvailable  Boolean  @default(true) @map("is_available")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@map("provider_profiles")
+}
