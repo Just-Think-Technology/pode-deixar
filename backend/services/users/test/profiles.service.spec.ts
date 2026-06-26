@@ -82,7 +82,7 @@ describe("ProfilesService", () => {
 
       expect(result).toBeDefined();
       expect(result.id).toBe("client-1");
-      expect(result.user.completeName).toBe("Test User");
+      expect(result.user.complete_name).toBe("Test User");
       expect(mockLogger.logProfileFetched).toHaveBeenCalledWith(
         "user-1",
         "CLIENT",
@@ -223,7 +223,9 @@ describe("ProfilesService", () => {
     });
 
     it("should throw ConflictException if profile already exists", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue({ id: "existing" });
+      mockPrisma.providerProfile.findUnique.mockResolvedValue({
+        id: "existing",
+      });
 
       await expect(
         service.createProviderProfile("user-1", {}, "127.0.0.1"),
@@ -374,7 +376,12 @@ describe("ProfilesService", () => {
       mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.uploadAvatar("user-1", "CLIENT", "http://new.com/avatar.png", "127.0.0.1"),
+        service.uploadAvatar(
+          "user-1",
+          "CLIENT",
+          "http://new.com/avatar.png",
+          "127.0.0.1",
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });
