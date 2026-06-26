@@ -39,10 +39,10 @@ export class ProfilesService {
       id: profile.id,
       user: {
         id: user.id,
-        completeName: user.completeName,
+        complete_name: user.completeName,
         email: user.email,
         phone: user.phone,
-        postalCode: user.postalCode,
+        postal_code: user.postalCode,
         role: user.role,
       },
       avatar_url: profile.avatarUrl,
@@ -57,10 +57,10 @@ export class ProfilesService {
       id: profile.id,
       user: {
         id: user.id,
-        completeName: user.completeName,
+        complete_name: user.completeName,
         email: user.email,
         phone: user.phone,
-        postalCode: user.postalCode,
+        postal_code: user.postalCode,
         role: user.role,
       },
       avatar_url: profile.avatarUrl,
@@ -93,14 +93,18 @@ export class ProfilesService {
       return this.formatProviderProfile(profile, user);
     }
 
-    const profile = await this.prisma.clientProfile.findUnique({
-      where: { userId },
-    });
-    if (!profile) {
-      throw new NotFoundException("Client profile not found");
+    if (role === "CLIENT") {
+      const profile = await this.prisma.clientProfile.findUnique({
+        where: { userId },
+      });
+      if (!profile) {
+        throw new NotFoundException("Client profile not found");
+      }
+      this.usersLogger.logProfileFetched(userId, role);
+      return this.formatClientProfile(profile, user);
     }
-    this.usersLogger.logProfileFetched(userId, role);
-    return this.formatClientProfile(profile, user);
+
+    throw new BadRequestException("Invalid role");
   }
 
   async createClientProfile(
@@ -253,6 +257,13 @@ export class ProfilesService {
     }
 
     if (role === "PROVIDER") {
+      const existingProfile = await this.prisma.providerProfile.findUnique({
+        where: { userId },
+      });
+      if (!existingProfile) {
+        throw new NotFoundException("Provider profile not found");
+      }
+
       const profile = await this.prisma.providerProfile.update({
         where: { userId },
         data: { avatarUrl },
@@ -261,11 +272,22 @@ export class ProfilesService {
       return this.formatProviderProfile(profile, user);
     }
 
-    const profile = await this.prisma.clientProfile.update({
-      where: { userId },
-      data: { avatarUrl },
-    });
-    this.usersLogger.logAvatarUploaded(userId, role, ip);
-    return this.formatClientProfile(profile, user);
+    if (role === "CLIENT") {
+      const existingProfile = await this.prisma.clientProfile.findUnique({
+        where: { userId },
+      });
+      if (!existingProfile) {
+        throw new NotFoundException("Client profile not found");
+      }
+
+      const profile = await this.prisma.clientProfile.update({
+        where: { userId },
+        data: { avatarUrl },
+      });
+      this.usersLogger.logAvatarUploaded(userId, role, ip);
+      return this.formatClientProfile(profile, user);
+    }
+
+    throw new BadRequestException("Invalid role");
   }
 }

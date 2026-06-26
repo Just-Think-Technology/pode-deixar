@@ -9,7 +9,7 @@ import { RolesGuard } from "../auth/roles.guard";
 @Global()
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       useFactory: (config: ConfigService) => ({

@@ -122,58 +122,68 @@ describe("ProfilesService", () => {
       expect(result.id).toBe("provider-1");
       expect(result.user.role).toBe("PROVIDER");
     });
+
+    it("should throw BadRequestException when role is invalid", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+
+      await expect(service.getProfile("user-1", "ADMIN")).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it("should throw NotFoundException when user not found", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.getProfile("user-1", "CLIENT")).rejects.toThrow(
+        NotFoundException,
+      );
+    });
   });
 
-  describe("createClientProfile", () => {
-    it("should create client profile", async () => {
-      const mockProfile = {
+  describe("updateClientProfile", () => {
+    it("should update client profile", async () => {
+      const existing = {
         id: "client-1",
         userId: "user-1",
-        avatarUrl: "http://avatar.com/img.png",
-        preferences: { theme: "dark" },
+        avatarUrl: "http://old.com/avatar.png",
+        preferences: { theme: "light" },
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.clientProfile.create.mockResolvedValue(mockProfile);
+      const updated = {
+        ...existing,
+        avatarUrl: "http://new.com/avatar.png",
+        preferences: { theme: "dark" },
+      };
 
-      const result = await service.createClientProfile(
+      mockPrisma.clientProfile.findUnique.mockResolvedValue(existing);
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.clientProfile.update.mockResolvedValue(updated);
+
+      const result = await service.updateClientProfile(
         "user-1",
         {
-          avatarUrl: "http://avatar.com/img.png",
+          avatarUrl: "http://new.com/avatar.png",
           preferences: { theme: "dark" },
         },
         "127.0.0.1",
       );
 
-      expect(result).toBeDefined();
-      expect(result.avatar_url).toBe("http://avatar.com/img.png");
-      expect(mockLogger.logProfileCreated).toHaveBeenCalledWith(
+      expect(result.avatar_url).toBe("http://new.com/avatar.png");
+      expect(result.preferences).toEqual({ theme: "dark" });
+      expect(mockLogger.logProfileUpdated).toHaveBeenCalledWith(
         "user-1",
         "CLIENT",
         "127.0.0.1",
       );
     });
 
-    it("should throw ConflictException if profile already exists", async () => {
-      mockPrisma.clientProfile.findUnique.mockResolvedValue({ id: "existing" });
-
-      await expect(
-        service.createClientProfile("user-1", {}, "127.0.0.1"),
-      ).rejects.toThrow(ConflictException);
-    });
-
-    it("should throw BadRequestException if user is not a client", async () => {
+    it("should throw NotFoundException when client profile not found", async () => {
       mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue({
-        id: "user-1",
-        role: "PROVIDER",
-      });
 
       await expect(
-        service.createClientProfile("user-1", {}, "127.0.0.1"),
-      ).rejects.toThrow(BadRequestException);
+        service.updateClientProfile("user-1", {}, "127.0.0.1"),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -210,6 +220,162 @@ describe("ProfilesService", () => {
         "PROVIDER",
         "127.0.0.1",
       );
+    });
+
+    it("should throw ConflictException if profile already exists", async () => {
+      mockPrisma.providerProfile.findUnique.mockResolvedValue({ id: "existing" });
+
+      await expect(
+        service.createProviderProfile("user-1", {}, "127.0.0.1"),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("should throw BadRequestException if user is not a provider", async () => {
+      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+
+      await expect(
+        service.createProviderProfile("user-1", {}, "127.0.0.1"),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("updateProviderProfile", () => {
+    it("should update provider profile", async () => {
+      const existing = {
+        id: "provider-1",
+        userId: "user-1",
+        avatarUrl: "http://old.com/avatar.png",
+        bio: "Old bio",
+        hourlyRate: 40,
+        skills: ["skill1"],
+        portfolio: [],
+        isAvailable: true,
+        rating: 0,
+        totalReviews: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const updated = {
+        ...existing,
+        bio: "New bio",
+        hourlyRate: 60,
+        skills: ["skill1", "skill2"],
+      };
+
+      mockPrisma.providerProfile.findUnique.mockResolvedValue(existing);
+      mockPrisma.user.findUnique.mockResolvedValue(mockProviderUser);
+      mockPrisma.providerProfile.update.mockResolvedValue(updated);
+
+      const result = await service.updateProviderProfile(
+        "user-1",
+        {
+          bio: "New bio",
+          hourlyRate: 60,
+          skills: ["skill1", "skill2"],
+        },
+        "127.0.0.1",
+      );
+
+      expect(result.bio).toBe("New bio");
+      expect(result.hourly_rate).toBe(60);
+      expect(result.skills).toEqual(["skill1", "skill2"]);
+      expect(mockLogger.logProfileUpdated).toHaveBeenCalledWith(
+        "user-1",
+        "PROVIDER",
+        "127.0.0.1",
+      );
+    });
+
+    it("should throw NotFoundException when provider profile not found", async () => {
+      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateProviderProfile("user-1", {}, "127.0.0.1"),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("uploadAvatar", () => {
+    it("should upload client avatar", async () => {
+      const existing = {
+        id: "client-1",
+        userId: "user-1",
+        avatarUrl: "http://old.com/avatar.png",
+        preferences: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const updated = {
+        ...existing,
+        avatarUrl: "http://new.com/avatar.png",
+      };
+
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.clientProfile.findUnique.mockResolvedValue(existing);
+      mockPrisma.clientProfile.update.mockResolvedValue(updated);
+
+      const result = await service.uploadAvatar(
+        "user-1",
+        "CLIENT",
+        "http://new.com/avatar.png",
+        "127.0.0.1",
+      );
+
+      expect(result.avatar_url).toBe("http://new.com/avatar.png");
+      expect(mockLogger.logAvatarUploaded).toHaveBeenCalledWith(
+        "user-1",
+        "CLIENT",
+        "127.0.0.1",
+      );
+    });
+
+    it("should upload provider avatar", async () => {
+      const existing = {
+        id: "provider-1",
+        userId: "user-1",
+        avatarUrl: "http://old.com/avatar.png",
+        bio: "Provider bio",
+        hourlyRate: 45,
+        skills: ["skill1"],
+        portfolio: [],
+        rating: 0,
+        totalReviews: 0,
+        isAvailable: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const updated = {
+        ...existing,
+        avatarUrl: "http://new.com/avatar.png",
+      };
+
+      mockPrisma.user.findUnique.mockResolvedValue(mockProviderUser);
+      mockPrisma.providerProfile.findUnique.mockResolvedValue(existing);
+      mockPrisma.providerProfile.update.mockResolvedValue(updated);
+
+      const result = await service.uploadAvatar(
+        "user-1",
+        "PROVIDER",
+        "http://new.com/avatar.png",
+        "127.0.0.1",
+      );
+
+      expect(result.avatar_url).toBe("http://new.com/avatar.png");
+      expect(mockLogger.logAvatarUploaded).toHaveBeenCalledWith(
+        "user-1",
+        "PROVIDER",
+        "127.0.0.1",
+      );
+    });
+
+    it("should throw NotFoundException when profile does not exist for uploadAvatar", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.uploadAvatar("user-1", "CLIENT", "http://new.com/avatar.png", "127.0.0.1"),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

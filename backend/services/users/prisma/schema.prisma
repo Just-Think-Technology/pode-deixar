@@ -15,12 +15,14 @@ enum Role {
 }
 
 model User {
-  id            String   @id @default(uuid()) @map("id")
-  completeName  String   @map("complete_name")
-  email         String   @unique
-  role          Role     @default(CLIENT)
-  phone         String
-  postalCode    String   @map("postal_code")
+  id              String           @id @default(uuid()) @map("id")
+  completeName    String           @map("complete_name")
+  email           String           @unique
+  role            Role             @default(CLIENT)
+  phone           String
+  postalCode      String           @map("postal_code")
+  clientProfile   ClientProfile?
+  providerProfile ProviderProfile?
 
   @@map("users")
 }
@@ -32,6 +34,7 @@ model ClientProfile {
   preferences Json?    @default("{}")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id])
 
   @@map("client_profiles")
 }
@@ -49,6 +52,7 @@ model ProviderProfile {
   isAvailable  Boolean  @default(true) @map("is_available")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id])
 
   @@map("provider_profiles")
 }
