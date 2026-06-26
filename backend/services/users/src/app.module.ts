@@ -14,7 +14,7 @@ import { UsersLoggerService } from "./shared/users-logger.service";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === "test" ? [] : [".env.stg"],
+      envFilePath: process.env.NODE_ENV === "test" ? [] : [".env.staging"],
     }),
     ThrottlerModule.forRoot({
       ttl: 60,
