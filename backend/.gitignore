@@ -3,3 +3,7 @@ dist/
 node_modules/
 build/
 logs/
+AGENTS.md
+
+# docs internas (não versionar)
+AGENTS.md
