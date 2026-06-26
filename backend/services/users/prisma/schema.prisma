@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+  PROVIDER
+}
+
+model User {
+  id                      String    @id @default(uuid())
+  completeName            String    @map("complete_name")
+  email                   String    @unique
+  password                String
+  role                    Role      @default(CLIENT)
+  phone                   String
+  postalCode              String    @map("postal_code")
+  emailVerified           Boolean   @default(false) @map("email_verified")
+  emailVerificationToken  String?   @map("email_verification_token")
+  emailVerificationExpires DateTime? @map("email_verification_expires")
+  passwordResetToken      String?   @map("password_reset_token")
+  passwordResetExpires    DateTime? @map("password_reset_expires")
+  refreshToken            String?   @map("refresh_token")
+  refreshTokenFamily      String?   @map("refresh_token_family")
+  failedLoginAttempts     Int       @default(0) @map("failed_login_attempts")
+  lockoutUntil            DateTime? @map("lockout_until")
+  lastLoginAt             DateTime? @map("last_login_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  clientProfile   ClientProfile?  @relation("UserClientProfile")
+  providerProfile ProviderProfile? @relation("UserProviderProfile")
+
+  @@map("users")
+}
+
+model ClientProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation("UserClientProfile", fields: [userId], references: [id], onDelete: Cascade)
+  avatarUrl       String?  @map("avatar_url")
+  preferences     Json?    @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("client_profiles")
+}
+
+model ProviderProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation("UserProviderProfile", fields: [userId], references: [id], onDelete: Cascade)
+  avatarUrl       String?  @map("avatar_url")
+  bio             String?
+  hourlyRate      Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  skills          String[] @default([])
+  portfolio       Json?    @default("[]")
+  rating          Float    @default(0)
+  totalReviews    Int      @default(0) @map("total_reviews")
+  isAvailable     Boolean  @default(true) @map("is_available")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("provider_profiles")
+}
