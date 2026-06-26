@@ -19,50 +19,88 @@ export class ProfilesService {
     private usersLogger: UsersLoggerService,
   ) {}
 
+  private async getUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        completeName: true,
+        email: true,
+        phone: true,
+        postalCode: true,
+        role: true,
+      },
+    });
+    return user;
+  }
+
+  private formatClientProfile(profile: any, user: any) {
+    return {
+      id: profile.id,
+      user: {
+        id: user.id,
+        completeName: user.completeName,
+        email: user.email,
+        phone: user.phone,
+        postalCode: user.postalCode,
+        role: user.role,
+      },
+      avatar_url: profile.avatarUrl,
+      preferences: profile.preferences,
+      created_at: profile.createdAt,
+      updated_at: profile.updatedAt,
+    };
+  }
+
+  private formatProviderProfile(profile: any, user: any) {
+    return {
+      id: profile.id,
+      user: {
+        id: user.id,
+        completeName: user.completeName,
+        email: user.email,
+        phone: user.phone,
+        postalCode: user.postalCode,
+        role: user.role,
+      },
+      avatar_url: profile.avatarUrl,
+      bio: profile.bio,
+      hourly_rate: profile.hourlyRate,
+      skills: profile.skills,
+      portfolio: profile.portfolio,
+      rating: profile.rating,
+      total_reviews: profile.totalReviews,
+      is_available: profile.isAvailable,
+      created_at: profile.createdAt,
+      updated_at: profile.updatedAt,
+    };
+  }
+
   async getProfile(userId: string, role: string) {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
     if (role === "PROVIDER") {
       const profile = await this.prisma.providerProfile.findUnique({
         where: { userId },
-        include: {
-          user: {
-            select: {
-              id: true,
-              completeName: true,
-              email: true,
-              phone: true,
-              postalCode: true,
-              role: true,
-            },
-          },
-        },
       });
       if (!profile) {
         throw new NotFoundException("Provider profile not found");
       }
       this.usersLogger.logProfileFetched(userId, role);
-      return this.formatProviderProfile(profile);
+      return this.formatProviderProfile(profile, user);
     }
 
     const profile = await this.prisma.clientProfile.findUnique({
       where: { userId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            completeName: true,
-            email: true,
-            phone: true,
-            postalCode: true,
-            role: true,
-          },
-        },
-      },
     });
     if (!profile) {
       throw new NotFoundException("Client profile not found");
     }
     this.usersLogger.logProfileFetched(userId, role);
-    return this.formatClientProfile(profile);
+    return this.formatClientProfile(profile, user);
   }
 
   async createClientProfile(
@@ -77,7 +115,7 @@ export class ProfilesService {
       throw new ConflictException("Client profile already exists");
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.getUser(userId);
     if (!user || user.role !== "CLIENT") {
       throw new BadRequestException(
         "User must be a client to create client profile",
@@ -90,22 +128,10 @@ export class ProfilesService {
         avatarUrl: dto.avatarUrl,
         preferences: dto.preferences || {},
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            completeName: true,
-            email: true,
-            phone: true,
-            postalCode: true,
-            role: true,
-          },
-        },
-      },
     });
 
     this.usersLogger.logProfileCreated(userId, "CLIENT", ip);
-    return this.formatClientProfile(profile);
+    return this.formatClientProfile(profile, user);
   }
 
   async updateClientProfile(
@@ -120,6 +146,11 @@ export class ProfilesService {
       throw new NotFoundException("Client profile not found");
     }
 
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
     const profile = await this.prisma.clientProfile.update({
       where: { userId },
       data: {
@@ -131,22 +162,10 @@ export class ProfilesService {
               ? Prisma.JsonNull
               : existing.preferences,
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            completeName: true,
-            email: true,
-            phone: true,
-            postalCode: true,
-            role: true,
-          },
-        },
-      },
     });
 
     this.usersLogger.logProfileUpdated(userId, "CLIENT", ip);
-    return this.formatClientProfile(profile);
+    return this.formatClientProfile(profile, user);
   }
 
   async createProviderProfile(
@@ -161,7 +180,7 @@ export class ProfilesService {
       throw new ConflictException("Provider profile already exists");
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.getUser(userId);
     if (!user || user.role !== "PROVIDER") {
       throw new BadRequestException(
         "User must be a provider to create provider profile",
@@ -178,22 +197,10 @@ export class ProfilesService {
         portfolio: dto.portfolio || [],
         isAvailable: dto.isAvailable ?? true,
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            completeName: true,
-            email: true,
-            phone: true,
-            postalCode: true,
-            role: true,
-          },
-        },
-      },
     });
 
     this.usersLogger.logProfileCreated(userId, "PROVIDER", ip);
-    return this.formatProviderProfile(profile);
+    return this.formatProviderProfile(profile, user);
   }
 
   async updateProviderProfile(
@@ -206,6 +213,11 @@ export class ProfilesService {
     });
     if (!existing) {
       throw new NotFoundException("Provider profile not found");
+    }
+
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new NotFoundException("User not found");
     }
 
     const profile = await this.prisma.providerProfile.update({
@@ -223,22 +235,10 @@ export class ProfilesService {
               : existing.portfolio,
         isAvailable: dto.isAvailable ?? existing.isAvailable,
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            completeName: true,
-            email: true,
-            phone: true,
-            postalCode: true,
-            role: true,
-          },
-        },
-      },
     });
 
     this.usersLogger.logProfileUpdated(userId, "PROVIDER", ip);
-    return this.formatProviderProfile(profile);
+    return this.formatProviderProfile(profile, user);
   }
 
   async uploadAvatar(
@@ -247,72 +247,25 @@ export class ProfilesService {
     avatarUrl: string,
     ip?: string,
   ) {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
     if (role === "PROVIDER") {
       const profile = await this.prisma.providerProfile.update({
         where: { userId },
         data: { avatarUrl },
-        include: {
-          user: {
-            select: {
-              id: true,
-              completeName: true,
-              email: true,
-              phone: true,
-              postalCode: true,
-              role: true,
-            },
-          },
-        },
       });
       this.usersLogger.logAvatarUploaded(userId, role, ip);
-      return this.formatProviderProfile(profile);
+      return this.formatProviderProfile(profile, user);
     }
 
     const profile = await this.prisma.clientProfile.update({
       where: { userId },
       data: { avatarUrl },
-      include: {
-        user: {
-          select: {
-            id: true,
-            completeName: true,
-            email: true,
-            phone: true,
-            postalCode: true,
-            role: true,
-          },
-        },
-      },
     });
     this.usersLogger.logAvatarUploaded(userId, role, ip);
-    return this.formatClientProfile(profile);
-  }
-
-  private formatClientProfile(profile: any) {
-    return {
-      id: profile.id,
-      user: profile.user,
-      avatar_url: profile.avatarUrl,
-      preferences: profile.preferences,
-      created_at: profile.createdAt,
-      updated_at: profile.updatedAt,
-    };
-  }
-
-  private formatProviderProfile(profile: any) {
-    return {
-      id: profile.id,
-      user: profile.user,
-      avatar_url: profile.avatarUrl,
-      bio: profile.bio,
-      hourly_rate: profile.hourlyRate,
-      skills: profile.skills,
-      portfolio: profile.portfolio,
-      rating: profile.rating,
-      total_reviews: profile.totalReviews,
-      is_available: profile.isAvailable,
-      created_at: profile.createdAt,
-      updated_at: profile.updatedAt,
-    };
+    return this.formatClientProfile(profile, user);
   }
 }

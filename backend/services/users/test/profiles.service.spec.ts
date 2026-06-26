@@ -11,6 +11,24 @@ import {
 describe("ProfilesService", () => {
   let service: ProfilesService;
 
+  const mockUser = {
+    id: "user-1",
+    completeName: "Test User",
+    email: "test@test.com",
+    phone: "123",
+    postalCode: "12345",
+    role: "CLIENT",
+  };
+
+  const mockProviderUser = {
+    id: "user-1",
+    completeName: "Test Provider",
+    email: "provider@test.com",
+    phone: "123",
+    postalCode: "12345",
+    role: "PROVIDER",
+  };
+
   const mockPrisma = {
     clientProfile: {
       findUnique: jest.fn(),
@@ -56,21 +74,15 @@ describe("ProfilesService", () => {
         preferences: {},
         createdAt: new Date(),
         updatedAt: new Date(),
-        user: {
-          id: "user-1",
-          completeName: "Test User",
-          email: "test@test.com",
-          phone: "123",
-          postalCode: "12345",
-          role: "CLIENT",
-        },
       };
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       mockPrisma.clientProfile.findUnique.mockResolvedValue(mockProfile);
 
       const result = await service.getProfile("user-1", "CLIENT");
 
       expect(result).toBeDefined();
       expect(result.id).toBe("client-1");
+      expect(result.user.completeName).toBe("Test User");
       expect(mockLogger.logProfileFetched).toHaveBeenCalledWith(
         "user-1",
         "CLIENT",
@@ -78,6 +90,7 @@ describe("ProfilesService", () => {
     });
 
     it("should throw NotFoundException when client profile not found", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
 
       await expect(service.getProfile("user-1", "CLIENT")).rejects.toThrow(
@@ -99,27 +112,20 @@ describe("ProfilesService", () => {
         isAvailable: true,
         createdAt: new Date(),
         updatedAt: new Date(),
-        user: {
-          id: "user-1",
-          completeName: "Test Provider",
-          email: "provider@test.com",
-          phone: "123",
-          postalCode: "12345",
-          role: "PROVIDER",
-        },
       };
+      mockPrisma.user.findUnique.mockResolvedValue(mockProviderUser);
       mockPrisma.providerProfile.findUnique.mockResolvedValue(mockProfile);
 
       const result = await service.getProfile("user-1", "PROVIDER");
 
       expect(result).toBeDefined();
       expect(result.id).toBe("provider-1");
+      expect(result.user.role).toBe("PROVIDER");
     });
   });
 
   describe("createClientProfile", () => {
     it("should create client profile", async () => {
-      const mockUser = { id: "user-1", role: "CLIENT" };
       const mockProfile = {
         id: "client-1",
         userId: "user-1",
@@ -127,7 +133,6 @@ describe("ProfilesService", () => {
         preferences: { theme: "dark" },
         createdAt: new Date(),
         updatedAt: new Date(),
-        user: mockUser,
       };
       mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
@@ -174,7 +179,6 @@ describe("ProfilesService", () => {
 
   describe("createProviderProfile", () => {
     it("should create provider profile", async () => {
-      const mockUser = { id: "user-1", role: "PROVIDER" };
       const mockProfile = {
         id: "provider-1",
         userId: "user-1",
@@ -188,10 +192,9 @@ describe("ProfilesService", () => {
         totalReviews: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
-        user: mockUser,
       };
       mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.user.findUnique.mockResolvedValue(mockProviderUser);
       mockPrisma.providerProfile.create.mockResolvedValue(mockProfile);
 
       const result = await service.createProviderProfile(
