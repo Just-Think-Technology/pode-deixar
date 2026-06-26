@@ -16,12 +16,10 @@ import { UsersLoggerService } from "./shared/users-logger.service";
       isGlobal: true,
       envFilePath: process.env.NODE_ENV === "test" ? [] : [".env.stg"],
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 100,
-      },
-    ]),
+    ThrottlerModule.forRoot({
+      ttl: 60,
+      limit: 100,
+    }),
     PrismaModule,
     ProfilesModule,
     SharedModule,
