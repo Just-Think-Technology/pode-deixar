@@ -1,5 +1,5 @@
 {
-  "name": "@pode-deixar/auth",
+  "name": "@pode-deixar/users",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -21,6 +21,7 @@
     "prisma:migrate": "prisma migrate deploy --schema=../../prisma/schema.prisma"
   },
   "dependencies": {
+    "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",
@@ -31,31 +32,24 @@
     "@nestjs/throttler": "^6.2.1",
     "@pode-deixar/logger": "*",
     "@prisma/client": "5.22.0",
-    "@types/argon2": "^0.14.1",
-    "@types/uuid": "^8.3.4",
-    "argon2": "^0.44.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "helmet": "^8.0.0",
-    "nodemailer": "^8.0.4",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "sanitize-html": "^2.17.3",
-    "swagger-ui-express": "^5.0.1",
-    "uuid": "^8.3.2"
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
-    "@nestjs/cli": "^10.3.2",
+    "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.19.11",
-    "@types/nodemailer": "^6.4.17",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
     "concurrently": "^8.2.2",
