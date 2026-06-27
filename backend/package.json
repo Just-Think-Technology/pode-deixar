@@ -5,13 +5,18 @@
   "main": "index.js",
   "scripts": {
     "dev": "npm run start:dev -w @pode-deixar/auth",
-    "build": "npm run prisma:generate && npm run build -w @pode-deixar/auth",
+    "dev:all": "concurrently \"npm run start:dev -w @pode-deixar/auth\" \"npm run start:dev -w @pode-deixar/users\"",
+    "build": "npm run prisma:generate && npm run build -w @pode-deixar/auth && npm run build -w @pode-deixar/users",
     "start": "npm run start -w @pode-deixar/auth",
+    "start:all": "concurrently \"npm run start -w @pode-deixar/auth\" \"npm run start -w @pode-deixar/users\"",
     "start:prod": "npm run start:prod -w @pode-deixar/auth",
-    "test": "npm run test -w @pode-deixar/auth",
+    "test": "npm run test -w @pode-deixar/auth && npm run test -w @pode-deixar/users",
     "prisma:generate": "npm run prisma:generate -w @pode-deixar/auth",
     "prisma:migrate": "npm run prisma:migrate -w @pode-deixar/auth",
-    "postinstall": "npm run prisma:generate"
+    "postinstall": "npm run prisma:generate",
+    "proxy:run": "powershell -File scripts/proxy.ps1 run",
+    "proxy:start": "powershell -File scripts/proxy.ps1 start",
+    "proxy:stop": "powershell -File scripts/proxy.ps1 stop"
   },
   "keywords": [],
   "author": "",
