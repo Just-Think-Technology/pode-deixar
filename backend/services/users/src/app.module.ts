@@ -10,8 +10,6 @@ import { HealthModule } from "./health/health.module";
 import { SharedModule } from "./shared/shared.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
-import { UsersLoggerService } from "./shared/users-logger.service";
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -33,7 +31,6 @@ import { UsersLoggerService } from "./shared/users-logger.service";
     SharedModule,
   ],
   providers: [
-    UsersLoggerService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
