@@ -4,6 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -169,7 +170,7 @@ export class LoginService {
     }
   }
 
-  async logout(userId: string) {
+  async logout(userId: string, accessTokenJti?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { email: true },
@@ -179,6 +180,34 @@ export class LoginService {
       where: { id: userId },
       data: { refreshToken: null },
     });
+
+    try {
+      if (accessTokenJti) {
+        await this.prisma.tokenBlacklist.create({
+          data: {
+            jti: accessTokenJti,
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          },
+        });
+      }
+
+      await this.prisma.tokenBlacklist.deleteMany({
+        where: { expiresAt: { lte: new Date() } },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2021'
+      ) {
+        this.authLogger.logSecurityEvent('token_blacklist_table_missing', {
+          userId,
+          message:
+            'token_blacklist table missing, refresh token cleared but access token not blacklisted',
+        });
+      } else {
+        throw error;
+      }
+    }
 
     this.authLogger.logLogout(userId, user?.email);
 
@@ -191,6 +220,7 @@ export class LoginService {
       email: user.email,
       role: user.role,
       type: 'access',
+      jti: crypto.randomUUID(),
     };
     return this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),

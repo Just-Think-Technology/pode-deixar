@@ -87,3 +87,10 @@ model ProviderService {
 
   @@map("provider_services")
 }
+
+model TokenBlacklist {
+  jti        String   @id
+  expiresAt  DateTime @map("expires_at")
+
+  @@map("token_blacklist")
+}
