@@ -52,17 +52,17 @@ async function bootstrap() {
 
   // Swagger API Documentation
   const config = new DocumentBuilder()
-    .setTitle('Auth Service API')
-    .setDescription('Authentication and user management service API')
+    .setTitle('Pode Deixar - Auth Service')
+    .setDescription('API de autenticação e gerenciamento de usuários')
     .setVersion('1.0')
-    .addTag('auth', 'Authentication endpoints')
+    .addTag('auth', 'Endpoints de autenticação')
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
         name: 'JWT',
-        description: 'Enter JWT token',
+        description: 'Informe o token JWT',
         in: 'header',
       },
       'JWT-auth',

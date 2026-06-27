@@ -23,7 +23,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
-@ApiTags("Provider Services")
+@ApiTags("Serviços do Prestador")
 @Controller("providers/me/services")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -70,7 +70,7 @@ export class ProviderServicesController {
   }
 }
 
-@ApiTags("Provider Services (Public)")
+@ApiTags("Serviços do Prestador (Público)")
 @Controller("providers/:providerId/services")
 @ApiBearerAuth()
 export class PublicProviderServicesController {
@@ -94,7 +94,7 @@ export class PublicProviderServicesController {
   }
 }
 
-@ApiTags("Provider Services (Owner)")
+@ApiTags("Serviços do Prestador (Dono)")
 @Controller("providers/me/services/:serviceId")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()

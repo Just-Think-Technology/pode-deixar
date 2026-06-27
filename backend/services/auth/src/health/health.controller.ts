@@ -3,7 +3,7 @@ import { HealthCheck, HealthCheckService, HealthCheckResult } from '@nestjs/term
 import { DatabaseHealthIndicator } from './database.health';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-@ApiTags('Health')
+@ApiTags('Saúde')
 @Controller('health')
 export class HealthController {
   constructor(
