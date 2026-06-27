@@ -5,9 +5,9 @@ import createLogger from '@pode-deixar/logger';
 export class AuthLoggerService {
   private readonly logger = createLogger('auth-service');
 
-  logLoginAttempt(email: string, success: boolean, ip?: string, userAgent?: string) {
+  logLoginAttempt(email: string, success: boolean, ip?: string) {
     this.logger.info(
-      { event: 'auth.login_attempt', email, success, ip, userAgent },
+      { event: 'auth.login_attempt', email, success, ip },
       success ? 'Login succeeded' : 'Login failed',
     );
   }
@@ -25,10 +25,6 @@ export class AuthLoggerService {
 
   logLogout(userId: string, email?: string) {
     this.logger.info({ event: 'auth.logout', userId, email }, 'User logged out');
-  }
-
-  logProfileAccess(userId: string) {
-    this.logger.info({ event: 'auth.profile_access', userId }, 'Profile accessed');
   }
 
   logPasswordResetRequested(email: string, success: boolean) {

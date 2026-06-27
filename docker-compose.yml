@@ -19,6 +19,7 @@ services:
     environment:
       FRONTEND_URL: http://localhost:8080
       SMTP_HOST: mailpit
+      TZ: America/Sao_Paulo
     ports:
       - "3001:3001"
     depends_on:
@@ -30,6 +31,8 @@ services:
       context: ./backend
       target: users-build
     env_file: ./backend/services/users/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
     ports:
       - "3002:3002"
     depends_on:

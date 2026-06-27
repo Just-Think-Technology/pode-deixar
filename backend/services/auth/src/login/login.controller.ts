@@ -29,9 +29,9 @@ export class LoginController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Autenticar usuário e retornar tokens JWT' })
   @ApiBody({ type: LoginDto })
-  async login(@Body() dto: LoginDto, @Headers('x-forwarded-for') ip?: string, @Headers('user-agent') userAgent?: string) {
+  async login(@Body() dto: LoginDto, @Headers('x-forwarded-for') ip?: string) {
     try { logger.info('auth.endpoint', `Login called for ${dto.email}`); } catch (e) {}
-    return this.loginService.login(dto, ip, userAgent);
+    return this.loginService.login(dto, ip);
   }
 
   @ApiTags('Acesso')

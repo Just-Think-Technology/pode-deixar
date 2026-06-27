@@ -35,28 +35,47 @@ export class RegisterService {
     const emailVerificationToken = uuidv4();
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const user = await this.prisma.user.create({
-      data: {
-        completeName: dto.complete_name,
-        email: dto.email,
-        password: passwordHash,
-        role: dto.role,
-        phone: dto.phone,
-        postalCode: dto.postal_code,
-        emailVerificationToken,
-        emailVerificationExpires,
-      },
-      select: {
-        id: true,
-        completeName: true,
-        email: true,
-        role: true,
-        phone: true,
-        postalCode: true,
-        emailVerified: true,
-        createdAt: true,
-        emailVerificationToken: true,
-      },
+    const [user] = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          completeName: dto.complete_name,
+          email: dto.email,
+          password: passwordHash,
+          role: dto.role,
+          phone: dto.phone,
+          postalCode: dto.postal_code,
+          emailVerificationToken,
+          emailVerificationExpires,
+        },
+        select: {
+          id: true,
+          completeName: true,
+          email: true,
+          role: true,
+          phone: true,
+          postalCode: true,
+          emailVerified: true,
+          createdAt: true,
+          emailVerificationToken: true,
+        },
+      });
+
+      if (dto.role === "CLIENT") {
+        await tx.clientProfile.create({
+          data: { userId: user.id, preferences: {} },
+        });
+      } else if (dto.role === "PROVIDER") {
+        await tx.providerProfile.create({
+          data: {
+            userId: user.id,
+            skills: [],
+            portfolio: [],
+            isAvailable: true,
+          },
+        });
+      }
+
+      return [user];
     });
 
     try {
