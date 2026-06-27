@@ -7,6 +7,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateProviderServiceDto } from "./dto/create-provider-service.dto";
 import { UpdateProviderServiceDto } from "./dto/update-provider-service.dto";
+import { SearchProvidersQueryDto } from "./dto/search-providers-query.dto";
 
 @Injectable()
 export class ProviderServicesService {
@@ -155,5 +156,78 @@ export class ProviderServicesService {
     this.usersLogger.logServiceDeleted(providerProfileId, serviceId, ip);
 
     return this.formatService(service);
+  }
+
+  async searchProviders(query: SearchProvidersQueryDto) {
+    const where: any = { isActive: true };
+
+    if (query.category) {
+      where.category = query.category;
+    }
+
+    if (query.q) {
+      where.OR = [
+        { title: { contains: query.q, mode: "insensitive" } },
+        { description: { contains: query.q, mode: "insensitive" } },
+      ];
+    }
+
+    const services = await this.prisma.providerService.findMany({
+      where,
+      include: {
+        providerProfile: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                completeName: true,
+                email: true,
+                phone: true,
+                postalCode: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const grouped = new Map<string, any>();
+
+    for (const service of services) {
+      const profile = service.providerProfile;
+      const profileId = profile.id;
+
+      if (!grouped.has(profileId)) {
+        grouped.set(profileId, {
+          id: profileId,
+          user: {
+            id: profile.user.id,
+            complete_name: profile.user.completeName,
+            email: profile.user.email,
+            phone: profile.user.phone,
+            postal_code: profile.user.postalCode,
+          },
+          avatar_url: profile.avatarUrl,
+          bio: profile.bio,
+          skills: profile.skills,
+          rating: profile.rating,
+          total_reviews: profile.totalReviews,
+          is_available: profile.isAvailable,
+          services: [],
+        });
+      }
+
+      grouped.get(profileId).services.push({
+        id: service.id,
+        title: service.title,
+        description: service.description,
+        fixed_price: service.fixedPrice,
+        category: service.category,
+        duration_minutes: service.durationMinutes,
+      });
+    }
+
+    return Array.from(grouped.values());
   }
 }
