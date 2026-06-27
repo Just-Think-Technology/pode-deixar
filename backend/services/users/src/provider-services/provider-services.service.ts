@@ -159,75 +159,103 @@ export class ProviderServicesService {
   }
 
   async searchProviders(query: SearchProvidersQueryDto) {
-    const where: any = { isActive: true };
-
+    const serviceWhere: any = { isActive: true };
     if (query.category) {
-      where.category = query.category;
+      serviceWhere.category = query.category;
     }
-
     if (query.q) {
-      where.OR = [
+      serviceWhere.OR = [
         { title: { contains: query.q, mode: "insensitive" } },
         { description: { contains: query.q, mode: "insensitive" } },
       ];
     }
 
-    const services = await this.prisma.providerService.findMany({
-      where,
-      include: {
-        providerProfile: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                completeName: true,
-                email: true,
-                phone: true,
-                postalCode: true,
-              },
+    const profileWhere: any = {};
+
+    if (query.q && query.category) {
+      profileWhere.OR = [
+        {
+          services: {
+            some: {
+              isActive: true,
+              category: query.category,
+              OR: [
+                { title: { contains: query.q, mode: "insensitive" } },
+                { description: { contains: query.q, mode: "insensitive" } },
+              ],
             },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const grouped = new Map<string, any>();
-
-    for (const service of services) {
-      const profile = service.providerProfile;
-      const profileId = profile.id;
-
-      if (!grouped.has(profileId)) {
-        grouped.set(profileId, {
-          id: profileId,
-          user: {
-            id: profile.user.id,
-            complete_name: profile.user.completeName,
-            email: profile.user.email,
-            phone: profile.user.phone,
-            postal_code: profile.user.postalCode,
+        {
+          user: { completeName: { contains: query.q, mode: "insensitive" } },
+          services: { some: { isActive: true, category: query.category } },
+        },
+      ];
+    } else if (query.category) {
+      profileWhere.services = {
+        some: { isActive: true, category: query.category },
+      };
+    } else if (query.q) {
+      profileWhere.OR = [
+        { user: { completeName: { contains: query.q, mode: "insensitive" } } },
+        {
+          services: {
+            some: {
+              isActive: true,
+              OR: [
+                { title: { contains: query.q, mode: "insensitive" } },
+                { description: { contains: query.q, mode: "insensitive" } },
+              ],
+            },
           },
-          avatar_url: profile.avatarUrl,
-          bio: profile.bio,
-          skills: profile.skills,
-          rating: profile.rating,
-          total_reviews: profile.totalReviews,
-          is_available: profile.isAvailable,
-          services: [],
-        });
-      }
-
-      grouped.get(profileId).services.push({
-        id: service.id,
-        title: service.title,
-        description: service.description,
-        fixed_price: service.fixedPrice,
-        category: service.category,
-        duration_minutes: service.durationMinutes,
-      });
+        },
+      ];
+    } else {
+      profileWhere.services = { some: { isActive: true } };
     }
 
-    return Array.from(grouped.values());
+    const profiles = await this.prisma.providerProfile.findMany({
+      where: profileWhere,
+      include: {
+        user: {
+          select: {
+            id: true,
+            completeName: true,
+            email: true,
+            phone: true,
+            postalCode: true,
+          },
+        },
+        services: {
+          where: serviceWhere,
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    return profiles.map((profile) => ({
+      id: profile.id,
+      user: {
+        id: profile.user.id,
+        complete_name: profile.user.completeName,
+        email: profile.user.email,
+        phone: profile.user.phone,
+        postal_code: profile.user.postalCode,
+      },
+      avatar_url: profile.avatarUrl,
+      bio: profile.bio,
+      skills: profile.skills,
+      rating: profile.rating,
+      total_reviews: profile.totalReviews,
+      is_available: profile.isAvailable,
+      services: profile.services.map((s) => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        fixed_price: s.fixedPrice,
+        category: s.category,
+        duration_minutes: s.durationMinutes,
+      })),
+    }));
   }
 }
