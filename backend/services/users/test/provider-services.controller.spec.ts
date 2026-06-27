@@ -3,6 +3,7 @@ import {
   ProviderServicesController,
   PublicProviderServicesController,
   ProviderServiceDetailController,
+  ProviderSearchController,
 } from "../src/provider-services/provider-services.controller";
 import { ProviderServicesService } from "../src/provider-services/provider-services.service";
 
@@ -10,6 +11,7 @@ describe("ProviderServicesController", () => {
   let controller: ProviderServicesController;
   let publicController: PublicProviderServicesController;
   let detailController: ProviderServiceDetailController;
+  let searchController: ProviderSearchController;
 
   const mockProviderServicesService = {
     getProviderProfileByUserId: jest.fn(),
@@ -18,6 +20,7 @@ describe("ProviderServicesController", () => {
     getProviderServices: jest.fn(),
     updateService: jest.fn(),
     deleteService: jest.fn(),
+    searchProviders: jest.fn(),
   };
 
   const mockProviderProfile = {
@@ -37,6 +40,7 @@ describe("ProviderServicesController", () => {
         ProviderServicesController,
         PublicProviderServicesController,
         ProviderServiceDetailController,
+        ProviderSearchController,
       ],
       providers: [
         { provide: ProviderServicesService, useValue: mockProviderServicesService },
@@ -46,6 +50,7 @@ describe("ProviderServicesController", () => {
     controller = module.get<ProviderServicesController>(ProviderServicesController);
     publicController = module.get<PublicProviderServicesController>(PublicProviderServicesController);
     detailController = module.get<ProviderServiceDetailController>(ProviderServiceDetailController);
+    searchController = module.get<ProviderSearchController>(ProviderSearchController);
     jest.clearAllMocks();
   });
 
@@ -170,6 +175,40 @@ describe("ProviderServicesController", () => {
         "127.0.0.1",
       );
       expect(result).toEqual(expectedService);
+    });
+  });
+
+  describe("ProviderSearchController - searchProviders", () => {
+    it("should call service.searchProviders with query params", async () => {
+      const query = { category: "ELETRICA", q: "chuveiro" };
+      const expectedResult = [{ id: "provider-1", services: [] }];
+
+      mockProviderServicesService.searchProviders.mockResolvedValue(
+        expectedResult,
+      );
+
+      const result = await searchController.searchProviders(query as any);
+
+      expect(
+        mockProviderServicesService.searchProviders,
+      ).toHaveBeenCalledWith(query);
+      expect(result).toEqual(expectedResult);
+    });
+
+    it("should call service.searchProviders with empty query", async () => {
+      const query = {};
+      const expectedResult: any[] = [];
+
+      mockProviderServicesService.searchProviders.mockResolvedValue(
+        expectedResult,
+      );
+
+      const result = await searchController.searchProviders(query as any);
+
+      expect(
+        mockProviderServicesService.searchProviders,
+      ).toHaveBeenCalledWith(query);
+      expect(result).toEqual([]);
     });
   });
 });
