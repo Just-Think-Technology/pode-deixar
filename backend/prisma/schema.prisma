@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+  PROVIDER
+}
+
+model User {
+  id                      String             @id @default(uuid())
+  completeName            String             @map("complete_name")
+  email                   String             @unique
+  password                String
+  role                    Role               @default(CLIENT)
+  phone                   String
+  postalCode              String             @map("postal_code")
+  emailVerified           Boolean            @default(false) @map("email_verified")
+  emailVerificationToken  String?            @map("email_verification_token")
+  emailVerificationExpires DateTime?          @map("email_verification_expires")
+  passwordResetToken      String?            @map("password_reset_token")
+  passwordResetExpires    DateTime?          @map("password_reset_expires")
+  refreshToken            String?            @map("refresh_token")
+  refreshTokenFamily      String?            @map("refresh_token_family")
+  failedLoginAttempts     Int                @default(0) @map("failed_login_attempts")
+  lockoutUntil            DateTime?          @map("lockout_until")
+  lastLoginAt             DateTime?          @map("last_login_at")
+  createdAt               DateTime           @default(now()) @map("created_at")
+  updatedAt               DateTime           @updatedAt @map("updated_at")
+  clientProfile           ClientProfile?
+  providerProfile         ProviderProfile?
+
+  @@map("users")
+}
+
+model ClientProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  avatarUrl   String?  @map("avatar_url")
+  preferences Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("client_profiles")
+}
+
+model ProviderProfile {
+  id           String             @id @default(uuid())
+  userId       String             @unique @map("user_id")
+  avatarUrl    String?            @map("avatar_url")
+  bio          String?
+  hourlyRate   Decimal?           @map("hourly_rate") @db.Decimal(10, 2)
+  skills       String[]           @default([])
+  portfolio    Json?              @default("[]")
+  rating       Float              @default(0)
+  totalReviews Int                @default(0) @map("total_reviews")
+  isAvailable  Boolean            @default(true) @map("is_available")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  user         User               @relation(fields: [userId], references: [id])
+  services     ProviderService[]
+
+  @@map("provider_profiles")
+}
+
+model ProviderService {
+  id                String           @id @default(uuid())
+  providerProfile   ProviderProfile  @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  providerProfileId String           @map("provider_profile_id")
+  title             String
+  description       String           @db.Text
+  fixedPrice        Decimal          @db.Decimal(10, 2) @map("fixed_price")
+  category          String
+  durationMinutes   Int?             @map("duration_minutes")
+  isActive          Boolean          @default(true) @map("is_active")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  @@map("provider_services")
+}
