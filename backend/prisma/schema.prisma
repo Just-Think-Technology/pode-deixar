@@ -81,7 +81,6 @@ model ProviderService {
   description       String           @db.Text
   fixedPrice        Decimal          @db.Decimal(10, 2) @map("fixed_price")
   category          String
-  durationMinutes   Int?             @map("duration_minutes")
   isActive          Boolean          @default(true) @map("is_active")
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")

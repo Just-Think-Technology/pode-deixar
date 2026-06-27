@@ -1,9 +1,11 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProfilesController } from "../src/profiles/profiles.controller";
+import { PublicProviderProfileController } from "../src/profiles/public-provider-profile.controller";
 import { ProfilesService } from "../src/profiles/profiles.service";
 
 describe("ProfilesController", () => {
   let controller: ProfilesController;
+  let publicProfileController: PublicProviderProfileController;
 
   const mockProfilesService = {
     getProfile: jest.fn(),
@@ -12,6 +14,7 @@ describe("ProfilesController", () => {
     createProviderProfile: jest.fn(),
     updateProviderProfile: jest.fn(),
     uploadAvatar: jest.fn(),
+    getPublicProviderProfile: jest.fn(),
   };
 
   const mockRequest = (overrides = {}) => ({
@@ -22,13 +25,16 @@ describe("ProfilesController", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [ProfilesController],
+      controllers: [ProfilesController, PublicProviderProfileController],
       providers: [
         { provide: ProfilesService, useValue: mockProfilesService },
       ],
     }).compile();
 
     controller = module.get<ProfilesController>(ProfilesController);
+    publicProfileController = module.get<PublicProviderProfileController>(
+      PublicProviderProfileController,
+    );
     jest.clearAllMocks();
   });
 
@@ -143,6 +149,28 @@ describe("ProfilesController", () => {
         "127.0.0.1",
       );
       expect(result.avatar_url).toBe(avatarUrl);
+    });
+  });
+
+  describe("PublicProviderProfileController - getPublicProviderProfile", () => {
+    it("should call service.getPublicProviderProfile with providerProfileId", async () => {
+      const expectedProfile = {
+        id: "provider-1",
+        user: { complete_name: "João" },
+        services: [],
+      };
+
+      mockProfilesService.getPublicProviderProfile.mockResolvedValue(
+        expectedProfile,
+      );
+
+      const result =
+        await publicProfileController.getPublicProviderProfile("provider-1");
+
+      expect(
+        mockProfilesService.getPublicProviderProfile,
+      ).toHaveBeenCalledWith("provider-1");
+      expect(result).toEqual(expectedProfile);
     });
   });
 });

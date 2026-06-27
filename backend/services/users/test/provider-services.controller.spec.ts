@@ -62,9 +62,8 @@ describe("ProviderServicesController", () => {
         description: "Descrição",
         fixedPrice: 150.0,
         category: "ELETRICA",
-        durationMinutes: 60,
-      };
-      const expectedService = { id: "service-1", title: "Instalação de chuveiro" };
+       };
+       const expectedService = { id: "service-1", title: "Instalação de chuveiro" };
 
       mockProviderServicesService.getProviderProfileByUserId.mockResolvedValue(
         mockProviderProfile,

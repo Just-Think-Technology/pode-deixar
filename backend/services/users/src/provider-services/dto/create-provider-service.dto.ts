@@ -1,12 +1,10 @@
 import {
   IsString,
   IsNumber,
-  IsOptional,
-  Min,
   MaxLength,
   IsPositive,
 } from "class-validator";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class CreateProviderServiceDto {
   @ApiProperty({
@@ -35,12 +33,4 @@ export class CreateProviderServiceDto {
   @MaxLength(50)
   category: string;
 
-  @ApiPropertyOptional({
-    description: "Duração estimada em minutos",
-    example: 60,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(15)
-  durationMinutes?: number;
 }

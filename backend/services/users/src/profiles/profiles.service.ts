@@ -290,4 +290,57 @@ export class ProfilesService {
 
     throw new BadRequestException("Função inválida");
   }
+
+  async getPublicProviderProfile(providerProfileId: string) {
+    const profile = await this.prisma.providerProfile.findUnique({
+      where: { id: providerProfileId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            completeName: true,
+            email: true,
+            phone: true,
+            postalCode: true,
+          },
+        },
+        services: {
+          where: { isActive: true },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException("Perfil de prestador não encontrado");
+    }
+
+    return {
+      id: profile.id,
+      user: {
+        id: profile.user.id,
+        complete_name: profile.user.completeName,
+        email: profile.user.email,
+        phone: profile.user.phone,
+        postal_code: profile.user.postalCode,
+      },
+      avatar_url: profile.avatarUrl,
+      bio: profile.bio,
+      hourly_rate: profile.hourlyRate,
+      skills: profile.skills,
+      portfolio: profile.portfolio,
+      rating: profile.rating,
+      total_reviews: profile.totalReviews,
+      is_available: profile.isAvailable,
+      services: profile.services.map((s) => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        fixed_price: s.fixedPrice,
+        category: s.category,
+      })),
+      created_at: profile.createdAt,
+      updated_at: profile.updatedAt,
+    };
+  }
 }
