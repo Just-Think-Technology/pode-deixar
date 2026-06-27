@@ -21,6 +21,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    if (payload.jti) {
+      try {
+        const blacklisted = await this.prisma.tokenBlacklist.findUnique({
+          where: { jti: payload.jti },
+        });
+
+        if (blacklisted) {
+          throw new UnauthorizedException('Token revogado');
+        }
+      } catch (e: any) {
+        if (e?.code !== 'P2021') throw e;
+      }
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
       select: {
@@ -37,6 +51,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Usuário não encontrado');
     }
 
-    return user;
+    return { ...user, jti: payload.jti };
   }
 }

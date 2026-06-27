@@ -24,8 +24,10 @@ RUN npx prisma generate --schema=prisma/schema.prisma
 FROM prisma AS auth-build
 COPY shared/logger ./shared/logger
 COPY services/auth ./services/auth
-RUN npm run build -w @pode-deixar/auth
+COPY scripts/migrate-and-start.sh ./scripts/migrate-and-start.sh
+RUN chmod +x ./scripts/migrate-and-start.sh && npm run build -w @pode-deixar/auth
 EXPOSE 3001
+ENTRYPOINT ["./scripts/migrate-and-start.sh"]
 CMD ["node", "services/auth/dist/main.js"]
 
 # ─── Users Service ──────────────────────────────────────────
