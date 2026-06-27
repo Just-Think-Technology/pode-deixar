@@ -22,7 +22,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
-@ApiTags("Profiles")
+@ApiTags("Perfis")
 @Controller("profiles")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()

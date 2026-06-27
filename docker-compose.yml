@@ -18,8 +18,11 @@ services:
     env_file: ./backend/services/auth/.env.staging
     environment:
       FRONTEND_URL: http://localhost:8080
+      SMTP_HOST: mailpit
     ports:
       - "3001:3001"
+    depends_on:
+      - mailpit
 
   # ─── Users Service ───────────────────────────────────────
   users:
@@ -44,6 +47,13 @@ services:
     depends_on:
       - auth
       - users
+
+  # ─── Mailpit (SMTP Testing) ─────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
   # ─── Proxy Reverso (Caddy) ───────────────────────────────
   caddy:
