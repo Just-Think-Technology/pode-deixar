@@ -133,3 +133,39 @@ export type UpdateWorkerProfileResult = {
   emailChanged: boolean;
   user: UserProfile;
 };
+
+export type CreateServicePayload = {
+  title: string;
+  description: string;
+  category_id: string;
+  location: string;
+};
+
+export type ServiceCategory = {
+  id: string;
+  name: string;
+};
+
+export type ServiceType = {
+  id: string;
+  title: string;
+  description: string;
+  category_id: string;
+  category_name: string;
+  location: string;
+  status: "active" | "inactive";
+  created_at: string;
+};
+
+export type CreateServiceResponse = {
+  message: string;
+  service: ServiceType;
+};
+
+export type ServicesListResponse = {
+  services: ServiceType[];
+};
+
+export type ServiceCategoriesResponse = {
+  categories: ServiceCategory[];
+};
