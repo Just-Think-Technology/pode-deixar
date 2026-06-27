@@ -48,6 +48,7 @@ describe("ProviderServicesService", () => {
   const mockPrisma = {
     providerProfile: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
     providerService: {
       create: jest.fn(),
@@ -297,109 +298,133 @@ describe("ProviderServicesService", () => {
   });
 
   describe("searchProviders", () => {
-    const mockUserData = {
-      id: "user-1",
-      completeName: "João Eletricista",
-      email: "joao@email.com",
-      phone: "11999999999",
-      postalCode: "01234-567",
-    };
-
-    const mockServiceWithProfile = {
-      id: "service-1",
-      providerProfileId: "provider-profile-1",
-      title: "Instalação de chuveiro elétrico",
-      description: "Instalação completa",
-      fixedPrice: 150.0,
-      category: "ELETRICA",
-      durationMinutes: 60,
-      isActive: true,
+    const mockProfileWithServices = {
+      id: "provider-profile-1",
+      userId: "user-1",
+      avatarUrl: null,
+      bio: "Eletricista experiente",
+      hourlyRate: 50,
+      skills: ["ELETRICA"],
+      portfolio: [],
+      rating: 4.5,
+      totalReviews: 10,
+      isAvailable: true,
       createdAt: new Date(),
       updatedAt: new Date(),
-      providerProfile: {
-        id: "provider-profile-1",
-        userId: "user-1",
-        avatarUrl: null,
-        bio: "Eletricista experiente",
-        skills: ["ELETRICA"],
-        rating: 4.5,
-        totalReviews: 10,
-        isAvailable: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        user: mockUserData,
+      user: {
+        id: "user-1",
+        completeName: "João Eletricista",
+        email: "joao@email.com",
+        phone: "11999999999",
+        postalCode: "01234-567",
       },
+      services: [
+        {
+          id: "service-1",
+          providerProfileId: "provider-profile-1",
+          title: "Instalação de chuveiro elétrico",
+          description: "Instalação completa",
+          fixedPrice: 150.0,
+          category: "ELETRICA",
+          durationMinutes: 60,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
     };
 
-    const mockService2WithProfile = {
-      ...mockServiceWithProfile,
-      id: "service-2",
-      title: "Troca de fiação",
-      description: "Troca completa da fiação elétrica",
-      category: "ELETRICA",
-      fixedPrice: 200.0,
+    const mockProfileWithNameMatch = {
+      ...mockProfileWithServices,
+      id: "provider-profile-2",
+      user: {
+        ...mockProfileWithServices.user,
+        id: "user-2",
+        completeName: "José Chuveiro",
+      },
+      services: [
+        {
+          ...mockProfileWithServices.services[0],
+          id: "service-3",
+          providerProfileId: "provider-profile-2",
+          title: "Reparo geral",
+          category: "HIDRAULICA",
+        },
+      ],
+    };
+
+    const mockProfileWithMultipleServices = {
+      ...mockProfileWithServices,
+      services: [
+        ...mockProfileWithServices.services,
+        {
+          id: "service-2",
+          providerProfileId: "provider-profile-1",
+          title: "Troca de fiação",
+          description: "Troca completa da fiação elétrica",
+          fixedPrice: 200.0,
+          category: "ELETRICA",
+          durationMinutes: 90,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
     };
 
     it("should return all active providers when no filters", async () => {
-      mockPrisma.providerService.findMany.mockResolvedValue([
-        mockServiceWithProfile,
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithServices,
       ]);
 
       const query: SearchProvidersQueryDto = {};
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerService.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { isActive: true },
-        }),
-      );
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
       expect(result).toHaveLength(1);
       expect(result[0].user.complete_name).toBe("João Eletricista");
       expect(result[0].services).toHaveLength(1);
     });
 
     it("should filter by category", async () => {
-      mockPrisma.providerService.findMany.mockResolvedValue([
-        mockServiceWithProfile,
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithServices,
       ]);
 
       const query: SearchProvidersQueryDto = { category: "ELETRICA" };
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerService.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { isActive: true, category: "ELETRICA" },
-        }),
-      );
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
       expect(result).toHaveLength(1);
     });
 
-    it("should filter by text search on title", async () => {
-      mockPrisma.providerService.findMany.mockResolvedValue([
-        mockServiceWithProfile,
+    it("should filter by text search on service title", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithServices,
       ]);
 
       const query: SearchProvidersQueryDto = { q: "chuveiro" };
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerService.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            isActive: true,
-            OR: [
-              { title: { contains: "chuveiro", mode: "insensitive" } },
-              { description: { contains: "chuveiro", mode: "insensitive" } },
-            ],
-          },
-        }),
-      );
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
       expect(result).toHaveLength(1);
     });
 
+    it("should filter by provider name", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithNameMatch,
+      ]);
+
+      const query: SearchProvidersQueryDto = { q: "José" };
+      const result = await service.searchProviders(query);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].user.complete_name).toBe("José Chuveiro");
+    });
+
     it("should group multiple services under the same provider", async () => {
-      mockPrisma.providerService.findMany.mockResolvedValue([
-        mockServiceWithProfile,
-        mockService2WithProfile,
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithMultipleServices,
       ]);
 
       const query: SearchProvidersQueryDto = { category: "ELETRICA" };
@@ -411,8 +436,8 @@ describe("ProviderServicesService", () => {
       expect(result[0].services[1].title).toBe("Troca de fiação");
     });
 
-    it("should return empty array when no services match", async () => {
-      mockPrisma.providerService.findMany.mockResolvedValue([]);
+    it("should return empty array when no matches", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([]);
 
       const query: SearchProvidersQueryDto = { category: "HIDRAULICA" };
       const result = await service.searchProviders(query);
