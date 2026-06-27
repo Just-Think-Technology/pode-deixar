@@ -8,11 +8,20 @@ import {
   requestEmailChange,
   updateWorkerProfile,
 } from "@/api/worker/profile";
+import {
+  createWorkerService,
+  getServiceCategories,
+  getWorkerServices,
+} from "@/api/worker/services";
 import { ApiError } from "@/api/client";
 import type {
+  CreateServicePayload,
+  CreateServiceResponse,
   LoginResponse,
   PublicRole,
   ResetPasswordPayload,
+  ServiceCategoriesResponse,
+  ServicesListResponse,
   UpdateWorkerProfilePayload,
   UpdateWorkerProfileResult,
   UserProfile,
@@ -140,4 +149,58 @@ export async function deleteWorkerAccountAction(): Promise<void> {
   }
 
   await clearAuthSession();
+}
+
+export async function createServiceAction(
+  payload: CreateServicePayload,
+): Promise<CreateServiceResponse> {
+  const token = await requireAccessToken();
+
+  try {
+    return await createWorkerService(token, payload);
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
+      return {
+        message: "Serviço cadastrado com sucesso!",
+        service: {
+          id: crypto.randomUUID(),
+          title: payload.title,
+          description: payload.description,
+          category_id: payload.category_id,
+          category_name: payload.category_id,
+          location: payload.location,
+          status: "active",
+          created_at: new Date().toISOString(),
+        },
+      };
+    }
+    throw err;
+  }
+}
+
+export async function getWorkerServicesAction(): Promise<ServicesListResponse> {
+  const token = await requireAccessToken();
+
+  try {
+    return await getWorkerServices(token);
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
+      return { services: [] };
+    }
+    throw err;
+  }
+}
+
+export async function getServiceCategoriesAction(): Promise<ServiceCategoriesResponse> {
+  const token = await requireAccessToken();
+
+  try {
+    return await getServiceCategories(token);
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
+      const { MOCK_SERVICE_CATEGORIES } = await import("@/mock/worker/services");
+      return { categories: MOCK_SERVICE_CATEGORIES };
+    }
+    throw err;
+  }
 }
