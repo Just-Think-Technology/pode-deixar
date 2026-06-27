@@ -26,7 +26,7 @@ COPY shared/logger ./shared/logger
 COPY services/auth ./services/auth
 RUN npm run build -w @pode-deixar/auth
 EXPOSE 3001
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=prisma/schema.prisma && node services/auth/dist/main.js"]
+CMD ["node", "services/auth/dist/main.js"]
 
 # ─── Users Service ──────────────────────────────────────────
 FROM prisma AS users-build

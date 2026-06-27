@@ -22,13 +22,13 @@ export class LoginService {
     private passwordService: PasswordService,
   ) {}
 
-  async login(dto: LoginDto, ip?: string, userAgent?: string) {
+  async login(dto: LoginDto, ip?: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
 
     if (!user) {
-      this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
+      this.authLogger.logLoginAttempt(dto.email, false, ip);
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
@@ -74,12 +74,12 @@ export class LoginService {
         });
       }
 
-      this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
+      this.authLogger.logLoginAttempt(dto.email, false, ip);
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
     if (!user.emailVerified) {
-      this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
+      this.authLogger.logLoginAttempt(dto.email, false, ip);
       this.authLogger.logSecurityEvent('email_not_verified', { email: dto.email, ip });
       throw new ForbiddenException('Verifique seu email antes de fazer login');
     }
@@ -103,9 +103,9 @@ export class LoginService {
       },
     });
 
-    const expiresIn = dto.rememberMe ? 30 * 24 * 60 * 60 : 15 * 60;
+    const expiresIn = 15 * 60; // access_token real TTL (15 min)
 
-    this.authLogger.logLoginAttempt(dto.email, true, ip, userAgent);
+    this.authLogger.logLoginAttempt(dto.email, true, ip);
 
     return {
       message: 'Login realizado com sucesso',
@@ -183,41 +183,6 @@ export class LoginService {
     this.authLogger.logLogout(userId, user?.email);
 
     return { message: 'Logout realizado com sucesso' };
-  }
-
-  async getProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        completeName: true,
-        email: true,
-        role: true,
-        phone: true,
-        postalCode: true,
-        emailVerified: true,
-        createdAt: true,
-        lastLoginAt: true,
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Usuário não encontrado');
-    }
-
-    this.authLogger.logProfileAccess(user.id);
-
-    return {
-      id: user.id,
-      complete_name: user.completeName,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      postal_code: user.postalCode,
-      email_verified: user.emailVerified,
-      created_at: user.createdAt,
-      last_login_at: user.lastLoginAt,
-    };
   }
 
   private async generateAccessToken(user: any) {
