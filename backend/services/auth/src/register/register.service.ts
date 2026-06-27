@@ -23,12 +23,12 @@ export class RegisterService {
 
   async register(dto: RegisterDto, ip?: string) {
     if (dto.password !== dto.confirm_password) {
-      throw new BadRequestException('Passwords do not match');
+      throw new BadRequestException('Senhas não conferem');
     }
 
     const existingUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existingUser) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException('Email já cadastrado');
     }
 
     const passwordHash = await this.passwordService.hash(dto.password);
@@ -72,7 +72,7 @@ export class RegisterService {
     this.authLogger.logRegistration(dto.email, dto.role, ip);
 
     return {
-      message: 'User registered successfully. Please check your email to verify your account.',
+      message: 'Usuário cadastrado com sucesso. Verifique seu email para ativar sua conta.',
       user: {
         id: user.id,
         complete_name: user.completeName,
@@ -93,31 +93,31 @@ export class RegisterService {
     const user = await this.prisma.user.findFirst({ where: { emailVerificationToken: dto.token } });
     if (!user) {
       this.authLogger.logEmailVerificationTokenFailure(dto.token, 'invalid token');
-      throw new BadRequestException('Invalid verification token');
+      throw new BadRequestException('Token de verificação inválido');
     }
     if (user.emailVerified) {
       this.authLogger.logEmailVerification(user.email, false, 'already verified');
-      throw new BadRequestException('Email already verified');
+      throw new BadRequestException('Email já verificado');
     }
     if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
       this.authLogger.logEmailVerification(user.email, false, 'token expired');
-      throw new BadRequestException('Verification token has expired. Please request a new verification email.');
+      throw new BadRequestException('Token de verificação expirou. Solicite um novo email de verificação.');
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null } });
     this.authLogger.logEmailVerification(user.email, true);
-    return { message: 'Email verified successfully' };
+    return { message: 'Email verificado com sucesso' };
   }
 
   async resendVerificationEmail(dto: ResendVerificationDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (!user) {
       this.authLogger.logResendVerification(dto.email, false);
-      return { message: 'If the email exists, a new verification link has been sent' };
+      return { message: 'Se o email existir, um novo link de verificação foi enviado' };
     }
     if (user.emailVerified) {
       this.authLogger.logResendVerification(dto.email, false);
-      throw new BadRequestException('Email is already verified');
+      throw new BadRequestException('Email já está verificado');
     }
 
     const emailVerificationToken = uuidv4();
@@ -133,7 +133,7 @@ export class RegisterService {
     }
 
     return {
-      message: 'If the email exists, a new verification link has been sent',
+      message: 'Se o email existir, um novo link de verificação foi enviado',
       ...(process.env.NODE_ENV !== 'production' && {
         email_verification_token: emailVerificationToken,
       }),

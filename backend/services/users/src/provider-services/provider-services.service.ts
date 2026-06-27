@@ -20,7 +20,7 @@ export class ProviderServicesService {
       where: { userId },
     });
     if (!profile) {
-      throw new NotFoundException("Provider profile not found");
+      throw new NotFoundException("Perfil de prestador não encontrado");
     }
     return profile;
   }
@@ -30,7 +30,7 @@ export class ProviderServicesService {
       where: { id: providerProfileId },
     });
     if (!profile) {
-      throw new NotFoundException("Provider profile not found");
+      throw new NotFoundException("Perfil de prestador não encontrado");
     }
     return profile;
   }
@@ -107,11 +107,11 @@ export class ProviderServicesService {
     });
 
     if (!existing) {
-      throw new NotFoundException("Service not found");
+      throw new NotFoundException("Serviço não encontrado");
     }
 
     if (existing.providerProfileId !== providerProfileId) {
-      throw new BadRequestException("Service does not belong to this provider");
+      throw new BadRequestException("Serviço não pertence a este prestador");
     }
 
     const service = await this.prisma.providerService.update({
@@ -140,11 +140,11 @@ export class ProviderServicesService {
     });
 
     if (!existing) {
-      throw new NotFoundException("Service not found");
+      throw new NotFoundException("Serviço não encontrado");
     }
 
     if (existing.providerProfileId !== providerProfileId) {
-      throw new BadRequestException("Service does not belong to this provider");
+      throw new BadRequestException("Serviço não pertence a este prestador");
     }
 
     const service = await this.prisma.providerService.update({

@@ -38,7 +38,7 @@ describe('PUT /auth/change-password', () => {
         .send({ currentPassword: user.password, newPassword: NEW_PASSWORD })
         .expect(200);
 
-      expect(response.body).toHaveProperty('message', 'Password changed successfully');
+      expect(response.body).toHaveProperty('message', 'Senha alterada com sucesso');
 
       // Confirm the new password works
       await loginUser(app, user.email, NEW_PASSWORD);

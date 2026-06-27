@@ -37,13 +37,13 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
         to: email,
-        subject: 'Verify Your Email Address',
+        subject: 'Verifique seu endereço de email',
         html: `
-          <h1>Welcome!</h1>
-          <p>Please verify your email address by clicking the link below:</p>
-          <a href="${verificationUrl}">Verify Email</a>
-          <p>This link will expire in 24 hours.</p>
-          <p>If you didn't create an account, please ignore this email.</p>
+          <h1>Bem-vindo!</h1>
+          <p>Por favor, verifique seu endereço de email clicando no link abaixo:</p>
+          <a href="${verificationUrl}">Verificar Email</a>
+          <p>Este link expirará em 24 horas.</p>
+          <p>Se você não criou uma conta, ignore este email.</p>
         `,
       });
       logger.info('auth.email', `Verification email sent to ${email}`);
@@ -61,13 +61,13 @@ export class EmailService {
       await this.transporter.sendMail({
         from: this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
         to: email,
-        subject: 'Reset Your Password',
+        subject: 'Redefina sua senha',
         html: `
-          <h1>Password Reset Request</h1>
-          <p>You requested a password reset. Click the link below to reset your password:</p>
-          <a href="${resetUrl}">Reset Password</a>
-          <p>This link will expire in 1 hour.</p>
-          <p>If you didn't request this, please ignore this email.</p>
+          <h1>Solicitação de redefinição de senha</h1>
+          <p>Você solicitou a redefinição de senha. Clique no link abaixo para redefinir sua senha:</p>
+          <a href="${resetUrl}">Redefinir Senha</a>
+          <p>Este link expirará em 1 hora.</p>
+          <p>Se você não solicitou isso, ignore este email.</p>
         `,
       });
       logger.info('auth.email', `Password reset email sent to ${email}`);

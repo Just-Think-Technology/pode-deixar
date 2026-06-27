@@ -62,7 +62,7 @@ describe('Password Reset Flow', () => {
 
       expect(response.body).toHaveProperty(
         'message',
-        'If the email exists, a password reset link has been sent',
+        'Se o email existir, um link de redefinição de senha foi enviado',
       );
     });
 
@@ -135,7 +135,7 @@ describe('Password Reset Flow', () => {
         .send({ token: resetToken, newPassword: 'NewPassword123!' })
         .expect(400);
 
-      expect(response.body.message).toContain('Invalid or expired reset token');
+      expect(response.body.message).toContain('Token de redefinição inválido ou expirado');
     });
   });
 });

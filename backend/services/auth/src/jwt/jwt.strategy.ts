@@ -34,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (!user) {
       logger.error('auth.validate', `User not found for id ${payload.sub}`);
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Usuário não encontrado');
     }
 
     return user;

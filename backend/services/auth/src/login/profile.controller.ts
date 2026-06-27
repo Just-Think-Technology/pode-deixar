@@ -27,9 +27,9 @@ export class ProfileController {
 
   @Get('default-profile')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiOperation({ summary: 'Obter perfil do usuário atual' })
   @ApiBearerAuth()
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token', required: true })
+  @ApiHeader({ name: 'Authorization', description: 'Token de autenticação', required: true })
   async getProfile(@Request() req: any) {
     try { logger.info('auth.endpoint', `Profile requested for user ${req.user?.id}`); } catch (e) {}
     const profile = await this.loginService.getProfile(req.user.id);
@@ -39,37 +39,37 @@ export class ProfileController {
   @Get('client-profile')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CLIENT)
-  @ApiOperation({ summary: 'Client-only endpoint' })
+  @ApiOperation({ summary: 'Endpoint exclusivo para clientes' })
   @ApiBearerAuth()
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token', required: true })
+  @ApiHeader({ name: 'Authorization', description: 'Token de autenticação', required: true })
   async clientOnly() {
-    return { message: 'This is client only data' };
+    return { message: 'Apenas clientes podem acessar este recurso' };
   }
 
   @Get('admin-profile')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Admin-only endpoint' })
+  @ApiOperation({ summary: 'Endpoint exclusivo para administradores' })
   @ApiBearerAuth()
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token', required: true })
+  @ApiHeader({ name: 'Authorization', description: 'Token de autenticação', required: true })
   async adminOnly() {
-    return { message: 'This is admin only data' };
+    return { message: 'Apenas administradores podem acessar este recurso' };
   }
 
   @Get('provider-profile')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.PROVIDER)
-  @ApiOperation({ summary: 'Provider-only endpoint' })
+  @ApiOperation({ summary: 'Endpoint exclusivo para prestadores' })
   @ApiBearerAuth()
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token', required: true })
+  @ApiHeader({ name: 'Authorization', description: 'Token de autenticação', required: true })
   async providerOnly() {
-    return { message: 'This is provider only data' };
+    return { message: 'Apenas prestadores podem acessar este recurso' };
   }
 
   @Patch('users/:id/promote-admin')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Promote user to ADMIN (admin only)' })
+  @ApiOperation({ summary: 'Promover usuário a ADMIN (apenas admin)' })
   @ApiBearerAuth()
   async promoteToAdmin(@Param('id') id: string) {
     return this.prisma.user.update({

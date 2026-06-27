@@ -25,7 +25,7 @@ export class PasswordManagementService {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (!user) {
       this.authLogger.logPasswordResetRequested(dto.email, false);
-      return { message: 'If the email exists, a password reset link has been sent' };
+      return { message: 'Se o email existir, um link de redefinição de senha foi enviado' };
     }
 
     const resetToken = uuidv4();
@@ -43,7 +43,7 @@ export class PasswordManagementService {
     }
 
     return {
-      message: 'If the email exists, a password reset link has been sent',
+      message: 'Se o email existir, um link de redefinição de senha foi enviado',
       ...(process.env.NODE_ENV !== 'production' && {
         reset_password_token: resetToken,
       }),
@@ -54,7 +54,7 @@ export class PasswordManagementService {
     const user = await this.prisma.user.findFirst({ where: { passwordResetToken: dto.token, passwordResetExpires: { gt: new Date() } } });
     if (!user) {
       this.authLogger.logSecurityEvent('password_reset_invalid_token', { token: dto.token });
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BadRequestException('Token de redefinição inválido ou expirado');
     }
 
     const hashedPassword = await this.passwordService.hash(dto.newPassword);
@@ -63,7 +63,7 @@ export class PasswordManagementService {
     this.authLogger.logPasswordResetComplete(user.email);
 
     return {
-      message: 'Password reset successfully',
+      message: 'Senha redefinida com sucesso',
       user: {
         email: user.email,
         role: user.role,
@@ -75,19 +75,19 @@ export class PasswordManagementService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       this.authLogger.logSecurityEvent('password_change_invalid_user', { userId });
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Usuário não encontrado');
     }
 
     const isCurrentPasswordValid = await this.passwordService.verify(user.password, dto.currentPassword);
     if (!isCurrentPasswordValid) {
       this.authLogger.logPasswordChange(userId, false);
-      throw new BadRequestException('Current password is incorrect');
+      throw new BadRequestException('Senha atual incorreta');
     }
 
     const hashedNewPassword = await this.passwordService.hash(dto.newPassword);
     await this.prisma.user.update({ where: { id: userId }, data: { password: hashedNewPassword } });
     this.authLogger.logPasswordChange(userId, true);
 
-    return { message: 'Password changed successfully' };
+    return { message: 'Senha alterada com sucesso' };
   }
 }
