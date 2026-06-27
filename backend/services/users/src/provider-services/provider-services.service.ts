@@ -159,6 +159,12 @@ export class ProviderServicesService {
   }
 
   async searchProviders(query: SearchProvidersQueryDto) {
+    const profileIds = await this.findMatchingProfileIds(query);
+
+    if (profileIds.length === 0) {
+      return [];
+    }
+
     const serviceWhere: any = { isActive: true };
     if (query.category) {
       serviceWhere.category = query.category;
@@ -170,52 +176,8 @@ export class ProviderServicesService {
       ];
     }
 
-    const profileWhere: any = {};
-
-    if (query.q && query.category) {
-      profileWhere.OR = [
-        {
-          services: {
-            some: {
-              isActive: true,
-              category: query.category,
-              OR: [
-                { title: { contains: query.q, mode: "insensitive" } },
-                { description: { contains: query.q, mode: "insensitive" } },
-              ],
-            },
-          },
-        },
-        {
-          user: { completeName: { contains: query.q, mode: "insensitive" } },
-          services: { some: { isActive: true, category: query.category } },
-        },
-      ];
-    } else if (query.category) {
-      profileWhere.services = {
-        some: { isActive: true, category: query.category },
-      };
-    } else if (query.q) {
-      profileWhere.OR = [
-        { user: { completeName: { contains: query.q, mode: "insensitive" } } },
-        {
-          services: {
-            some: {
-              isActive: true,
-              OR: [
-                { title: { contains: query.q, mode: "insensitive" } },
-                { description: { contains: query.q, mode: "insensitive" } },
-              ],
-            },
-          },
-        },
-      ];
-    } else {
-      profileWhere.services = { some: { isActive: true } };
-    }
-
     const profiles = await this.prisma.providerProfile.findMany({
-      where: profileWhere,
+      where: { id: { in: profileIds } },
       include: {
         user: {
           select: {
@@ -257,5 +219,42 @@ export class ProviderServicesService {
         duration_minutes: s.durationMinutes,
       })),
     }));
+  }
+
+  private async findMatchingProfileIds(query: SearchProvidersQueryDto): Promise<string[]> {
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (query.q) {
+      conditions.push(
+        `unaccent(ps.title) ILIKE unaccent($${paramIndex})`,
+        `unaccent(ps.description) ILIKE unaccent($${paramIndex})`,
+        `unaccent(u.complete_name) ILIKE unaccent($${paramIndex})`,
+      );
+      params.push(`%${query.q}%`);
+      paramIndex++;
+    }
+
+    if (query.category) {
+      conditions.push(`ps.category = $${paramIndex}`);
+      params.push(query.category);
+      paramIndex++;
+    }
+
+    const whereClause = conditions.length > 0
+      ? `AND (${conditions.join(' OR ')})`
+      : '';
+
+    const sql = `
+      SELECT DISTINCT pp.id
+      FROM provider_profiles pp
+      JOIN users u ON u.id = pp.user_id
+      JOIN provider_services ps ON ps.provider_profile_id = pp.id AND ps.is_active = TRUE
+      WHERE 1=1 ${whereClause}
+    `;
+
+    const result = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(sql, ...params);
+    return result.map((r) => r.id);
   }
 }
