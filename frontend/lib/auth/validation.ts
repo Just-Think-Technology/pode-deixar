@@ -1,4 +1,5 @@
 import type {
+  CreateServicePayload,
   LoginPayload,
   RegisterPayload,
   UpdateWorkerProfilePayload,
@@ -93,6 +94,32 @@ export function validateWorkerProfileUpdate(
 
   if (!payload.postal_code?.trim()) {
     errors.postal_code = "CEP é obrigatório";
+  }
+
+  return Object.keys(errors).length > 0 ? fail(errors) : { ok: true };
+}
+
+export function validateCreateService(
+  payload: CreateServicePayload,
+): ValidationResult {
+  const errors: Record<string, string> = {};
+
+  const title = payload.title?.trim() ?? "";
+  if (title.length < 3 || title.length > 100) {
+    errors.title = "Título deve ter entre 3 e 100 caracteres";
+  }
+
+  const description = payload.description?.trim() ?? "";
+  if (description.length < 10 || description.length > 500) {
+    errors.description = "Descrição deve ter entre 10 e 500 caracteres";
+  }
+
+  if (!payload.category_id?.trim()) {
+    errors.category_id = "Selecione uma categoria";
+  }
+
+  if (!payload.location?.trim()) {
+    errors.location = "Informe a cidade/estado de atuação";
   }
 
   return Object.keys(errors).length > 0 ? fail(errors) : { ok: true };
