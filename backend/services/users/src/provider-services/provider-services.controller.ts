@@ -6,7 +6,10 @@ import {
   Delete,
   Body,
   Param,
+<<<<<<< HEAD
   Query,
+=======
+>>>>>>> 68d7f77 (Develop (#13))
   UseGuards,
   Request,
 } from "@nestjs/common";
@@ -16,17 +19,27 @@ import {
   ApiBearerAuth,
   ApiResponse,
   ApiParam,
+<<<<<<< HEAD
   ApiQuery,
+=======
+>>>>>>> 68d7f77 (Develop (#13))
 } from "@nestjs/swagger";
 import { ProviderServicesService } from "./provider-services.service";
 import { CreateProviderServiceDto } from "./dto/create-provider-service.dto";
 import { UpdateProviderServiceDto } from "./dto/update-provider-service.dto";
+<<<<<<< HEAD
 import { SearchProvidersQueryDto } from "./dto/search-providers-query.dto";
+=======
+>>>>>>> 68d7f77 (Develop (#13))
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
+<<<<<<< HEAD
 @ApiTags("Serviços do Prestador")
+=======
+@ApiTags("Provider Services")
+>>>>>>> 68d7f77 (Develop (#13))
 @Controller("providers/me/services")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -73,6 +86,7 @@ export class ProviderServicesController {
   }
 }
 
+<<<<<<< HEAD
 @ApiTags("Busca de Prestadores")
 @Controller("providers/search")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -107,6 +121,9 @@ export class ProviderSearchController {
 }
 
 @ApiTags("Serviços do Prestador (Público)")
+=======
+@ApiTags("Provider Services (Public)")
+>>>>>>> 68d7f77 (Develop (#13))
 @Controller("providers/:providerId/services")
 @ApiBearerAuth()
 export class PublicProviderServicesController {
@@ -130,7 +147,11 @@ export class PublicProviderServicesController {
   }
 }
 
+<<<<<<< HEAD
 @ApiTags("Serviços do Prestador (Dono)")
+=======
+@ApiTags("Provider Services (Owner)")
+>>>>>>> 68d7f77 (Develop (#13))
 @Controller("providers/me/services/:serviceId")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()

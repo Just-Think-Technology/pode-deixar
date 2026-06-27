@@ -5,21 +5,30 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+<<<<<<< HEAD
 import { MinioService } from "../storage/minio.service";
+=======
+>>>>>>> 68d7f77 (Develop (#13))
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateClientProfileDto } from "./dto/create-client-profile.dto";
 import { UpdateClientProfileDto } from "./dto/update-client-profile.dto";
 import { CreateProviderProfileDto } from "./dto/create-provider-profile.dto";
 import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
 import { Prisma } from "@prisma/client";
+<<<<<<< HEAD
 import { randomUUID } from "crypto";
 import { extname } from "path";
+=======
+>>>>>>> 68d7f77 (Develop (#13))
 
 @Injectable()
 export class ProfilesService {
   constructor(
     private prisma: PrismaService,
+<<<<<<< HEAD
     private minio: MinioService,
+=======
+>>>>>>> 68d7f77 (Develop (#13))
     private usersLogger: UsersLoggerService,
   ) {}
 
@@ -83,7 +92,11 @@ export class ProfilesService {
   async getProfile(userId: string, role: string) {
     const user = await this.getUser(userId);
     if (!user) {
+<<<<<<< HEAD
       throw new NotFoundException("Usuário não encontrado");
+=======
+      throw new NotFoundException("User not found");
+>>>>>>> 68d7f77 (Develop (#13))
     }
 
     if (role === "PROVIDER") {
@@ -91,7 +104,11 @@ export class ProfilesService {
         where: { userId },
       });
       if (!profile) {
+<<<<<<< HEAD
         throw new NotFoundException("Perfil de prestador não encontrado");
+=======
+        throw new NotFoundException("Provider profile not found");
+>>>>>>> 68d7f77 (Develop (#13))
       }
       this.usersLogger.logProfileFetched(userId, role);
       return this.formatProviderProfile(profile, user);
@@ -102,13 +119,21 @@ export class ProfilesService {
         where: { userId },
       });
       if (!profile) {
+<<<<<<< HEAD
         throw new NotFoundException("Perfil de cliente não encontrado");
+=======
+        throw new NotFoundException("Client profile not found");
+>>>>>>> 68d7f77 (Develop (#13))
       }
       this.usersLogger.logProfileFetched(userId, role);
       return this.formatClientProfile(profile, user);
     }
 
+<<<<<<< HEAD
     throw new BadRequestException("Função inválida");
+=======
+    throw new BadRequestException("Invalid role");
+>>>>>>> 68d7f77 (Develop (#13))
   }
 
   async createClientProfile(
@@ -120,13 +145,21 @@ export class ProfilesService {
       where: { userId },
     });
     if (existing) {
+<<<<<<< HEAD
       throw new ConflictException("Perfil de cliente já existe");
+=======
+      throw new ConflictException("Client profile already exists");
+>>>>>>> 68d7f77 (Develop (#13))
     }
 
     const user = await this.getUser(userId);
     if (!user || user.role !== "CLIENT") {
       throw new BadRequestException(
+<<<<<<< HEAD
         "Usuário precisa ser cliente para criar perfil de cliente",
+=======
+        "User must be a client to create client profile",
+>>>>>>> 68d7f77 (Develop (#13))
       );
     }
 
@@ -151,12 +184,20 @@ export class ProfilesService {
       where: { userId },
     });
     if (!existing) {
+<<<<<<< HEAD
       throw new NotFoundException("Perfil de cliente não encontrado");
+=======
+      throw new NotFoundException("Client profile not found");
+>>>>>>> 68d7f77 (Develop (#13))
     }
 
     const user = await this.getUser(userId);
     if (!user) {
+<<<<<<< HEAD
       throw new NotFoundException("Usuário não encontrado");
+=======
+      throw new NotFoundException("User not found");
+>>>>>>> 68d7f77 (Develop (#13))
     }
 
     const profile = await this.prisma.clientProfile.update({
@@ -185,13 +226,21 @@ export class ProfilesService {
       where: { userId },
     });
     if (existing) {
+<<<<<<< HEAD
       throw new ConflictException("Perfil de prestador já existe");
+=======
+      throw new ConflictException("Provider profile already exists");
+>>>>>>> 68d7f77 (Develop (#13))
     }
 
     const user = await this.getUser(userId);
     if (!user || user.role !== "PROVIDER") {
       throw new BadRequestException(
+<<<<<<< HEAD
         "Usuário precisa ser prestador para criar perfil de prestador",
+=======
+        "User must be a provider to create provider profile",
+>>>>>>> 68d7f77 (Develop (#13))
       );
     }
 
@@ -220,12 +269,20 @@ export class ProfilesService {
       where: { userId },
     });
     if (!existing) {
+<<<<<<< HEAD
       throw new NotFoundException("Perfil de prestador não encontrado");
+=======
+      throw new NotFoundException("Provider profile not found");
+>>>>>>> 68d7f77 (Develop (#13))
     }
 
     const user = await this.getUser(userId);
     if (!user) {
+<<<<<<< HEAD
       throw new NotFoundException("Usuário não encontrado");
+=======
+      throw new NotFoundException("User not found");
+>>>>>>> 68d7f77 (Develop (#13))
     }
 
     const profile = await this.prisma.providerProfile.update({
@@ -252,11 +309,16 @@ export class ProfilesService {
   async uploadAvatar(
     userId: string,
     role: string,
+<<<<<<< HEAD
     file: Express.Multer.File,
+=======
+    avatarUrl: string,
+>>>>>>> 68d7f77 (Develop (#13))
     ip?: string,
   ) {
     const user = await this.getUser(userId);
     if (!user) {
+<<<<<<< HEAD
       throw new NotFoundException("Usuário não encontrado");
     }
 
@@ -269,11 +331,17 @@ export class ProfilesService {
       this.minio.avatarBucket,
     );
 
+=======
+      throw new NotFoundException("User not found");
+    }
+
+>>>>>>> 68d7f77 (Develop (#13))
     if (role === "PROVIDER") {
       const existingProfile = await this.prisma.providerProfile.findUnique({
         where: { userId },
       });
       if (!existingProfile) {
+<<<<<<< HEAD
         throw new NotFoundException("Perfil de prestador não encontrado");
       }
 
@@ -285,11 +353,18 @@ export class ProfilesService {
         await this.minio
           .deleteFile(oldFileName, this.minio.avatarBucket)
           .catch(() => {});
+=======
+        throw new NotFoundException("Provider profile not found");
+>>>>>>> 68d7f77 (Develop (#13))
       }
 
       const profile = await this.prisma.providerProfile.update({
         where: { userId },
+<<<<<<< HEAD
         data: { avatarUrl: url },
+=======
+        data: { avatarUrl },
+>>>>>>> 68d7f77 (Develop (#13))
       });
       this.usersLogger.logAvatarUploaded(userId, role, ip);
       return this.formatProviderProfile(profile, user);
@@ -300,6 +375,7 @@ export class ProfilesService {
         where: { userId },
       });
       if (!existingProfile) {
+<<<<<<< HEAD
         throw new NotFoundException("Perfil de cliente não encontrado");
       }
 
@@ -311,16 +387,24 @@ export class ProfilesService {
         await this.minio
           .deleteFile(oldFileName, this.minio.avatarBucket)
           .catch(() => {});
+=======
+        throw new NotFoundException("Client profile not found");
+>>>>>>> 68d7f77 (Develop (#13))
       }
 
       const profile = await this.prisma.clientProfile.update({
         where: { userId },
+<<<<<<< HEAD
         data: { avatarUrl: url },
+=======
+        data: { avatarUrl },
+>>>>>>> 68d7f77 (Develop (#13))
       });
       this.usersLogger.logAvatarUploaded(userId, role, ip);
       return this.formatClientProfile(profile, user);
     }
 
+<<<<<<< HEAD
     throw new BadRequestException("Função inválida");
   }
 
@@ -381,5 +465,8 @@ export class ProfilesService {
       created_at: profile.createdAt,
       updated_at: profile.updatedAt,
     };
+=======
+    throw new BadRequestException("Invalid role");
+>>>>>>> 68d7f77 (Develop (#13))
   }
 }

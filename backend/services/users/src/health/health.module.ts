@@ -1,8 +1,16 @@
+<<<<<<< HEAD
 import { Module } from "@nestjs/common";
 import { TerminusModule } from "@nestjs/terminus";
 import { HealthController } from "./health.controller";
 import { DatabaseHealthIndicator } from "./database.health";
 import { PrismaModule } from "../prisma/prisma.module";
+=======
+import { Module } from '@nestjs/common';
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health.controller';
+import { DatabaseHealthIndicator } from './database.health';
+import { PrismaModule } from '../prisma/prisma.module';
+>>>>>>> 68d7f77 (Develop (#13))
 
 @Module({
   imports: [TerminusModule, PrismaModule],
@@ -10,4 +18,8 @@ import { PrismaModule } from "../prisma/prisma.module";
   providers: [DatabaseHealthIndicator],
   exports: [DatabaseHealthIndicator],
 })
+<<<<<<< HEAD
 export class HealthModule {}
+=======
+export class HealthModule {}
+>>>>>>> 68d7f77 (Develop (#13))

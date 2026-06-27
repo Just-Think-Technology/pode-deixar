@@ -3,7 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TerminusModule } from '@nestjs/terminus';
+<<<<<<< HEAD
 import { ValidationError } from 'class-validator';
+=======
+>>>>>>> 68d7f77 (Develop (#13))
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth.module';
@@ -66,6 +69,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+<<<<<<< HEAD
       envFilePath: ['../../.env.staging'],
     }),
     ThrottlerModule.forRootAsync({
@@ -82,6 +86,17 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     }),
     TerminusModule,
     EmailModule,
+=======
+      envFilePath: [".env.staging"],
+    }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
+    TerminusModule,
+>>>>>>> 68d7f77 (Develop (#13))
     PrismaModule,
     AuthModule,
     CommonModule,

@@ -8,7 +8,10 @@ AGENTS.md
 
 # docs internas (não versionar)
 AGENTS.md
+<<<<<<< HEAD
 
 # env files (staging/prod não versionados)
 .env.staging
 .env.prod
+=======
+>>>>>>> 68d7f77 (Develop (#13))

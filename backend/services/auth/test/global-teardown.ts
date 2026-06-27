@@ -2,7 +2,11 @@ import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
+<<<<<<< HEAD
 dotenv.config({ path: path.resolve(__dirname, '../../../.env.staging') });
+=======
+dotenv.config({ path: path.resolve(__dirname, '../.env.staging') });
+>>>>>>> 68d7f77 (Develop (#13))
 
 export default async function globalTeardown() {
   const prisma = new PrismaClient();

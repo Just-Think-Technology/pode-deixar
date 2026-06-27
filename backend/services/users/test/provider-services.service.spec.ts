@@ -2,8 +2,12 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ProviderServicesService } from "../src/provider-services/provider-services.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
+<<<<<<< HEAD
 import { NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { SearchProvidersQueryDto } from "../src/provider-services/dto/search-providers-query.dto";
+=======
+import { NotFoundException, BadRequestException } from "@nestjs/common";
+>>>>>>> 68d7f77 (Develop (#13))
 
 describe("ProviderServicesService", () => {
   let service: ProviderServicesService;
@@ -32,20 +36,28 @@ describe("ProviderServicesService", () => {
     role: "PROVIDER",
   };
 
+<<<<<<< HEAD
   const mockCategory = {
     id: "cat-eletrica",
     name: "Elétrica",
     slug: "eletrica",
   };
 
+=======
+>>>>>>> 68d7f77 (Develop (#13))
   const mockService = {
     id: "service-1",
     providerProfileId: "provider-profile-1",
     title: "Instalação de chuveiro elétrico",
     description: "Instalação completa de chuveiro elétrico com garantia",
     fixedPrice: 150.0,
+<<<<<<< HEAD
     categoryId: "cat-eletrica",
     category: mockCategory,
+=======
+    category: "ELETRICA",
+    durationMinutes: 60,
+>>>>>>> 68d7f77 (Develop (#13))
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -54,8 +66,11 @@ describe("ProviderServicesService", () => {
   const mockPrisma = {
     providerProfile: {
       findUnique: jest.fn(),
+<<<<<<< HEAD
       findMany: jest.fn(),
       count: jest.fn(),
+=======
+>>>>>>> 68d7f77 (Develop (#13))
     },
     providerService: {
       create: jest.fn(),
@@ -67,7 +82,10 @@ describe("ProviderServicesService", () => {
     user: {
       findUnique: jest.fn(),
     },
+<<<<<<< HEAD
     $transaction: jest.fn(),
+=======
+>>>>>>> 68d7f77 (Develop (#13))
   };
 
   const mockLogger = {
@@ -98,10 +116,18 @@ describe("ProviderServicesService", () => {
       title: "Instalação de chuveiro elétrico",
       description: "Instalação completa de chuveiro elétrico com garantia",
       fixedPrice: 150.0,
+<<<<<<< HEAD
       categoryId: "cat-eletrica",
     };
 
      it("should create a service for provider", async () => {
+=======
+      category: "ELETRICA",
+      durationMinutes: 60,
+    };
+
+    it("should create a service for provider", async () => {
+>>>>>>> 68d7f77 (Develop (#13))
       mockPrisma.providerProfile.findUnique.mockResolvedValue(
         mockProviderProfile,
       );
@@ -180,6 +206,7 @@ describe("ProviderServicesService", () => {
       expect(mockPrisma.providerService.findMany).toHaveBeenCalledWith({
         where: { providerProfileId: "provider-profile-1", isActive: true },
         orderBy: { createdAt: "desc" },
+<<<<<<< HEAD
         include: {
           category: { select: { id: true, name: true, slug: true } },
           images: {
@@ -187,6 +214,8 @@ describe("ProviderServicesService", () => {
             orderBy: { createdAt: "desc" },
           },
         },
+=======
+>>>>>>> 68d7f77 (Develop (#13))
       });
     });
 
@@ -252,7 +281,11 @@ describe("ProviderServicesService", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+<<<<<<< HEAD
     it("should throw ForbiddenException when service belongs to another provider", async () => {
+=======
+    it("should throw BadRequestException when service belongs to another provider", async () => {
+>>>>>>> 68d7f77 (Develop (#13))
       mockPrisma.providerService.findUnique.mockResolvedValue({
         ...mockService,
         providerProfileId: "other-profile",
@@ -265,7 +298,11 @@ describe("ProviderServicesService", () => {
           updateDto,
           "127.0.0.1",
         ),
+<<<<<<< HEAD
       ).rejects.toThrow(ForbiddenException);
+=======
+      ).rejects.toThrow(BadRequestException);
+>>>>>>> 68d7f77 (Develop (#13))
     });
   });
 
@@ -299,7 +336,11 @@ describe("ProviderServicesService", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+<<<<<<< HEAD
     it("should throw ForbiddenException when service belongs to another provider", async () => {
+=======
+    it("should throw BadRequestException when service belongs to another provider", async () => {
+>>>>>>> 68d7f77 (Develop (#13))
       mockPrisma.providerService.findUnique.mockResolvedValue({
         ...mockService,
         providerProfileId: "other-profile",
@@ -307,6 +348,7 @@ describe("ProviderServicesService", () => {
 
       await expect(
         service.deleteService("provider-profile-1", "service-1", "127.0.0.1"),
+<<<<<<< HEAD
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -532,6 +574,9 @@ describe("ProviderServicesService", () => {
       const result = await service.searchProviders(query);
 
       expect(result.data[0].id).toBe("far-high");
+=======
+      ).rejects.toThrow(BadRequestException);
+>>>>>>> 68d7f77 (Develop (#13))
     });
   });
 });

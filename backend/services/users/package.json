@@ -10,10 +10,17 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "watch:logger": "tsc -b ../../shared/logger --watch",
+<<<<<<< HEAD
     "start:dev": "concurrently \"pnpm run watch:logger\" \"nest start --watch\"",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"src/**/*.ts\" --fix",
+=======
+    "start:dev": "concurrently \"npm run watch:logger\" \"nest start --watch\"",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+>>>>>>> 68d7f77 (Develop (#13))
     "test": "cross-env NODE_ENV=test jest",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:cov": "cross-env NODE_ENV=test jest --coverage",
@@ -30,13 +37,20 @@
     "@nestjs/swagger": "^11.2.6",
     "@nestjs/terminus": "^11.1.1",
     "@nestjs/throttler": "^6.2.1",
+<<<<<<< HEAD
     "@pode-deixar/logger": "workspace:*",
+=======
+    "@pode-deixar/logger": "*",
+>>>>>>> 68d7f77 (Develop (#13))
     "@prisma/client": "5.22.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "helmet": "^8.0.0",
+<<<<<<< HEAD
     "minio": "^8.0.7",
     "multer": "^2.2.0",
+=======
+>>>>>>> 68d7f77 (Develop (#13))
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
@@ -51,7 +65,10 @@
     "@nestjs/testing": "^11.0.1",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+<<<<<<< HEAD
     "@types/multer": "^2.2.0",
+=======
+>>>>>>> 68d7f77 (Develop (#13))
     "@types/node": "^22.19.11",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
@@ -60,7 +77,10 @@
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
+<<<<<<< HEAD
     "eslint-plugin-security": "^4.0.1",
+=======
+>>>>>>> 68d7f77 (Develop (#13))
     "globals": "^16.0.0",
     "jest": "^30.0.0",
     "prettier": "^3.4.2",

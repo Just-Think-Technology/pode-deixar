@@ -96,6 +96,7 @@ export class UsersLoggerService {
       },
     );
   }
+<<<<<<< HEAD
 
   logServiceImageUploaded(
     providerProfileId: string,
@@ -143,4 +144,6 @@ export class UsersLoggerService {
       ip,
     });
   }
+=======
+>>>>>>> 68d7f77 (Develop (#13))
 }
