@@ -38,9 +38,8 @@ describe("ProviderServicesService", () => {
     title: "Instalação de chuveiro elétrico",
     description: "Instalação completa de chuveiro elétrico com garantia",
     fixedPrice: 150.0,
-    category: "ELETRICA",
-    durationMinutes: 60,
-    isActive: true,
+     category: "ELETRICA",
+     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -90,11 +89,10 @@ describe("ProviderServicesService", () => {
       title: "Instalação de chuveiro elétrico",
       description: "Instalação completa de chuveiro elétrico com garantia",
       fixedPrice: 150.0,
-      category: "ELETRICA",
-      durationMinutes: 60,
-    };
+       category: "ELETRICA",
+     };
 
-    it("should create a service for provider", async () => {
+     it("should create a service for provider", async () => {
       mockPrisma.providerProfile.findUnique.mockResolvedValue(
         mockProviderProfile,
       );
@@ -326,15 +324,14 @@ describe("ProviderServicesService", () => {
           description: "Instalação completa",
           fixedPrice: 150.0,
           category: "ELETRICA",
-          durationMinutes: 60,
           isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ],
-    };
+           createdAt: new Date(),
+           updatedAt: new Date(),
+         },
+       ],
+     };
 
-    const mockProfileWithNameMatch = {
+     const mockProfileWithNameMatch = {
       ...mockProfileWithServices,
       id: "provider-profile-2",
       user: {
@@ -364,7 +361,6 @@ describe("ProviderServicesService", () => {
           description: "Troca completa da fiação elétrica",
           fixedPrice: 200.0,
           category: "ELETRICA",
-          durationMinutes: 90,
           isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),

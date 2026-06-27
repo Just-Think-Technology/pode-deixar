@@ -44,7 +44,6 @@ export class ProviderServicesService {
       description: service.description,
       fixed_price: service.fixedPrice,
       category: service.category,
-      duration_minutes: service.durationMinutes,
       is_active: service.isActive,
       created_at: service.createdAt,
       updated_at: service.updatedAt,
@@ -65,7 +64,6 @@ export class ProviderServicesService {
         description: dto.description,
         fixedPrice: dto.fixedPrice,
         category: dto.category,
-        durationMinutes: dto.durationMinutes,
         isActive: true,
       },
     });
@@ -122,7 +120,6 @@ export class ProviderServicesService {
         description: dto.description ?? existing.description,
         fixedPrice: dto.fixedPrice ?? existing.fixedPrice,
         category: dto.category ?? existing.category,
-        durationMinutes: dto.durationMinutes ?? existing.durationMinutes,
       },
     });
 
@@ -213,7 +210,6 @@ export class ProviderServicesService {
         description: s.description,
         fixed_price: s.fixedPrice,
         category: s.category,
-        duration_minutes: s.durationMinutes,
       })),
     }));
 

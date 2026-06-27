@@ -15,7 +15,7 @@ import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor"
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
     title: 'Título', description: 'Descrição', fixedPrice: 'Preço fixo',
-    category: 'Categoria', durationMinutes: 'Duração (minutos)',
+    category: 'Categoria',
     avatarUrl: 'URL do avatar', bio: 'Biografia', hourlyRate: 'Valor por hora',
     skills: 'Habilidades', portfolio: 'Portfólio', isAvailable: 'Disponível',
     preferences: 'Preferências',
