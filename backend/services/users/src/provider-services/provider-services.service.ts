@@ -158,26 +158,23 @@ export class ProviderServicesService {
     return this.formatService(service);
   }
 
+  private removerAcentos(texto: string): string {
+    return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+
   async searchProviders(query: SearchProvidersQueryDto) {
-    const profileIds = await this.findMatchingProfileIds(query);
+    const serviceFilter: any = { isActive: true };
+    const profileFilter: any = { services: { some: { isActive: true } } };
 
-    if (profileIds.length === 0) {
-      return [];
-    }
-
-    const serviceWhere: any = { isActive: true };
     if (query.category) {
-      serviceWhere.category = query.category;
-    }
-    if (query.q) {
-      serviceWhere.OR = [
-        { title: { contains: query.q, mode: "insensitive" } },
-        { description: { contains: query.q, mode: "insensitive" } },
-      ];
+      serviceFilter.category = query.category;
+      profileFilter.services = {
+        some: { isActive: true, category: query.category },
+      };
     }
 
     const profiles = await this.prisma.providerProfile.findMany({
-      where: { id: { in: profileIds } },
+      where: profileFilter,
       include: {
         user: {
           select: {
@@ -189,13 +186,13 @@ export class ProviderServicesService {
           },
         },
         services: {
-          where: serviceWhere,
+          where: serviceFilter,
           orderBy: { createdAt: "desc" },
         },
       },
     });
 
-    return profiles.map((profile) => ({
+    let resultados = profiles.map((profile) => ({
       id: profile.id,
       user: {
         id: profile.user.id,
@@ -219,42 +216,20 @@ export class ProviderServicesService {
         duration_minutes: s.durationMinutes,
       })),
     }));
-  }
-
-  private async findMatchingProfileIds(query: SearchProvidersQueryDto): Promise<string[]> {
-    const conditions: string[] = [];
-    const params: any[] = [];
-    let paramIndex = 1;
 
     if (query.q) {
-      conditions.push(
-        `unaccent(ps.title) ILIKE unaccent($${paramIndex})`,
-        `unaccent(ps.description) ILIKE unaccent($${paramIndex})`,
-        `unaccent(u.complete_name) ILIKE unaccent($${paramIndex})`,
-      );
-      params.push(`%${query.q}%`);
-      paramIndex++;
+      const termo = this.removerAcentos(query.q);
+      resultados = resultados.filter((p) => {
+        const nome = this.removerAcentos(p.user.complete_name);
+        if (nome.includes(termo)) return true;
+        return p.services.some(
+          (s) =>
+            this.removerAcentos(s.title).includes(termo) ||
+            this.removerAcentos(s.description).includes(termo),
+        );
+      });
     }
 
-    if (query.category) {
-      conditions.push(`ps.category = $${paramIndex}`);
-      params.push(query.category);
-      paramIndex++;
-    }
-
-    const whereClause = conditions.length > 0
-      ? `AND (${conditions.join(' OR ')})`
-      : '';
-
-    const sql = `
-      SELECT DISTINCT pp.id
-      FROM provider_profiles pp
-      JOIN users u ON u.id = pp.user_id
-      JOIN provider_services ps ON ps.provider_profile_id = pp.id AND ps.is_active = TRUE
-      WHERE 1=1 ${whereClause}
-    `;
-
-    const result = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(sql, ...params);
-    return result.map((r) => r.id);
+    return resultados;
   }
 }
