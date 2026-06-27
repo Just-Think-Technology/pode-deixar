@@ -60,6 +60,7 @@ describe("ProviderServicesService", () => {
     user: {
       findUnique: jest.fn(),
     },
+    $queryRawUnsafe: jest.fn(),
   };
 
   const mockLogger = {
@@ -372,7 +373,12 @@ describe("ProviderServicesService", () => {
       ],
     };
 
+    beforeEach(() => {
+      mockPrisma.$queryRawUnsafe.mockReset();
+    });
+
     it("should return all active providers when no filters", async () => {
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([{ id: "provider-profile-1" }]);
       mockPrisma.providerProfile.findMany.mockResolvedValue([
         mockProfileWithServices,
       ]);
@@ -380,6 +386,7 @@ describe("ProviderServicesService", () => {
       const query: SearchProvidersQueryDto = {};
       const result = await service.searchProviders(query);
 
+      expect(mockPrisma.$queryRawUnsafe).toHaveBeenCalled();
       expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
       expect(result).toHaveLength(1);
       expect(result[0].user.complete_name).toBe("João Eletricista");
@@ -387,6 +394,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should filter by category", async () => {
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([{ id: "provider-profile-1" }]);
       mockPrisma.providerProfile.findMany.mockResolvedValue([
         mockProfileWithServices,
       ]);
@@ -399,6 +407,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should filter by text search on service title", async () => {
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([{ id: "provider-profile-1" }]);
       mockPrisma.providerProfile.findMany.mockResolvedValue([
         mockProfileWithServices,
       ]);
@@ -411,6 +420,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should filter by provider name", async () => {
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([{ id: "provider-profile-2" }]);
       mockPrisma.providerProfile.findMany.mockResolvedValue([
         mockProfileWithNameMatch,
       ]);
@@ -422,7 +432,20 @@ describe("ProviderServicesService", () => {
       expect(result[0].user.complete_name).toBe("José Chuveiro");
     });
 
+    it("should search with unaccent (ignore accents)", async () => {
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([{ id: "provider-profile-1" }]);
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithServices,
+      ]);
+
+      const query: SearchProvidersQueryDto = { q: "elétrica" };
+      const result = await service.searchProviders(query);
+
+      expect(result).toHaveLength(1);
+    });
+
     it("should group multiple services under the same provider", async () => {
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([{ id: "provider-profile-1" }]);
       mockPrisma.providerProfile.findMany.mockResolvedValue([
         mockProfileWithMultipleServices,
       ]);
@@ -437,7 +460,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should return empty array when no matches", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([]);
+      mockPrisma.$queryRawUnsafe.mockResolvedValue([]);
 
       const query: SearchProvidersQueryDto = { category: "HIDRAULICA" };
       const result = await service.searchProviders(query);
