@@ -18,8 +18,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = 'Internal server error';
-    let error = 'Internal Server Error';
+    let message = 'Erro interno do servidor';
+    let error = 'Erro Interno do Servidor';
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -46,7 +46,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Don't expose internal errors in production
     const isProduction = process.env.NODE_ENV === 'production';
     const responseMessage = isProduction && status === HttpStatus.INTERNAL_SERVER_ERROR
-      ? 'Internal server error'
+      ? 'Erro interno do servidor'
       : message;
 
     response.status(status).json({

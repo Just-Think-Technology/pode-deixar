@@ -29,7 +29,7 @@ export class LoginService {
 
     if (!user) {
       this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciais inválidas');
     }
 
     if (user.lockoutUntil && user.lockoutUntil > new Date()) {
@@ -38,7 +38,7 @@ export class LoginService {
         lockoutUntil: user.lockoutUntil,
         ip,
       });
-      throw new ForbiddenException('Account is temporarily locked due to multiple failed login attempts');
+      throw new ForbiddenException('Conta temporariamente bloqueada devido a múltiplas tentativas de login');
     }
 
     const isPasswordValid = await this.passwordService.verify(user.password, dto.password);
@@ -66,7 +66,7 @@ export class LoginService {
           ip,
         });
 
-        throw new ForbiddenException('Account locked due to multiple failed attempts');
+        throw new ForbiddenException('Conta bloqueada devido a múltiplas tentativas');
       } else {
         await this.prisma.user.updateMany({
           where: { id: user.id },
@@ -75,13 +75,13 @@ export class LoginService {
       }
 
       this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciais inválidas');
     }
 
     if (!user.emailVerified) {
       this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
       this.authLogger.logSecurityEvent('email_not_verified', { email: dto.email, ip });
-      throw new ForbiddenException('Please verify your email before logging in');
+      throw new ForbiddenException('Verifique seu email antes de fazer login');
     }
 
     await this.prisma.user.updateMany({
@@ -108,7 +108,7 @@ export class LoginService {
     this.authLogger.logLoginAttempt(dto.email, true, ip, userAgent);
 
     return {
-      message: 'Login successful',
+      message: 'Login realizado com sucesso',
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_in: expiresIn,
@@ -139,7 +139,7 @@ export class LoginService {
           where: { id: payload.sub },
           data: { refreshToken: null },
         });
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new UnauthorizedException('Token de atualização inválido');
       }
 
       await this.prisma.user.update({
@@ -165,7 +165,7 @@ export class LoginService {
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.authLogger.logTokenRefresh('unknown', false);
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Token de atualização inválido');
     }
   }
 
@@ -182,7 +182,7 @@ export class LoginService {
 
     this.authLogger.logLogout(userId, user?.email);
 
-    return { message: 'Logged out successfully' };
+    return { message: 'Logout realizado com sucesso' };
   }
 
   async getProfile(userId: string) {
@@ -202,7 +202,7 @@ export class LoginService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Usuário não encontrado');
     }
 
     this.authLogger.logProfileAccess(user.id);

@@ -27,7 +27,7 @@ export class LoginController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Authenticate user and return JWT tokens' })
+  @ApiOperation({ summary: 'Autenticar usuário e retornar tokens JWT' })
   @ApiBody({ type: LoginDto })
   async login(@Body() dto: LoginDto, @Headers('x-forwarded-for') ip?: string, @Headers('user-agent') userAgent?: string) {
     try { logger.info('auth.endpoint', `Login called for ${dto.email}`); } catch (e) {}
@@ -37,7 +37,7 @@ export class LoginController {
   @ApiTags('Acesso')
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh token' })
+  @ApiOperation({ summary: 'Atualizar token' })
   @ApiBody({ type: RefreshTokenDto })
   async refreshToken(@Body() dto: RefreshTokenDto) {
     try { logger.info('auth.endpoint', `Refresh token requested`); } catch (e) {}
@@ -48,9 +48,9 @@ export class LoginController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Logout user (invalidate refresh token)' })
+  @ApiOperation({ summary: 'Logout do usuário (invalidar refresh token)' })
   @ApiBearerAuth()
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token', required: true })
+  @ApiHeader({ name: 'Authorization', description: 'Token de autenticação', required: true })
   async logout(@Request() req: any) {
     try { logger.info('auth.endpoint', `Logout requested for user ${req.user?.id}`); } catch (e) {}
     return this.loginService.logout(req.user.id);

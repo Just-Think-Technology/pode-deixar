@@ -79,7 +79,7 @@ export class ProfilesService {
   async getProfile(userId: string, role: string) {
     const user = await this.getUser(userId);
     if (!user) {
-      throw new NotFoundException("User not found");
+      throw new NotFoundException("Usuário não encontrado");
     }
 
     if (role === "PROVIDER") {
@@ -87,7 +87,7 @@ export class ProfilesService {
         where: { userId },
       });
       if (!profile) {
-        throw new NotFoundException("Provider profile not found");
+        throw new NotFoundException("Perfil de prestador não encontrado");
       }
       this.usersLogger.logProfileFetched(userId, role);
       return this.formatProviderProfile(profile, user);
@@ -98,13 +98,13 @@ export class ProfilesService {
         where: { userId },
       });
       if (!profile) {
-        throw new NotFoundException("Client profile not found");
+        throw new NotFoundException("Perfil de cliente não encontrado");
       }
       this.usersLogger.logProfileFetched(userId, role);
       return this.formatClientProfile(profile, user);
     }
 
-    throw new BadRequestException("Invalid role");
+    throw new BadRequestException("Função inválida");
   }
 
   async createClientProfile(
@@ -116,13 +116,13 @@ export class ProfilesService {
       where: { userId },
     });
     if (existing) {
-      throw new ConflictException("Client profile already exists");
+      throw new ConflictException("Perfil de cliente já existe");
     }
 
     const user = await this.getUser(userId);
     if (!user || user.role !== "CLIENT") {
       throw new BadRequestException(
-        "User must be a client to create client profile",
+        "Usuário precisa ser cliente para criar perfil de cliente",
       );
     }
 
@@ -147,12 +147,12 @@ export class ProfilesService {
       where: { userId },
     });
     if (!existing) {
-      throw new NotFoundException("Client profile not found");
+      throw new NotFoundException("Perfil de cliente não encontrado");
     }
 
     const user = await this.getUser(userId);
     if (!user) {
-      throw new NotFoundException("User not found");
+      throw new NotFoundException("Usuário não encontrado");
     }
 
     const profile = await this.prisma.clientProfile.update({
@@ -181,13 +181,13 @@ export class ProfilesService {
       where: { userId },
     });
     if (existing) {
-      throw new ConflictException("Provider profile already exists");
+      throw new ConflictException("Perfil de prestador já existe");
     }
 
     const user = await this.getUser(userId);
     if (!user || user.role !== "PROVIDER") {
       throw new BadRequestException(
-        "User must be a provider to create provider profile",
+        "Usuário precisa ser prestador para criar perfil de prestador",
       );
     }
 
@@ -216,12 +216,12 @@ export class ProfilesService {
       where: { userId },
     });
     if (!existing) {
-      throw new NotFoundException("Provider profile not found");
+      throw new NotFoundException("Perfil de prestador não encontrado");
     }
 
     const user = await this.getUser(userId);
     if (!user) {
-      throw new NotFoundException("User not found");
+      throw new NotFoundException("Usuário não encontrado");
     }
 
     const profile = await this.prisma.providerProfile.update({
@@ -253,7 +253,7 @@ export class ProfilesService {
   ) {
     const user = await this.getUser(userId);
     if (!user) {
-      throw new NotFoundException("User not found");
+      throw new NotFoundException("Usuário não encontrado");
     }
 
     if (role === "PROVIDER") {
@@ -261,7 +261,7 @@ export class ProfilesService {
         where: { userId },
       });
       if (!existingProfile) {
-        throw new NotFoundException("Provider profile not found");
+        throw new NotFoundException("Perfil de prestador não encontrado");
       }
 
       const profile = await this.prisma.providerProfile.update({
@@ -277,7 +277,7 @@ export class ProfilesService {
         where: { userId },
       });
       if (!existingProfile) {
-        throw new NotFoundException("Client profile not found");
+        throw new NotFoundException("Perfil de cliente não encontrado");
       }
 
       const profile = await this.prisma.clientProfile.update({
@@ -288,6 +288,6 @@ export class ProfilesService {
       return this.formatClientProfile(profile, user);
     }
 
-    throw new BadRequestException("Invalid role");
+    throw new BadRequestException("Função inválida");
   }
 }

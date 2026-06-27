@@ -45,7 +45,7 @@ describe('GET /auth/admin-profile', () => {
         .set(bearerAuth(accessToken))
         .expect(200);
 
-      expect(response.body).toHaveProperty('message', 'This is admin only data');
+      expect(response.body).toHaveProperty('message', 'Apenas administradores podem acessar este recurso');
     });
   });
 

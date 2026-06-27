@@ -18,7 +18,7 @@ export class RegisterController {
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Register a new user' })
+  @ApiOperation({ summary: 'Registrar um novo usuário' })
   @ApiBody({ type: RegisterDto })
   async register(@Body() dto: RegisterDto, @Headers('x-forwarded-for') ip?: string) {
     try { logger.info('auth.endpoint', `Register called for ${dto.email}`); } catch (e) {}
@@ -27,7 +27,7 @@ export class RegisterController {
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify user email with token' })
+  @ApiOperation({ summary: 'Verificar email do usuário com token' })
   @ApiBody({ type: VerifyEmailDto })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     try { logger.info('auth.endpoint', `Verify email requested`); } catch (e) {}
@@ -36,7 +36,7 @@ export class RegisterController {
 
   @Post('resend-email-verification')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Resend email verification link' })
+  @ApiOperation({ summary: 'Reenviar link de verificação de email' })
   @ApiBody({ type: ResendVerificationDto })
   async resendVerificationEmail(@Body() dto: ResendVerificationDto) {
     try { logger.info('auth.endpoint', `Resend verification requested for ${dto.email}`); } catch (e) {}

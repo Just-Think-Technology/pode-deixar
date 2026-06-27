@@ -99,7 +99,7 @@ describe('EmailService', () => {
       expect(mockSendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: EMAIL,
-          subject: 'Verify Your Email Address',
+          subject: 'Verifique seu endereço de email',
         }),
       );
     });
@@ -167,7 +167,7 @@ describe('EmailService', () => {
       expect(mockSendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: EMAIL,
-          subject: 'Reset Your Password',
+          subject: 'Redefina sua senha',
         }),
       );
     });

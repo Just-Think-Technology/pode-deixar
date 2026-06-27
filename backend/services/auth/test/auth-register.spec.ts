@@ -53,7 +53,7 @@ describe('POST /auth/register', () => {
         .send(user)
         .expect(409);
 
-      expect(response.body.message).toContain('already registered');
+      expect(response.body.message).toContain('Email já cadastrado');
     });
   });
 
@@ -122,7 +122,7 @@ describe('POST /auth/register', () => {
         .send({ ...user, confirm_password: 'DifferentPassword123!' })
         .expect(400);
 
-      expect(response.body.message).toContain('do not match');
+      expect(response.body.message).toContain('Senhas não conferem');
     });
   });
 });
