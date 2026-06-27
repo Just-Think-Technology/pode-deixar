@@ -6,6 +6,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProfilesModule } from "./profiles/profiles.module";
 import { ProviderServicesModule } from "./provider-services/provider-services.module";
+import { HealthModule } from "./health/health.module";
 import { SharedModule } from "./shared/shared.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
@@ -28,6 +29,7 @@ import { UsersLoggerService } from "./shared/users-logger.service";
     PrismaModule,
     ProfilesModule,
     ProviderServicesModule,
+    HealthModule,
     SharedModule,
   ],
   providers: [

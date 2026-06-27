@@ -3,6 +3,7 @@ dist/
 node_modules/
 build/
 logs/
+*.tsbuildinfo
 AGENTS.md
 
 # docs internas (não versionar)
