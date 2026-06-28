@@ -5,15 +5,18 @@ import { getWorkerProfileAction } from "@/lib/auth/actions";
 import { WORKER_PROFILE_UI_DEFAULTS } from "@/mock/worker/profile";
 
 export default async function WorkerProfileRoute() {
+  let user: any;
   try {
-    const { user } = await getWorkerProfileAction();
-    return (
-      <WorkerProfilePage
-        initialProfile={user}
-        uiDefaults={WORKER_PROFILE_UI_DEFAULTS}
-      />
-    );
+    const result = await getWorkerProfileAction();
+    user = result.user;
   } catch {
     redirect("/login/worker");
   }
+
+  return (
+    <WorkerProfilePage
+      initialProfile={user}
+      uiDefaults={WORKER_PROFILE_UI_DEFAULTS}
+    />
+  );
 }
