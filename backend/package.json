@@ -1,20 +1,20 @@
 {
   "name": "@pode-deixar/backend",
   "version": "1.0.0",
+  "packageManager": "pnpm@11.9.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "npm run start:dev -w @pode-deixar/auth",
-    "dev:all": "concurrently \"npm run start:dev -w @pode-deixar/auth\" \"npm run start:dev -w @pode-deixar/users\"",
-    "build": "npm run prisma:generate && npm run build -w @pode-deixar/auth && npm run build -w @pode-deixar/users",
-    "start": "npm run start -w @pode-deixar/auth",
-    "start:all": "concurrently \"npm run start -w @pode-deixar/auth\" \"npm run start -w @pode-deixar/users\"",
-    "start:prod": "npm run start:prod -w @pode-deixar/auth",
-    "test": "npm run test -w @pode-deixar/auth && npm run test -w @pode-deixar/users",
-    "prisma:generate": "npm run prisma:generate -w @pode-deixar/auth",
-    "prisma:migrate": "npm run prisma:migrate -w @pode-deixar/auth",
-    "lint": "npm run lint -w @pode-deixar/auth && npm run lint -w @pode-deixar/users",
-    "postinstall": "npm run prisma:generate",
+    "dev": "pnpm run start:dev --filter @pode-deixar/auth",
+    "dev:all": "concurrently \"pnpm run start:dev --filter @pode-deixar/auth\" \"pnpm run start:dev --filter @pode-deixar/users\"",
+    "build": "pnpm run prisma:generate && pnpm run build --filter @pode-deixar/auth && pnpm run build --filter @pode-deixar/users",
+    "start": "pnpm run start --filter @pode-deixar/auth",
+    "start:all": "concurrently \"pnpm run start --filter @pode-deixar/auth\" \"pnpm run start --filter @pode-deixar/users\"",
+    "start:prod": "pnpm run start:prod --filter @pode-deixar/auth",
+    "test": "pnpm run test --filter @pode-deixar/auth && pnpm run test --filter @pode-deixar/users",
+    "prisma:generate": "prisma generate --schema=prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "lint": "pnpm run lint --filter @pode-deixar/auth && pnpm run lint --filter @pode-deixar/users",
     "proxy:run": "powershell -File scripts/proxy.ps1 run",
     "proxy:start": "powershell -File scripts/proxy.ps1 start",
     "proxy:stop": "powershell -File scripts/proxy.ps1 stop"
@@ -29,9 +29,11 @@
   ],
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "cross-env": "^10.1.0"
+    "cross-env": "^10.1.0",
+    "prisma": "5.22.0"
   },
   "dependencies": {
+    "@prisma/client": "5.22.0",
     "pino": "^8.18.0",
     "pino-pretty": "^10.0.0"
   }

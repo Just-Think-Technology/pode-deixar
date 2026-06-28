@@ -1,0 +1,10 @@
+packages:
+  - "shared/*"
+  - "services/*"
+onlyBuiltDependencies:
+  - "@prisma/client"
+  - "@prisma/engines"
+  - prisma
+  - argon2
+  - "@scarf/scarf"
+  - unrs-resolver
