@@ -43,6 +43,27 @@ describe('PUT /auth/change-password', () => {
       // Confirm the new password works
       await loginUser(app, user.email, NEW_PASSWORD);
     });
+
+    it('should invalidate the old access token and clear the refresh token', async () => {
+      const user = createTestUser();
+      const { accessToken } = await registerAndLogin(app, user, prisma);
+
+      await request(app.getHttpServer())
+        .put('/auth/change-password')
+        .set(bearerAuth(accessToken))
+        .send({ currentPassword: user.password, newPassword: NEW_PASSWORD })
+        .expect(200);
+
+      // Old access token should be blacklisted → 401 on any protected endpoint
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set(bearerAuth(accessToken))
+        .expect(401);
+
+      // Refresh token should be cleared in the DB
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      expect(dbUser?.refreshToken).toBeNull();
+    });
   });
 
   describe('Authentication failure cases', () => {
