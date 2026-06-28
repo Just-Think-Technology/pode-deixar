@@ -25,7 +25,7 @@ FROM prisma AS auth-build
 COPY shared/logger ./shared/logger
 COPY services/auth ./services/auth
 COPY scripts/migrate-and-start.sh ./scripts/migrate-and-start.sh
-RUN chmod +x ./scripts/migrate-and-start.sh && pnpm run build --filter @pode-deixar/auth
+RUN chmod +x ./scripts/migrate-and-start.sh && pnpm run --filter @pode-deixar/auth build
 EXPOSE 3001
 ENTRYPOINT ["./scripts/migrate-and-start.sh"]
 CMD ["node", "services/auth/dist/main.js"]
@@ -34,6 +34,6 @@ CMD ["node", "services/auth/dist/main.js"]
 FROM prisma AS users-build
 COPY shared/logger ./shared/logger
 COPY services/users ./services/users
-RUN pnpm run build --filter @pode-deixar/users
+RUN pnpm run --filter @pode-deixar/users build
 EXPOSE 3002
 CMD ["node", "services/users/dist/main.js"]
