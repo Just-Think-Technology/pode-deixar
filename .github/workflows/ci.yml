@@ -34,7 +34,7 @@ jobs:
       - run: corepack enable && corepack prepare pnpm@latest --activate
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
 
@@ -90,14 +90,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - run: corepack enable && corepack prepare pnpm@latest --activate
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
