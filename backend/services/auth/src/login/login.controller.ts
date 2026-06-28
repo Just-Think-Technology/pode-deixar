@@ -14,7 +14,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { LoginService } from './login.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { JwtAuthGuard } from '../jwt/jwt-auth.guard';1
+import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
 import getLogger from '../shared/shared-logger';
 
 const logger = getLogger('login');
