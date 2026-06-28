@@ -70,6 +70,16 @@ jobs:
           DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
           EOF
 
+      - name: Create .env.staging for service-orders (CI)
+        shell: bash
+        run: |
+          cat > services/service-orders/.env.staging << 'EOF'
+          NODE_ENV=test
+          PORT=3003
+          JWT_ACCESS_SECRET=ci-test-access-secret
+          DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
+          EOF
+
       - name: Run Prisma migrations
         shell: bash
         run: |

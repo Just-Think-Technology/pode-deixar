@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "shared/logger" },
-    { "path": "services/auth" }
+    { "path": "services/auth" },
+    { "path": "services/service-orders" }
   ]
 }

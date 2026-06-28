@@ -21,6 +21,13 @@ import { UsersLoggerService } from "./users-logger.service";
     }),
   ],
   providers: [JwtStrategy, JwtAuthGuard, RolesGuard, UsersLoggerService],
-  exports: [JwtModule, PassportModule, JwtStrategy, JwtAuthGuard, RolesGuard, UsersLoggerService],
+  exports: [
+    JwtModule,
+    PassportModule,
+    JwtStrategy,
+    JwtAuthGuard,
+    RolesGuard,
+    UsersLoggerService,
+  ],
 })
 export class SharedModule {}

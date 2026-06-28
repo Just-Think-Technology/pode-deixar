@@ -14,10 +14,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   private translateMessage(msg: string): string {
     const translations: Record<string, string> = {
-      'Unauthorized': 'Não autorizado',
-      'Forbidden': 'Acesso negado',
+      Unauthorized: 'Não autorizado',
+      Forbidden: 'Acesso negado',
       'Not Found': 'Não encontrado',
-      'Conflict': 'Conflito',
+      Conflict: 'Conflito',
       'Bad Request': 'Requisição inválida',
       'Internal Server Error': 'Erro interno do servidor',
     };
@@ -26,13 +26,20 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   private getDefaultErrorForStatus(status: number): string {
     switch (status) {
-      case HttpStatus.BAD_REQUEST: return 'Requisição Inválida';
-      case HttpStatus.UNAUTHORIZED: return 'Não Autorizado';
-      case HttpStatus.FORBIDDEN: return 'Proibido';
-      case HttpStatus.NOT_FOUND: return 'Não Encontrado';
-      case HttpStatus.CONFLICT: return 'Conflito';
-      case HttpStatus.TOO_MANY_REQUESTS: return 'Muitas Requisições';
-      default: return 'Erro Interno do Servidor';
+      case HttpStatus.BAD_REQUEST:
+        return 'Requisição Inválida';
+      case HttpStatus.UNAUTHORIZED:
+        return 'Não Autorizado';
+      case HttpStatus.FORBIDDEN:
+        return 'Proibido';
+      case HttpStatus.NOT_FOUND:
+        return 'Não Encontrado';
+      case HttpStatus.CONFLICT:
+        return 'Conflito';
+      case HttpStatus.TOO_MANY_REQUESTS:
+        return 'Muitas Requisições';
+      default:
+        return 'Erro Interno do Servidor';
     }
   }
 
@@ -51,12 +58,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'string') {
         message = this.translateMessage(exceptionResponse);
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
         const responseObj = exceptionResponse as any;
         message = responseObj.message
-          ? (Array.isArray(responseObj.message)
+          ? Array.isArray(responseObj.message)
             ? responseObj.message.map((m: string) => this.translateMessage(m))
-            : this.translateMessage(responseObj.message))
+            : this.translateMessage(responseObj.message)
           : message;
         error = responseObj.error || this.getDefaultErrorForStatus(status);
       }
@@ -73,9 +83,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     // Don't expose internal errors in production
     const isProduction = process.env.NODE_ENV === 'production';
-    const responseMessage = isProduction && status === HttpStatus.INTERNAL_SERVER_ERROR
-      ? 'Erro interno do servidor'
-      : message;
+    const responseMessage =
+      isProduction && status === HttpStatus.INTERNAL_SERVER_ERROR
+        ? 'Erro interno do servidor'
+        : message;
 
     response.status(status).json({
       statusCode: status,

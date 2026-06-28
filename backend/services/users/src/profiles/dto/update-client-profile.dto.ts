@@ -7,7 +7,9 @@ export class UpdateClientProfileDto {
   @IsUrl()
   avatarUrl?: string;
 
-  @ApiPropertyOptional({ description: "Preferências do usuário como objeto JSON" })
+  @ApiPropertyOptional({
+    description: "Preferências do usuário como objeto JSON",
+  })
   @IsOptional()
   @IsObject()
   preferences?: Record<string, any>;

@@ -88,6 +88,52 @@ model ProviderService {
   @@map("provider_services")
 }
 
+enum ServiceOrderStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model ServiceOrder {
+  id          String             @id @default(uuid())
+  clientId    String             @map("client_id")
+  title       String
+  description String             @db.Text
+  category    String
+  budgetMin   Decimal?           @map("budget_min") @db.Decimal(10, 2)
+  budgetMax   Decimal?           @map("budget_max") @db.Decimal(10, 2)
+  address     Json?              @default("{}")
+  status      ServiceOrderStatus @default(OPEN)
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  proposals   Proposal[]
+
+  @@map("service_orders")
+}
+
+model Proposal {
+  id               String         @id @default(uuid())
+  serviceOrderId   String         @map("service_order_id")
+  providerId       String         @map("provider_id")
+  price            Decimal        @db.Decimal(10, 2)
+  description      String         @db.Text
+  estimatedDuration String?       @map("estimated_duration")
+  status           ProposalStatus @default(PENDING)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  serviceOrder     ServiceOrder   @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
+  @@map("proposals")
+}
+
 model TokenBlacklist {
   jti        String   @id
   expiresAt  DateTime @map("expires_at")

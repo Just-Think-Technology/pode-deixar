@@ -26,7 +26,9 @@ export class RegisterService {
       throw new BadRequestException('Senhas não conferem');
     }
 
-    const existingUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (existingUser) {
       throw new ConflictException('Email já cadastrado');
     }
@@ -60,11 +62,11 @@ export class RegisterService {
         },
       });
 
-      if (dto.role === "CLIENT") {
+      if (dto.role === 'CLIENT') {
         await tx.clientProfile.create({
           data: { userId: user.id, preferences: {} },
         });
-      } else if (dto.role === "PROVIDER") {
+      } else if (dto.role === 'PROVIDER') {
         await tx.providerProfile.create({
           data: {
             userId: user.id,
@@ -79,7 +81,10 @@ export class RegisterService {
     });
 
     try {
-      await this.emailService.sendEmailVerification(dto.email, emailVerificationToken);
+      await this.emailService.sendEmailVerification(
+        dto.email,
+        emailVerificationToken,
+      );
     } catch (error) {
       this.authLogger.logSecurityEvent('email_send_failed', {
         email: dto.email,
@@ -91,7 +96,8 @@ export class RegisterService {
     this.authLogger.logRegistration(dto.email, dto.role, ip);
 
     return {
-      message: 'Usuário cadastrado com sucesso. Verifique seu email para ativar sua conta.',
+      message:
+        'Usuário cadastrado com sucesso. Verifique seu email para ativar sua conta.',
       user: {
         id: user.id,
         complete_name: user.completeName,
@@ -109,30 +115,55 @@ export class RegisterService {
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
-    const user = await this.prisma.user.findFirst({ where: { emailVerificationToken: dto.token } });
+    const user = await this.prisma.user.findFirst({
+      where: { emailVerificationToken: dto.token },
+    });
     if (!user) {
-      this.authLogger.logEmailVerificationTokenFailure(dto.token, 'invalid token');
+      this.authLogger.logEmailVerificationTokenFailure(
+        dto.token,
+        'invalid token',
+      );
       throw new BadRequestException('Token de verificação inválido');
     }
     if (user.emailVerified) {
-      this.authLogger.logEmailVerification(user.email, false, 'already verified');
+      this.authLogger.logEmailVerification(
+        user.email,
+        false,
+        'already verified',
+      );
       throw new BadRequestException('Email já verificado');
     }
-    if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+    if (
+      !user.emailVerificationExpires ||
+      user.emailVerificationExpires < new Date()
+    ) {
       this.authLogger.logEmailVerification(user.email, false, 'token expired');
-      throw new BadRequestException('Token de verificação expirou. Solicite um novo email de verificação.');
+      throw new BadRequestException(
+        'Token de verificação expirou. Solicite um novo email de verificação.',
+      );
     }
 
-    await this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null } });
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      },
+    });
     this.authLogger.logEmailVerification(user.email, true);
     return { message: 'Email verificado com sucesso' };
   }
 
   async resendVerificationEmail(dto: ResendVerificationDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (!user) {
       this.authLogger.logResendVerification(dto.email, false);
-      return { message: 'Se o email existir, um novo link de verificação foi enviado' };
+      return {
+        message: 'Se o email existir, um novo link de verificação foi enviado',
+      };
     }
     if (user.emailVerified) {
       this.authLogger.logResendVerification(dto.email, false);
@@ -141,13 +172,23 @@ export class RegisterService {
 
     const emailVerificationToken = uuidv4();
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await this.prisma.user.update({ where: { id: user.id }, data: { emailVerificationToken, emailVerificationExpires } });
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerificationToken, emailVerificationExpires },
+    });
 
     try {
-      await this.emailService.sendEmailVerification(dto.email, emailVerificationToken);
+      await this.emailService.sendEmailVerification(
+        dto.email,
+        emailVerificationToken,
+      );
       this.authLogger.logResendVerification(dto.email, true);
     } catch (error) {
-      this.authLogger.logSecurityEvent('email_send_failed', { email: dto.email, type: 'verification', error: error.message });
+      this.authLogger.logSecurityEvent('email_send_failed', {
+        email: dto.email,
+        type: 'verification',
+        error: error.message,
+      });
       this.authLogger.logResendVerification(dto.email, false);
     }
 

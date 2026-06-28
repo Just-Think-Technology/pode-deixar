@@ -32,10 +32,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           throw new UnauthorizedException("Token revogado");
         }
       } catch (e: any) {
-        if (e?.code !== 'P2021') throw e;
+        if (e?.code !== "P2021") throw e;
       }
     }
 
-    return { sub: payload.sub, email: payload.email, role: payload.role, jti: payload.jti };
+    return {
+      sub: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      jti: payload.jti,
+    };
   }
 }

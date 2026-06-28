@@ -15,10 +15,16 @@ import { ResponseLoggerInterceptor } from './shared/response-logger.interceptor'
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
-    email: 'Email', password: 'Senha', complete_name: 'Nome completo',
-    confirm_password: 'Confirmação de senha', phone: 'Telefone',
-    postal_code: 'CEP', role: 'Função', newPassword: 'Nova senha',
-    currentPassword: 'Senha atual', token: 'Token',
+    email: 'Email',
+    password: 'Senha',
+    complete_name: 'Nome completo',
+    confirm_password: 'Confirmação de senha',
+    phone: 'Telefone',
+    postal_code: 'CEP',
+    role: 'Função',
+    newPassword: 'Nova senha',
+    currentPassword: 'Senha atual',
+    token: 'Token',
   };
 
   const traducoes: Record<string, (r: string) => string> = {
@@ -39,11 +45,16 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   };
 
   return errors.map((error) => {
-    if (!error.constraints) return `${rotulos[error.property] || error.property} inválido`;
-    return Object.entries(error.constraints).map(([chave, msg]) => {
-      const tradutor = traducoes[chave];
-      return tradutor ? tradutor(rotulos[error.property] || error.property) : msg;
-    }).join('; ');
+    if (!error.constraints)
+      return `${rotulos[error.property] || error.property} inválido`;
+    return Object.entries(error.constraints)
+      .map(([chave, msg]) => {
+        const tradutor = traducoes[chave];
+        return tradutor
+          ? tradutor(rotulos[error.property] || error.property)
+          : msg;
+      })
+      .join('; ');
   });
 }
 
@@ -51,7 +62,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [".env.staging"],
+      envFilePath: ['.env.staging'],
     }),
     ThrottlerModule.forRoot([
       {

@@ -32,6 +32,17 @@
         reverse_proxy users:3002
     }
 
+    # ─── Service Orders Service ─────────────────────────────
+    handle /api/services/* {
+        uri strip_prefix /api
+        reverse_proxy service-orders:3003
+    }
+
+    handle /api/proposals/* {
+        uri strip_prefix /api
+        reverse_proxy service-orders:3003
+    }
+
     # ─── Frontend ────────────────────────────────────────────
     reverse_proxy frontend:3000
 }

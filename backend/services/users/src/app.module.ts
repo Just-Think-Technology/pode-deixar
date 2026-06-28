@@ -14,11 +14,17 @@ import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor"
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
-    title: 'Título', description: 'Descrição', fixedPrice: 'Preço fixo',
-    category: 'Categoria',
-    avatarUrl: 'URL do avatar', bio: 'Biografia', hourlyRate: 'Valor por hora',
-    skills: 'Habilidades', portfolio: 'Portfólio', isAvailable: 'Disponível',
-    preferences: 'Preferências',
+    title: "Título",
+    description: "Descrição",
+    fixedPrice: "Preço fixo",
+    category: "Categoria",
+    avatarUrl: "URL do avatar",
+    bio: "Biografia",
+    hourlyRate: "Valor por hora",
+    skills: "Habilidades",
+    portfolio: "Portfólio",
+    isAvailable: "Disponível",
+    preferences: "Preferências",
   };
 
   const traducoes: Record<string, (r: string) => string> = {
@@ -38,11 +44,16 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   };
 
   return errors.map((error) => {
-    if (!error.constraints) return `${rotulos[error.property] || error.property} inválido`;
-    return Object.entries(error.constraints).map(([chave, msg]) => {
-      const tradutor = traducoes[chave];
-      return tradutor ? tradutor(rotulos[error.property] || error.property) : msg;
-    }).join('; ');
+    if (!error.constraints)
+      return `${rotulos[error.property] || error.property} inválido`;
+    return Object.entries(error.constraints)
+      .map(([chave, msg]) => {
+        const tradutor = traducoes[chave];
+        return tradutor
+          ? tradutor(rotulos[error.property] || error.property)
+          : msg;
+      })
+      .join("; ");
   });
 }
 @Module({
