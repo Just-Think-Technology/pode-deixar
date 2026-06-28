@@ -185,7 +185,8 @@ export async function getWorkerServicesAction(): Promise<ServicesListResponse> {
     return await getWorkerServices(token);
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
-      return { services: [] };
+      const { MOCK_SERVICES } = await import("@/mock/worker/services");
+      return { services: MOCK_SERVICES };
     }
     throw err;
   }
