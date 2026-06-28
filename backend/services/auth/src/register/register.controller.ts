@@ -1,5 +1,5 @@
 import { Body, Controller, Post, Headers, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { UseGuards } from '@nestjs/common';
 import { RegisterService } from './register.service';
@@ -21,7 +21,7 @@ export class RegisterController {
   @ApiOperation({ summary: 'Registrar um novo usuário' })
   @ApiBody({ type: RegisterDto })
   async register(@Body() dto: RegisterDto, @Headers('x-forwarded-for') ip?: string) {
-    try { logger.info('auth.endpoint', `Register called for ${dto.email}`); } catch (e) {}
+    try { logger.info('auth.endpoint', `Register called for ${dto.email}`); } catch {}
     return this.registerService.register(dto, ip);
   }
 
@@ -30,7 +30,7 @@ export class RegisterController {
   @ApiOperation({ summary: 'Verificar email do usuário com token' })
   @ApiBody({ type: VerifyEmailDto })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
-    try { logger.info('auth.endpoint', `Verify email requested`); } catch (e) {}
+    try { logger.info('auth.endpoint', `Verify email requested`); } catch {}
     return this.registerService.verifyEmail(dto);
   }
 
@@ -39,7 +39,7 @@ export class RegisterController {
   @ApiOperation({ summary: 'Reenviar link de verificação de email' })
   @ApiBody({ type: ResendVerificationDto })
   async resendVerificationEmail(@Body() dto: ResendVerificationDto) {
-    try { logger.info('auth.endpoint', `Resend verification requested for ${dto.email}`); } catch (e) {}
+    try { logger.info('auth.endpoint', `Resend verification requested for ${dto.email}`); } catch {}
     return this.registerService.resendVerificationEmail(dto);
   }
 }

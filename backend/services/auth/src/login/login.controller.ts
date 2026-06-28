@@ -2,14 +2,13 @@ import {
   Body,
   Controller,
   Post,
-  Get,
   UseGuards,
   Request,
   Headers,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiHeader } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiHeader } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { LoginService } from './login.service';
 import { LoginDto } from './dto/login.dto';
@@ -30,7 +29,7 @@ export class LoginController {
   @ApiOperation({ summary: 'Autenticar usuário e retornar tokens JWT' })
   @ApiBody({ type: LoginDto })
   async login(@Body() dto: LoginDto, @Headers('x-forwarded-for') ip?: string) {
-    try { logger.info('auth.endpoint', `Login called for ${dto.email}`); } catch (e) {}
+    try { logger.info('auth.endpoint', `Login called for ${dto.email}`); } catch {}
     return this.loginService.login(dto, ip);
   }
 
@@ -40,7 +39,7 @@ export class LoginController {
   @ApiOperation({ summary: 'Atualizar token' })
   @ApiBody({ type: RefreshTokenDto })
   async refreshToken(@Body() dto: RefreshTokenDto) {
-    try { logger.info('auth.endpoint', `Refresh token requested`); } catch (e) {}
+    try { logger.info('auth.endpoint', `Refresh token requested`); } catch {}
     return this.loginService.refreshToken(dto);
   }
 
@@ -52,7 +51,7 @@ export class LoginController {
   @ApiBearerAuth()
   @ApiHeader({ name: 'Authorization', description: 'Token de autenticação', required: true })
   async logout(@Request() req: any) {
-    try { logger.info('auth.endpoint', `Logout requested for user ${req.user?.id}`); } catch (e) {}
+    try { logger.info('auth.endpoint', `Logout requested for user ${req.user?.id}`); } catch {}
     return this.loginService.logout(req.user.id, req.user.jti);
   }
 }
