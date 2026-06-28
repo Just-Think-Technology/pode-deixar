@@ -88,10 +88,19 @@ describe('Password Reset Flow', () => {
       const { user, resetToken } = await setupResetFlow();
       const newPassword = 'NewPassword123!';
 
+      // Get a refresh token before reset
+      const loginRes = await loginUser(app, user.email, user.password);
+
       await request(app.getHttpServer())
         .post('/auth/reset-password')
         .send({ token: resetToken, newPassword })
         .expect(200);
+
+      // Old refresh token should be invalidated
+      await request(app.getHttpServer())
+        .post('/auth/refresh-token')
+        .send({ refreshToken: loginRes.body.refresh_token })
+        .expect(401);
 
       // Confirm the old password no longer works implicitly by using the new one
       await loginUser(app, user.email, newPassword);

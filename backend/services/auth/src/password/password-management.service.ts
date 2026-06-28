@@ -3,6 +3,7 @@ import {
   BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -59,7 +60,7 @@ export class PasswordManagementService {
 
     const hashedPassword = await this.passwordService.hash(dto.newPassword);
 
-    await this.prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword, passwordResetToken: null, passwordResetExpires: null, failedLoginAttempts: 0, lockoutUntil: null } });
+    await this.prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword, passwordResetToken: null, passwordResetExpires: null, refreshToken: null, failedLoginAttempts: 0, lockoutUntil: null } });
     this.authLogger.logPasswordResetComplete(user.email);
 
     return {
@@ -71,7 +72,7 @@ export class PasswordManagementService {
     };
   }
 
-  async changePassword(userId: string, dto: ChangePasswordDto) {
+  async changePassword(userId: string, dto: ChangePasswordDto, accessTokenJti?: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       this.authLogger.logSecurityEvent('password_change_invalid_user', { userId });
@@ -85,8 +86,31 @@ export class PasswordManagementService {
     }
 
     const hashedNewPassword = await this.passwordService.hash(dto.newPassword);
-    await this.prisma.user.update({ where: { id: userId }, data: { password: hashedNewPassword } });
+    await this.prisma.user.update({ where: { id: userId }, data: { password: hashedNewPassword, refreshToken: null } });
     this.authLogger.logPasswordChange(userId, true);
+
+    try {
+      if (accessTokenJti) {
+        await this.prisma.tokenBlacklist.create({
+          data: {
+            jti: accessTokenJti,
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          },
+        });
+      }
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2021'
+      ) {
+        this.authLogger.logSecurityEvent('token_blacklist_table_missing', {
+          userId,
+          message: 'token_blacklist table missing, password changed but access token not blacklisted',
+        });
+      } else {
+        throw error;
+      }
+    }
 
     return { message: 'Senha alterada com sucesso' };
   }

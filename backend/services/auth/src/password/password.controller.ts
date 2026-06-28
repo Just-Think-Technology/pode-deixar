@@ -34,6 +34,6 @@ export class PasswordController {
   @HttpCode(HttpStatus.OK)
   async change(@Request() req: any, @Body() dto: ChangePasswordDto) {
     try { logger.info('auth.endpoint', `Change password requested for user ${req.user?.id}`); } catch {}
-    return this.passwordService.changePassword(req.user.id, dto);
+    return this.passwordService.changePassword(req.user.id, dto, req.user.jti);
   }
 }
