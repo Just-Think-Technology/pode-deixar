@@ -10,7 +10,13 @@ import { LoginModule } from '../login/login.module';
 @Module({
   imports: [LoginModule],
   controllers: [PasswordController],
-  providers: [PasswordManagementService, PrismaService, AuthLoggerService, EmailService, PasswordService],
+  providers: [
+    PasswordManagementService,
+    PrismaService,
+    AuthLoggerService,
+    EmailService,
+    PasswordService,
+  ],
   exports: [PasswordManagementService],
 })
 export class PasswordModule {}

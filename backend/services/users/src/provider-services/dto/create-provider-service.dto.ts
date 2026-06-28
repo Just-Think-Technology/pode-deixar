@@ -1,9 +1,4 @@
-import {
-  IsString,
-  IsNumber,
-  MaxLength,
-  IsPositive,
-} from "class-validator";
+import { IsString, IsNumber, MaxLength, IsPositive } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class CreateProviderServiceDto {
@@ -32,5 +27,4 @@ export class CreateProviderServiceDto {
   @IsString()
   @MaxLength(50)
   category: string;
-
 }

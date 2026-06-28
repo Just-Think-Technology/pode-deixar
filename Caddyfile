@@ -36,6 +36,17 @@ http://localhost:8080 {
         reverse_proxy localhost:3002
     }
 
+    # ─── Services Service (:3003) ─────────────────────────────────
+    handle /api/services/* {
+        uri strip_prefix /api
+        reverse_proxy localhost:3003
+    }
+
+    handle /api/proposals/* {
+        uri strip_prefix /api
+        reverse_proxy localhost:3003
+    }
+
     # ─── Frontend (Next.js :3000) ─────────────────────────────────
     reverse_proxy localhost:3000
 }

@@ -35,7 +35,8 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
+        from:
+          this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
         to: email,
         subject: 'Verifique seu endereço de email',
         html: `
@@ -49,7 +50,10 @@ export class EmailService {
       logger.info('auth.email', `Verification email sent to ${email}`);
       return true;
     } catch (error) {
-      logger.error('auth.email', `Failed to send verification email to ${email} - ${error.message}`);
+      logger.error(
+        'auth.email',
+        `Failed to send verification email to ${email} - ${error.message}`,
+      );
       throw error;
     }
   }
@@ -59,7 +63,8 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
+        from:
+          this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com',
         to: email,
         subject: 'Redefina sua senha',
         html: `
@@ -72,7 +77,10 @@ export class EmailService {
       });
       logger.info('auth.email', `Password reset email sent to ${email}`);
     } catch (error) {
-      logger.error('auth.email', `Failed to send password reset email to ${email} - ${error.message}`);
+      logger.error(
+        'auth.email',
+        `Failed to send password reset email to ${email} - ${error.message}`,
+      );
       throw error;
     }
   }

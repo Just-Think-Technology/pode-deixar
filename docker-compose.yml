@@ -39,6 +39,20 @@ services:
       auth:
         condition: service_started
 
+  # ─── Service Orders Service ──────────────────────────────
+  service-orders:
+    build:
+      context: ./backend
+      target: service-orders-build
+    env_file: ./backend/services/service-orders/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+    ports:
+      - "3003:3003"
+    depends_on:
+      auth:
+        condition: service_started
+
   # ─── Frontend (Next.js) ──────────────────────────────────
   frontend:
     build:
@@ -68,4 +82,5 @@ services:
     depends_on:
       - auth
       - users
+      - service-orders
       - frontend

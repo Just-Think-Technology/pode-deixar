@@ -156,7 +156,10 @@ export class ProviderServicesService {
   }
 
   private removerAcentos(texto: string): string {
-    return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    return texto
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
   }
 
   async searchProviders(query: SearchProvidersQueryDto) {

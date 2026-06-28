@@ -24,7 +24,10 @@ export class AuthLoggerService {
   }
 
   logLogout(userId: string, email?: string) {
-    this.logger.info({ event: 'auth.logout', userId, email }, 'User logged out');
+    this.logger.info(
+      { event: 'auth.logout', userId, email },
+      'User logged out',
+    );
   }
 
   logPasswordResetRequested(email: string, success: boolean) {
@@ -42,7 +45,10 @@ export class AuthLoggerService {
   }
 
   logPasswordResetComplete(email: string) {
-    this.logger.info({ event: 'auth.password_reset_complete', email }, 'Password reset completed');
+    this.logger.info(
+      { event: 'auth.password_reset_complete', email },
+      'Password reset completed',
+    );
   }
 
   logPasswordChange(userId: string, success: boolean) {
@@ -53,11 +59,17 @@ export class AuthLoggerService {
   }
 
   logRegistration(email: string, role: string, ip?: string) {
-    this.logger.info({ event: 'auth.registration', email, role, ip }, 'User registration completed');
+    this.logger.info(
+      { event: 'auth.registration', email, role, ip },
+      'User registration completed',
+    );
   }
 
   logEmailVerificationTokenFailure(token: string, reason: string) {
-    this.logger.warn({ event: 'auth.email_verification_token_failure', token, reason }, 'Email verification token failure');
+    this.logger.warn(
+      { event: 'auth.email_verification_token_failure', token, reason },
+      'Email verification token failure',
+    );
   }
 
   logEmailVerification(email: string, success: boolean, reason?: string) {

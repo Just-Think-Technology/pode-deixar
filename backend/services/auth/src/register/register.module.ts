@@ -8,7 +8,13 @@ import { PasswordService } from '../password/password.service';
 
 @Module({
   controllers: [RegisterController],
-  providers: [RegisterService, PrismaService, AuthLoggerService, EmailService, PasswordService],
+  providers: [
+    RegisterService,
+    PrismaService,
+    AuthLoggerService,
+    EmailService,
+    PasswordService,
+  ],
   exports: [RegisterService],
 })
 export class RegisterModule {}

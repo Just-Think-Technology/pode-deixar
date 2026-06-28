@@ -4,15 +4,7 @@ import { RegisterModule } from './register/register.module';
 import { PasswordModule } from './password/password.module';
 
 @Module({
-  imports: [
-    LoginModule,
-    RegisterModule,
-    PasswordModule,
-  ],
-  exports: [
-    LoginModule,
-    RegisterModule,
-    PasswordModule,
-  ],
+  imports: [LoginModule, RegisterModule, PasswordModule],
+  exports: [LoginModule, RegisterModule, PasswordModule],
 })
 export class AuthModule {}
