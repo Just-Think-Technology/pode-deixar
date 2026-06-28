@@ -9,6 +9,22 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pode-deixar
+          POSTGRES_PASSWORD: pode-deixar
+          POSTGRES_DB: pode-deixar-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     defaults:
       run:
         working-directory: backend
@@ -22,6 +38,45 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - run: npm ci
+
+      - name: Create .env.staging for CI
+        shell: bash
+        run: |
+          cat > services/auth/.env.staging << 'EOF'
+          NODE_ENV=test
+          PORT=3001
+          FRONTEND_URL=http://localhost:3000
+          JWT_ACCESS_SECRET=ci-test-access-secret
+          JWT_REFRESH_SECRET=ci-test-refresh-secret
+          SMTP_HOST=localhost
+          SMTP_PORT=1025
+          SMTP_USER=
+          SMTP_PASS=
+          SMTP_FROM=noreply@pode-deixar.com
+          MAX_LOGIN_ATTEMPTS=5
+          LOCKOUT_DURATION_MINUTES=15
+          DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
+          DIRECT_DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
+          EOF
+
+      - name: Create .env.staging for users (CI)
+        shell: bash
+        run: |
+          cat > services/users/.env.staging << 'EOF'
+          NODE_ENV=test
+          PORT=3002
+          JWT_ACCESS_SECRET=ci-test-access-secret
+          DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
+          EOF
+
+      - name: Run Prisma migrations
+        shell: bash
+        run: |
+          npx prisma migrate deploy --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
+          DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
+
       - run: npm run lint
       - run: npm run build
       - run: npm test
