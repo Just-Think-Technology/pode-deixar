@@ -12,7 +12,7 @@ const poppins = Poppins({
 
 
 export const metadata: Metadata = {
-    title: "Pode-Deixar — Encontre profissionais de confiança",
+    title: "Pode Deixar — Encontre profissionais de confiança",
     description:
         "Conectamos você com trabalhadores qualificados através de orçamentos personalizados. Rápido, seguro e transparente.",
 };
