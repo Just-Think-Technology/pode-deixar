@@ -9,7 +9,7 @@ MAX_RETRIES=6
 RETRY_DELAY=5
 
 run_migration() {
-  npx prisma migrate deploy --schema="$SCHEMA"
+  pnpm exec prisma migrate deploy --schema="$SCHEMA"
 }
 
 echo "=== [migrate-and-start] Running database migrations ==="
