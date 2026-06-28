@@ -13,6 +13,7 @@
     "test": "npm run test -w @pode-deixar/auth && npm run test -w @pode-deixar/users",
     "prisma:generate": "npm run prisma:generate -w @pode-deixar/auth",
     "prisma:migrate": "npm run prisma:migrate -w @pode-deixar/auth",
+    "lint": "npm run lint -w @pode-deixar/auth && npm run lint -w @pode-deixar/users",
     "postinstall": "npm run prisma:generate",
     "proxy:run": "powershell -File scripts/proxy.ps1 run",
     "proxy:start": "powershell -File scripts/proxy.ps1 start",

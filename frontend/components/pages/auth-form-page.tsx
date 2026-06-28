@@ -345,7 +345,6 @@ function useRegisterHandler(authRole: AuthRole, publicRole: PublicRole) {
 function handleValidationError(
     err: unknown,
     setFieldErrors: (e: Record<string, string>) => void,
-    setError: (e: string | null) => void,
 ): boolean {
     if (
         err instanceof Error &&
@@ -381,7 +380,7 @@ export function ClientLoginForm() {
         try {
             await loginHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError))
+            if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });
@@ -438,7 +437,7 @@ export function WorkerLoginForm() {
         try {
             await loginHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError))
+            if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });
@@ -495,7 +494,7 @@ export function ClientRegisterForm() {
         try {
             await registerHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError))
+            if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });
@@ -591,7 +590,7 @@ export function WorkerRegisterForm() {
         try {
             await registerHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError))
+            if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });
