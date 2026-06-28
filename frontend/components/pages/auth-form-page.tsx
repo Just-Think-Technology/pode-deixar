@@ -372,7 +372,6 @@ export function ClientLoginForm() {
         fieldErrors,
         wrapSubmit,
         setFieldErrors,
-        setError,
     } = useAuthFormSubmit();
     const loginHandler = useLoginHandler("client");
 
@@ -429,7 +428,6 @@ export function WorkerLoginForm() {
         fieldErrors,
         wrapSubmit,
         setFieldErrors,
-        setError,
     } = useAuthFormSubmit();
     const loginHandler = useLoginHandler("worker");
 
@@ -486,7 +484,6 @@ export function ClientRegisterForm() {
         fieldErrors,
         wrapSubmit,
         setFieldErrors,
-        setError,
     } = useAuthFormSubmit();
     const registerHandler = useRegisterHandler("client", "CLIENT");
 
@@ -582,7 +579,6 @@ export function WorkerRegisterForm() {
         fieldErrors,
         wrapSubmit,
         setFieldErrors,
-        setError,
     } = useAuthFormSubmit();
     const registerHandler = useRegisterHandler("worker", "PROVIDER");
 
