@@ -37,7 +37,7 @@ export class PasswordManagementService {
       await this.emailService.sendPasswordReset(dto.email, resetToken);
       this.authLogger.logPasswordResetRequested(dto.email, true);
       this.authLogger.logPasswordReset(dto.email, true);
-    } catch (error) {
+    } catch {
       this.authLogger.logPasswordResetRequested(dto.email, false);
       this.authLogger.logPasswordReset(dto.email, false);
     }

@@ -18,14 +18,14 @@ export class PasswordController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgot(@Body() dto: ForgotPasswordDto) {
-    try { logger.info('auth.endpoint', `Forgot password requested for ${dto.email}`); } catch (e) {}
+    try { logger.info('auth.endpoint', `Forgot password requested for ${dto.email}`); } catch {}
     return this.passwordService.forgotPassword(dto);
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async reset(@Body() dto: ResetPasswordDto) {
-    try { logger.info('auth.endpoint', `Reset password token used`); } catch (e) {}
+    try { logger.info('auth.endpoint', `Reset password token used`); } catch {}
     return this.passwordService.resetPassword(dto);
   }
 
@@ -33,7 +33,7 @@ export class PasswordController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async change(@Request() req: any, @Body() dto: ChangePasswordDto) {
-    try { logger.info('auth.endpoint', `Change password requested for user ${req.user?.id}`); } catch (e) {}
+    try { logger.info('auth.endpoint', `Change password requested for user ${req.user?.id}`); } catch {}
     return this.passwordService.changePassword(req.user.id, dto);
   }
 }
