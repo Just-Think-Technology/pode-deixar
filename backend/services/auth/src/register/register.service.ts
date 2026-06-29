@@ -8,7 +8,7 @@ import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { AuthLoggerService } from '../shared/auth-logger.service';
-import { EmailService } from '../send_email/email.service';
+import { EmailService } from '@pode-deixar/email';
 import { PasswordService } from '../password/password.service';
 import { v4 as uuidv4 } from 'uuid';
 

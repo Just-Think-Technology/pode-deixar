@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "shared/logger" },
+    { "path": "shared/email" },
     { "path": "services/auth" },
     { "path": "services/service-orders" }
   ]

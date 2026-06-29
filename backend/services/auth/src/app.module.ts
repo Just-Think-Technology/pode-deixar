@@ -12,6 +12,7 @@ import { CommonModule } from './shared/common.module';
 import { HealthModule } from './health/health.module';
 import { GlobalExceptionFilter } from './shared/global-exception.filter';
 import { ResponseLoggerInterceptor } from './shared/response-logger.interceptor';
+import { EmailModule } from '@pode-deixar/email';
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
@@ -71,6 +72,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
       },
     ]),
     TerminusModule,
+    EmailModule,
     PrismaModule,
     AuthModule,
     CommonModule,
