@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from "@nestjs/common";
@@ -15,15 +16,17 @@ import {
   ApiBearerAuth,
   ApiResponse,
   ApiParam,
+  ApiQuery,
 } from "@nestjs/swagger";
 import { ProviderServicesService } from "./provider-services.service";
 import { CreateProviderServiceDto } from "./dto/create-provider-service.dto";
 import { UpdateProviderServiceDto } from "./dto/update-provider-service.dto";
+import { SearchProvidersQueryDto } from "./dto/search-providers-query.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
-@ApiTags("Provider Services")
+@ApiTags("Serviços do Prestador")
 @Controller("providers/me/services")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -70,7 +73,37 @@ export class ProviderServicesController {
   }
 }
 
-@ApiTags("Provider Services (Public)")
+@ApiTags("Busca de Prestadores")
+@Controller("providers/search")
+export class ProviderSearchController {
+  constructor(
+    private readonly providerServicesService: ProviderServicesService,
+  ) {}
+
+  @Get()
+  @ApiOperation({ summary: "Buscar prestadores por categoria ou texto" })
+  @ApiQuery({
+    name: "category",
+    required: false,
+    description: "Filtrar por categoria do serviço",
+    example: "ELETRICA",
+  })
+  @ApiQuery({
+    name: "q",
+    required: false,
+    description: "Texto para buscar no título ou descrição do serviço",
+    example: "chuveiro",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Lista de prestadores encontrados com seus serviços",
+  })
+  async searchProviders(@Query() query: SearchProvidersQueryDto) {
+    return this.providerServicesService.searchProviders(query);
+  }
+}
+
+@ApiTags("Serviços do Prestador (Público)")
 @Controller("providers/:providerId/services")
 @ApiBearerAuth()
 export class PublicProviderServicesController {
@@ -94,7 +127,7 @@ export class PublicProviderServicesController {
   }
 }
 
-@ApiTags("Provider Services (Owner)")
+@ApiTags("Serviços do Prestador (Dono)")
 @Controller("providers/me/services/:serviceId")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()

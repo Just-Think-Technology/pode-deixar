@@ -8,7 +8,7 @@ import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { AuthLoggerService } from '../shared/auth-logger.service';
-import { EmailService } from '../send_email/email.service';
+import { EmailService } from '@pode-deixar/email';
 import { PasswordService } from '../password/password.service';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -23,44 +23,68 @@ export class RegisterService {
 
   async register(dto: RegisterDto, ip?: string) {
     if (dto.password !== dto.confirm_password) {
-      throw new BadRequestException('Passwords do not match');
+      throw new BadRequestException('Senhas não conferem');
     }
 
-    const existingUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (existingUser) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException('Email já cadastrado');
     }
 
     const passwordHash = await this.passwordService.hash(dto.password);
     const emailVerificationToken = uuidv4();
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const user = await this.prisma.user.create({
-      data: {
-        completeName: dto.complete_name,
-        email: dto.email,
-        password: passwordHash,
-        role: dto.role,
-        phone: dto.phone,
-        postalCode: dto.postal_code,
-        emailVerificationToken,
-        emailVerificationExpires,
-      },
-      select: {
-        id: true,
-        completeName: true,
-        email: true,
-        role: true,
-        phone: true,
-        postalCode: true,
-        emailVerified: true,
-        createdAt: true,
-        emailVerificationToken: true,
-      },
+    const [user] = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          completeName: dto.complete_name,
+          email: dto.email,
+          password: passwordHash,
+          role: dto.role,
+          phone: dto.phone,
+          postalCode: dto.postal_code,
+          emailVerificationToken,
+          emailVerificationExpires,
+        },
+        select: {
+          id: true,
+          completeName: true,
+          email: true,
+          role: true,
+          phone: true,
+          postalCode: true,
+          emailVerified: true,
+          createdAt: true,
+          emailVerificationToken: true,
+        },
+      });
+
+      if (dto.role === 'CLIENT') {
+        await tx.clientProfile.create({
+          data: { userId: user.id, preferences: {} },
+        });
+      } else if (dto.role === 'PROVIDER') {
+        await tx.providerProfile.create({
+          data: {
+            userId: user.id,
+            skills: [],
+            portfolio: [],
+            isAvailable: true,
+          },
+        });
+      }
+
+      return [user];
     });
 
     try {
-      await this.emailService.sendEmailVerification(dto.email, emailVerificationToken);
+      await this.emailService.sendEmailVerification(
+        dto.email,
+        emailVerificationToken,
+      );
     } catch (error) {
       this.authLogger.logSecurityEvent('email_send_failed', {
         email: dto.email,
@@ -72,7 +96,8 @@ export class RegisterService {
     this.authLogger.logRegistration(dto.email, dto.role, ip);
 
     return {
-      message: 'User registered successfully. Please check your email to verify your account.',
+      message:
+        'Usuário cadastrado com sucesso. Verifique seu email para ativar sua conta.',
       user: {
         id: user.id,
         complete_name: user.completeName,
@@ -90,50 +115,85 @@ export class RegisterService {
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
-    const user = await this.prisma.user.findFirst({ where: { emailVerificationToken: dto.token } });
+    const user = await this.prisma.user.findFirst({
+      where: { emailVerificationToken: dto.token },
+    });
     if (!user) {
-      this.authLogger.logEmailVerificationTokenFailure(dto.token, 'invalid token');
-      throw new BadRequestException('Invalid verification token');
+      this.authLogger.logEmailVerificationTokenFailure(
+        dto.token,
+        'invalid token',
+      );
+      throw new BadRequestException('Token de verificação inválido');
     }
     if (user.emailVerified) {
-      this.authLogger.logEmailVerification(user.email, false, 'already verified');
-      throw new BadRequestException('Email already verified');
+      this.authLogger.logEmailVerification(
+        user.email,
+        false,
+        'already verified',
+      );
+      throw new BadRequestException('Email já verificado');
     }
-    if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+    if (
+      !user.emailVerificationExpires ||
+      user.emailVerificationExpires < new Date()
+    ) {
       this.authLogger.logEmailVerification(user.email, false, 'token expired');
-      throw new BadRequestException('Verification token has expired. Please request a new verification email.');
+      throw new BadRequestException(
+        'Token de verificação expirou. Solicite um novo email de verificação.',
+      );
     }
 
-    await this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null } });
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      },
+    });
     this.authLogger.logEmailVerification(user.email, true);
-    return { message: 'Email verified successfully' };
+    return { message: 'Email verificado com sucesso' };
   }
 
   async resendVerificationEmail(dto: ResendVerificationDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (!user) {
       this.authLogger.logResendVerification(dto.email, false);
-      return { message: 'If the email exists, a new verification link has been sent' };
+      return {
+        message: 'Se o email existir, um novo link de verificação foi enviado',
+      };
     }
     if (user.emailVerified) {
       this.authLogger.logResendVerification(dto.email, false);
-      throw new BadRequestException('Email is already verified');
+      throw new BadRequestException('Email já está verificado');
     }
 
     const emailVerificationToken = uuidv4();
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await this.prisma.user.update({ where: { id: user.id }, data: { emailVerificationToken, emailVerificationExpires } });
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerificationToken, emailVerificationExpires },
+    });
 
     try {
-      await this.emailService.sendEmailVerification(dto.email, emailVerificationToken);
+      await this.emailService.sendEmailVerification(
+        dto.email,
+        emailVerificationToken,
+      );
       this.authLogger.logResendVerification(dto.email, true);
     } catch (error) {
-      this.authLogger.logSecurityEvent('email_send_failed', { email: dto.email, type: 'verification', error: error.message });
+      this.authLogger.logSecurityEvent('email_send_failed', {
+        email: dto.email,
+        type: 'verification',
+        error: error.message,
+      });
       this.authLogger.logResendVerification(dto.email, false);
     }
 
     return {
-      message: 'If the email exists, a new verification link has been sent',
+      message: 'Se o email existir, um novo link de verificação foi enviado',
       ...(process.env.NODE_ENV !== 'production' && {
         email_verification_token: emailVerificationToken,
       }),

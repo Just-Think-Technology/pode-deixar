@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
@@ -12,7 +17,9 @@ export class ResponseLoggerInterceptor implements NestInterceptor {
     const httpContext = context.switchToHttp();
     const request = httpContext.getRequest<Request>();
     const response = httpContext.getResponse<Response>();
-    const { method, originalUrl, url } = request as Request & { originalUrl?: string };
+    const { method, originalUrl, url } = request as Request & {
+      originalUrl?: string;
+    };
     const route = originalUrl || url;
     const start = Date.now();
 

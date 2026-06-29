@@ -385,4 +385,80 @@ describe("ProfilesService", () => {
       ).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe("getPublicProviderProfile", () => {
+    const mockProfile = {
+      id: "provider-1",
+      userId: "user-1",
+      avatarUrl: null,
+      bio: "Eletricista experiente",
+      hourlyRate: 50,
+      skills: ["ELETRICA"],
+      portfolio: [],
+      rating: 4.5,
+      totalReviews: 10,
+      isAvailable: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      user: {
+        id: "user-1",
+        completeName: "João Eletricista",
+        email: "joao@email.com",
+        phone: "11999999999",
+        postalCode: "01234-567",
+      },
+      services: [
+        {
+          id: "service-1",
+          providerProfileId: "provider-1",
+          title: "Instalação de chuveiro",
+          description: "Descrição",
+          fixedPrice: 150,
+          category: "ELETRICA",
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    };
+
+    it("should return provider profile with services", async () => {
+      mockPrisma.providerProfile.findUnique.mockResolvedValue(mockProfile);
+
+      const result = await service.getPublicProviderProfile("provider-1");
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe("provider-1");
+      expect(result.user.complete_name).toBe("João Eletricista");
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0].title).toBe("Instalação de chuveiro");
+      expect(result.services[0].fixed_price).toBe(150);
+      expect(mockPrisma.providerProfile.findUnique).toHaveBeenCalledWith({
+        where: { id: "provider-1" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              completeName: true,
+              email: true,
+              phone: true,
+              postalCode: true,
+            },
+          },
+          services: {
+            where: { isActive: true },
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      });
+    });
+
+    it("should throw NotFoundException when provider profile not found", async () => {
+      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.getPublicProviderProfile("invalid-id"),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });

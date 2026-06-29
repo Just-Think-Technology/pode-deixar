@@ -13,25 +13,29 @@ async function bootstrap() {
   });
 
   // Security headers
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
       },
-    },
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
-  }));
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+    }),
+  );
 
   // CORS configuration
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:3000',
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -52,17 +56,17 @@ async function bootstrap() {
 
   // Swagger API Documentation
   const config = new DocumentBuilder()
-    .setTitle('Auth Service API')
-    .setDescription('Authentication and user management service API')
+    .setTitle('Pode Deixar - Auth Service')
+    .setDescription('API de autenticação e gerenciamento de usuários')
     .setVersion('1.0')
-    .addTag('auth', 'Authentication endpoints')
+    .addTag('auth', 'Endpoints de autenticação')
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
         name: 'JWT',
-        description: 'Enter JWT token',
+        description: 'Informe o token JWT',
         in: 'header',
       },
       'JWT-auth',
@@ -74,7 +78,10 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
 
-  logger.info('bootstrap', `Auth service is running on: http://localhost:${port}`);
+  logger.info(
+    'bootstrap',
+    `Auth service is running on: http://localhost:${port}`,
+  );
   logger.info('bootstrap', `API Documentation: http://localhost:${port}/api`);
 }
 bootstrap();

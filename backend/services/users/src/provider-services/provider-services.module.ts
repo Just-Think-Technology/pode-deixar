@@ -1,8 +1,11 @@
 import { Module } from "@nestjs/common";
 import { ProviderServicesService } from "./provider-services.service";
-import { ProviderServicesController } from "./provider-services.controller";
-import { PublicProviderServicesController } from "./provider-services.controller";
-import { ProviderServiceDetailController } from "./provider-services.controller";
+import {
+  ProviderServicesController,
+  PublicProviderServicesController,
+  ProviderServiceDetailController,
+  ProviderSearchController,
+} from "./provider-services.controller";
 import { PrismaModule } from "../prisma/prisma.module";
 import { SharedModule } from "../shared/shared.module";
 
@@ -12,6 +15,7 @@ import { SharedModule } from "../shared/shared.module";
     ProviderServicesController,
     PublicProviderServicesController,
     ProviderServiceDetailController,
+    ProviderSearchController,
   ],
   providers: [ProviderServicesService],
   exports: [ProviderServicesService],

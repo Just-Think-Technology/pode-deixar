@@ -10,35 +10,35 @@ import {
 import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateProviderProfileDto {
-  @ApiPropertyOptional({ description: "Avatar URL" })
+  @ApiPropertyOptional({ description: "URL do avatar" })
   @IsOptional()
   @IsUrl()
   avatarUrl?: string;
 
-  @ApiPropertyOptional({ description: "Professional bio" })
+  @ApiPropertyOptional({ description: "Biografia profissional" })
   @IsOptional()
   @IsString()
   bio?: string;
 
-  @ApiPropertyOptional({ description: "Hourly rate" })
+  @ApiPropertyOptional({ description: "Tarifa por hora" })
   @IsOptional()
   @IsNumber()
   @Min(0)
   hourlyRate?: number;
 
-  @ApiPropertyOptional({ description: "List of skills" })
+  @ApiPropertyOptional({ description: "Lista de habilidades" })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   skills?: string[];
 
-  @ApiPropertyOptional({ description: "Portfolio URLs" })
+  @ApiPropertyOptional({ description: "URLs do portfólio" })
   @IsOptional()
   @IsArray()
   @IsUrl({}, { each: true })
   portfolio?: string[];
 
-  @ApiPropertyOptional({ description: "Availability status" })
+  @ApiPropertyOptional({ description: "Status de disponibilidade" })
   @IsOptional()
   @IsBoolean()
   isAvailable?: boolean;

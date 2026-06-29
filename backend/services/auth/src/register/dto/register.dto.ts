@@ -6,7 +6,7 @@ import {
   IsString,
   Matches,
   MinLength,
-  MaxLength
+  MaxLength,
 } from 'class-validator';
 
 export enum PublicRole {
@@ -15,40 +15,66 @@ export enum PublicRole {
 }
 
 export class RegisterDto {
-  @ApiProperty({ description: 'User\'s complete name', example: 'John Doe' })
+  @ApiProperty({ description: 'Nome completo do usuário', example: 'John Doe' })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
   @MaxLength(50)
-  @Matches(/^[\p{L}\s'-]+$/u, { message: 'complete_name contains invalid characters' })
+  @Matches(/^[\p{L}\s'-]+$/u, {
+    message: 'nome completo contém caracteres inválidos',
+  })
   complete_name: string;
 
-  @ApiProperty({ description: 'User\'s email address', example: 'john.doe@example.com' })
+  @ApiProperty({
+    description: 'Endereço de email do usuário',
+    example: 'john.doe@example.com',
+  })
   @IsEmail()
   @IsString()
   email: string;
 
-  @ApiProperty({ description: 'User\'s password (minimum 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character)', example: 'Password123!', minLength: 8 })
+  @ApiProperty({
+    description:
+      'Senha do usuário (mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 número, 1 especial)',
+    example: 'Password123!',
+    minLength: 8,
+  })
   @IsString()
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/, { message: 'weak password: minimun 8 characters, 1 upper, 1 lower, 1 number e 1 especial' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/, {
+    message:
+      'senha fraca: mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 número e 1 especial',
+  })
   password: string;
 
-  @ApiProperty({ description: 'User\'s password confirmation (must match password field)', example: 'Password123!', minLength: 8 })
+  @ApiProperty({
+    description: 'Confirmação de senha (deve coincidir com o campo senha)',
+    example: 'Password123!',
+    minLength: 8,
+  })
   @IsString()
   @IsNotEmpty()
   confirm_password: string;
 
-  @ApiProperty({ description: 'User\'s phone number', example: '+1234567890' })
+  @ApiProperty({
+    description: 'Número de telefone do usuário',
+    example: '+1234567890',
+  })
   @IsString()
   @IsNotEmpty()
   phone: string;
 
-  @ApiProperty({ description: 'User\'s postal code', example: '12345-678' })
+  @ApiProperty({ description: 'CEP do usuário', example: '12345-678' })
   @IsString()
   @IsNotEmpty()
   postal_code: string;
 
-  @ApiProperty({ description: 'User role', enum: PublicRole, example: PublicRole.CLIENT })
-  @IsEnum(PublicRole, { message: 'role must be CLIENT or PROVIDER' })
+  @ApiProperty({
+    description: 'Função do usuário',
+    enum: PublicRole,
+    example: PublicRole.CLIENT,
+  })
+  @IsEnum(PublicRole, {
+    message: 'função deve ser CLIENT (Cliente) ou PROVIDER (Prestador)',
+  })
   role: PublicRole;
 }
