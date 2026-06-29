@@ -85,4 +85,13 @@ export class AuthLoggerService {
       success ? 'Verification email resent' : 'Resend verification failed',
     );
   }
+
+  logTokenVerification(userId: string, success: boolean, reason?: string) {
+    this.logger.info(
+      { event: 'auth.token_verify', userId, success, reason },
+      success
+        ? 'Token verified successfully'
+        : `Token verification failed: ${reason}`,
+    );
+  }
 }
