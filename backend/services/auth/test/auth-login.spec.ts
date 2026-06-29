@@ -36,7 +36,7 @@ describe('POST /auth/login', () => {
         .expect(200);
 
       expect(response.body).toMatchObject({
-        message: 'Login successful',
+        message: 'Login realizado com sucesso',
         token_type: 'Bearer',
       });
       expect(response.body).toHaveProperty('access_token');
@@ -72,7 +72,7 @@ describe('POST /auth/login', () => {
         .send({ email: user.email, password: 'WrongPassword123!' })
         .expect(401);
 
-      expect(response.body.message).toContain('Invalid credentials');
+      expect(response.body.message).toContain('Credenciais inválidas');
     });
 
     it('should reject non-existent email with 401', async () => {

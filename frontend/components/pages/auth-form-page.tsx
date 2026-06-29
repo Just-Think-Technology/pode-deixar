@@ -345,7 +345,6 @@ function useRegisterHandler(authRole: AuthRole, publicRole: PublicRole) {
 function handleValidationError(
     err: unknown,
     setFieldErrors: (e: Record<string, string>) => void,
-    setError: (e: string | null) => void,
 ): boolean {
     if (
         err instanceof Error &&
@@ -373,7 +372,6 @@ export function ClientLoginForm() {
         fieldErrors,
         wrapSubmit,
         setFieldErrors,
-        setError,
     } = useAuthFormSubmit();
     const loginHandler = useLoginHandler("client");
 
@@ -381,7 +379,7 @@ export function ClientLoginForm() {
         try {
             await loginHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError))
+            if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });
@@ -430,7 +428,6 @@ export function WorkerLoginForm() {
         fieldErrors,
         wrapSubmit,
         setFieldErrors,
-        setError,
     } = useAuthFormSubmit();
     const loginHandler = useLoginHandler("worker");
 
@@ -438,7 +435,7 @@ export function WorkerLoginForm() {
         try {
             await loginHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError))
+            if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });
@@ -487,7 +484,6 @@ export function ClientRegisterForm() {
         fieldErrors,
         wrapSubmit,
         setFieldErrors,
-        setError,
     } = useAuthFormSubmit();
     const registerHandler = useRegisterHandler("client", "CLIENT");
 
@@ -495,7 +491,7 @@ export function ClientRegisterForm() {
         try {
             await registerHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError))
+            if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });
@@ -583,7 +579,6 @@ export function WorkerRegisterForm() {
         fieldErrors,
         wrapSubmit,
         setFieldErrors,
-        setError,
     } = useAuthFormSubmit();
     const registerHandler = useRegisterHandler("worker", "PROVIDER");
 
@@ -591,7 +586,7 @@ export function WorkerRegisterForm() {
         try {
             await registerHandler(form);
         } catch (err) {
-            if (!handleValidationError(err, setFieldErrors, setError))
+            if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });

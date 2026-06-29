@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import { EmailService } from '../src/send_email/email.service';
+import { EmailService } from '@pode-deixar/email';
 
 // ─── Nodemailer mock ──────────────────────────────────────────────────────────
 
@@ -99,7 +99,7 @@ describe('EmailService', () => {
       expect(mockSendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: EMAIL,
-          subject: 'Verify Your Email Address',
+          subject: 'Verifique seu endereço de email',
         }),
       );
     });
@@ -167,7 +167,7 @@ describe('EmailService', () => {
       expect(mockSendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: EMAIL,
-          subject: 'Reset Your Password',
+          subject: 'Redefina sua senha',
         }),
       );
     });

@@ -1,0 +1,10 @@
+packages:
+  - "shared/*"
+  - "services/*"
+allowBuilds:
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true
+  argon2: true
+  "@scarf/scarf": true
+  unrs-resolver: true

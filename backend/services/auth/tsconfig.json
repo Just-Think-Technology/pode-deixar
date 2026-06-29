@@ -22,7 +22,9 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@pode-deixar/logger": ["../../shared/logger/dist"],
-      "@pode-deixar/logger/*": ["../../shared/logger/dist/*"]
+      "@pode-deixar/logger/*": ["../../shared/logger/dist/*"],
+      "@pode-deixar/email": ["../../shared/email/dist"],
+      "@pode-deixar/email/*": ["../../shared/email/dist/*"]
     }
   },
   "include": ["src/**/*.ts"]

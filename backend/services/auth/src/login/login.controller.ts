@@ -2,19 +2,24 @@ import {
   Body,
   Controller,
   Post,
-  Get,
   UseGuards,
   Request,
   Headers,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiHeader } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiBody,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { LoginService } from './login.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { JwtAuthGuard } from '../jwt/jwt-auth.guard';1
+import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
 import getLogger from '../shared/shared-logger';
 
 const logger = getLogger('login');
@@ -27,20 +32,24 @@ export class LoginController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Authenticate user and return JWT tokens' })
+  @ApiOperation({ summary: 'Autenticar usuário e retornar tokens JWT' })
   @ApiBody({ type: LoginDto })
-  async login(@Body() dto: LoginDto, @Headers('x-forwarded-for') ip?: string, @Headers('user-agent') userAgent?: string) {
-    try { logger.info('auth.endpoint', `Login called for ${dto.email}`); } catch (e) {}
-    return this.loginService.login(dto, ip, userAgent);
+  async login(@Body() dto: LoginDto, @Headers('x-forwarded-for') ip?: string) {
+    try {
+      logger.info('auth.endpoint', `Login called for ${dto.email}`);
+    } catch {}
+    return this.loginService.login(dto, ip);
   }
 
   @ApiTags('Acesso')
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh token' })
+  @ApiOperation({ summary: 'Atualizar token' })
   @ApiBody({ type: RefreshTokenDto })
   async refreshToken(@Body() dto: RefreshTokenDto) {
-    try { logger.info('auth.endpoint', `Refresh token requested`); } catch (e) {}
+    try {
+      logger.info('auth.endpoint', `Refresh token requested`);
+    } catch {}
     return this.loginService.refreshToken(dto);
   }
 
@@ -48,11 +57,17 @@ export class LoginController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Logout user (invalidate refresh token)' })
+  @ApiOperation({ summary: 'Logout do usuário (invalidar tokens)' })
   @ApiBearerAuth()
-  @ApiHeader({ name: 'Authorization', description: 'Bearer token', required: true })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Token de autenticação',
+    required: true,
+  })
   async logout(@Request() req: any) {
-    try { logger.info('auth.endpoint', `Logout requested for user ${req.user?.id}`); } catch (e) {}
-    return this.loginService.logout(req.user.id);
+    try {
+      logger.info('auth.endpoint', `Logout requested for user ${req.user?.id}`);
+    } catch {}
+    return this.loginService.logout(req.user.id, req.user.jti);
   }
 }

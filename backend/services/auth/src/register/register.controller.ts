@@ -1,5 +1,12 @@
-import { Body, Controller, Post, Headers, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Post,
+  Headers,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { UseGuards } from '@nestjs/common';
 import { RegisterService } from './register.service';
@@ -18,28 +25,40 @@ export class RegisterController {
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Register a new user' })
+  @ApiOperation({ summary: 'Registrar um novo usuário' })
   @ApiBody({ type: RegisterDto })
-  async register(@Body() dto: RegisterDto, @Headers('x-forwarded-for') ip?: string) {
-    try { logger.info('auth.endpoint', `Register called for ${dto.email}`); } catch (e) {}
+  async register(
+    @Body() dto: RegisterDto,
+    @Headers('x-forwarded-for') ip?: string,
+  ) {
+    try {
+      logger.info('auth.endpoint', `Register called for ${dto.email}`);
+    } catch {}
     return this.registerService.register(dto, ip);
   }
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify user email with token' })
+  @ApiOperation({ summary: 'Verificar email do usuário com token' })
   @ApiBody({ type: VerifyEmailDto })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
-    try { logger.info('auth.endpoint', `Verify email requested`); } catch (e) {}
+    try {
+      logger.info('auth.endpoint', `Verify email requested`);
+    } catch {}
     return this.registerService.verifyEmail(dto);
   }
 
   @Post('resend-email-verification')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Resend email verification link' })
+  @ApiOperation({ summary: 'Reenviar link de verificação de email' })
   @ApiBody({ type: ResendVerificationDto })
   async resendVerificationEmail(@Body() dto: ResendVerificationDto) {
-    try { logger.info('auth.endpoint', `Resend verification requested for ${dto.email}`); } catch (e) {}
+    try {
+      logger.info(
+        'auth.endpoint',
+        `Resend verification requested for ${dto.email}`,
+      );
+    } catch {}
     return this.registerService.resendVerificationEmail(dto);
   }
 }
