@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import createLogger from '@pode-deixar/logger';
+import { verificationTemplate, passwordResetTemplate } from './email.templates';
 
 const logger = createLogger('email');
 
@@ -51,13 +52,7 @@ export class EmailService {
     return this.sendMail({
       to: email,
       subject: 'Verifique seu endereço de email',
-      html: `
-        <h1>Bem-vindo!</h1>
-        <p>Por favor, verifique seu endereço de email clicando no link abaixo:</p>
-        <a href="${verificationUrl}">Verificar Email</a>
-        <p>Este link expirará em 24 horas.</p>
-        <p>Se você não criou uma conta, ignore este email.</p>
-      `,
+      html: verificationTemplate(verificationUrl),
     });
   }
 
@@ -67,13 +62,7 @@ export class EmailService {
     return this.sendMail({
       to: email,
       subject: 'Redefina sua senha',
-      html: `
-        <h1>Solicitação de redefinição de senha</h1>
-        <p>Você solicitou a redefinição de senha. Clique no link abaixo para redefinir sua senha:</p>
-        <a href="${resetUrl}">Redefinir Senha</a>
-        <p>Este link expirará em 1 hora.</p>
-        <p>Se você não solicitou isso, ignore este email.</p>
-      `,
+      html: passwordResetTemplate(resetUrl),
     });
   }
 }
