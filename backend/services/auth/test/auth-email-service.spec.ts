@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import { EmailService } from '../src/send_email/email.service';
+import { EmailService } from '@pode-deixar/email';
 
 // ─── Nodemailer mock ──────────────────────────────────────────────────────────
 

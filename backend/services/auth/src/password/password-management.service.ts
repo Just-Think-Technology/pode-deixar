@@ -9,7 +9,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthLoggerService } from '../shared/auth-logger.service';
-import { EmailService } from '../send_email/email.service';
+import { EmailService } from '@pode-deixar/email';
 import { PasswordService } from './password.service';
 import { v4 as uuidv4 } from 'uuid';
 
