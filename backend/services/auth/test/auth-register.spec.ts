@@ -4,6 +4,7 @@ import { App } from 'supertest/types';
 import {
   setupTestApp,
   createTestUser,
+  createProviderUser,
   teardownTestApp
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -40,6 +41,44 @@ describe('POST /auth/register', () => {
       });
       expect(response.body.user).not.toHaveProperty('password');
     });
+
+    it('should auto-create a client_profile when registering as CLIENT', async () => {
+      const user = createTestUser();
+
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(user)
+        .expect(201);
+
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      expect(dbUser).toBeDefined();
+
+      const profile = await prisma.clientProfile.findUnique({
+        where: { userId: dbUser!.id },
+      });
+      expect(profile).toBeDefined();
+      expect(profile?.preferences).toEqual({});
+    });
+
+    it('should auto-create a provider_profile when registering as PROVIDER', async () => {
+      const user = createProviderUser();
+
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(user)
+        .expect(201);
+
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      expect(dbUser).toBeDefined();
+
+      const profile = await prisma.providerProfile.findUnique({
+        where: { userId: dbUser!.id },
+      });
+      expect(profile).toBeDefined();
+      expect(profile?.isAvailable).toBe(true);
+      expect(profile?.skills).toEqual([]);
+      expect(profile?.portfolio).toEqual([]);
+    });
   });
 
   describe('Conflict cases', () => {
@@ -53,7 +92,7 @@ describe('POST /auth/register', () => {
         .send(user)
         .expect(409);
 
-      expect(response.body.message).toContain('already registered');
+      expect(response.body.message).toContain('Email já cadastrado');
     });
   });
 
@@ -122,7 +161,7 @@ describe('POST /auth/register', () => {
         .send({ ...user, confirm_password: 'DifferentPassword123!' })
         .expect(400);
 
-      expect(response.body.message).toContain('do not match');
+      expect(response.body.message).toContain('Senhas não conferem');
     });
   });
 });

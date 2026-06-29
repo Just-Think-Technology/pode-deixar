@@ -1,0 +1,52 @@
+# Pode Deixar - Reverse Proxy
+# Expõe todos os serviços em uma única porta (8080)
+#
+# Uso:
+#   caddy run    # inicia o proxy
+#   caddy stop   # para o proxy
+
+http://localhost:8080 {
+
+    # ─── Auth Health (strip diferente: /health, não /auth/health) ──
+    handle /api/auth/health* {
+        uri strip_prefix /api/auth
+        reverse_proxy localhost:3001
+    }
+
+    # ─── Users Health ─────────────────────────────────────────────
+    handle /api/users/health* {
+        uri strip_prefix /api/users
+        reverse_proxy localhost:3002
+    }
+
+    # ─── Auth Service (:3001) ─────────────────────────────────────
+    handle /api/auth/* {
+        uri strip_prefix /api
+        reverse_proxy localhost:3001
+    }
+
+    # ─── Users Service (:3002) ────────────────────────────────────
+    handle /api/profiles/* {
+        uri strip_prefix /api
+        reverse_proxy localhost:3002
+    }
+
+    handle /api/providers/* {
+        uri strip_prefix /api
+        reverse_proxy localhost:3002
+    }
+
+    # ─── Services Service (:3003) ─────────────────────────────────
+    handle /api/services/* {
+        uri strip_prefix /api
+        reverse_proxy localhost:3003
+    }
+
+    handle /api/proposals/* {
+        uri strip_prefix /api
+        reverse_proxy localhost:3003
+    }
+
+    # ─── Frontend (Next.js :3000) ─────────────────────────────────
+    reverse_proxy localhost:3000
+}

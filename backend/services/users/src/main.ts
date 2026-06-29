@@ -14,7 +14,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle("Pode Deixar - Users Service")
-    .setDescription("API for user profiles management")
+    .setDescription("API de gerenciamento de perfis de usuários")
     .setVersion("1.0")
     .addBearerAuth()
     .build();

@@ -1,0 +1,86 @@
+# Pode Deixar - Docker Compose
+# Inicializa toda a plataforma com um comando:
+#   docker compose up -d
+#
+# Para rebuildar as imagens:
+#   docker compose build
+#
+# ATENÇÃO: Remove o serviço postgres porque usamos Neon DB externo
+# As credenciais do banco ficam em backend/services/*/.env.staging
+
+services:
+
+  # ─── Auth Service ────────────────────────────────────────
+  auth:
+    build:
+      context: ./backend
+      target: auth-build
+    env_file: ./backend/services/auth/.env.staging
+    environment:
+      FRONTEND_URL: http://localhost:8080
+      SMTP_HOST: mailpit
+      TZ: America/Sao_Paulo
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mailpit
+
+  # ─── Users Service ───────────────────────────────────────
+  users:
+    build:
+      context: ./backend
+      target: users-build
+    env_file: ./backend/services/users/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+    ports:
+      - "3002:3002"
+    depends_on:
+      auth:
+        condition: service_started
+
+  # ─── Service Orders Service ──────────────────────────────
+  service-orders:
+    build:
+      context: ./backend
+      target: service-orders-build
+    env_file: ./backend/services/service-orders/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+    ports:
+      - "3003:3003"
+    depends_on:
+      auth:
+        condition: service_started
+
+  # ─── Frontend (Next.js) ──────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_BACKEND_URL: http://localhost:8080/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth
+      - users
+
+  # ─── Mailpit (SMTP Testing) ─────────────────────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # ─── Proxy Reverso (Caddy) ───────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./Caddyfile.docker:/etc/caddy/Caddyfile
+    depends_on:
+      - auth
+      - users
+      - service-orders
+      - frontend

@@ -4,6 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -22,14 +23,14 @@ export class LoginService {
     private passwordService: PasswordService,
   ) {}
 
-  async login(dto: LoginDto, ip?: string, userAgent?: string) {
+  async login(dto: LoginDto, ip?: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
 
     if (!user) {
-      this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
-      throw new UnauthorizedException('Invalid credentials');
+      this.authLogger.logLoginAttempt(dto.email, false, ip);
+      throw new UnauthorizedException('Credenciais inválidas');
     }
 
     if (user.lockoutUntil && user.lockoutUntil > new Date()) {
@@ -38,15 +39,22 @@ export class LoginService {
         lockoutUntil: user.lockoutUntil,
         ip,
       });
-      throw new ForbiddenException('Account is temporarily locked due to multiple failed login attempts');
+      throw new ForbiddenException(
+        'Conta temporariamente bloqueada devido a múltiplas tentativas de login',
+      );
     }
 
-    const isPasswordValid = await this.passwordService.verify(user.password, dto.password);
+    const isPasswordValid = await this.passwordService.verify(
+      user.password,
+      dto.password,
+    );
 
     if (!isPasswordValid) {
       const newAttempts = user.failedLoginAttempts + 1;
-      const maxAttempts = this.configService.get<number>('MAX_LOGIN_ATTEMPTS') || 5;
-      const lockoutDuration = this.configService.get<number>('LOCKOUT_DURATION_MINUTES') || 15;
+      const maxAttempts =
+        this.configService.get<number>('MAX_LOGIN_ATTEMPTS') || 5;
+      const lockoutDuration =
+        this.configService.get<number>('LOCKOUT_DURATION_MINUTES') || 15;
 
       if (newAttempts >= maxAttempts) {
         const lockoutUntil = new Date(Date.now() + lockoutDuration * 60 * 1000);
@@ -66,7 +74,9 @@ export class LoginService {
           ip,
         });
 
-        throw new ForbiddenException('Account locked due to multiple failed attempts');
+        throw new ForbiddenException(
+          'Conta bloqueada devido a múltiplas tentativas',
+        );
       } else {
         await this.prisma.user.updateMany({
           where: { id: user.id },
@@ -74,14 +84,17 @@ export class LoginService {
         });
       }
 
-      this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
-      throw new UnauthorizedException('Invalid credentials');
+      this.authLogger.logLoginAttempt(dto.email, false, ip);
+      throw new UnauthorizedException('Credenciais inválidas');
     }
 
     if (!user.emailVerified) {
-      this.authLogger.logLoginAttempt(dto.email, false, ip, userAgent);
-      this.authLogger.logSecurityEvent('email_not_verified', { email: dto.email, ip });
-      throw new ForbiddenException('Please verify your email before logging in');
+      this.authLogger.logLoginAttempt(dto.email, false, ip);
+      this.authLogger.logSecurityEvent('email_not_verified', {
+        email: dto.email,
+        ip,
+      });
+      throw new ForbiddenException('Verifique seu email antes de fazer login');
     }
 
     await this.prisma.user.updateMany({
@@ -103,12 +116,12 @@ export class LoginService {
       },
     });
 
-    const expiresIn = dto.rememberMe ? 30 * 24 * 60 * 60 : 15 * 60;
+    const expiresIn = 15 * 60; // access_token real TTL (15 min)
 
-    this.authLogger.logLoginAttempt(dto.email, true, ip, userAgent);
+    this.authLogger.logLoginAttempt(dto.email, true, ip);
 
     return {
-      message: 'Login successful',
+      message: 'Login realizado com sucesso',
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_in: expiresIn,
@@ -125,7 +138,9 @@ export class LoginService {
   async refreshToken(dto: RefreshTokenDto) {
     try {
       const payload = await this.jwtService.verifyAsync(dto.refreshToken, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET') || 'refresh-secret-key',
+        secret:
+          this.configService.get<string>('JWT_REFRESH_SECRET') ||
+          'refresh-secret-key',
       });
 
       const hashedIncoming = this.hashRefreshToken(dto.refreshToken);
@@ -139,7 +154,7 @@ export class LoginService {
           where: { id: payload.sub },
           data: { refreshToken: null },
         });
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new UnauthorizedException('Token de atualização inválido');
       }
 
       await this.prisma.user.update({
@@ -165,11 +180,11 @@ export class LoginService {
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       this.authLogger.logTokenRefresh('unknown', false);
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Token de atualização inválido');
     }
   }
 
-  async logout(userId: string) {
+  async logout(userId: string, accessTokenJti?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { email: true },
@@ -180,44 +195,37 @@ export class LoginService {
       data: { refreshToken: null },
     });
 
-    this.authLogger.logLogout(userId, user?.email);
+    try {
+      if (accessTokenJti) {
+        await this.prisma.tokenBlacklist.create({
+          data: {
+            jti: accessTokenJti,
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+          },
+        });
+      }
 
-    return { message: 'Logged out successfully' };
-  }
-
-  async getProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        completeName: true,
-        email: true,
-        role: true,
-        phone: true,
-        postalCode: true,
-        emailVerified: true,
-        createdAt: true,
-        lastLoginAt: true,
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('User not found');
+      await this.prisma.tokenBlacklist.deleteMany({
+        where: { expiresAt: { lte: new Date() } },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2021'
+      ) {
+        this.authLogger.logSecurityEvent('token_blacklist_table_missing', {
+          userId,
+          message:
+            'token_blacklist table missing, refresh token cleared but access token not blacklisted',
+        });
+      } else {
+        throw error;
+      }
     }
 
-    this.authLogger.logProfileAccess(user.id);
+    this.authLogger.logLogout(userId, user?.email);
 
-    return {
-      id: user.id,
-      complete_name: user.completeName,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      postal_code: user.postalCode,
-      email_verified: user.emailVerified,
-      created_at: user.createdAt,
-      last_login_at: user.lastLoginAt,
-    };
+    return { message: 'Logout realizado com sucesso' };
   }
 
   private async generateAccessToken(user: any) {
@@ -226,6 +234,7 @@ export class LoginService {
       email: user.email,
       role: user.role,
       type: 'access',
+      jti: crypto.randomUUID(),
     };
     return this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
