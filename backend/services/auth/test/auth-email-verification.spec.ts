@@ -45,7 +45,7 @@ describe('POST /auth/verify-email', () => {
         .send({ token })
         .expect(200);
 
-      expect(response.body).toHaveProperty('message', 'Email verified successfully');
+      expect(response.body).toHaveProperty('message', 'Email verificado com sucesso');
 
       const updatedUser = await prisma.user.findUnique({ where: { email } });
       expect(updatedUser?.emailVerified).toBe(true);
@@ -59,7 +59,7 @@ describe('POST /auth/verify-email', () => {
         .send({ token: 'invalid-token' })
         .expect(400);
 
-      expect(response.body.message).toContain('Invalid verification token');
+      expect(response.body.message).toContain('Token de verificação inválido');
     });
 
     it('should reject a missing token with 400', async () => {
@@ -83,7 +83,7 @@ describe('POST /auth/verify-email', () => {
         .send({ token })
         .expect(400);
 
-      expect(response.body.message).toContain('Verification token has expired');
+      expect(response.body.message).toContain('Token de verificação expirou');
     });
   });
 });

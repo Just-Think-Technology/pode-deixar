@@ -33,7 +33,7 @@ describe('POST /auth/logout', () => {
       .set(bearerAuth(accessToken))
       .expect(200);
 
-    expect(response.body).toHaveProperty('message', 'Logged out successfully');
+    expect(response.body).toHaveProperty('message', 'Logout realizado com sucesso');
 
     const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
     expect(dbUser?.refreshToken).toBeNull();

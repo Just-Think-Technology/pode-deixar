@@ -1,6 +1,7 @@
 {
   "name": "@pode-deixar/logger",
   "version": "1.0.0",
+  "private": true,
   "type": "commonjs",
   "main": "dist/index.js",
   "license": "ISC"

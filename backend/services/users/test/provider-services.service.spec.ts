@@ -3,6 +3,7 @@ import { ProviderServicesService } from "../src/provider-services/provider-servi
 import { PrismaService } from "../src/prisma/prisma.service";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
 import { NotFoundException, BadRequestException } from "@nestjs/common";
+import { SearchProvidersQueryDto } from "../src/provider-services/dto/search-providers-query.dto";
 
 describe("ProviderServicesService", () => {
   let service: ProviderServicesService;
@@ -37,9 +38,8 @@ describe("ProviderServicesService", () => {
     title: "Instalação de chuveiro elétrico",
     description: "Instalação completa de chuveiro elétrico com garantia",
     fixedPrice: 150.0,
-    category: "ELETRICA",
-    durationMinutes: 60,
-    isActive: true,
+     category: "ELETRICA",
+     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -47,6 +47,7 @@ describe("ProviderServicesService", () => {
   const mockPrisma = {
     providerProfile: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
     providerService: {
       create: jest.fn(),
@@ -88,11 +89,10 @@ describe("ProviderServicesService", () => {
       title: "Instalação de chuveiro elétrico",
       description: "Instalação completa de chuveiro elétrico com garantia",
       fixedPrice: 150.0,
-      category: "ELETRICA",
-      durationMinutes: 60,
-    };
+       category: "ELETRICA",
+     };
 
-    it("should create a service for provider", async () => {
+     it("should create a service for provider", async () => {
       mockPrisma.providerProfile.findUnique.mockResolvedValue(
         mockProviderProfile,
       );
@@ -292,6 +292,178 @@ describe("ProviderServicesService", () => {
       await expect(
         service.deleteService("provider-profile-1", "service-1", "127.0.0.1"),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("searchProviders", () => {
+    const mockProfileWithServices = {
+      id: "provider-profile-1",
+      userId: "user-1",
+      avatarUrl: null,
+      bio: "Eletricista experiente",
+      hourlyRate: 50,
+      skills: ["ELETRICA"],
+      portfolio: [],
+      rating: 4.5,
+      totalReviews: 10,
+      isAvailable: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      user: {
+        id: "user-1",
+        completeName: "João Eletricista",
+        email: "joao@email.com",
+        phone: "11999999999",
+        postalCode: "01234-567",
+      },
+      services: [
+        {
+          id: "service-1",
+          providerProfileId: "provider-profile-1",
+          title: "Instalação de chuveiro elétrico",
+          description: "Instalação completa",
+          fixedPrice: 150.0,
+          category: "ELETRICA",
+          isActive: true,
+           createdAt: new Date(),
+           updatedAt: new Date(),
+         },
+       ],
+     };
+
+     const mockProfileWithNameMatch = {
+      ...mockProfileWithServices,
+      id: "provider-profile-2",
+      user: {
+        ...mockProfileWithServices.user,
+        id: "user-2",
+        completeName: "José Chuveiro",
+      },
+      services: [
+        {
+          ...mockProfileWithServices.services[0],
+          id: "service-3",
+          providerProfileId: "provider-profile-2",
+          title: "Reparo geral",
+          category: "HIDRAULICA",
+        },
+      ],
+    };
+
+    const mockProfileWithMultipleServices = {
+      ...mockProfileWithServices,
+      services: [
+        ...mockProfileWithServices.services,
+        {
+          id: "service-2",
+          providerProfileId: "provider-profile-1",
+          title: "Troca de fiação",
+          description: "Troca completa da fiação elétrica",
+          fixedPrice: 200.0,
+          category: "ELETRICA",
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    };
+
+    it("should return all active providers when no filters", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithServices,
+      ]);
+
+      const query: SearchProvidersQueryDto = {};
+      const result = await service.searchProviders(query);
+
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+      expect(result[0].user.complete_name).toBe("João Eletricista");
+      expect(result[0].services).toHaveLength(1);
+    });
+
+    it("should filter by category", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithServices,
+      ]);
+
+      const query: SearchProvidersQueryDto = { category: "ELETRICA" };
+      const result = await service.searchProviders(query);
+
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+    });
+
+    it("should filter by text search on service title", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithServices,
+      ]);
+
+      const query: SearchProvidersQueryDto = { q: "chuveiro" };
+      const result = await service.searchProviders(query);
+
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+    });
+
+    it("should filter by provider name", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithNameMatch,
+      ]);
+
+      const query: SearchProvidersQueryDto = { q: "José" };
+      const result = await service.searchProviders(query);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].user.complete_name).toBe("José Chuveiro");
+    });
+
+    it("should search ignoring accents", async () => {
+      const profileComAcento = {
+        ...mockProfileWithServices,
+        services: [{
+          ...mockProfileWithServices.services[0],
+          title: "Instalação elétrica",
+        }],
+      };
+      mockPrisma.providerProfile.findMany.mockResolvedValue([profileComAcento]);
+
+      const query: SearchProvidersQueryDto = { q: "eletrica" };
+      const result = await service.searchProviders(query);
+
+      expect(result).toHaveLength(1);
+    });
+
+    it("should group multiple services under the same provider", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithMultipleServices,
+      ]);
+
+      const query: SearchProvidersQueryDto = { category: "ELETRICA" };
+      const result = await service.searchProviders(query);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].services).toHaveLength(2);
+      expect(result[0].services[0].title).toBe("Instalação de chuveiro elétrico");
+      expect(result[0].services[1].title).toBe("Troca de fiação");
+    });
+
+    it("should return empty array when no matches", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([]);
+
+      const query: SearchProvidersQueryDto = { category: "HIDRAULICA" };
+      const result = await service.searchProviders(query);
+
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            services: {
+              some: { isActive: true, category: "HIDRAULICA" },
+            },
+          },
+        }),
+      );
+      expect(result).toHaveLength(0);
     });
   });
 });

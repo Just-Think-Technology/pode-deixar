@@ -1,17 +1,23 @@
 {
   "name": "@pode-deixar/backend",
   "version": "1.0.0",
+  "packageManager": "pnpm@11.9.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "npm run start:dev -w @pode-deixar/auth",
-    "build": "npm run prisma:generate && npm run build -w @pode-deixar/auth",
-    "start": "npm run start -w @pode-deixar/auth",
-    "start:prod": "npm run start:prod -w @pode-deixar/auth",
-    "test": "npm run test -w @pode-deixar/auth",
-    "prisma:generate": "npm run prisma:generate -w @pode-deixar/auth",
-    "prisma:migrate": "npm run prisma:migrate -w @pode-deixar/auth",
-    "postinstall": "npm run prisma:generate"
+    "dev": "pnpm run --filter @pode-deixar/auth start:dev",
+    "dev:all": "concurrently \"pnpm run --filter @pode-deixar/auth start:dev\" \"pnpm run --filter @pode-deixar/users start:dev\" \"pnpm run --filter @pode-deixar/service-orders start:dev\"",
+    "build": "pnpm run prisma:generate && pnpm run --filter @pode-deixar/auth build && pnpm run --filter @pode-deixar/users build && pnpm run --filter @pode-deixar/service-orders build",
+    "start": "pnpm run --filter @pode-deixar/auth start",
+    "start:all": "concurrently \"pnpm run --filter @pode-deixar/auth start\" \"pnpm run --filter @pode-deixar/users start\" \"pnpm run --filter @pode-deixar/service-orders start\"",
+    "start:prod": "pnpm run --filter @pode-deixar/auth start:prod",
+    "test": "pnpm run --filter @pode-deixar/auth test && pnpm run --filter @pode-deixar/users test && pnpm run --filter @pode-deixar/service-orders test",
+    "prisma:generate": "prisma generate --schema=prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "lint": "pnpm run --filter @pode-deixar/auth lint && pnpm run --filter @pode-deixar/users lint && pnpm run --filter @pode-deixar/service-orders lint",
+    "proxy:run": "powershell -File scripts/proxy.ps1 run",
+    "proxy:start": "powershell -File scripts/proxy.ps1 start",
+    "proxy:stop": "powershell -File scripts/proxy.ps1 stop"
   },
   "keywords": [],
   "author": "",
@@ -23,9 +29,11 @@
   ],
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "cross-env": "^10.1.0"
+    "cross-env": "^10.1.0",
+    "prisma": "5.22.0"
   },
   "dependencies": {
+    "@prisma/client": "5.22.0",
     "pino": "^8.18.0",
     "pino-pretty": "^10.0.0"
   }

@@ -67,7 +67,7 @@ export function createLogger(serviceName: string, featureName?: string, options:
     const fileStream = fs.createWriteStream(filePath, { flags: 'a' });
     const prettyFile = pinoPretty({
       colorize: false,
-      translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+      translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
       ignore: 'pid,hostname',
       destination: fileStream,
       sync: true,
@@ -79,7 +79,7 @@ export function createLogger(serviceName: string, featureName?: string, options:
   if (!isProd || isTest) {
     const prettyStdout = pinoPretty({
       colorize: true,
-      translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+      translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
       ignore: 'pid,hostname',
       messageFormat: '[{service}] {event} - {msg}',
       destination: process.stdout,

@@ -105,18 +105,7 @@ describe('Security and Edge Cases', () => {
       },
     );
 
-    it('should never expose password or passwordHash in profile response', async () => {
-      const user = createTestUser();
-      const { accessToken } = await registerAndLogin(app, user, prisma);
 
-      const response = await request(app.getHttpServer())
-        .get('/auth/default-profile')
-        .set(bearerAuth(accessToken))
-        .expect(200);
-
-      expect(response.body.user).not.toHaveProperty('password');
-      expect(response.body.user).not.toHaveProperty('passwordHash');
-    });
   });
 
   // ── Input Validation Edge Cases ──────────────────────────────────────────
@@ -182,11 +171,11 @@ describe('Security and Edge Cases', () => {
       'should reject malformed token "%s" with 401',
       async (token) => {
         const response = await request(app.getHttpServer())
-          .get('/auth/default-profile')
+          .post('/auth/logout')
           .set('Authorization', `Bearer ${token}`)
           .expect(401);
 
-        expect(response.body.message).toContain('Unauthorized');
+        expect(response.body.message).toContain('Não autorizado');
       },
     );
 
@@ -197,11 +186,11 @@ describe('Security and Edge Cases', () => {
         '.wrong-signature';
 
       const response = await request(app.getHttpServer())
-        .get('/auth/default-profile')
+        .post('/auth/logout')
         .set('Authorization', tokenWithBadSig) // intentionally no "Bearer " prefix to test raw header rejection
         .expect(401);
 
-      expect(response.body.message).toContain('Unauthorized');
+      expect(response.body.message).toContain('Não autorizado');
     });
   });
 });

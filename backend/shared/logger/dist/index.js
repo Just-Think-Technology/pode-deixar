@@ -55,7 +55,7 @@ function createLogger(serviceName, featureName, options = {}) {
         const fileStream = fs_1.default.createWriteStream(filePath, { flags: 'a' });
         const prettyFile = (0, pino_pretty_1.default)({
             colorize: false,
-            translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+            translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
             ignore: 'pid,hostname',
             destination: fileStream,
             sync: true,
@@ -66,7 +66,7 @@ function createLogger(serviceName, featureName, options = {}) {
     if (!isProd || isTest) {
         const prettyStdout = (0, pino_pretty_1.default)({
             colorize: true,
-            translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+            translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
             ignore: 'pid,hostname',
             messageFormat: '[{service}] {event} - {msg}',
             destination: process.stdout,
