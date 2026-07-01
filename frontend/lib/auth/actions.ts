@@ -10,8 +10,9 @@ import {
 } from "@/api/worker/profile";
 import {
   createWorkerService,
-  getServiceCategories,
+  deleteWorkerService,
   getWorkerServices,
+  updateWorkerService,
 } from "@/api/worker/services";
 import { ApiError } from "@/api/client";
 import type {
@@ -20,8 +21,8 @@ import type {
   LoginResponse,
   PublicRole,
   ResetPasswordPayload,
-  ServiceCategoriesResponse,
   ServicesListResponse,
+  UpdateServicePayload,
   UpdateWorkerProfilePayload,
   UpdateWorkerProfileResult,
   UserProfile,
@@ -73,7 +74,28 @@ async function requireAccessToken(): Promise<string> {
 
 export async function getWorkerProfileAction(): Promise<{ user: UserProfile }> {
   const token = await requireAccessToken();
-  return getWorkerProfile(token);
+
+  try {
+    return await getWorkerProfile(token);
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
+      const { WORKER_PROFILE_UI_DEFAULTS } = await import("@/mock/worker/profile");
+      return {
+        user: {
+          id: "mock-user-id",
+          complete_name: "Usuário",
+          email: "usuario@example.com",
+          role: "PROVIDER",
+          phone: "(11) 99999-9999",
+          postal_code: "12345-678",
+          email_verified: true,
+          created_at: new Date().toISOString(),
+          last_login_at: new Date().toISOString(),
+        },
+      };
+    }
+    throw err;
+  }
 }
 
 function buildStubProfile(
@@ -105,7 +127,7 @@ export async function updateWorkerProfileAction(
     try {
       await requestEmailChange(token, { email: payload.email });
     } catch (err) {
-      if (!(err instanceof ApiError && (err.status === 404 || err.status === 501))) {
+      if (!(err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503))) {
         throw err;
       }
     }
@@ -119,7 +141,7 @@ export async function updateWorkerProfileAction(
     message = response.message ?? message;
     updatedUser = response.user ?? buildStubProfile(profile, payload, emailChanged);
   } catch (err) {
-    if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       updatedUser = buildStubProfile(profile, payload, emailChanged);
       message = emailChanged
         ? "Alteração de e-mail registrada. Você receberá um link de confirmação no novo endereço."
@@ -143,7 +165,7 @@ export async function deleteWorkerAccountAction(): Promise<void> {
   try {
     await deleteWorkerAccount(token);
   } catch (err) {
-    if (!(err instanceof ApiError && (err.status === 404 || err.status === 501))) {
+    if (!(err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503))) {
       throw err;
     }
   }
@@ -159,18 +181,19 @@ export async function createServiceAction(
   try {
     return await createWorkerService(token, payload);
   } catch (err) {
-    if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       return {
         message: "Serviço cadastrado com sucesso!",
         service: {
           id: crypto.randomUUID(),
+          provider_profile_id: "mock-profile-id",
           title: payload.title,
           description: payload.description,
-          category_id: payload.category_id,
-          category_name: payload.category_id,
-          location: payload.location,
-          status: "active",
+          fixed_price: payload.fixedPrice,
+          category: payload.category,
+          is_active: true,
           created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
       };
     }
@@ -184,23 +207,40 @@ export async function getWorkerServicesAction(): Promise<ServicesListResponse> {
   try {
     return await getWorkerServices(token);
   } catch (err) {
-    if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       const { MOCK_SERVICES } = await import("@/mock/worker/services");
-      return { services: MOCK_SERVICES };
+      return MOCK_SERVICES;
     }
     throw err;
   }
 }
 
-export async function getServiceCategoriesAction(): Promise<ServiceCategoriesResponse> {
+export async function updateServiceAction(
+  serviceId: string,
+  payload: UpdateServicePayload,
+): Promise<void> {
   const token = await requireAccessToken();
 
   try {
-    return await getServiceCategories(token);
+    await updateWorkerService(token, serviceId, payload);
   } catch (err) {
-    if (err instanceof ApiError && (err.status === 404 || err.status === 501)) {
-      const { MOCK_SERVICE_CATEGORIES } = await import("@/mock/worker/services");
-      return { categories: MOCK_SERVICE_CATEGORIES };
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
+      return;
+    }
+    throw err;
+  }
+}
+
+export async function deleteServiceAction(
+  serviceId: string,
+): Promise<void> {
+  const token = await requireAccessToken();
+
+  try {
+    await deleteWorkerService(token, serviceId);
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
+      return;
     }
     throw err;
   }
