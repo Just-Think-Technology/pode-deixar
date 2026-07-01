@@ -6,11 +6,11 @@ import {
   Briefcase,
   Calendar,
   Clock,
-  MapPin,
   Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,11 +31,19 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import type { ServiceType } from "@/lib/auth/types";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  deleteServiceAction,
+  updateServiceAction,
+} from "@/lib/auth/actions";
+import type { ProviderService } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
 
 type WorkerServicesPageProps = {
-  services: ServiceType[];
+  services: ProviderService[];
 };
 
 const CATEGORY_GRADIENTS: Record<string, string> = {
@@ -74,12 +82,98 @@ function formatDate(dateString: string): string {
 }
 
 export default function WorkerServicesPage({
-  services,
+  services: initialServices,
 }: WorkerServicesPageProps) {
   const router = useRouter();
-  const [selectedService, setSelectedService] = useState<ServiceType | null>(
-    null,
-  );
+  const [services, setServices] = useState<ProviderService[]>(initialServices);
+  const [selectedService, setSelectedService] = useState<ProviderService | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingService, setEditingService] = useState<ProviderService | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+
+  function openEdit(service: ProviderService) {
+    setEditingService(service);
+    setEditErrors({});
+    setDetailsOpen(false);
+    setEditOpen(true);
+  }
+
+  async function handleSaveEdit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingService) return;
+    setEditErrors({});
+    setSaving(true);
+
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const title = String(data.get("title") ?? "").trim();
+    const description = String(data.get("description") ?? "").trim();
+    const category = String(data.get("category") ?? "").trim();
+    const fixedPrice = Number(data.get("fixedPrice") ?? 0);
+
+    const errors: Record<string, string> = {};
+    if (title.length < 3 || title.length > 200) errors.title = "Título deve ter entre 3 e 200 caracteres";
+    if (description.length < 10 || description.length > 2000) errors.description = "Descrição deve ter entre 10 e 2000 caracteres";
+    if (!category) errors.category = "Informe a categoria do serviço";
+    if (!fixedPrice || fixedPrice <= 0) errors.fixedPrice = "Preço deve ser maior que zero";
+
+    if (Object.keys(errors).length > 0) {
+      setEditErrors(errors);
+      setSaving(false);
+      return;
+    }
+
+    const updatedService: ProviderService = {
+      ...editingService,
+      title,
+      description,
+      category,
+      fixed_price: fixedPrice,
+    };
+
+    setServices((prev) =>
+      prev.map((s) => (s.id === editingService.id ? updatedService : s)),
+    );
+    setEditOpen(false);
+    setEditingService(null);
+    setSaving(false);
+
+    try {
+      await updateServiceAction(updatedService.id, {
+        title,
+        description,
+        category,
+        fixedPrice,
+      });
+      toast.success("Serviço atualizado com sucesso!");
+    } catch {
+      setServices((prev) =>
+        prev.map((s) =>
+          s.id === updatedService.id ? editingService : s,
+        ),
+      );
+      toast.error("Erro ao atualizar serviço. Tente novamente.");
+    }
+  }
+
+  async function handleDelete(service: ProviderService) {
+    if (!confirm("Tem certeza que deseja desativar este serviço?")) return;
+    setDeleting(true);
+    setServices((prev) => prev.filter((s) => s.id !== service.id));
+    setDetailsOpen(false);
+    try {
+      await deleteServiceAction(service.id);
+      toast.success("Serviço desativado com sucesso!");
+    } catch {
+      setServices((prev) => [...prev, service]);
+      toast.error("Erro ao desativar serviço. Tente novamente.");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -126,9 +220,10 @@ export default function WorkerServicesPage({
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service) => {
             const gradient =
-              CATEGORY_GRADIENTS[service.category_id] ??
+              CATEGORY_GRADIENTS[service.category.toLowerCase()] ??
               CATEGORY_GRADIENTS.outros;
-            const icon = CATEGORY_ICON[service.category_id] ?? "📋";
+            const icon =
+              CATEGORY_ICON[service.category.toLowerCase()] ?? "📋";
 
             return (
               <Card
@@ -152,15 +247,19 @@ export default function WorkerServicesPage({
                         {service.title}
                       </h3>
                       <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="size-3.5 shrink-0" />
-                        <span className="truncate">{service.location}</span>
+                        <span className="font-medium text-foreground">
+                          {service.fixed_price.toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })}
+                        </span>
                       </div>
                     </div>
                     <Badge
-                      variant={service.status === "active" ? "default" : "secondary"}
+                      variant={service.is_active ? "default" : "secondary"}
                       className="shrink-0 text-xs capitalize"
                     >
-                      {service.status === "active" ? "Ativo" : "Inativo"}
+                      {service.is_active ? "Ativo" : "Inativo"}
                     </Badge>
                   </div>
 
@@ -169,17 +268,20 @@ export default function WorkerServicesPage({
                   </p>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="shrink-0 text-xs capitalize"
-                    >
-                      {service.category_name}
+                    <Badge variant="outline" className="shrink-0 text-xs">
+                      {service.category}
                     </Badge>
                   </div>
                 </CardContent>
 
                 <CardFooter className="flex gap-2 px-4 pb-4 pt-3">
-                  <Dialog onOpenChange={(open) => open && setSelectedService(service)}>
+                  <Dialog
+                    open={detailsOpen && selectedService?.id === service.id}
+                    onOpenChange={(open) => {
+                      if (open) setSelectedService(service);
+                      setDetailsOpen(open);
+                    }}
+                  >
                     <DialogTrigger
                       render={
                         <Button type="button" variant="outline" className="flex-1" />
@@ -207,11 +309,14 @@ export default function WorkerServicesPage({
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1 rounded-lg bg-muted/50 px-3 py-2.5">
                                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <MapPin className="size-3.5" />
-                                  Local
+                                  <Briefcase className="size-3.5" />
+                                  Preço
                                 </span>
                                 <p className="text-sm font-medium text-foreground">
-                                  {selectedService.location}
+                                  {selectedService.fixed_price.toLocaleString("pt-BR", {
+                                    style: "currency",
+                                    currency: "BRL",
+                                  })}
                                 </p>
                               </div>
                               <div className="space-y-1 rounded-lg bg-muted/50 px-3 py-2.5">
@@ -219,8 +324,8 @@ export default function WorkerServicesPage({
                                   <Briefcase className="size-3.5" />
                                   Categoria
                                 </span>
-                                <p className="text-sm font-medium capitalize text-foreground">
-                                  {selectedService.category_name}
+                                <p className="text-sm font-medium text-foreground">
+                                  {selectedService.category}
                                 </p>
                               </div>
                               <div className="space-y-1 rounded-lg bg-muted/50 px-3 py-2.5">
@@ -238,7 +343,7 @@ export default function WorkerServicesPage({
                                   Status
                                 </span>
                                 <p className="text-sm font-medium capitalize text-foreground">
-                                  {selectedService.status === "active"
+                                  {selectedService.is_active
                                     ? "Ativo"
                                     : "Inativo"}
                                 </p>
@@ -247,7 +352,12 @@ export default function WorkerServicesPage({
                           </div>
 
                           <DialogFooter showCloseButton>
-                            <Button type="button" variant="outline" className="gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="gap-2"
+                              onClick={() => openEdit(selectedService)}
+                            >
                               <Pencil className="size-4" />
                               Editar
                             </Button>
@@ -255,9 +365,11 @@ export default function WorkerServicesPage({
                               type="button"
                               variant="destructive"
                               className="gap-2"
+                              disabled={deleting}
+                              onClick={() => handleDelete(selectedService)}
                             >
                               <Trash2 className="size-4" />
-                              Excluir
+                              {deleting ? "Desativando..." : "Excluir"}
                             </Button>
                           </DialogFooter>
                         </>
@@ -270,6 +382,107 @@ export default function WorkerServicesPage({
           })}
         </div>
       )}
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Serviço</DialogTitle>
+            <DialogDescription>
+              Altere os dados do serviço e clique em salvar.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form key={editingService?.id ?? "new"} onSubmit={handleSaveEdit} className="space-y-4">
+            <FieldGroup className="grid gap-4 md:grid-cols-2">
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="edit-title">Título do serviço</FieldLabel>
+                <Input
+                  id="edit-title"
+                  name="title"
+                  defaultValue={editingService?.title ?? ""}
+                  aria-invalid={!!editErrors.title}
+                />
+                {editErrors.title && (
+                  <p className="text-sm text-destructive">{editErrors.title}</p>
+                )}
+              </Field>
+
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="edit-description">Descrição</FieldLabel>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  defaultValue={editingService?.description ?? ""}
+                  rows={3}
+                  aria-invalid={!!editErrors.description}
+                />
+                {editErrors.description && (
+                  <p className="text-sm text-destructive">
+                    {editErrors.description}
+                  </p>
+                )}
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="edit-category">Categoria</FieldLabel>
+                <Input
+                  id="edit-category"
+                  name="category"
+                  defaultValue={editingService?.category ?? ""}
+                  aria-invalid={!!editErrors.category}
+                />
+                {editErrors.category && (
+                  <p className="text-sm text-destructive">
+                    {editErrors.category}
+                  </p>
+                )}
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="edit-fixedPrice">Preço fixo (R$)</FieldLabel>
+                <Input
+                  id="edit-fixedPrice"
+                  name="fixedPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={editingService?.fixed_price ?? ""}
+                  aria-invalid={!!editErrors.fixedPrice}
+                />
+                {editErrors.fixedPrice && (
+                  <p className="text-sm text-destructive">
+                    {editErrors.fixedPrice}
+                  </p>
+                )}
+              </Field>
+            </FieldGroup>
+
+            <DialogFooter showCloseButton>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={saving}
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              >
+                {saving ? (
+                  <>
+                    <Spinner className="mr-2" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar alterações"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

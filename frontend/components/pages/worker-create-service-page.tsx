@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Briefcase, FileText, MapPin, Plus } from "lucide-react";
+import { Briefcase, FileText, Plus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
@@ -15,11 +15,6 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  NativeSelect,
-  NativeSelectOptGroup,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { createServiceAction } from "@/lib/auth/actions";
@@ -27,12 +22,10 @@ import {
   getApiErrorMessage,
   mapApiErrorToFieldErrors,
 } from "@/lib/auth/errors";
-import type { CreateServicePayload, ServiceCategory } from "@/lib/auth/types";
+import type { CreateServicePayload } from "@/lib/auth/types";
 import { validateCreateService } from "@/lib/auth/validation";
 
-type WorkerCreateServicePageProps = {
-  categories: ServiceCategory[];
-};
+type WorkerCreateServicePageProps = Record<string, never>;
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -46,14 +39,12 @@ function parseCreateServiceForm(
   return {
     title: String(data.get("title") ?? "").trim(),
     description: String(data.get("description") ?? "").trim(),
-    category_id: String(data.get("category_id") ?? "").trim(),
-    location: String(data.get("location") ?? "").trim(),
+    fixedPrice: Number(data.get("fixedPrice") ?? 0),
+    category: String(data.get("category") ?? "").trim(),
   };
 }
 
-export default function WorkerCreateServicePage({
-  categories,
-}: WorkerCreateServicePageProps) {
+export default function WorkerCreateServicePage(_props: WorkerCreateServicePageProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -78,7 +69,6 @@ export default function WorkerCreateServicePage({
 
       toast.success("Serviço cadastrado com sucesso!");
       router.push("/worker/services");
-      router.refresh();
     } catch (err) {
       if (
         err instanceof Error &&
@@ -154,42 +144,38 @@ export default function WorkerCreateServicePage({
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="category_id">Categoria</FieldLabel>
-                <NativeSelect
-                  id="category_id"
-                  name="category_id"
-                  aria-invalid={!!fieldErrors.category_id}
-                  defaultValue=""
-                >
-                  <NativeSelectOptGroup label="Categorias">
-                    <NativeSelectOption value="" disabled>
-                      Selecione uma categoria
-                    </NativeSelectOption>
-                    {categories.map((category) => (
-                      <NativeSelectOption key={category.id} value={category.id}>
-                        {category.name}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelectOptGroup>
-                </NativeSelect>
-                <FieldError message={fieldErrors.category_id} />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="location">
-                  Cidade / Estado de atuação
-                </FieldLabel>
+                <FieldLabel htmlFor="category">Categoria</FieldLabel>
                 <div className="relative">
-                  <MapPin className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Briefcase className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="location"
-                    name="location"
-                    placeholder="Ex.: São Paulo, SP"
-                    aria-invalid={!!fieldErrors.location}
+                    id="category"
+                    name="category"
+                    placeholder="Ex.: Elétrica, Hidráulica, Pintura..."
+                    aria-invalid={!!fieldErrors.category}
                     className="pl-9"
                   />
                 </div>
-                <FieldError message={fieldErrors.location} />
+                <FieldError message={fieldErrors.category} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="fixedPrice">Preço fixo (R$)</FieldLabel>
+                <div className="relative">
+                  <span className="pointer-events-none absolute top-3.5 left-3 size-4 -translate-y-1/2 text-muted-foreground">
+                    R$
+                  </span>
+                  <Input
+                    id="fixedPrice"
+                    name="fixedPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="150,00"
+                    aria-invalid={!!fieldErrors.fixedPrice}
+                    className="pl-10"
+                  />
+                </div>
+                <FieldError message={fieldErrors.fixedPrice} />
               </Field>
             </FieldGroup>
 

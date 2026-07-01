@@ -137,35 +137,36 @@ export type UpdateWorkerProfileResult = {
 export type CreateServicePayload = {
   title: string;
   description: string;
-  category_id: string;
-  location: string;
+  fixedPrice: number;
+  category: string;
 };
 
-export type ServiceCategory = {
-  id: string;
-  name: string;
+export type UpdateServicePayload = {
+  title?: string;
+  description?: string;
+  fixedPrice?: number;
+  category?: string;
 };
 
-export type ServiceType = {
+export type ProviderService = {
   id: string;
+  provider_profile_id: string;
   title: string;
   description: string;
-  category_id: string;
-  category_name: string;
-  location: string;
-  status: "active" | "inactive";
+  fixed_price: number;
+  category: string;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 export type CreateServiceResponse = {
-  message: string;
-  service: ServiceType;
+  message?: string;
+  service: ProviderService;
 };
 
-export type ServicesListResponse = {
-  services: ServiceType[];
-};
+export type ServicesListResponse = ProviderService[];
 
-export type ServiceCategoriesResponse = {
-  categories: ServiceCategory[];
-};
+export type UpdateServiceResponse = ProviderService;
+
+export type DeleteServiceResponse = ProviderService;
