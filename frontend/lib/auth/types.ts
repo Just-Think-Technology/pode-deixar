@@ -133,3 +133,40 @@ export type UpdateWorkerProfileResult = {
   emailChanged: boolean;
   user: UserProfile;
 };
+
+export type CreateServicePayload = {
+  title: string;
+  description: string;
+  fixedPrice: number;
+  category: string;
+};
+
+export type UpdateServicePayload = {
+  title?: string;
+  description?: string;
+  fixedPrice?: number;
+  category?: string;
+};
+
+export type ProviderService = {
+  id: string;
+  provider_profile_id: string;
+  title: string;
+  description: string;
+  fixed_price: number;
+  category: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateServiceResponse = {
+  message?: string;
+  service: ProviderService;
+};
+
+export type ServicesListResponse = ProviderService[];
+
+export type UpdateServiceResponse = ProviderService;
+
+export type DeleteServiceResponse = ProviderService;
