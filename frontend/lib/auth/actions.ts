@@ -3,9 +3,9 @@
 import { login } from "@/api/login";
 import { resetPassword } from "@/api/reset-password";
 import {
+  createWorkerProfile,
   deleteWorkerAccount,
   getWorkerProfile,
-  requestEmailChange,
   updateWorkerProfile,
 } from "@/api/worker/profile";
 import {
@@ -19,9 +19,11 @@ import type {
   CreateServicePayload,
   CreateServiceResponse,
   LoginResponse,
+  ProfileResponse,
   PublicRole,
   ResetPasswordPayload,
   ServicesListResponse,
+  UpdateProviderProfilePayload,
   UpdateServicePayload,
   UpdateWorkerProfilePayload,
   UpdateWorkerProfileResult,
@@ -35,6 +37,49 @@ import {
   saveAuthSession,
   updateAuthSessionUser,
 } from "@/lib/auth/session.server";
+
+function mapProfileResponseToUserProfile(profile: ProfileResponse): UserProfile {
+  return {
+    id: profile.user.id,
+    complete_name: profile.user.complete_name,
+    email: profile.user.email,
+    role: profile.user.role,
+    phone: profile.user.phone,
+    postal_code: profile.user.postal_code,
+    email_verified: true,
+    created_at: profile.created_at,
+    last_login_at: null,
+    profile_id: profile.id,
+    avatar_url: profile.avatar_url,
+    bio: profile.bio,
+    hourly_rate: profile.hourly_rate,
+    skills: profile.skills,
+    portfolio: profile.portfolio,
+    rating: profile.rating,
+    total_reviews: profile.total_reviews,
+    is_available: profile.is_available,
+  };
+}
+
+function buildMockProfile(sessionUser: {
+  id: string;
+  complete_name: string;
+  email: string;
+  phone?: string;
+  postal_code?: string;
+}): UserProfile {
+  return {
+    id: sessionUser.id,
+    complete_name: sessionUser.complete_name,
+    email: sessionUser.email,
+    role: "PROVIDER",
+    phone: sessionUser.phone ?? "(11) 99999-9999",
+    postal_code: sessionUser.postal_code ?? "12345-678",
+    email_verified: true,
+    created_at: new Date().toISOString(),
+    last_login_at: new Date().toISOString(),
+  };
+}
 
 export async function saveAuthSessionAction(data: LoginResponse): Promise<void> {
   await saveAuthSession(data);
@@ -76,22 +121,17 @@ export async function getWorkerProfileAction(): Promise<{ user: UserProfile }> {
   const token = await requireAccessToken();
 
   try {
-    return await getWorkerProfile(token);
+    const profile = await getWorkerProfile(token);
+    return { user: mapProfileResponseToUserProfile(profile) };
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
-      const { WORKER_PROFILE_UI_DEFAULTS } = await import("@/mock/worker/profile");
+      const session = await getAuthSession();
       return {
-        user: {
-          id: "mock-user-id",
-          complete_name: "Usuário",
-          email: "usuario@example.com",
-          role: "PROVIDER",
-          phone: "(11) 99999-9999",
-          postal_code: "12345-678",
-          email_verified: true,
-          created_at: new Date().toISOString(),
-          last_login_at: new Date().toISOString(),
-        },
+        user: buildMockProfile({
+          id: session?.user.id ?? "mock-user-id",
+          complete_name: session?.user.complete_name ?? "Usuário",
+          email: session?.user.email ?? "usuario@example.com",
+        }),
       };
     }
     throw err;
@@ -114,38 +154,37 @@ function buildStubProfile(
 }
 
 export async function updateWorkerProfileAction(
-  payload: UpdateWorkerProfilePayload,
+  payload: UpdateProviderProfilePayload,
 ): Promise<UpdateWorkerProfileResult> {
   const token = await requireAccessToken();
 
-  const { user: profile } = await getWorkerProfile(token);
-
-  const emailChanged =
-    payload.email.trim().toLowerCase() !== profile.email.trim().toLowerCase();
-
-  if (emailChanged) {
-    try {
-      await requestEmailChange(token, { email: payload.email });
-    } catch (err) {
-      if (!(err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503))) {
-        throw err;
-      }
-    }
-  }
+  const profileResponse = await getWorkerProfile(token);
+  const currentProfile = mapProfileResponseToUserProfile(profileResponse);
 
   let message = "Perfil atualizado com sucesso.";
-  let updatedUser = profile;
+  let updatedUser = currentProfile;
 
   try {
-    const response = await updateWorkerProfile(token, payload);
-    message = response.message ?? message;
-    updatedUser = response.user ?? buildStubProfile(profile, payload, emailChanged);
+    if (currentProfile.profile_id) {
+      const response = await updateWorkerProfile(token, payload);
+      updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
+      message = "Perfil atualizado com sucesso.";
+    } else {
+      const response = await createWorkerProfile(token, payload);
+      updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
+      message = "Perfil profissional criado com sucesso!";
+    }
   } catch (err) {
-    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
-      updatedUser = buildStubProfile(profile, payload, emailChanged);
-      message = emailChanged
-        ? "Alteração de e-mail registrada. Você receberá um link de confirmação no novo endereço."
-        : "Perfil atualizado localmente. A sincronização com o servidor estará disponível em breve.";
+    if (err instanceof ApiError && (err.status === 501 || err.status === 503)) {
+      const stubPayload: UpdateWorkerProfilePayload = {
+        complete_name: currentProfile.complete_name,
+        email: currentProfile.email,
+        phone: currentProfile.phone,
+        postal_code: currentProfile.postal_code,
+        biography: payload.bio ?? currentProfile.bio ?? "",
+      };
+      updatedUser = buildStubProfile(currentProfile, stubPayload, false);
+      message = "Perfil atualizado localmente. A sincronização com o servidor estará disponível em breve.";
     } else {
       throw err;
     }
@@ -156,7 +195,7 @@ export async function updateWorkerProfileAction(
     email: updatedUser.email,
   });
 
-  return { message, emailChanged, user: updatedUser };
+  return { message, emailChanged: false, user: updatedUser };
 }
 
 export async function deleteWorkerAccountAction(): Promise<void> {
