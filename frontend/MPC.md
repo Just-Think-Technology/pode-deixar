@@ -219,6 +219,20 @@ Arquitetura de Acessibilidade: A importância de integrar acessibilidade desde a
 Observabilidade: A capacidade de monitorar erros e métricas de desempenho em ambientes de produção real.
 
 
+Colors:
+Primary: #2F80ED Secondary: #27AE60 Accent: #F2C94C Background: #F5F6FA Text: #333333
+
+Typography:
+Headings e Body: Poppins
+
+Components:
+Buttons
+Inputs
+Cards
+Modals
+Chat bubbles
+Request cards
+
 
 
 
