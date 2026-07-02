@@ -44,6 +44,21 @@ export function mapApiErrorToFieldErrors(
     if (msg.includes("postal_code")) {
       fieldErrors.postal_code = error.message;
     }
+    if (msg.includes("bio")) {
+      fieldErrors.bio = error.message;
+    }
+    if (msg.includes("hourly") || msg.includes("hourlyrate")) {
+      fieldErrors.hourlyRate = error.message;
+    }
+    if (msg.includes("skills")) {
+      fieldErrors.skills = error.message;
+    }
+    if (msg.includes("portfolio")) {
+      fieldErrors.portfolio = error.message;
+    }
+    if (msg.includes("isavailable") || msg.includes("is_available") || msg.includes("available")) {
+      fieldErrors.isAvailable = error.message;
+    }
     if (Object.keys(fieldErrors).length > 0) {
       return fieldErrors;
     }

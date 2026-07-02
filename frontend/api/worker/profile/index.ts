@@ -1,15 +1,16 @@
 import { apiFetchAuth } from "@/api/client";
 import type {
+  CreateProviderProfilePayload,
   ProfileResponse,
   RequestEmailChangePayload,
   RequestEmailChangeResponse,
-  UpdateProfileResponse,
-  UpdateWorkerProfilePayload,
+  UpdateProviderProfilePayload,
 } from "@/lib/auth/types";
 
 export const WORKER_PROFILE_ROUTES = {
-  getProfile: "/auth/default-profile",
-  updateProfile: "/auth/profile",
+  getProfile: "/profiles/me",
+  createProfile: "/profiles/provider",
+  updateProfile: "/profiles/provider",
   deleteAccount: "/auth/account",
   requestEmailChange: "/auth/request-email-change",
 } as const;
@@ -20,11 +21,25 @@ export function getWorkerProfile(accessToken: string) {
   });
 }
 
+export function createWorkerProfile(
+  accessToken: string,
+  payload: CreateProviderProfilePayload,
+) {
+  return apiFetchAuth<ProfileResponse>(
+    WORKER_PROFILE_ROUTES.createProfile,
+    accessToken,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
 export function updateWorkerProfile(
   accessToken: string,
-  payload: UpdateWorkerProfilePayload,
+  payload: UpdateProviderProfilePayload,
 ) {
-  return apiFetchAuth<UpdateProfileResponse>(
+  return apiFetchAuth<ProfileResponse>(
     WORKER_PROFILE_ROUTES.updateProfile,
     accessToken,
     {

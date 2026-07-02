@@ -2,7 +2,7 @@ import type {
     CreateServicePayload,
     LoginPayload,
     RegisterPayload,
-    UpdateWorkerProfilePayload,
+    UpdateProviderProfilePayload,
     ValidationResult,
 } from "@/lib/auth/types";
 
@@ -71,29 +71,27 @@ export function validateRegister(payload: RegisterPayload): ValidationResult {
 }
 
 export function validateWorkerProfileUpdate(
-    payload: UpdateWorkerProfilePayload,
+    payload: UpdateProviderProfilePayload,
 ): ValidationResult {
     const errors: Record<string, string> = {};
 
-    const name = payload.complete_name?.trim() ?? "";
-    if (name.length < 3 || name.length > 50) {
-        errors.complete_name = "Nome deve ter entre 3 e 50 caracteres";
-    } else if (!NAME_REGEX.test(name)) {
-        errors.complete_name = "Nome contém caracteres inválidos";
+    const bio = payload.bio?.trim() ?? "";
+    if (bio.length > 1000) {
+        errors.bio = "Biografia deve ter no máximo 1000 caracteres";
     }
 
-    if (!payload.email?.trim()) {
-        errors.email = "E-mail é obrigatório";
-    } else if (!EMAIL_REGEX.test(payload.email)) {
-        errors.email = "E-mail inválido";
+    if (payload.hourlyRate !== undefined && payload.hourlyRate !== null) {
+        if (isNaN(payload.hourlyRate) || payload.hourlyRate < 0) {
+            errors.hourlyRate = "Valor por hora deve ser um número positivo";
+        }
     }
 
-    if (!payload.phone?.trim()) {
-        errors.phone = "Telefone é obrigatório";
+    if (payload.skills && payload.skills.length > 20) {
+        errors.skills = "Máximo de 20 habilidades";
     }
 
-    if (!payload.postal_code?.trim()) {
-        errors.postal_code = "CEP é obrigatório";
+    if (payload.portfolio && payload.portfolio.length > 10) {
+        errors.portfolio = "Máximo de 10 links no portfólio";
     }
 
     return Object.keys(errors).length > 0 ? fail(errors) : { ok: true };
