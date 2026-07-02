@@ -97,27 +97,59 @@ export type ValidationResult =
   | { ok: true }
   | { ok: false; errors: Record<string, string> };
 
+export type ProfileResponse = {
+  id: string;
+  user: {
+    id: string;
+    complete_name: string;
+    email: string;
+    phone: string;
+    postal_code: string;
+    role: "PROVIDER";
+  };
+  avatar_url: string | null;
+  bio: string | null;
+  hourly_rate: number | null;
+  skills: string[];
+  portfolio: string[];
+  rating: number;
+  total_reviews: number;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type UserProfile = AuthUser & {
   phone: string;
   postal_code: string;
   email_verified: boolean;
   created_at: string;
   last_login_at: string | null;
+  profile_id?: string;
+  avatar_url?: string | null;
+  bio?: string | null;
+  hourly_rate?: number | null;
+  skills?: string[];
+  portfolio?: string[];
+  rating?: number;
+  total_reviews?: number;
+  is_available?: boolean;
 };
 
-export type ProfileResponse = { user: UserProfile };
-
-export type UpdateWorkerProfilePayload = {
-  complete_name: string;
-  email: string;
-  phone: string;
-  postal_code: string;
-  biography?: string;
+export type UpdateProviderProfilePayload = {
+  avatarUrl?: string;
+  bio?: string;
+  hourlyRate?: number;
+  skills?: string[];
+  portfolio?: string[];
+  isAvailable?: boolean;
 };
+
+export type CreateProviderProfilePayload = UpdateProviderProfilePayload;
 
 export type UpdateProfileResponse = {
-  message: string;
-  user?: UserProfile;
+  message?: string;
+  profile?: ProfileResponse;
 };
 
 export type RequestEmailChangePayload = {
@@ -126,6 +158,14 @@ export type RequestEmailChangePayload = {
 
 export type RequestEmailChangeResponse = {
   message: string;
+};
+
+export type UpdateWorkerProfilePayload = {
+  complete_name: string;
+  email: string;
+  phone: string;
+  postal_code: string;
+  biography?: string;
 };
 
 export type UpdateWorkerProfileResult = {
