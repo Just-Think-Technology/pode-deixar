@@ -1,8 +1,10 @@
 node_modules/
 **/node_modules/
 dist/
+**/dist/
 logs/
 .git/
 .gitignore
 AGENTS.md
 *.tsbuildinfo
+**/*.tsbuildinfo

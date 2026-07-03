@@ -24,7 +24,7 @@ FROM prisma AS auth-build
 COPY shared/logger ./shared/logger
 COPY shared/email ./shared/email
 COPY services/auth ./services/auth
-RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/auth build
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/email build && pnpm run --filter @pode-deixar/auth build
 RUN printf '#!/bin/sh\nMAX_RETRIES=6\nRETRY_DELAY=5\nretry=0\nwhile [ $retry -lt $MAX_RETRIES ]; do\n  if pnpm exec prisma migrate deploy --schema=prisma/schema.prisma; then\n    echo "=== [entrypoint] Migrations applied successfully ==="\n    break\n  fi\n  retry=$((retry + 1))\n  if [ $retry -lt $MAX_RETRIES ]; then\n    echo "=== [entrypoint] Migration attempt $retry failed, retrying in ${RETRY_DELAY}s... ==="\n    sleep $RETRY_DELAY\n  else\n    echo "=== [entrypoint] All migration attempts failed. Starting service anyway... ==="\n  fi\ndone\nexec "$@"' > /entrypoint.sh && chmod +x /entrypoint.sh
 EXPOSE 3001
 ENTRYPOINT ["/entrypoint.sh"]
@@ -35,7 +35,7 @@ FROM prisma AS users-build
 COPY shared/logger ./shared/logger
 COPY shared/email ./shared/email
 COPY services/users ./services/users
-RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/users build
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/users build
 EXPOSE 3002
 CMD ["node", "services/users/dist/main.js"]
 
@@ -44,6 +44,6 @@ FROM prisma AS service-orders-build
 COPY shared/logger ./shared/logger
 COPY shared/email ./shared/email
 COPY services/service-orders ./services/service-orders
-RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/service-orders build
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/service-orders build
 EXPOSE 3003
 CMD ["node", "services/service-orders/dist/main.js"]

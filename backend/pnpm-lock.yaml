@@ -499,8 +499,15 @@ importers:
       '@types/nodemailer':
         specifier: ^6.4.17
         version: 6.4.24
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
 
-  shared/logger: {}
+  shared/logger:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
 
 packages:
 
