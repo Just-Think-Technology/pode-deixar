@@ -47,7 +47,7 @@ ALTER TABLE "service_orders" ALTER COLUMN "category_id" SET NOT NULL;
 ALTER TABLE "provider_services" ADD CONSTRAINT "provider_services_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "service_orders" ADD CONSTRAINT "service_orders_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- Drop old category column and index
-ALTER TABLE "provider_services" DROP COLUMN "category";
-ALTER TABLE "service_orders" DROP COLUMN "category";
+-- Drop old category column and index (IF EXISTS for service_orders which may be created fresh)
+ALTER TABLE "provider_services" DROP COLUMN IF EXISTS "category";
+ALTER TABLE "service_orders" DROP COLUMN IF EXISTS "category";
 DROP INDEX IF EXISTS "provider_services_category_idx";
