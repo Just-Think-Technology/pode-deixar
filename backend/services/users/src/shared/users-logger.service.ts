@@ -96,4 +96,16 @@ export class UsersLoggerService {
       },
     );
   }
+
+  logCategoryCreated(name: string, ip?: string) {
+    this.logger.info("category_created", `Category created: ${name}`, { name, ip });
+  }
+
+  logCategoryUpdated(name: string, ip?: string) {
+    this.logger.info("category_updated", `Category updated: ${name}`, { name, ip });
+  }
+
+  logCategoryDeleted(name: string, ip?: string) {
+    this.logger.info("category_deleted", `Category deleted: ${name}`, { name, ip });
+  }
 }

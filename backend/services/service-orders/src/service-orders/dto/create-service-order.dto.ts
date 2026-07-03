@@ -27,12 +27,11 @@ export class CreateServiceOrderDto {
   description: string;
 
   @ApiProperty({
-    description: "Categoria do serviço",
-    example: "HIDRAULICA",
+    description: "ID da categoria",
+    example: "uuid-da-categoria",
   })
   @IsString()
-  @MaxLength(50)
-  category: string;
+  categoryId: string;
 
   @ApiPropertyOptional({
     description: "Orçamento mínimo",
