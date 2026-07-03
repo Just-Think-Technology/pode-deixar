@@ -60,7 +60,8 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === "test" ? [] : [".env.staging"],
+      envFilePath:
+        process.env.NODE_ENV === "test" ? [] : ["../../.env.staging"],
     }),
     ThrottlerModule.forRoot({
       throttlers: [
