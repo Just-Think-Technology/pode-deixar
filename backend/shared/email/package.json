@@ -11,7 +11,11 @@
     "@pode-deixar/logger": "workspace:*",
     "nodemailer": "^8.0.4"
   },
+  "scripts": {
+    "build": "tsc -b"
+  },
   "devDependencies": {
-    "@types/nodemailer": "^6.4.17"
+    "@types/nodemailer": "^6.4.17",
+    "typescript": "^5.7.3"
   }
 }
