@@ -32,14 +32,21 @@ describe("ProviderServicesService", () => {
     role: "PROVIDER",
   };
 
+  const mockCategory = {
+    id: "cat-eletrica",
+    name: "Elétrica",
+    slug: "eletrica",
+  };
+
   const mockService = {
     id: "service-1",
     providerProfileId: "provider-profile-1",
     title: "Instalação de chuveiro elétrico",
     description: "Instalação completa de chuveiro elétrico com garantia",
     fixedPrice: 150.0,
-     category: "ELETRICA",
-     isActive: true,
+    categoryId: "cat-eletrica",
+    category: mockCategory,
+    isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -89,8 +96,8 @@ describe("ProviderServicesService", () => {
       title: "Instalação de chuveiro elétrico",
       description: "Instalação completa de chuveiro elétrico com garantia",
       fixedPrice: 150.0,
-       category: "ELETRICA",
-     };
+      categoryId: "cat-eletrica",
+    };
 
      it("should create a service for provider", async () => {
       mockPrisma.providerProfile.findUnique.mockResolvedValue(
@@ -171,6 +178,7 @@ describe("ProviderServicesService", () => {
       expect(mockPrisma.providerService.findMany).toHaveBeenCalledWith({
         where: { providerProfileId: "provider-profile-1", isActive: true },
         orderBy: { createdAt: "desc" },
+        include: { category: { select: { id: true, name: true, slug: true } } },
       });
     });
 
@@ -323,15 +331,16 @@ describe("ProviderServicesService", () => {
           title: "Instalação de chuveiro elétrico",
           description: "Instalação completa",
           fixedPrice: 150.0,
-          category: "ELETRICA",
+          categoryId: "cat-eletrica",
+          category: mockCategory,
           isActive: true,
-           createdAt: new Date(),
-           updatedAt: new Date(),
-         },
-       ],
-     };
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+    };
 
-     const mockProfileWithNameMatch = {
+    const mockProfileWithNameMatch = {
       ...mockProfileWithServices,
       id: "provider-profile-2",
       user: {
@@ -345,7 +354,8 @@ describe("ProviderServicesService", () => {
           id: "service-3",
           providerProfileId: "provider-profile-2",
           title: "Reparo geral",
-          category: "HIDRAULICA",
+          categoryId: "cat-hidraulica",
+          category: { id: "cat-hidraulica", name: "Hidráulica", slug: "hidraulica" },
         },
       ],
     };
@@ -360,7 +370,8 @@ describe("ProviderServicesService", () => {
           title: "Troca de fiação",
           description: "Troca completa da fiação elétrica",
           fixedPrice: 200.0,
-          category: "ELETRICA",
+          categoryId: "cat-eletrica",
+          category: mockCategory,
           isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -387,7 +398,7 @@ describe("ProviderServicesService", () => {
         mockProfileWithServices,
       ]);
 
-      const query: SearchProvidersQueryDto = { category: "ELETRICA" };
+      const query: SearchProvidersQueryDto = { categoryId: "cat-eletrica" };
       const result = await service.searchProviders(query);
 
       expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
@@ -439,7 +450,7 @@ describe("ProviderServicesService", () => {
         mockProfileWithMultipleServices,
       ]);
 
-      const query: SearchProvidersQueryDto = { category: "ELETRICA" };
+      const query: SearchProvidersQueryDto = { categoryId: "cat-eletrica" };
       const result = await service.searchProviders(query);
 
       expect(result).toHaveLength(1);
@@ -451,14 +462,14 @@ describe("ProviderServicesService", () => {
     it("should return empty array when no matches", async () => {
       mockPrisma.providerProfile.findMany.mockResolvedValue([]);
 
-      const query: SearchProvidersQueryDto = { category: "HIDRAULICA" };
+      const query: SearchProvidersQueryDto = { categoryId: "cat-hidraulica" };
       const result = await service.searchProviders(query);
 
       expect(mockPrisma.providerProfile.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             services: {
-              some: { isActive: true, category: "HIDRAULICA" },
+              some: { isActive: true, categoryId: "cat-hidraulica" },
             },
           },
         }),

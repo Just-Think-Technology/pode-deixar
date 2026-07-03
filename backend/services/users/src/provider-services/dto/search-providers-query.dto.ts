@@ -3,14 +3,12 @@ import { IsOptional, IsString, MaxLength } from "class-validator";
 
 export class SearchProvidersQueryDto {
   @ApiPropertyOptional({
-    description: "Filtrar por categoria do serviço",
-    example: "ELETRICA",
-    maxLength: 50,
+    description: "Filtrar por ID da categoria",
+    example: "uuid-da-categoria",
   })
   @IsOptional()
   @IsString()
-  @MaxLength(50)
-  category?: string;
+  categoryId?: string;
 
   @ApiPropertyOptional({
     description: "Texto para buscar no título ou descrição do serviço",

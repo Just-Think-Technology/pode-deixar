@@ -43,7 +43,14 @@ export class ProviderServicesService {
       title: service.title,
       description: service.description,
       fixed_price: service.fixedPrice,
-      category: service.category,
+      category_id: service.categoryId,
+      category: service.category
+        ? {
+            id: service.category.id,
+            name: service.category.name,
+            slug: service.category.slug,
+          }
+        : null,
       is_active: service.isActive,
       created_at: service.createdAt,
       updated_at: service.updatedAt,
@@ -63,8 +70,11 @@ export class ProviderServicesService {
         title: dto.title,
         description: dto.description,
         fixedPrice: dto.fixedPrice,
-        category: dto.category,
+        categoryId: dto.categoryId,
         isActive: true,
+      },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
       },
     });
 
@@ -79,6 +89,9 @@ export class ProviderServicesService {
     const services = await this.prisma.providerService.findMany({
       where: { providerProfileId },
       orderBy: { createdAt: "desc" },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     return services.map((s) => this.formatService(s));
@@ -90,6 +103,9 @@ export class ProviderServicesService {
     const services = await this.prisma.providerService.findMany({
       where: { providerProfileId, isActive: true },
       orderBy: { createdAt: "desc" },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     return services.map((s) => this.formatService(s));
@@ -119,7 +135,10 @@ export class ProviderServicesService {
         title: dto.title ?? existing.title,
         description: dto.description ?? existing.description,
         fixedPrice: dto.fixedPrice ?? existing.fixedPrice,
-        category: dto.category ?? existing.category,
+        categoryId: dto.categoryId ?? existing.categoryId,
+      },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
       },
     });
 
@@ -148,6 +167,9 @@ export class ProviderServicesService {
     const service = await this.prisma.providerService.update({
       where: { id: serviceId },
       data: { isActive: false },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     this.usersLogger.logServiceDeleted(providerProfileId, serviceId, ip);
@@ -166,10 +188,10 @@ export class ProviderServicesService {
     const serviceFilter: any = { isActive: true };
     const profileFilter: any = { services: { some: { isActive: true } } };
 
-    if (query.category) {
-      serviceFilter.category = query.category;
+    if (query.categoryId) {
+      serviceFilter.categoryId = query.categoryId;
       profileFilter.services = {
-        some: { isActive: true, category: query.category },
+        some: { isActive: true, categoryId: query.categoryId },
       };
     }
 
@@ -188,6 +210,9 @@ export class ProviderServicesService {
         services: {
           where: serviceFilter,
           orderBy: { createdAt: "desc" },
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+          },
         },
       },
     });
@@ -212,7 +237,10 @@ export class ProviderServicesService {
         title: s.title,
         description: s.description,
         fixed_price: s.fixedPrice,
-        category: s.category,
+        category_id: s.categoryId,
+        category: s.category
+          ? { id: s.category.id, name: s.category.name, slug: s.category.slug }
+          : null,
       })),
     }));
 

@@ -21,7 +21,14 @@ export class ServiceOrdersService {
       client_id: order.clientId,
       title: order.title,
       description: order.description,
-      category: order.category,
+      category_id: order.categoryId,
+      category: order.category
+        ? {
+            id: order.category.id,
+            name: order.category.name,
+            slug: order.category.slug,
+          }
+        : null,
       budget_min: order.budgetMin,
       budget_max: order.budgetMax,
       address: order.address,
@@ -37,9 +44,12 @@ export class ServiceOrdersService {
         clientId,
         title: dto.title,
         description: dto.description,
-        category: dto.category,
+        categoryId: dto.categoryId,
         budgetMin: dto.budgetMin ?? null,
         budgetMax: dto.budgetMax ?? null,
+      },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
       },
     });
 
@@ -52,6 +62,9 @@ export class ServiceOrdersService {
     const orders = await this.prisma.serviceOrder.findMany({
       where: { clientId },
       orderBy: { createdAt: "desc" },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     return orders.map((o) => this.formatOrder(o));
@@ -60,7 +73,10 @@ export class ServiceOrdersService {
   async findById(id: string) {
     const order = await this.prisma.serviceOrder.findUnique({
       where: { id },
-      include: { proposals: true },
+      include: {
+        proposals: true,
+        category: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     if (!order) {
@@ -85,6 +101,9 @@ export class ServiceOrdersService {
     const orders = await this.prisma.serviceOrder.findMany({
       where: { status: "OPEN" },
       orderBy: { createdAt: "desc" },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     return orders.map((o) => this.formatOrder(o));
@@ -119,11 +138,14 @@ export class ServiceOrdersService {
       data: {
         title: dto.title ?? existing.title,
         description: dto.description ?? existing.description,
-        category: dto.category ?? existing.category,
+        categoryId: dto.categoryId ?? existing.categoryId,
         budgetMin:
           dto.budgetMin !== undefined ? dto.budgetMin : existing.budgetMin,
         budgetMax:
           dto.budgetMax !== undefined ? dto.budgetMax : existing.budgetMax,
+      },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
       },
     });
 
@@ -158,6 +180,9 @@ export class ServiceOrdersService {
     const order = await this.prisma.serviceOrder.update({
       where: { id: orderId },
       data: { status: "CANCELLED" },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
     });
 
     this.logger.logServiceOrderCancelled(clientId, orderId, ip);

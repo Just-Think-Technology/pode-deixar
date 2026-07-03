@@ -414,7 +414,8 @@ describe("ProfilesService", () => {
           title: "Instalação de chuveiro",
           description: "Descrição",
           fixedPrice: 150,
-          category: "ELETRICA",
+          categoryId: "cat-eletrica",
+          category: { id: "cat-eletrica", name: "Elétrica", slug: "eletrica" },
           isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -448,6 +449,9 @@ describe("ProfilesService", () => {
           services: {
             where: { isActive: true },
             orderBy: { createdAt: "desc" },
+            include: {
+              category: { select: { id: true, name: true, slug: true } },
+            },
           },
         },
       });

@@ -16,7 +16,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
     title: "Título",
     description: "Descrição",
-    category: "Categoria",
+    categoryId: "Categoria",
     price: "Preço",
     budgetMin: "Orçamento mínimo",
     budgetMax: "Orçamento máximo",
