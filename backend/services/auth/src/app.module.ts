@@ -63,7 +63,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.staging'],
+      envFilePath: ['../../.env.staging'],
     }),
     ThrottlerModule.forRoot([
       {

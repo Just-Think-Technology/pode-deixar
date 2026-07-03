@@ -43,10 +43,11 @@ jobs:
       - name: Create .env.staging for CI
         shell: bash
         run: |
-          cat > services/auth/.env.staging << 'EOF'
+          cat > .env.staging << 'EOF'
           NODE_ENV=test
-          PORT=3001
-          FRONTEND_URL=http://localhost:3000
+          AUTH_PORT=3001
+          USERS_PORT=3002
+          SERVICE_ORDERS_PORT=3003
           JWT_ACCESS_SECRET=ci-test-access-secret
           JWT_REFRESH_SECRET=ci-test-refresh-secret
           SMTP_HOST=localhost
@@ -58,26 +59,6 @@ jobs:
           LOCKOUT_DURATION_MINUTES=15
           DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
           DIRECT_DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          EOF
-
-      - name: Create .env.staging for users (CI)
-        shell: bash
-        run: |
-          cat > services/users/.env.staging << 'EOF'
-          NODE_ENV=test
-          PORT=3002
-          JWT_ACCESS_SECRET=ci-test-access-secret
-          DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          EOF
-
-      - name: Create .env.staging for service-orders (CI)
-        shell: bash
-        run: |
-          cat > services/service-orders/.env.staging << 'EOF'
-          NODE_ENV=test
-          PORT=3003
-          JWT_ACCESS_SECRET=ci-test-access-secret
-          DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
           EOF
 
       - name: Run Prisma migrations
