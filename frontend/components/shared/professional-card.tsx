@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { FileText, MapPin, MessageSquare, Star } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,6 +18,7 @@ type ProfessionalCardProps = {
 };
 
 export default function ProfessionalCard({ professional, className }: ProfessionalCardProps) {
+  const router = useRouter();
   const initials = professional.user.complete_name
     .split(" ")
     .map((n) => n[0])
@@ -146,7 +148,7 @@ export default function ProfessionalCard({ professional, className }: Profession
           type="button"
           variant="outline"
           className="flex-1"
-          onClick={() => toast.info("Detalhes do profissional em breve.")}
+          onClick={() => router.push(`/client/providers/${professional.id}`)}
         >
           Ver Mais
         </Button>
