@@ -326,7 +326,7 @@ function WhyPodeDeixer() {
                         className="text-3xl font-bold text-[#333333] sm:text-4xl"
                     >
                         Por que escolher o{" "}
-                        <span className="text-[#2F80ED]">Pode-Deixar?</span>
+                        <span className="text-[#2F80ED]">Pode Deixar?</span>
                     </h2>
                 </div>
 
