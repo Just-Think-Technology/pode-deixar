@@ -3,10 +3,10 @@
 import EmptyState from "@/components/shared/empty-state";
 import ProfessionalCard from "@/components/shared/professional-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { MockProfessional } from "@/mock/types";
+import type { ProviderSearchResult } from "@/lib/client/search/types";
 
 type SearchResultsProps = {
-  professionals: MockProfessional[];
+  professionals: ProviderSearchResult[];
   total: number;
   isLoading: boolean;
   hasSearched: boolean;
