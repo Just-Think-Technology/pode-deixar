@@ -69,8 +69,32 @@ jobs:
           DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
           DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
 
-      - run: pnpm run lint
-      - run: pnpm run build
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate --schema=prisma/schema.prisma
+
+      - name: Build shared packages
+        run: pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/email build
+
+      - name: Build services in parallel
+        shell: bash
+        run: |
+          pnpm run --filter @pode-deixar/auth build &
+          pnpm run --filter @pode-deixar/users build &
+          pnpm run --filter @pode-deixar/service-orders build &
+          FAIL=0
+          for job in $(jobs -p); do wait $job || FAIL=1; done
+          exit $FAIL
+
+      - name: Lint services in parallel
+        shell: bash
+        run: |
+          pnpm run --filter @pode-deixar/auth lint &
+          pnpm run --filter @pode-deixar/users lint &
+          pnpm run --filter @pode-deixar/service-orders lint &
+          FAIL=0
+          for job in $(jobs -p); do wait $job || FAIL=1; done
+          exit $FAIL
+
       - run: pnpm test
 
   frontend:
@@ -89,5 +113,12 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run lint
-      - run: pnpm run build
+
+      - name: Lint and build in parallel
+        shell: bash
+        run: |
+          pnpm run lint &
+          pnpm run build &
+          FAIL=0
+          for job in $(jobs -p); do wait $job || FAIL=1; done
+          exit $FAIL
