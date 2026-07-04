@@ -61,8 +61,8 @@ describe("ProviderServicesController", () => {
         title: "Instalação de chuveiro",
         description: "Descrição",
         fixedPrice: 150.0,
-        category: "ELETRICA",
-       };
+        categoryId: "cat-eletrica",
+      };
        const expectedService = { id: "service-1", title: "Instalação de chuveiro" };
 
       mockProviderServicesService.getProviderProfileByUserId.mockResolvedValue(
@@ -179,7 +179,7 @@ describe("ProviderServicesController", () => {
 
   describe("ProviderSearchController - searchProviders", () => {
     it("should call service.searchProviders with query params", async () => {
-      const query = { category: "ELETRICA", q: "chuveiro" };
+      const query = { categoryId: "cat-eletrica", q: "chuveiro" };
       const expectedResult = [{ id: "provider-1", services: [] }];
 
       mockProviderServicesService.searchProviders.mockResolvedValue(

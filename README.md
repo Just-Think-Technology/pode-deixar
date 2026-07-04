@@ -101,6 +101,34 @@ O projeto foi concebido utilizando uma arquitetura baseada em microsserviços, p
 
 ---
 
+## Desenvolvimento Local com Docker
+
+### Subir os serviços
+
+```bash
+docker compose up -d
+```
+
+### Reconstruir imagens e subir (após alterações em dependências ou código)
+
+```bash
+docker compose build --no-cache && docker compose up -d
+```
+
+### Parar os serviços
+
+```bash
+docker compose down
+```
+
+### Logs
+
+```bash
+docker compose logs -f <service>
+```
+
+---
+
 ## Roadmap
 
 - Planos de destaque para prestadores

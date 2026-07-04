@@ -23,8 +23,7 @@ export class CreateProviderServiceDto {
   @IsPositive()
   fixedPrice: number;
 
-  @ApiProperty({ description: "Categoria do serviço", example: "ELETRICA" })
+  @ApiProperty({ description: "ID da categoria", example: "uuid-da-categoria" })
   @IsString()
-  @MaxLength(50)
-  category: string;
+  categoryId: string;
 }

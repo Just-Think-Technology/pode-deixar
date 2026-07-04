@@ -75,6 +75,9 @@ export class ProviderServicesController {
 
 @ApiTags("Busca de Prestadores")
 @Controller("providers/search")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth()
+@Roles("CLIENT")
 export class ProviderSearchController {
   constructor(
     private readonly providerServicesService: ProviderServicesService,
@@ -83,10 +86,10 @@ export class ProviderSearchController {
   @Get()
   @ApiOperation({ summary: "Buscar prestadores por categoria ou texto" })
   @ApiQuery({
-    name: "category",
+    name: "categoryId",
     required: false,
-    description: "Filtrar por categoria do serviço",
-    example: "ELETRICA",
+    description: "Filtrar por ID da categoria",
+    example: "uuid-da-categoria",
   })
   @ApiQuery({
     name: "q",

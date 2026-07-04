@@ -6,7 +6,7 @@
 #   docker compose build
 #
 # ATENÇÃO: Remove o serviço postgres porque usamos Neon DB externo
-# As credenciais do banco ficam em backend/services/*/.env.staging
+# As credenciais do banco ficam em backend/.env.staging
 
 services:
 
@@ -15,7 +15,7 @@ services:
     build:
       context: ./backend
       target: auth-build
-    env_file: ./backend/services/auth/.env.staging
+    env_file: ./backend/.env.staging
     environment:
       FRONTEND_URL: http://localhost:8080
       SMTP_HOST: mailpit
@@ -30,7 +30,7 @@ services:
     build:
       context: ./backend
       target: users-build
-    env_file: ./backend/services/users/.env.staging
+    env_file: ./backend/.env.staging
     environment:
       TZ: America/Sao_Paulo
     ports:
@@ -44,7 +44,7 @@ services:
     build:
       context: ./backend
       target: service-orders-build
-    env_file: ./backend/services/service-orders/.env.staging
+    env_file: ./backend/.env.staging
     environment:
       TZ: America/Sao_Paulo
     ports:
