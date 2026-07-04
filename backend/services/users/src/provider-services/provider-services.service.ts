@@ -200,7 +200,7 @@ export class ProviderServicesService {
       rating: profile.rating,
       total_reviews: profile.totalReviews,
       is_available: profile.isAvailable,
-      services: profile.services.map((s) => ({
+      services: profile.services.map((s: any) => ({
         id: s.id,
         title: s.title,
         description: s.description,
@@ -259,7 +259,7 @@ export class ProviderServicesService {
           const nome = this.removerAcentos(p.user.complete_name);
           if (nome.includes(termo)) return true;
           return p.services.some(
-            (s) =>
+            (s: any) =>
               this.removerAcentos(s.title).includes(termo) ||
               this.removerAcentos(s.description).includes(termo),
           );
