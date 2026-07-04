@@ -21,9 +21,9 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 3
 
     defaults:
       run:
@@ -95,7 +95,15 @@ jobs:
           for job in $(jobs -p); do wait $job || FAIL=1; done
           exit $FAIL
 
-      - run: pnpm test
+      - name: Test services in parallel
+        shell: bash
+        run: |
+          pnpm run --filter @pode-deixar/auth test &
+          pnpm run --filter @pode-deixar/users test &
+          pnpm run --filter @pode-deixar/service-orders test &
+          FAIL=0
+          for job in $(jobs -p); do wait $job || FAIL=1; done
+          exit $FAIL
 
   frontend:
     runs-on: ubuntu-latest
