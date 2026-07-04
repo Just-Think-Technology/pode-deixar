@@ -75,6 +75,9 @@ export class ProviderServicesController {
 
 @ApiTags("Busca de Prestadores")
 @Controller("providers/search")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth()
+@Roles("CLIENT")
 export class ProviderSearchController {
   constructor(
     private readonly providerServicesService: ProviderServicesService,
