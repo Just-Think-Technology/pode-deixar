@@ -32,6 +32,12 @@
         reverse_proxy users:3002
     }
 
+    # ─── Users Service (Categories) ─────────────────────────
+    handle /api/categories/* {
+        uri strip_prefix /api
+        reverse_proxy users:3002
+    }
+
     # ─── Service Orders Service ─────────────────────────────
     handle /api/services/* {
         uri strip_prefix /api

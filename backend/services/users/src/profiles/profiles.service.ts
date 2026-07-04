@@ -307,6 +307,9 @@ export class ProfilesService {
         services: {
           where: { isActive: true },
           orderBy: { createdAt: "desc" },
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+          },
         },
       },
     });
@@ -337,7 +340,10 @@ export class ProfilesService {
         title: s.title,
         description: s.description,
         fixed_price: s.fixedPrice,
-        category: s.category,
+        category_id: s.categoryId,
+        category: s.category
+          ? { id: s.category.id, name: s.category.name, slug: s.category.slug }
+          : null,
       })),
       created_at: profile.createdAt,
       updated_at: profile.updatedAt,

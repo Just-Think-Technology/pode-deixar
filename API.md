@@ -354,7 +354,7 @@ Alterar senha do usuário autenticado. Requer **Bearer token**.
 
 ## Users Service
 
-**Porta:** `3002` | **Proxy Caddy:** `/api/profiles/*`, `/api/providers/*`
+**Porta:** `3002` | **Proxy Caddy:** `/api/profiles/*`, `/api/providers/*`, `/api/categories/*`
 
 ### Health
 
@@ -365,6 +365,94 @@ Alterar senha do usuário autenticado. Requer **Bearer token**.
 #### `GET /health/live`
 
 Idênticos ao [Auth Service Health](#health).
+
+---
+
+### Categorias
+
+**Prefixo:** `categories` | **GET público** | **POST/PATCH/DELETE:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `ADMIN`
+
+#### `GET /categories`
+
+Listar todas as categorias, ordenadas por `order`. Sem autenticação.
+
+**Resposta `200`:**
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Elétrica",
+    "slug": "eletrica",
+    "description": "Serviços de elétrica residencial e comercial",
+    "icon": "zap",
+    "order": 1
+  }
+]
+```
+
+---
+
+#### `POST /categories`
+
+Criar nova categoria. Requer **Bearer token** com role `ADMIN`.
+
+**Request body (`CreateCategoryDto`):**
+```json
+{
+  "name": "Elétrica",
+  "slug": "eletrica",
+  "description": "Serviços de elétrica residencial e comercial",
+  "icon": "zap",
+  "order": 1
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `name` | `string` | sim | Nome (máx. 100 caracteres) |
+| `slug` | `string` | sim | Slug único (máx. 100 caracteres) |
+| `description` | `string` | não | Descrição (máx. 500 caracteres) |
+| `icon` | `string` | não | Nome do ícone Lucide (máx. 50 caracteres) |
+| `order` | `number` | não | Ordem de exibição (≥ 0) |
+
+**Resposta `201`:** Categoria criada.
+
+| Erro | Código |
+|------|--------|
+| Nome ou slug já existente | `409` |
+
+---
+
+#### `PATCH /categories/:id`
+
+Atualizar categoria. Requer **Bearer token** com role `ADMIN`.
+
+**Parâmetros de URL:**
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `id` | `string` (UUID) | ID da categoria |
+
+**Request body (`UpdateCategoryDto`):** Mesmos campos do `CreateCategoryDto`, todos opcionais.
+
+**Resposta `200`:** Categoria atualizada.
+
+| Erro | Código |
+|------|--------|
+| Categoria não encontrada | `404` |
+| Nome ou slug já existente | `409` |
+
+---
+
+#### `DELETE /categories/:id`
+
+Excluir categoria. Requer **Bearer token** com role `ADMIN`.
+
+**Resposta `200`:** `{ "message": "Categoria excluída com sucesso" }`
+
+| Erro | Código |
+|------|--------|
+| Categoria não encontrada | `404` |
+| Categoria possui serviços vinculados | `409` |
 
 ---
 
@@ -603,7 +691,7 @@ Visualizar perfil público de um prestador, incluindo seus serviços ativos.
   "total_reviews": 23,
   "is_available": true,
   "services": [
-    { "id": "uuid", "title": "Instalação de chuveiro", "description": "...", "fixed_price": 150.00, "category": "ELETRICA" }
+    { "id": "uuid", "title": "Instalação de chuveiro", "description": "...", "fixed_price": 150.00, "category_id": "uuid", "category": { "id": "uuid", "name": "Elétrica", "slug": "eletrica" } }
   ],
   "created_at": "2026-06-28T10:00:00.000Z",
   "updated_at": "2026-06-28T10:00:00.000Z"
@@ -630,7 +718,7 @@ Cadastrar novo serviço.
   "title": "Instalação de chuveiro elétrico",
   "description": "Instalação completa com garantia de 90 dias",
   "fixedPrice": 150.00,
-  "category": "ELETRICA"
+  "categoryId": "uuid-da-categoria"
 }
 ```
 
@@ -639,7 +727,7 @@ Cadastrar novo serviço.
 | `title` | `string` | sim | Máx. 200 caracteres |
 | `description` | `string` | sim | Máx. 2000 caracteres |
 | `fixedPrice` | `number` | sim | 2 casas decimais, positivo |
-| `category` | `string` | sim | Máx. 50 caracteres |
+| `categoryId` | `string` (UUID) | sim | ID da categoria |
 
 **Resposta `201`:**
 ```json
@@ -649,7 +737,8 @@ Cadastrar novo serviço.
   "title": "Instalação de chuveiro elétrico",
   "description": "Instalação completa com garantia de 90 dias",
   "fixed_price": 150.00,
-  "category": "ELETRICA",
+  "category_id": "uuid",
+  "category": { "id": "uuid", "name": "Elétrica", "slug": "eletrica" },
   "is_active": true,
   "created_at": "2026-06-28T10:00:00.000Z",
   "updated_at": "2026-06-28T10:00:00.000Z"
@@ -715,36 +804,51 @@ Desativar serviço (soft delete — marca `is_active = false`).
 
 ### Busca de Prestadores
 
-**Prefixo:** `providers/search` | **Sem autenticação**
+**Prefixo:** `providers/search` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
 
 #### `GET /providers/search`
 
 Buscar prestadores por categoria ou texto.
 
 **Query params:**
-| Parâmetro | Tipo | Obrigatório | Descrição |
-|-----------|------|-------------|-----------|
-| `category` | `string` | não | Filtrar por categoria do serviço |
-| `q` | `string` | não | Texto para busca no título/descrição |
+| Parâmetro | Tipo | Obrigatório | Descrição | Default |
+|-----------|------|-------------|-----------|---------|
+| `categoryId` | `string` (UUID) | não | Filtrar por ID da categoria | — |
+| `q` | `string` | não | Texto para busca no título/descrição | — |
+| `page` | `number` | não | Número da página | `1` |
+| `limit` | `number` | não | Itens por página | `10` |
 
 **Resposta `200`:**
 ```json
-[
-  {
-    "id": "uuid",
-    "user": { "id": "uuid", "complete_name": "...", "email": "...", "phone": "...", "postal_code": "..." },
-    "avatar_url": "https://...",
-    "bio": "Profissional experiente",
-    "skills": ["Hidráulica", "Elétrica"],
-    "rating": 4.8,
-    "total_reviews": 23,
-    "is_available": true,
-    "services": [
-      { "id": "uuid", "title": "Instalação de chuveiro", "description": "...", "fixed_price": 150.00, "category": "ELETRICA" }
-    ]
+{
+  "data": [
+    {
+      "id": "uuid",
+      "user": { "id": "uuid", "complete_name": "...", "email": "...", "phone": "...", "postal_code": "..." },
+      "avatar_url": "https://...",
+      "bio": "Profissional experiente",
+      "skills": ["Hidráulica", "Elétrica"],
+      "rating": 4.8,
+      "total_reviews": 23,
+      "is_available": true,
+      "services": [
+        { "id": "uuid", "title": "Instalação de chuveiro", "description": "...", "fixed_price": 150.00, "category_id": "uuid", "category": { "id": "uuid", "name": "Elétrica", "slug": "eletrica" } }
+      ]
+    }
+  ],
+  "meta": {
+    "total": 50,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 5
   }
-]
+}
 ```
+
+| Erro | Código |
+|------|--------|
+| Token inválido ou não autorizado | `401` |
+| Role não autorizada (não é CLIENT) | `403` |
 
 ---
 
@@ -770,7 +874,8 @@ Listar serviços ativos de um prestador específico.
     "title": "Instalação de chuveiro elétrico",
     "description": "Instalação completa com garantia de 90 dias",
     "fixed_price": 150.00,
-    "category": "ELETRICA",
+    "category_id": "uuid",
+    "category": { "id": "uuid", "name": "Elétrica", "slug": "eletrica" },
     "is_active": true,
     "created_at": "2026-06-28T10:00:00.000Z",
     "updated_at": "2026-06-28T10:00:00.000Z"
@@ -813,7 +918,7 @@ Criar novo pedido de serviço.
 {
   "title": "Preciso de um encanador para consertar vazamento",
   "description": "O chuveiro está vazando e precisa de reparo urgente",
-  "category": "HIDRAULICA",
+  "categoryId": "uuid-da-categoria",
   "budgetMin": 50.00,
   "budgetMax": 200.00
 }
@@ -823,7 +928,7 @@ Criar novo pedido de serviço.
 |-------|------|-------------|-----------|
 | `title` | `string` | sim | Máx. 200 caracteres |
 | `description` | `string` | sim | Máx. 2000 caracteres |
-| `category` | `string` | sim | Máx. 50 caracteres |
+| `categoryId` | `string` (UUID) | sim | ID da categoria |
 | `budgetMin` | `number` | não | Orçamento mínimo (≥ 0) |
 | `budgetMax` | `number` | não | Orçamento máximo (> 0) |
 
@@ -836,7 +941,8 @@ Criar novo pedido de serviço.
   "client_id": "uuid",
   "title": "Preciso de um encanador para consertar vazamento",
   "description": "O chuveiro está vazando e precisa de reparo urgente",
-  "category": "HIDRAULICA",
+  "category_id": "uuid",
+  "category": { "id": "uuid", "name": "Hidráulica", "slug": "hidraulica" },
   "budget_min": 50.00,
   "budget_max": 200.00,
   "address": {},
@@ -876,7 +982,8 @@ Obter detalhe de um pedido (apenas dono).
   "client_id": "uuid",
   "title": "Preciso de um encanador para consertar vazamento",
   "description": "O chuveiro está vazando e precisa de reparo urgente",
-  "category": "HIDRAULICA",
+  "category_id": "uuid",
+  "category": { "id": "uuid", "name": "Hidráulica", "slug": "hidraulica" },
   "budget_min": 50.00,
   "budget_max": 200.00,
   "address": {},
@@ -1148,6 +1255,19 @@ Rejeitar proposta (apenas dono do pedido).
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 
+### `Category`
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `id` | UUID | Primary key |
+| `name` | String | Nome (único) |
+| `slug` | String | Slug (único) |
+| `description` | String? | Descrição |
+| `icon` | String? | Ícone Lucide |
+| `order` | Int | Ordem de exibição |
+| `created_at` | DateTime | |
+| `updated_at` | DateTime | |
+
 ### `ProviderService`
 
 | Campo | Tipo | Descrição |
@@ -1157,7 +1277,8 @@ Rejeitar proposta (apenas dono do pedido).
 | `title` | String | Título do serviço |
 | `description` | Text | Descrição detalhada |
 | `fixed_price` | Decimal | Preço fixo |
-| `category` | String | Categoria |
+| `category_id` | UUID | FK → Category |
+| `category` | Category | Objeto da categoria (via include) |
 | `is_active` | Boolean | Ativo? (soft delete) |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
@@ -1170,7 +1291,8 @@ Rejeitar proposta (apenas dono do pedido).
 | `client_id` | UUID | FK → User |
 | `title` | String | Título |
 | `description` | Text | Descrição |
-| `category` | String | Categoria |
+| `category_id` | UUID | FK → Category |
+| `category` | Category | Objeto da categoria (via include) |
 | `budget_min` | Decimal? | Orçamento mínimo |
 | `budget_max` | Decimal? | Orçamento máximo |
 | `address` | JSON? | Endereço |
@@ -1210,6 +1332,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `/api/auth/*` | `:3001` | Auth |
 | `/api/profiles/*` | `:3002` | Users |
 | `/api/providers/*` | `:3002` | Users |
+| `/api/categories/*` | `:3002` | Users |
 | `/api/services/*` | `:3003` | Service Orders |
 | `/api/proposals/*` | `:3003` | Service Orders |
 | `/*` (demais) | `:3000` | Frontend |
@@ -1231,7 +1354,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `POST` | `/auth/reset-password` | — | — | Redefinir senha |
 | `PUT` | `/auth/change-password` | Bearer | — | Alterar senha |
 
-### Users Service (11 endpoints)
+### Users Service (20 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1245,14 +1368,18 @@ Rejeitar proposta (apenas dono do pedido).
 | `PATCH` | `/profiles/provider` | Bearer | PROVIDER | Atualizar perfil prestador |
 | `PATCH` | `/profiles/avatar` | Bearer | CLIENT, PROVIDER | Upload avatar |
 | `GET` | `/providers/:providerId/profile` | — | — | Perfil público prestador |
-| `GET` | `/providers/search` | — | — | Buscar prestadores |
+| `GET` | `/providers/search` | Bearer | CLIENT | Buscar prestadores |
 | `POST` | `/providers/me/services` | Bearer | PROVIDER | Criar serviço |
 | `GET` | `/providers/me/services` | Bearer | PROVIDER | Meus serviços |
 | `PATCH` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Atualizar serviço |
 | `DELETE` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Desativar serviço |
 | `GET` | `/providers/:providerId/services` | — | — | Serviços públicos |
+| `GET` | `/categories` | — | — | Listar categorias |
+| `POST` | `/categories` | Bearer | ADMIN | Criar categoria |
+| `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
+| `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
 
-### Service Orders Service (15 endpoints)
+### Service Orders Service (16 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1277,9 +1404,10 @@ Rejeitar proposta (apenas dono do pedido).
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **38** |
+| **Endpoints** | **48** |
 | **Serviços** | **3** |
-| **Controllers** | **22** |
-| **DTOs** | **19** |
-| **Autenticação (Bearer)** | **20 endpoints** |
-| **Públicos (sem auth)** | **18 endpoints** |
+| **Controllers** | **24** |
+| **DTOs** | **21** |
+| **Autenticação (Bearer)** | **2 endpoints** |
+| **Bearer + Roles** | **25 endpoints** |
+| **Públicos (sem auth)** | **21 endpoints** |

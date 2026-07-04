@@ -7,6 +7,7 @@ import { ValidationError } from "class-validator";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProfilesModule } from "./profiles/profiles.module";
 import { ProviderServicesModule } from "./provider-services/provider-services.module";
+import { CategoriesModule } from "./categories/categories.module";
 import { HealthModule } from "./health/health.module";
 import { SharedModule } from "./shared/shared.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
@@ -17,7 +18,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     title: "Título",
     description: "Descrição",
     fixedPrice: "Preço fixo",
-    category: "Categoria",
+    categoryId: "Categoria",
     avatarUrl: "URL do avatar",
     bio: "Biografia",
     hourlyRate: "Valor por hora",
@@ -25,6 +26,9 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     portfolio: "Portfólio",
     isAvailable: "Disponível",
     preferences: "Preferências",
+    name: "Nome",
+    slug: "Slug",
+    icon: "Ícone",
   };
 
   const traducoes: Record<string, (r: string) => string> = {
@@ -60,7 +64,8 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === "test" ? [] : [".env.staging"],
+      envFilePath:
+        process.env.NODE_ENV === "test" ? [] : ["../../.env.staging"],
     }),
     ThrottlerModule.forRoot({
       throttlers: [
@@ -73,6 +78,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     PrismaModule,
     ProfilesModule,
     ProviderServicesModule,
+    CategoriesModule,
     HealthModule,
     SharedModule,
   ],
