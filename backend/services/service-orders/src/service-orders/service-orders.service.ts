@@ -7,6 +7,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ServicesLoggerService } from "../shared/services-logger.service";
 import { CreateServiceOrderDto } from "./dto/create-service-order.dto";
 import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
+import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 
 @Injectable()
 export class ServiceOrdersService {
@@ -20,6 +21,8 @@ export class ServiceOrdersService {
       id: order.id,
       client_id: order.clientId,
       provider_id: order.providerId ?? null,
+      provider_service_id: order.providerServiceId ?? null,
+      agreed_price: order.agreedPrice ?? null,
       title: order.title,
       description: order.description,
       category_id: order.categoryId,
@@ -225,6 +228,66 @@ export class ServiceOrdersService {
     });
 
     this.logger.logServiceOrderCancelled(clientId, orderId, ip);
+
+    return this.formatOrder(order);
+  }
+
+  async hireFromProvider(
+    clientId: string,
+    dto: HireProviderServiceDto,
+    ip?: string,
+  ) {
+    const providerService = await this.prisma.providerService.findUnique({
+      where: { id: dto.providerServiceId },
+      include: {
+        providerProfile: true,
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    if (!providerService) {
+      throw new NotFoundException("Serviço do prestador não encontrado");
+    }
+
+    if (!providerService.isActive) {
+      throw new BadRequestException("Serviço não está disponível");
+    }
+
+    const providerUserId = providerService.providerProfile.userId;
+
+    if (providerUserId === clientId) {
+      throw new BadRequestException(
+        "Você não pode contratar seu próprio serviço",
+      );
+    }
+
+    const order = await this.prisma.serviceOrder.create({
+      data: {
+        clientId,
+        providerId: providerUserId,
+        providerServiceId: providerService.id,
+        agreedPrice: providerService.fixedPrice,
+        title: providerService.title,
+        description: providerService.description,
+        categoryId: providerService.categoryId,
+        status: "IN_PROGRESS",
+      },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    this.logger.logInfo(
+      "service_order_hired",
+      `Service hired by client ${clientId}`,
+      {
+        clientId,
+        orderId: order.id,
+        providerServiceId: providerService.id,
+        agreedPrice: providerService.fixedPrice,
+        ip,
+      },
+    );
 
     return this.formatOrder(order);
   }

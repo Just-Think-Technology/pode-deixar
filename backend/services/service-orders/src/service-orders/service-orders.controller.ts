@@ -19,6 +19,7 @@ import {
 import { ServiceOrdersService } from "./service-orders.service";
 import { CreateServiceOrderDto } from "./dto/create-service-order.dto";
 import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
+import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
@@ -50,6 +51,23 @@ export class ServiceOrdersController {
   async findMyOrders(@Request() req: any) {
     const userId = req.user.sub;
     return this.serviceOrdersService.findByClient(userId);
+  }
+
+  @Post("hire")
+  @Roles("CLIENT")
+  @ApiOperation({
+    summary: "Contratar serviço com valor fixo (apenas clientes)",
+  })
+  @ApiResponse({ status: 201, description: "Serviço contratado com sucesso" })
+  @ApiResponse({
+    status: 404,
+    description: "Serviço do prestador não encontrado",
+  })
+  @ApiResponse({ status: 400, description: "Serviço não disponível" })
+  async hire(@Request() req: any, @Body() dto: HireProviderServiceDto) {
+    const userId = req.user.sub;
+    const ip = req.ip;
+    return this.serviceOrdersService.hireFromProvider(userId, dto, ip);
   }
 }
 
