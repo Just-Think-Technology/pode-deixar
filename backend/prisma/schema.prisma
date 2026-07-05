@@ -122,6 +122,8 @@ model ServiceOrder {
   id          String             @id @default(uuid())
   clientId    String             @map("client_id")
   providerId  String?            @map("provider_id")
+  providerServiceId String?      @map("provider_service_id")
+  agreedPrice Decimal?           @map("agreed_price") @db.Decimal(10, 2)
   title       String
   description String             @db.Text
   categoryId  String             @map("category_id")

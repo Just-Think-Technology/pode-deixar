@@ -965,6 +965,37 @@ Listar todos os pedidos do cliente autenticado.
 
 ---
 
+#### `POST /services/me/hire`
+
+Contratar serviço com valor fixo diretamente (sem proposta). Cria pedido com status `IN_PROGRESS`.
+
+**Request body (`HireProviderServiceDto`):**
+```json
+{
+  "providerServiceId": "uuid-do-servico"
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `providerServiceId` | `string` (UUID) | sim | ID do serviço do prestador |
+
+**Resposta `201`:** Mesma estrutura do `POST /services/me`, com acréscimos:
+
+| Campo | Descrição |
+|-------|-----------|
+| `provider_service_id` | ID do serviço contratado |
+| `agreed_price` | Valor fixo acordado (copiado do serviço) |
+| `status` | `IN_PROGRESS` (já inicia em andamento) |
+
+| Erro | Código |
+|------|--------|
+| Serviço do prestador não encontrado | `404` |
+| Serviço não está disponível | `400` |
+| Não é possível contratar próprio serviço | `400` |
+
+---
+
 ### Pedidos de Serviço (Dono)
 
 **Prefixo:** `services/me/:orderId` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
@@ -1310,6 +1341,8 @@ Rejeitar proposta (apenas dono do pedido).
 | `id` | UUID | Primary key |
 | `client_id` | UUID | FK → User |
 | `provider_id` | UUID? | FK → User (prestador alvo, solicitação direta) |
+| `provider_service_id` | UUID? | FK → ProviderService (contratação direta) |
+| `agreed_price` | Decimal? | Valor fixo acordado (contratação direta) |
 | `title` | String | Título |
 | `description` | Text | Descrição |
 | `category_id` | UUID | FK → Category |
@@ -1400,7 +1433,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
 | `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
 
-### Service Orders Service (17 endpoints)
+### Service Orders Service (18 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1408,6 +1441,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `GET` | `/health/ready` | — | — | Prontidão |
 | `GET` | `/health/live` | — | — | Atividade |
 | `POST` | `/services/me` | Bearer | CLIENT | Criar pedido |
+| `POST` | `/services/me/hire` | Bearer | CLIENT | Contratar serviço fixo |
 | `GET` | `/services/me` | Bearer | CLIENT | Meus pedidos |
 | `GET` | `/services/me/:orderId` | Bearer | CLIENT | Detalhe do pedido (dono) |
 | `PATCH` | `/services/me/:orderId` | Bearer | CLIENT | Atualizar pedido |
@@ -1426,10 +1460,10 @@ Rejeitar proposta (apenas dono do pedido).
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **49** |
+| **Endpoints** | **50** |
 | **Serviços** | **3** |
 | **Controllers** | **25** |
-| **DTOs** | **21** |
+| **DTOs** | **22** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **26 endpoints** |
+| **Bearer + Roles** | **27 endpoints** |
 | **Públicos (sem auth)** | **21 endpoints** |

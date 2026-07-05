@@ -18,6 +18,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     description: "Descrição",
     categoryId: "Categoria",
     price: "Preço",
+    providerServiceId: "Serviço do prestador",
     budgetMin: "Orçamento mínimo",
     budgetMax: "Orçamento máximo",
     providerId: "Prestador",

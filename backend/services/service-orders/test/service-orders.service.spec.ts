@@ -36,6 +36,9 @@ describe("ServiceOrdersService", () => {
     user: {
       findUnique: jest.fn(),
     },
+    providerService: {
+      findUnique: jest.fn(),
+    },
   };
 
   const mockLogger = {
@@ -322,6 +325,94 @@ describe("ServiceOrdersService", () => {
 
       await expect(
         service.cancel("other-client", "order-1"),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe("hireFromProvider", () => {
+    const hireDto = { providerServiceId: "service-1" };
+
+    const mockProviderService = {
+      id: "service-1",
+      title: "Instalação de chuveiro",
+      description: "Instalação de chuveiro elétrico",
+      fixedPrice: 150.0,
+      categoryId: "cat-1",
+      isActive: true,
+      providerProfile: { userId: "provider-1" },
+      category: { id: "cat-1", name: "Elétrica", slug: "eletrica" },
+    };
+
+    const hiredOrder = {
+      id: "order-hired",
+      clientId: "client-1",
+      providerId: "provider-1",
+      providerServiceId: "service-1",
+      agreedPrice: 150.0,
+      title: "Instalação de chuveiro",
+      description: "Instalação de chuveiro elétrico",
+      categoryId: "cat-1",
+      budgetMin: null,
+      budgetMax: null,
+      address: {},
+      status: "IN_PROGRESS",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      category: { id: "cat-1", name: "Elétrica", slug: "eletrica" },
+    };
+
+    it("should hire a provider service and create IN_PROGRESS order", async () => {
+      mockPrisma.providerService.findUnique.mockResolvedValue(mockProviderService);
+      mockPrisma.serviceOrder.create.mockResolvedValue(hiredOrder);
+
+      const result = await service.hireFromProvider("client-1", hireDto, "127.0.0.1");
+
+      expect(result.status).toBe("IN_PROGRESS");
+      expect(result.provider_id).toBe("provider-1");
+      expect(result.provider_service_id).toBe("service-1");
+      expect(result.agreed_price).toBe(150.0);
+      expect(mockPrisma.serviceOrder.create).toHaveBeenCalledWith({
+        data: {
+          clientId: "client-1",
+          providerId: "provider-1",
+          providerServiceId: "service-1",
+          agreedPrice: 150.0,
+          title: "Instalação de chuveiro",
+          description: "Instalação de chuveiro elétrico",
+          categoryId: "cat-1",
+          status: "IN_PROGRESS",
+        },
+        include: { category: { select: { id: true, name: true, slug: true } } },
+      });
+    });
+
+    it("should throw NotFoundException when provider service not found", async () => {
+      mockPrisma.providerService.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.hireFromProvider("client-1", hireDto),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw BadRequestException when service is not active", async () => {
+      mockPrisma.providerService.findUnique.mockResolvedValue({
+        ...mockProviderService,
+        isActive: false,
+      });
+
+      await expect(
+        service.hireFromProvider("client-1", hireDto),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException when hiring own service", async () => {
+      mockPrisma.providerService.findUnique.mockResolvedValue({
+        ...mockProviderService,
+        providerProfile: { userId: "client-1" },
+      });
+
+      await expect(
+        service.hireFromProvider("client-1", hireDto),
       ).rejects.toThrow(BadRequestException);
     });
   });
