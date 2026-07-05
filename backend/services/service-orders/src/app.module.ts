@@ -7,6 +7,7 @@ import { ValidationError } from "class-validator";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ServiceOrdersModule } from "./service-orders/service-orders.module";
 import { ProposalsModule } from "./proposals/proposals.module";
+import { CounterProposalsModule } from "./counter-proposals/counter-proposals.module";
 import { HealthModule } from "./health/health.module";
 import { SharedModule } from "./shared/shared.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
@@ -24,6 +25,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     providerId: "Prestador",
     estimatedDuration: "Duração estimada",
     serviceOrderId: "ID do pedido",
+    proposalId: "ID da proposta",
   };
 
   const traducoes: Record<string, (r: string) => string> = {
@@ -71,6 +73,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     PrismaModule,
     ServiceOrdersModule,
     ProposalsModule,
+    CounterProposalsModule,
     HealthModule,
     SharedModule,
   ],

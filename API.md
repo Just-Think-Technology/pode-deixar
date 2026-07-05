@@ -1231,6 +1231,106 @@ Rejeitar proposta (apenas dono do pedido).
 
 ---
 
+### Contrapropostas
+
+**Prefixo:** `counter-proposals` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
+
+#### `POST /counter-proposals`
+
+Criar contraproposta para uma proposta pendente. Pode ser enviada pelo cliente (dono do pedido) ou pelo prestador (dono da proposta).
+
+**Request body (`CreateCounterProposalDto`):**
+```json
+{
+  "proposalId": "uuid-da-proposta",
+  "price": 180.00,
+  "description": "Posso fazer por este valor com prazo maior",
+  "estimatedDuration": "3 dias"
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `proposalId` | `string` (UUID) | sim | ID da proposta original |
+| `price` | `number` | sim | Valor contraproposto |
+| `description` | `string` | sim | Máx. 2000 caracteres |
+| `estimatedDuration` | `string` | não | Máx. 100 caracteres |
+
+**Resposta `201`:**
+```json
+{
+  "id": "uuid",
+  "proposal_id": "uuid",
+  "sender_id": "uuid",
+  "price": 180.00,
+  "description": "Posso fazer por este valor com prazo maior",
+  "estimated_duration": "3 dias",
+  "status": "PENDING",
+  "created_at": "2026-07-05T10:00:00.000Z",
+  "updated_at": "2026-07-05T10:00:00.000Z"
+}
+```
+
+| Erro | Código |
+|------|--------|
+| Proposta não encontrada | `404` |
+| Proposta não está pendente | `400` |
+| Sem permissão para contrapor | `400` |
+| Já possui contraproposta pendente | `400` |
+
+---
+
+#### `GET /counter-proposals/me`
+
+Listar minhas contrapropostas enviadas.
+
+**Resposta `200`:** Array da mesma estrutura do `POST` acima, com campo adicional `proposal`.
+
+---
+
+#### `GET /counter-proposals/proposal/:proposalId`
+
+Listar contrapropostas de uma proposta específica.
+
+| Erro | Código |
+|------|--------|
+| Proposta não encontrada | `404` |
+
+---
+
+### Contrapropostas (Aceitar/Rejeitar)
+
+**Prefixo:** `counter-proposals/:counterProposalId` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
+
+#### `POST /counter-proposals/:counterProposalId/accept`
+
+Aceitar contraproposta. Finaliza o acordo: proposta vira `ACCEPTED`, pedido vira `IN_PROGRESS`, demais propostas/contrapropostas pendentes são rejeitadas.
+
+**Resposta `200`:** Contraproposta com status `ACCEPTED`.
+
+| Erro | Código |
+|------|--------|
+| Contraproposta não encontrada | `404` |
+| Contraproposta não está pendente | `400` |
+| Não pode aceitar a própria contraproposta | `400` |
+| Pedido não está aberto | `400` |
+
+---
+
+#### `POST /counter-proposals/:counterProposalId/reject`
+
+Rejeitar contraproposta. A proposta original permanece pendente.
+
+**Resposta `200`:** Contraproposta com status `REJECTED`.
+
+| Erro | Código |
+|------|--------|
+| Contraproposta não encontrada | `404` |
+| Contraproposta não está pendente | `400` |
+| Não pode rejeitar a própria contraproposta | `400` |
+
+---
+
 ## Enums
 
 ### `Role`
@@ -1433,7 +1533,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
 | `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
 
-### Service Orders Service (18 endpoints)
+### Service Orders Service (23 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1455,15 +1555,20 @@ Rejeitar proposta (apenas dono do pedido).
 | `DELETE` | `/proposals/:proposalId` | Bearer | PROVIDER | Retirar proposta |
 | `POST` | `/proposals/:proposalId/accept` | Bearer | CLIENT | Aceitar proposta |
 | `POST` | `/proposals/:proposalId/reject` | Bearer | CLIENT | Rejeitar proposta |
+| `POST` | `/counter-proposals` | Bearer | CLIENT, PROVIDER | Criar contraproposta |
+| `GET` | `/counter-proposals/me` | Bearer | CLIENT, PROVIDER | Minhas contrapropostas |
+| `GET` | `/counter-proposals/proposal/:proposalId` | Bearer | CLIENT, PROVIDER | Contrapropostas da proposta |
+| `POST` | `/counter-proposals/:counterProposalId/accept` | Bearer | CLIENT, PROVIDER | Aceitar contraproposta |
+| `POST` | `/counter-proposals/:counterProposalId/reject` | Bearer | CLIENT, PROVIDER | Rejeitar contraproposta |
 
 ### Totais
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **50** |
+| **Endpoints** | **55** |
 | **Serviços** | **3** |
-| **Controllers** | **25** |
-| **DTOs** | **22** |
+| **Controllers** | **27** |
+| **DTOs** | **23** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **27 endpoints** |
+| **Bearer + Roles** | **32 endpoints** |
 | **Públicos (sem auth)** | **21 endpoints** |
