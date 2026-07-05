@@ -80,7 +80,12 @@ export class CounterProposalsService {
     this.logger.logInfo(
       "counter_proposal_created",
       `Counter-proposal created by ${senderId} for proposal ${dto.proposalId}`,
-      { senderId, proposalId: dto.proposalId, counterProposalId: counterProposal.id, ip },
+      {
+        senderId,
+        proposalId: dto.proposalId,
+        counterProposalId: counterProposal.id,
+        ip,
+      },
     );
 
     return this.formatCounterProposal(counterProposal);
@@ -123,7 +128,7 @@ export class CounterProposalsService {
       throw new BadRequestException("O pedido não está mais aberto");
     }
 
-    const [updatedCp, updatedProposal] = await this.prisma.$transaction([
+    const [updatedCp] = await this.prisma.$transaction([
       this.prisma.counterProposal.update({
         where: { id: counterProposalId },
         data: { status: "ACCEPTED" },
