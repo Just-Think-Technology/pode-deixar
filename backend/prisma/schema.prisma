@@ -118,6 +118,12 @@ enum ProposalStatus {
   WITHDRAWN
 }
 
+enum CounterProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 model ServiceOrder {
   id          String             @id @default(uuid())
   clientId    String             @map("client_id")
@@ -149,9 +155,25 @@ model Proposal {
   status           ProposalStatus @default(PENDING)
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
-  serviceOrder     ServiceOrder   @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrder      ServiceOrder      @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  counterProposals  CounterProposal[]
 
   @@map("proposals")
+}
+
+model CounterProposal {
+  id               String                @id @default(uuid())
+  proposalId       String                @map("proposal_id")
+  senderId         String                @map("sender_id")
+  price            Decimal               @db.Decimal(10, 2)
+  description      String                @db.Text
+  estimatedDuration String?              @map("estimated_duration")
+  status           CounterProposalStatus @default(PENDING)
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+  proposal         Proposal              @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@map("counter_proposals")
 }
 
 model TokenBlacklist {
