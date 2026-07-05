@@ -911,7 +911,7 @@ Idênticos ao [Auth Service Health](#health).
 
 #### `POST /services/me`
 
-Criar novo pedido de serviço.
+Criar novo pedido de serviço. Se `providerId` for informado, o pedido é direcionado a um prestador específico (solicitação direta de orçamento).
 
 **Request body (`CreateServiceOrderDto`):**
 ```json
@@ -919,6 +919,7 @@ Criar novo pedido de serviço.
   "title": "Preciso de um encanador para consertar vazamento",
   "description": "O chuveiro está vazando e precisa de reparo urgente",
   "categoryId": "uuid-da-categoria",
+  "providerId": "uuid-do-prestador",
   "budgetMin": 50.00,
   "budgetMax": 200.00
 }
@@ -929,6 +930,7 @@ Criar novo pedido de serviço.
 | `title` | `string` | sim | Máx. 200 caracteres |
 | `description` | `string` | sim | Máx. 2000 caracteres |
 | `categoryId` | `string` (UUID) | sim | ID da categoria |
+| `providerId` | `string` (UUID) | não | ID do prestador (solicitação direta) |
 | `budgetMin` | `number` | não | Orçamento mínimo (≥ 0) |
 | `budgetMax` | `number` | não | Orçamento máximo (> 0) |
 
@@ -939,6 +941,7 @@ Criar novo pedido de serviço.
 {
   "id": "uuid",
   "client_id": "uuid",
+  "provider_id": "uuid",
   "title": "Preciso de um encanador para consertar vazamento",
   "description": "O chuveiro está vazando e precisa de reparo urgente",
   "category_id": "uuid",
@@ -977,9 +980,10 @@ Obter detalhe de um pedido (apenas dono).
 
 **Resposta `200`:**
 ```json
-{
+ {
   "id": "uuid",
   "client_id": "uuid",
+  "provider_id": null,
   "title": "Preciso de um encanador para consertar vazamento",
   "description": "O chuveiro está vazando e precisa de reparo urgente",
   "category_id": "uuid",
@@ -1289,6 +1293,7 @@ Rejeitar proposta (apenas dono do pedido).
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `client_id` | UUID | FK → User |
+| `provider_id` | UUID? | FK → User (prestador alvo, solicitação direta) |
 | `title` | String | Título |
 | `description` | Text | Descrição |
 | `category_id` | UUID | FK → Category |
