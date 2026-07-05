@@ -85,6 +85,18 @@ export class ServiceOrdersService {
     return this.formatOrder(order);
   }
 
+  async findReceivedByProvider(providerId: string) {
+    const orders = await this.prisma.serviceOrder.findMany({
+      where: { providerId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    return orders.map((o) => this.formatOrder(o));
+  }
+
   async findByClient(clientId: string) {
     const orders = await this.prisma.serviceOrder.findMany({
       where: { clientId },

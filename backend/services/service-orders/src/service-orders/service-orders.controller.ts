@@ -135,6 +135,28 @@ export class PublicServiceOrdersController {
   }
 }
 
+@ApiTags("Pedidos de Serviço (Prestador)")
+@Controller("services/requests/received")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth()
+export class ProviderReceivedOrdersController {
+  constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
+
+  @Get()
+  @Roles("PROVIDER")
+  @ApiOperation({
+    summary: "Listar pedidos recebidos (direcionados ao prestador)",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Lista de pedidos recebidos retornada com sucesso",
+  })
+  async findReceived(@Request() req: any) {
+    const userId = req.user.sub;
+    return this.serviceOrdersService.findReceivedByProvider(userId);
+  }
+}
+
 @ApiTags("Pedidos de Serviço (Detalhe)")
 @Controller("services/:orderId")
 export class ServiceOrderDetailController {

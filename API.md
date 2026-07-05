@@ -1043,6 +1043,22 @@ Cancelar pedido (apenas dono). Altera status para `CANCELLED`.
 
 ---
 
+### Pedidos de Serviço (Prestador)
+
+**Prefixo:** `services/requests/received` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+
+#### `GET /services/requests/received`
+
+Listar pedidos direcionados ao prestador logado (solicitações recebidas).
+
+**Resposta `200`:** Array da mesma estrutura do `POST /services/me`.
+
+| Erro | Código |
+|------|--------|
+| Token inválido | `401` |
+
+---
+
 ### Pedidos de Serviço (Público)
 
 **Prefixo:** `services` | **Sem autenticação**
@@ -1384,7 +1400,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
 | `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
 
-### Service Orders Service (16 endpoints)
+### Service Orders Service (17 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1398,6 +1414,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `DELETE` | `/services/me/:orderId` | Bearer | CLIENT | Cancelar pedido |
 | `GET` | `/services` | — | — | Pedidos abertos |
 | `GET` | `/services/:orderId` | — | — | Detalhe do pedido (público) |
+| `GET` | `/services/requests/received` | Bearer | PROVIDER | Solicitações recebidas |
 | `POST` | `/proposals` | Bearer | PROVIDER | Criar proposta |
 | `GET` | `/proposals/me` | Bearer | PROVIDER | Minhas propostas |
 | `PATCH` | `/proposals/:proposalId` | Bearer | PROVIDER | Atualizar proposta |
@@ -1409,10 +1426,10 @@ Rejeitar proposta (apenas dono do pedido).
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **48** |
+| **Endpoints** | **49** |
 | **Serviços** | **3** |
-| **Controllers** | **24** |
+| **Controllers** | **25** |
 | **DTOs** | **21** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **25 endpoints** |
+| **Bearer + Roles** | **26 endpoints** |
 | **Públicos (sem auth)** | **21 endpoints** |

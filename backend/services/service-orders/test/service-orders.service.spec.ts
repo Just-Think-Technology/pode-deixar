@@ -170,6 +170,31 @@ describe("ServiceOrdersService", () => {
     });
   });
 
+  describe("findReceivedByProvider", () => {
+    it("should return orders directed to a provider", async () => {
+      const directedOrder = { ...mockOrder, providerId: "provider-1" };
+      mockPrisma.serviceOrder.findMany.mockResolvedValue([directedOrder]);
+
+      const result = await service.findReceivedByProvider("provider-1");
+
+      expect(result).toHaveLength(1);
+      expect(result[0].provider_id).toBe("provider-1");
+      expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith({
+        where: { providerId: "provider-1" },
+        orderBy: { createdAt: "desc" },
+        include: { category: { select: { id: true, name: true, slug: true } } },
+      });
+    });
+
+    it("should return empty array when no orders directed", async () => {
+      mockPrisma.serviceOrder.findMany.mockResolvedValue([]);
+
+      const result = await service.findReceivedByProvider("provider-1");
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe("findById", () => {
     it("should return an order by id", async () => {
       mockPrisma.serviceOrder.findUnique.mockResolvedValue({
