@@ -32,7 +32,10 @@ export class CounterProposalsController {
   @Post()
   @Roles("CLIENT", "PROVIDER")
   @ApiOperation({ summary: "Criar contraproposta (cliente ou prestador)" })
-  @ApiResponse({ status: 201, description: "Contraproposta criada com sucesso" })
+  @ApiResponse({
+    status: 201,
+    description: "Contraproposta criada com sucesso",
+  })
   @ApiResponse({ status: 404, description: "Proposta não encontrada" })
   @ApiResponse({
     status: 400,
@@ -82,13 +85,19 @@ export class CounterProposalActionController {
   @Roles("CLIENT", "PROVIDER")
   @ApiOperation({ summary: "Aceitar contraproposta" })
   @ApiParam({ name: "counterProposalId", description: "ID da contraproposta" })
-  @ApiResponse({ status: 200, description: "Contraproposta aceita com sucesso" })
+  @ApiResponse({
+    status: 200,
+    description: "Contraproposta aceita com sucesso",
+  })
   @ApiResponse({ status: 404, description: "Contraproposta não encontrada" })
   @ApiResponse({
     status: 400,
     description: "Contraproposta não está pendente ou pedido não está aberto",
   })
-  async accept(@Request() req: any, @Param("counterProposalId") counterProposalId: string) {
+  async accept(
+    @Request() req: any,
+    @Param("counterProposalId") counterProposalId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.counterProposalsService.accept(userId, counterProposalId, ip);
@@ -98,9 +107,15 @@ export class CounterProposalActionController {
   @Roles("CLIENT", "PROVIDER")
   @ApiOperation({ summary: "Rejeitar contraproposta" })
   @ApiParam({ name: "counterProposalId", description: "ID da contraproposta" })
-  @ApiResponse({ status: 200, description: "Contraproposta rejeitada com sucesso" })
+  @ApiResponse({
+    status: 200,
+    description: "Contraproposta rejeitada com sucesso",
+  })
   @ApiResponse({ status: 404, description: "Contraproposta não encontrada" })
-  async reject(@Request() req: any, @Param("counterProposalId") counterProposalId: string) {
+  async reject(
+    @Request() req: any,
+    @Param("counterProposalId") counterProposalId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.counterProposalsService.reject(userId, counterProposalId, ip);

@@ -9,10 +9,7 @@ import { SharedModule } from "../shared/shared.module";
 
 @Module({
   imports: [PrismaModule, SharedModule],
-  controllers: [
-    CounterProposalsController,
-    CounterProposalActionController,
-  ],
+  controllers: [CounterProposalsController, CounterProposalActionController],
   providers: [CounterProposalsService],
 })
 export class CounterProposalsModule {}
