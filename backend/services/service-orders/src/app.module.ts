@@ -20,6 +20,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     price: "Preço",
     budgetMin: "Orçamento mínimo",
     budgetMax: "Orçamento máximo",
+    providerId: "Prestador",
     estimatedDuration: "Duração estimada",
     serviceOrderId: "ID do pedido",
   };

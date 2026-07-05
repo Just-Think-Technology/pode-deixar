@@ -19,6 +19,7 @@ export class ServiceOrdersService {
     return {
       id: order.id,
       client_id: order.clientId,
+      provider_id: order.providerId ?? null,
       title: order.title,
       description: order.description,
       category_id: order.categoryId,
@@ -38,10 +39,36 @@ export class ServiceOrdersService {
     };
   }
 
+  private async validateProvider(providerId: string, clientId: string) {
+    if (providerId === clientId) {
+      throw new BadRequestException(
+        "Você não pode solicitar orçamento para si mesmo",
+      );
+    }
+
+    const provider = await this.prisma.user.findUnique({
+      where: { id: providerId },
+      select: { id: true, role: true },
+    });
+
+    if (!provider) {
+      throw new BadRequestException("Prestador não encontrado");
+    }
+
+    if (provider.role !== "PROVIDER") {
+      throw new BadRequestException("Usuário não é um prestador");
+    }
+  }
+
   async create(clientId: string, dto: CreateServiceOrderDto, ip?: string) {
+    if (dto.providerId) {
+      await this.validateProvider(dto.providerId, clientId);
+    }
+
     const order = await this.prisma.serviceOrder.create({
       data: {
         clientId,
+        providerId: dto.providerId ?? null,
         title: dto.title,
         description: dto.description,
         categoryId: dto.categoryId,
