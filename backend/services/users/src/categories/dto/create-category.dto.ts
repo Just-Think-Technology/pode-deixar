@@ -12,13 +12,19 @@ export class CreateCategoryDto {
   @MaxLength(100)
   slug: string;
 
-  @ApiPropertyOptional({ description: "Descrição da categoria", example: "Serviços de elétrica residencial e comercial" })
+  @ApiPropertyOptional({
+    description: "Descrição da categoria",
+    example: "Serviços de elétrica residencial e comercial",
+  })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   description?: string;
 
-  @ApiPropertyOptional({ description: "Nome do ícone (Lucide)", example: "zap" })
+  @ApiPropertyOptional({
+    description: "Nome do ícone (Lucide)",
+    example: "zap",
+  })
   @IsOptional()
   @IsString()
   @MaxLength(50)

@@ -34,6 +34,7 @@ import {
   clearAuthSession,
   getAccessToken,
   getAuthSession,
+  refreshAuthSession,
   saveAuthSession,
   updateAuthSessionUser,
 } from "@/lib/auth/session.server";
@@ -109,19 +110,31 @@ export async function resetPasswordAction(
   return { role: loginData.user.role };
 }
 
-async function requireAccessToken(): Promise<string> {
+async function withTokenRefresh<T>(
+  fn: (token: string) => Promise<T>,
+): Promise<T> {
   const token = await getAccessToken();
   if (!token) {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
-  return token;
+
+  try {
+    return await fn(token);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      const refreshed = await refreshAuthSession();
+      if (!refreshed?.access_token) {
+        throw new Error("Sessão expirada. Faça login novamente.");
+      }
+      return await fn(refreshed.access_token);
+    }
+    throw err;
+  }
 }
 
 export async function getWorkerProfileAction(): Promise<{ user: UserProfile }> {
-  const token = await requireAccessToken();
-
   try {
-    const profile = await getWorkerProfile(token);
+    const profile = await withTokenRefresh((token) => getWorkerProfile(token));
     return { user: mapProfileResponseToUserProfile(profile) };
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
@@ -156,9 +169,7 @@ function buildStubProfile(
 export async function updateWorkerProfileAction(
   payload: UpdateProviderProfilePayload,
 ): Promise<UpdateWorkerProfileResult> {
-  const token = await requireAccessToken();
-
-  const profileResponse = await getWorkerProfile(token);
+  const profileResponse = await withTokenRefresh((token) => getWorkerProfile(token));
   const currentProfile = mapProfileResponseToUserProfile(profileResponse);
 
   let message = "Perfil atualizado com sucesso.";
@@ -166,11 +177,11 @@ export async function updateWorkerProfileAction(
 
   try {
     if (currentProfile.profile_id) {
-      const response = await updateWorkerProfile(token, payload);
+      const response = await withTokenRefresh((token) => updateWorkerProfile(token, payload));
       updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
       message = "Perfil atualizado com sucesso.";
     } else {
-      const response = await createWorkerProfile(token, payload);
+      const response = await withTokenRefresh((token) => createWorkerProfile(token, payload));
       updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
       message = "Perfil profissional criado com sucesso!";
     }
@@ -199,10 +210,8 @@ export async function updateWorkerProfileAction(
 }
 
 export async function deleteWorkerAccountAction(): Promise<void> {
-  const token = await requireAccessToken();
-
   try {
-    await deleteWorkerAccount(token);
+    await withTokenRefresh((token) => deleteWorkerAccount(token));
   } catch (err) {
     if (!(err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503))) {
       throw err;
@@ -215,10 +224,8 @@ export async function deleteWorkerAccountAction(): Promise<void> {
 export async function createServiceAction(
   payload: CreateServicePayload,
 ): Promise<CreateServiceResponse> {
-  const token = await requireAccessToken();
-
   try {
-    return await createWorkerService(token, payload);
+    return await withTokenRefresh((token) => createWorkerService(token, payload));
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       return {
@@ -230,6 +237,7 @@ export async function createServiceAction(
           description: payload.description,
           fixed_price: payload.fixedPrice,
           category: payload.category,
+          images: [],
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -241,10 +249,8 @@ export async function createServiceAction(
 }
 
 export async function getWorkerServicesAction(): Promise<ServicesListResponse> {
-  const token = await requireAccessToken();
-
   try {
-    return await getWorkerServices(token);
+    return await withTokenRefresh((token) => getWorkerServices(token));
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       const { MOCK_SERVICES } = await import("@/mock/worker/services");
@@ -258,10 +264,8 @@ export async function updateServiceAction(
   serviceId: string,
   payload: UpdateServicePayload,
 ): Promise<void> {
-  const token = await requireAccessToken();
-
   try {
-    await updateWorkerService(token, serviceId, payload);
+    await withTokenRefresh((token) => updateWorkerService(token, serviceId, payload));
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       return;
@@ -273,10 +277,8 @@ export async function updateServiceAction(
 export async function deleteServiceAction(
   serviceId: string,
 ): Promise<void> {
-  const token = await requireAccessToken();
-
   try {
-    await deleteWorkerService(token, serviceId);
+    await withTokenRefresh((token) => deleteWorkerService(token, serviceId));
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       return;

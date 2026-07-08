@@ -100,8 +100,19 @@ model ProviderService {
   isActive          Boolean          @default(true) @map("is_active")
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
+  images            ServiceImage[]
 
   @@map("provider_services")
+}
+
+model ServiceImage {
+  id                String          @id @default(uuid())
+  providerService   ProviderService @relation(fields: [providerServiceId], references: [id], onDelete: Cascade)
+  providerServiceId String          @map("provider_service_id")
+  url               String
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  @@map("service_images")
 }
 
 enum ServiceOrderStatus {
