@@ -51,6 +51,13 @@ export class ProviderServicesService {
             slug: service.category.slug,
           }
         : null,
+      images: service.images
+        ? service.images.map((img: any) => ({
+            id: img.id,
+            url: img.url,
+            created_at: img.createdAt,
+          }))
+        : [],
       is_active: service.isActive,
       created_at: service.createdAt,
       updated_at: service.updatedAt,
@@ -75,6 +82,10 @@ export class ProviderServicesService {
       },
       include: {
         category: { select: { id: true, name: true, slug: true } },
+        images: {
+          select: { id: true, url: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -91,6 +102,10 @@ export class ProviderServicesService {
       orderBy: { createdAt: "desc" },
       include: {
         category: { select: { id: true, name: true, slug: true } },
+        images: {
+          select: { id: true, url: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -105,6 +120,10 @@ export class ProviderServicesService {
       orderBy: { createdAt: "desc" },
       include: {
         category: { select: { id: true, name: true, slug: true } },
+        images: {
+          select: { id: true, url: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -139,6 +158,10 @@ export class ProviderServicesService {
       },
       include: {
         category: { select: { id: true, name: true, slug: true } },
+        images: {
+          select: { id: true, url: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -169,6 +192,10 @@ export class ProviderServicesService {
       data: { isActive: false },
       include: {
         category: { select: { id: true, name: true, slug: true } },
+        images: {
+          select: { id: true, url: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -209,6 +236,13 @@ export class ProviderServicesService {
         category: s.category
           ? { id: s.category.id, name: s.category.name, slug: s.category.slug }
           : null,
+        images: s.images
+          ? s.images.map((img: any) => ({
+              id: img.id,
+              url: img.url,
+              created_at: img.createdAt,
+            }))
+          : [],
       })),
     };
   }
@@ -242,6 +276,10 @@ export class ProviderServicesService {
         orderBy: { createdAt: "desc" },
         include: {
           category: { select: { id: true, name: true, slug: true } },
+          images: {
+            select: { id: true, url: true, createdAt: true },
+            orderBy: { createdAt: "desc" },
+          },
         },
       },
     } as const;

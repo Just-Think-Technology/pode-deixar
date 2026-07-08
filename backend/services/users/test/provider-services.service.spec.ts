@@ -180,7 +180,13 @@ describe("ProviderServicesService", () => {
       expect(mockPrisma.providerService.findMany).toHaveBeenCalledWith({
         where: { providerProfileId: "provider-profile-1", isActive: true },
         orderBy: { createdAt: "desc" },
-        include: { category: { select: { id: true, name: true, slug: true } } },
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+          images: {
+            select: { id: true, url: true, createdAt: true },
+            orderBy: { createdAt: "desc" },
+          },
+        },
       });
     });
 
