@@ -83,9 +83,11 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:${MINIO_PORT} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY} &&
-      mc mb local/${MINIO_BUCKET} --ignore-existing &&
-      mc anonymous set public local/${MINIO_BUCKET} &&
+      mc alias set local http://minio:$${MINIO_PORT:-9000} $${MINIO_ACCESS_KEY:-minioadmin} $${MINIO_SECRET_KEY:-minioadmin} &&
+      mc mb local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} --ignore-existing &&
+      mc anonymous set public local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} &&
+      mc mb local/$${MINIO_AVATARS_BUCKET:-avatars} --ignore-existing &&
+      mc anonymous set public local/$${MINIO_AVATARS_BUCKET:-avatars} &&
       echo 'Buckets created successfully'
       "
 

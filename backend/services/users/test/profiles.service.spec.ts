@@ -1,12 +1,33 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProfilesService } from "../src/profiles/profiles.service";
 import { PrismaService } from "../src/prisma/prisma.service";
+import { MinioService } from "../src/storage/minio.service";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
 import {
   NotFoundException,
   ConflictException,
   BadRequestException,
 } from "@nestjs/common";
+import { randomUUID } from "crypto";
+
+jest.mock("crypto", () => ({
+  randomUUID: jest.fn(() => "mocked-uuid"),
+}));
+
+function mockFile(): Express.Multer.File {
+  return {
+    fieldname: "file",
+    originalname: "avatar.png",
+    encoding: "7bit",
+    mimetype: "image/png",
+    buffer: Buffer.from("fake-content"),
+    size: 1024,
+    stream: null as any,
+    destination: "",
+    filename: "",
+    path: "",
+  };
+}
 
 describe("ProfilesService", () => {
   let service: ProfilesService;
@@ -52,11 +73,19 @@ describe("ProfilesService", () => {
     logAvatarUploaded: jest.fn(),
   };
 
+  const mockMinio = {
+    avatarBucket: "avatars",
+    uploadFile: jest.fn(),
+    deleteFile: jest.fn(),
+    extractFileName: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfilesService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: MinioService, useValue: mockMinio },
         { provide: UsersLoggerService, useValue: mockLogger },
       ],
     }).compile();
@@ -299,7 +328,10 @@ describe("ProfilesService", () => {
   });
 
   describe("uploadAvatar", () => {
-    it("should upload client avatar", async () => {
+    const expectedUrl =
+      "http://localhost:8080/api/storage/avatars/mocked-uuid.png";
+
+    it("should upload client avatar to MinIO and save URL", async () => {
       const existing = {
         id: "client-1",
         userId: "user-1",
@@ -310,9 +342,12 @@ describe("ProfilesService", () => {
       };
       const updated = {
         ...existing,
-        avatarUrl: "http://new.com/avatar.png",
+        avatarUrl: expectedUrl,
       };
 
+      mockMinio.uploadFile.mockResolvedValue(expectedUrl);
+      mockMinio.extractFileName.mockReturnValue("old-uuid.png");
+      mockMinio.deleteFile.mockResolvedValue(undefined);
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       mockPrisma.clientProfile.findUnique.mockResolvedValue(existing);
       mockPrisma.clientProfile.update.mockResolvedValue(updated);
@@ -320,11 +355,21 @@ describe("ProfilesService", () => {
       const result = await service.uploadAvatar(
         "user-1",
         "CLIENT",
-        "http://new.com/avatar.png",
+        mockFile(),
         "127.0.0.1",
       );
 
-      expect(result.avatar_url).toBe("http://new.com/avatar.png");
+      expect(mockMinio.uploadFile).toHaveBeenCalledWith(
+        "mocked-uuid.png",
+        Buffer.from("fake-content"),
+        "image/png",
+        mockMinio.avatarBucket,
+      );
+      expect(mockMinio.deleteFile).toHaveBeenCalledWith(
+        "old-uuid.png",
+        mockMinio.avatarBucket,
+      );
+      expect(result.avatar_url).toBe(expectedUrl);
       expect(mockLogger.logAvatarUploaded).toHaveBeenCalledWith(
         "user-1",
         "CLIENT",
@@ -349,9 +394,12 @@ describe("ProfilesService", () => {
       };
       const updated = {
         ...existing,
-        avatarUrl: "http://new.com/avatar.png",
+        avatarUrl: expectedUrl,
       };
 
+      mockMinio.uploadFile.mockResolvedValue(expectedUrl);
+      mockMinio.extractFileName.mockReturnValue("old-uuid.png");
+      mockMinio.deleteFile.mockResolvedValue(undefined);
       mockPrisma.user.findUnique.mockResolvedValue(mockProviderUser);
       mockPrisma.providerProfile.findUnique.mockResolvedValue(existing);
       mockPrisma.providerProfile.update.mockResolvedValue(updated);
@@ -359,11 +407,12 @@ describe("ProfilesService", () => {
       const result = await service.uploadAvatar(
         "user-1",
         "PROVIDER",
-        "http://new.com/avatar.png",
+        mockFile(),
         "127.0.0.1",
       );
 
-      expect(result.avatar_url).toBe("http://new.com/avatar.png");
+      expect(mockMinio.uploadFile).toHaveBeenCalled();
+      expect(result.avatar_url).toBe(expectedUrl);
       expect(mockLogger.logAvatarUploaded).toHaveBeenCalledWith(
         "user-1",
         "PROVIDER",
@@ -371,17 +420,77 @@ describe("ProfilesService", () => {
       );
     });
 
-    it("should throw NotFoundException when profile does not exist for uploadAvatar", async () => {
+    it("should delete old avatar from MinIO when uploading new one", async () => {
+      const existing = {
+        id: "client-1",
+        userId: "user-1",
+        avatarUrl: "http://localhost:8080/api/storage/avatars/old-uuid.png",
+        preferences: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const updated = {
+        ...existing,
+        avatarUrl: expectedUrl,
+      };
+
+      mockMinio.uploadFile.mockResolvedValue(expectedUrl);
+      mockMinio.extractFileName.mockReturnValue("old-uuid.png");
+      mockMinio.deleteFile.mockResolvedValue(undefined);
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.clientProfile.findUnique.mockResolvedValue(existing);
+      mockPrisma.clientProfile.update.mockResolvedValue(updated);
+
+      await service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1");
+
+      expect(mockMinio.extractFileName).toHaveBeenCalledWith(
+        "http://localhost:8080/api/storage/avatars/old-uuid.png",
+        mockMinio.avatarBucket,
+      );
+      expect(mockMinio.deleteFile).toHaveBeenCalledWith(
+        "old-uuid.png",
+        mockMinio.avatarBucket,
+      );
+    });
+
+    it("should not delete old avatar if profile had no avatar", async () => {
+      const existing = {
+        id: "client-1",
+        userId: "user-1",
+        avatarUrl: null,
+        preferences: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const updated = {
+        ...existing,
+        avatarUrl: expectedUrl,
+      };
+
+      mockMinio.uploadFile.mockResolvedValue(expectedUrl);
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.clientProfile.findUnique.mockResolvedValue(existing);
+      mockPrisma.clientProfile.update.mockResolvedValue(updated);
+
+      await service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1");
+
+      expect(mockMinio.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it("should throw NotFoundException when profile does not exist", async () => {
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.uploadAvatar(
-          "user-1",
-          "CLIENT",
-          "http://new.com/avatar.png",
-          "127.0.0.1",
-        ),
+        service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw NotFoundException when user does not exist", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1"),
       ).rejects.toThrow(NotFoundException);
     });
   });
