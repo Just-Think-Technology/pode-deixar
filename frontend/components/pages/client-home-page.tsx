@@ -22,13 +22,15 @@ export default function ClientHomePage() {
   const filtered = useMemo(() => {
     return CLIENT_MOCK_PROFESSIONALS.filter((p) => {
       const q = search.trim().toLowerCase();
+      const serviceTitle = p.services[0]?.title ?? "";
       const matchesSearch =
         !q ||
-        p.title.toLowerCase().includes(q) ||
-        p.providerName.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q);
+        serviceTitle.toLowerCase().includes(q) ||
+        p.user.complete_name.toLowerCase().includes(q) ||
+        (p.bio ?? "").toLowerCase().includes(q);
+      const categoryName = p.services[0]?.category.name ?? "";
       const matchesCategory =
-        category === CLIENT_CATEGORY_ALL || p.category === category;
+        category === CLIENT_CATEGORY_ALL || categoryName === category;
       return matchesSearch && matchesCategory;
     });
   }, [search, category]);
