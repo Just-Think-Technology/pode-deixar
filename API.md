@@ -639,26 +639,24 @@ Atualizar perfil de prestador.
 
 #### `PATCH /profiles/avatar`
 
-Atualizar URL do avatar (para ambos os tipos de perfil).
+Fazer upload de avatar (para ambos os tipos de perfil). Multipart form-data, campo `file`.
 
 **Roles:** `CLIENT`, `PROVIDER`
 
-**Request body (raw):**
-```json
-{
-  "avatarUrl": "https://nova-url-do-avatar"
-}
-```
+**Request (multipart/form-data):**
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `file` | `binary` | sim | JPEG, PNG, WebP ou GIF, máx 2MB |
 
-| Campo | Tipo | Obrigatório |
-|-------|------|-------------|
-| `avatarUrl` | `string` | sim |
-
-**Resposta `200`:** Perfil atualizado (mesma estrutura de `GET /profiles/me`).
+**Resposta `200`:** Perfil atualizado (mesma estrutura de `GET /profiles/me`), com `avatar_url` apontando para o MinIO.
 
 | Erro | Código |
 |------|--------|
+| Arquivo não enviado | `400` |
+| Formato inválido | `400` |
 | Perfil não encontrado | `404` |
+
+> O avatar antigo é automaticamente removido do MinIO ao enviar um novo.
 
 ---
 

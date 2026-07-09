@@ -5,14 +5,21 @@ import {
   Patch,
   Body,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Request,
+  BadRequestException,
 } from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
   ApiResponse,
+  ApiConsumes,
+  ApiBody,
 } from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
 import { ProfilesService } from "./profiles.service";
 import { CreateClientProfileDto } from "./dto/create-client-profile.dto";
 import { UpdateClientProfileDto } from "./dto/update-client-profile.dto";
@@ -110,16 +117,53 @@ export class ProfilesController {
 
   @Patch("avatar")
   @Roles("CLIENT", "PROVIDER")
+  @UseInterceptors(
+    FileInterceptor("file", {
+      storage: memoryStorage(),
+      limits: { fileSize: 2 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        if (allowed.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(
+            new BadRequestException(
+              "Formato de imagem inválido. Permitidos: JPEG, PNG, WebP, GIF",
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
   @ApiOperation({ summary: "Enviar avatar" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          format: "binary",
+          description: "Arquivo de imagem (JPEG, PNG, WebP ou GIF, máx 2MB)",
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: "Avatar enviado com sucesso" })
+  @ApiResponse({ status: 400, description: "Arquivo inválido" })
   @ApiResponse({ status: 404, description: "Perfil não encontrado" })
   async uploadAvatar(
     @Request() req: any,
-    @Body("avatarUrl") avatarUrl: string,
+    @UploadedFile() file: Express.Multer.File,
   ) {
+    if (!file) {
+      throw new BadRequestException("Arquivo não enviado");
+    }
+
     const userId = req.user.sub;
     const role = req.user.role;
     const ip = req.ip;
-    return this.profilesService.uploadAvatar(userId, role, avatarUrl, ip);
+    return this.profilesService.uploadAvatar(userId, role, file, ip);
   }
 }
