@@ -804,36 +804,51 @@ Desativar serviço (soft delete — marca `is_active = false`).
 
 ### Busca de Prestadores
 
-**Prefixo:** `providers/search` | **Sem autenticação**
+**Prefixo:** `providers/search` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
 
 #### `GET /providers/search`
 
 Buscar prestadores por categoria ou texto.
 
 **Query params:**
-| Parâmetro | Tipo | Obrigatório | Descrição |
-|-----------|------|-------------|-----------|
-| `categoryId` | `string` (UUID) | não | Filtrar por ID da categoria |
-| `q` | `string` | não | Texto para busca no título/descrição |
+| Parâmetro | Tipo | Obrigatório | Descrição | Default |
+|-----------|------|-------------|-----------|---------|
+| `categoryId` | `string` (UUID) | não | Filtrar por ID da categoria | — |
+| `q` | `string` | não | Texto para busca no título/descrição | — |
+| `page` | `number` | não | Número da página | `1` |
+| `limit` | `number` | não | Itens por página | `10` |
 
 **Resposta `200`:**
 ```json
-[
-  {
-    "id": "uuid",
-    "user": { "id": "uuid", "complete_name": "...", "email": "...", "phone": "...", "postal_code": "..." },
-    "avatar_url": "https://...",
-    "bio": "Profissional experiente",
-    "skills": ["Hidráulica", "Elétrica"],
-    "rating": 4.8,
-    "total_reviews": 23,
-    "is_available": true,
-    "services": [
-      { "id": "uuid", "title": "Instalação de chuveiro", "description": "...", "fixed_price": 150.00, "category_id": "uuid", "category": { "id": "uuid", "name": "Elétrica", "slug": "eletrica" } }
-    ]
+{
+  "data": [
+    {
+      "id": "uuid",
+      "user": { "id": "uuid", "complete_name": "...", "email": "...", "phone": "...", "postal_code": "..." },
+      "avatar_url": "https://...",
+      "bio": "Profissional experiente",
+      "skills": ["Hidráulica", "Elétrica"],
+      "rating": 4.8,
+      "total_reviews": 23,
+      "is_available": true,
+      "services": [
+        { "id": "uuid", "title": "Instalação de chuveiro", "description": "...", "fixed_price": 150.00, "category_id": "uuid", "category": { "id": "uuid", "name": "Elétrica", "slug": "eletrica" } }
+      ]
+    }
+  ],
+  "meta": {
+    "total": 50,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 5
   }
-]
+}
 ```
+
+| Erro | Código |
+|------|--------|
+| Token inválido ou não autorizado | `401` |
+| Role não autorizada (não é CLIENT) | `403` |
 
 ---
 
@@ -1339,7 +1354,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `POST` | `/auth/reset-password` | — | — | Redefinir senha |
 | `PUT` | `/auth/change-password` | Bearer | — | Alterar senha |
 
-### Users Service (15 endpoints)
+### Users Service (20 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1353,7 +1368,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `PATCH` | `/profiles/provider` | Bearer | PROVIDER | Atualizar perfil prestador |
 | `PATCH` | `/profiles/avatar` | Bearer | CLIENT, PROVIDER | Upload avatar |
 | `GET` | `/providers/:providerId/profile` | — | — | Perfil público prestador |
-| `GET` | `/providers/search` | — | — | Buscar prestadores |
+| `GET` | `/providers/search` | Bearer | CLIENT | Buscar prestadores |
 | `POST` | `/providers/me/services` | Bearer | PROVIDER | Criar serviço |
 | `GET` | `/providers/me/services` | Bearer | PROVIDER | Meus serviços |
 | `PATCH` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Atualizar serviço |
@@ -1364,7 +1379,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
 | `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
 
-### Service Orders Service (15 endpoints)
+### Service Orders Service (16 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1389,9 +1404,10 @@ Rejeitar proposta (apenas dono do pedido).
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **42** |
+| **Endpoints** | **48** |
 | **Serviços** | **3** |
 | **Controllers** | **24** |
 | **DTOs** | **21** |
-| **Autenticação (Bearer)** | **23 endpoints** |
-| **Públicos (sem auth)** | **19 endpoints** |
+| **Autenticação (Bearer)** | **2 endpoints** |
+| **Bearer + Roles** | **25 endpoints** |
+| **Públicos (sem auth)** | **21 endpoints** |

@@ -184,40 +184,8 @@ export class ProviderServicesService {
       .toLowerCase();
   }
 
-  async searchProviders(query: SearchProvidersQueryDto) {
-    const serviceFilter: any = { isActive: true };
-    const profileFilter: any = { services: { some: { isActive: true } } };
-
-    if (query.categoryId) {
-      serviceFilter.categoryId = query.categoryId;
-      profileFilter.services = {
-        some: { isActive: true, categoryId: query.categoryId },
-      };
-    }
-
-    const profiles = await this.prisma.providerProfile.findMany({
-      where: profileFilter,
-      include: {
-        user: {
-          select: {
-            id: true,
-            completeName: true,
-            email: true,
-            phone: true,
-            postalCode: true,
-          },
-        },
-        services: {
-          where: serviceFilter,
-          orderBy: { createdAt: "desc" },
-          include: {
-            category: { select: { id: true, name: true, slug: true } },
-          },
-        },
-      },
-    });
-
-    let resultados = profiles.map((profile) => ({
+  private formatProfileResult(profile: any) {
+    return {
       id: profile.id,
       user: {
         id: profile.user.id,
@@ -232,7 +200,7 @@ export class ProviderServicesService {
       rating: profile.rating,
       total_reviews: profile.totalReviews,
       is_available: profile.isAvailable,
-      services: profile.services.map((s) => ({
+      services: profile.services.map((s: any) => ({
         id: s.id,
         title: s.title,
         description: s.description,
@@ -242,21 +210,87 @@ export class ProviderServicesService {
           ? { id: s.category.id, name: s.category.name, slug: s.category.slug }
           : null,
       })),
-    }));
+    };
+  }
 
-    if (query.q) {
-      const termo = this.removerAcentos(query.q);
-      resultados = resultados.filter((p) => {
-        const nome = this.removerAcentos(p.user.complete_name);
-        if (nome.includes(termo)) return true;
-        return p.services.some(
-          (s) =>
-            this.removerAcentos(s.title).includes(termo) ||
-            this.removerAcentos(s.description).includes(termo),
-        );
-      });
+  async searchProviders(query: SearchProvidersQueryDto) {
+    const { page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const serviceFilter: any = { isActive: true };
+    const profileFilter: any = { services: { some: { isActive: true } } };
+
+    if (query.categoryId) {
+      serviceFilter.categoryId = query.categoryId;
+      profileFilter.services = {
+        some: { isActive: true, categoryId: query.categoryId },
+      };
     }
 
-    return resultados;
+    const includeClause = {
+      user: {
+        select: {
+          id: true,
+          completeName: true,
+          email: true,
+          phone: true,
+          postalCode: true,
+        },
+      },
+      services: {
+        where: serviceFilter,
+        orderBy: { createdAt: "desc" },
+        include: {
+          category: { select: { id: true, name: true, slug: true } },
+        },
+      },
+    } as const;
+
+    if (query.q) {
+      const allProfiles = await this.prisma.providerProfile.findMany({
+        where: profileFilter,
+        include: includeClause,
+      });
+
+      const termo = this.removerAcentos(query.q);
+      const filtrados = allProfiles
+        .map((p) => this.formatProfileResult(p))
+        .filter((p) => {
+          const nome = this.removerAcentos(p.user.complete_name);
+          if (nome.includes(termo)) return true;
+          return p.services.some(
+            (s: any) =>
+              this.removerAcentos(s.title).includes(termo) ||
+              this.removerAcentos(s.description).includes(termo),
+          );
+        });
+
+      const paginados = filtrados.slice(skip, skip + limit);
+
+      return {
+        data: paginados,
+        meta: {
+          total: filtrados.length,
+          page,
+          limit,
+          totalPages: Math.ceil(filtrados.length / limit),
+        },
+      };
+    }
+
+    const [profiles, total] = await this.prisma.$transaction([
+      this.prisma.providerProfile.findMany({
+        where: profileFilter,
+        skip,
+        take: limit,
+        include: includeClause,
+      }),
+      this.prisma.providerProfile.count({ where: profileFilter }),
+    ]);
+
+    return {
+      data: profiles.map((p) => this.formatProfileResult(p)),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 }
