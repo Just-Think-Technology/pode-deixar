@@ -1,0 +1,40 @@
+name: Frontend
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v5
+      - run: corepack enable && corepack prepare pnpm@latest --activate
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint and build in parallel
+        shell: bash
+        run: |
+          pnpm run lint &
+          pnpm run build &
+          FAIL=0
+          for job in $(jobs -p); do wait $job || FAIL=1; done
+          exit $FAIL
