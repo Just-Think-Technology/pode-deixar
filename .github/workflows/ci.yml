@@ -7,9 +7,8 @@ on:
     branches: [main, develop]
 
 jobs:
-  backend:
+  backend-setup:
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:16
@@ -75,35 +74,91 @@ jobs:
       - name: Build shared packages
         run: pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/email build
 
-      - name: Build services in parallel
-        shell: bash
-        run: |
-          pnpm run --filter @pode-deixar/auth build &
-          pnpm run --filter @pode-deixar/users build &
-          pnpm run --filter @pode-deixar/service-orders build &
-          FAIL=0
-          for job in $(jobs -p); do wait $job || FAIL=1; done
-          exit $FAIL
+      - name: Cache backend dependencies
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            backend/node_modules
+            backend/packages/logger/dist
+            backend/packages/email/dist
+            backend/services/*/node_modules
+            backend/prisma/generated
+          key: backend-${{ github.sha }}
 
-      - name: Lint services in parallel
-        shell: bash
-        run: |
-          pnpm run --filter @pode-deixar/auth lint &
-          pnpm run --filter @pode-deixar/users lint &
-          pnpm run --filter @pode-deixar/service-orders lint &
-          FAIL=0
-          for job in $(jobs -p); do wait $job || FAIL=1; done
-          exit $FAIL
+  backend-auth:
+    needs: backend-setup
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - run: corepack enable && corepack prepare pnpm@latest --activate
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            backend/node_modules
+            backend/packages/logger/dist
+            backend/packages/email/dist
+            backend/services/*/node_modules
+            backend/prisma/generated
+          key: backend-${{ github.sha }}
+      - run: pnpm run --filter @pode-deixar/auth build
+      - run: pnpm run --filter @pode-deixar/auth lint
+      - run: pnpm run --filter @pode-deixar/auth test
 
-      - name: Test services in parallel
-        shell: bash
-        run: |
-          pnpm run --filter @pode-deixar/auth test &
-          pnpm run --filter @pode-deixar/users test &
-          pnpm run --filter @pode-deixar/service-orders test &
-          FAIL=0
-          for job in $(jobs -p); do wait $job || FAIL=1; done
-          exit $FAIL
+  backend-users:
+    needs: backend-setup
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - run: corepack enable && corepack prepare pnpm@latest --activate
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            backend/node_modules
+            backend/packages/logger/dist
+            backend/packages/email/dist
+            backend/services/*/node_modules
+            backend/prisma/generated
+          key: backend-${{ github.sha }}
+      - run: pnpm run --filter @pode-deixar/users build
+      - run: pnpm run --filter @pode-deixar/users lint
+      - run: pnpm run --filter @pode-deixar/users test
+
+  backend-service-orders:
+    needs: backend-setup
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - run: corepack enable && corepack prepare pnpm@latest --activate
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            backend/node_modules
+            backend/packages/logger/dist
+            backend/packages/email/dist
+            backend/services/*/node_modules
+            backend/prisma/generated
+          key: backend-${{ github.sha }}
+      - run: pnpm run --filter @pode-deixar/service-orders build
+      - run: pnpm run --filter @pode-deixar/service-orders lint
+      - run: pnpm run --filter @pode-deixar/service-orders test
 
   frontend:
     runs-on: ubuntu-latest
