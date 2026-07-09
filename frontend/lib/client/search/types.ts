@@ -1,5 +1,3 @@
-import type { LucideIcon } from "lucide-react";
-
 export type ProviderSearchResult = {
   id: string;
   user: {
@@ -45,7 +43,7 @@ export type SearchProfessionalsResponse = {
 export type PopularCategory = {
   id: string;
   label: string;
-  icon: LucideIcon;
+  iconKey: string;
   iconClassName: string;
   iconBgClassName: string;
 };

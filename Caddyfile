@@ -37,7 +37,7 @@ http://localhost:8080 {
     }
 
     # ─── Users Service (Categories) ──────────────────────────────
-    handle /api/categories/* {
+    handle /api/categories* {
         uri strip_prefix /api
         reverse_proxy localhost:3002
     }

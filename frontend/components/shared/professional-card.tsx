@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FileText, MapPin, MessageSquare, Star } from "lucide-react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,7 +137,7 @@ export default function ProfessionalCard({ professional, className }: Profession
           type="button"
           className="flex-1 gap-2"
           onClick={() =>
-            toast.info("Em breve você poderá solicitar orçamentos por aqui.")
+            router.push(`/client/providers/${professional.id}/quote`)
           }
         >
           <MessageSquare className="size-4" />
