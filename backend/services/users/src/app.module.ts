@@ -14,6 +14,8 @@ import { SharedModule } from "./shared/shared.module";
 import { MinioModule } from "./storage/minio.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
+import { AppController } from "./app.controller";
+import { AppService } from "./app.service";
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
@@ -86,7 +88,9 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     SharedModule,
     MinioModule,
   ],
+  controllers: [AppController],
   providers: [
+    AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
