@@ -55,6 +55,7 @@ describe("ProviderServicesService", () => {
     providerProfile: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn(),
     },
     providerService: {
       create: jest.fn(),
@@ -66,6 +67,7 @@ describe("ProviderServicesService", () => {
     user: {
       findUnique: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const mockLogger = {
@@ -380,29 +382,33 @@ describe("ProviderServicesService", () => {
     };
 
     it("should return all active providers when no filters", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
-        mockProfileWithServices,
+      mockPrisma.$transaction.mockResolvedValue([
+        [mockProfileWithServices],
+        1,
       ]);
 
       const query: SearchProvidersQueryDto = {};
       const result = await service.searchProviders(query);
 
       expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
-      expect(result).toHaveLength(1);
-      expect(result[0].user.complete_name).toBe("João Eletricista");
-      expect(result[0].services).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].user.complete_name).toBe("João Eletricista");
+      expect(result.data[0].services).toHaveLength(1);
+      expect(result.meta.total).toBe(1);
     });
 
     it("should filter by category", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
-        mockProfileWithServices,
+      mockPrisma.$transaction.mockResolvedValue([
+        [mockProfileWithServices],
+        1,
       ]);
 
       const query: SearchProvidersQueryDto = { categoryId: "cat-eletrica" };
       const result = await service.searchProviders(query);
 
       expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
+      expect(result.meta.total).toBe(1);
     });
 
     it("should filter by text search on service title", async () => {
@@ -414,7 +420,7 @@ describe("ProviderServicesService", () => {
       const result = await service.searchProviders(query);
 
       expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it("should filter by provider name", async () => {
@@ -425,8 +431,8 @@ describe("ProviderServicesService", () => {
       const query: SearchProvidersQueryDto = { q: "José" };
       const result = await service.searchProviders(query);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].user.complete_name).toBe("José Chuveiro");
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].user.complete_name).toBe("José Chuveiro");
     });
 
     it("should search ignoring accents", async () => {
@@ -442,25 +448,26 @@ describe("ProviderServicesService", () => {
       const query: SearchProvidersQueryDto = { q: "eletrica" };
       const result = await service.searchProviders(query);
 
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it("should group multiple services under the same provider", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
-        mockProfileWithMultipleServices,
+      mockPrisma.$transaction.mockResolvedValue([
+        [mockProfileWithMultipleServices],
+        1,
       ]);
 
       const query: SearchProvidersQueryDto = { categoryId: "cat-eletrica" };
       const result = await service.searchProviders(query);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].services).toHaveLength(2);
-      expect(result[0].services[0].title).toBe("Instalação de chuveiro elétrico");
-      expect(result[0].services[1].title).toBe("Troca de fiação");
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].services).toHaveLength(2);
+      expect(result.data[0].services[0].title).toBe("Instalação de chuveiro elétrico");
+      expect(result.data[0].services[1].title).toBe("Troca de fiação");
     });
 
     it("should return empty array when no matches", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([]);
+      mockPrisma.$transaction.mockResolvedValue([[], 0]);
 
       const query: SearchProvidersQueryDto = { categoryId: "cat-hidraulica" };
       const result = await service.searchProviders(query);
@@ -474,7 +481,8 @@ describe("ProviderServicesService", () => {
           },
         }),
       );
-      expect(result).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
+      expect(result.meta.total).toBe(0);
     });
   });
 });
