@@ -1,23 +1,43 @@
+import { apiFetch, apiFetchAuth } from "@/api/client";
 import { mockSearchProfessionals } from "@/mock/client/search";
 import type {
+  ProviderSearchResult,
   SearchProfessionalsPayload,
   SearchProfessionalsResponse,
 } from "@/lib/client/search/types";
 
 export type { SearchProfessionalsPayload, SearchProfessionalsResponse };
 
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+
 /**
- * POST /client/professionals/search
- * Body: { query?: string; categoryId?: string }
+ * GET /providers/search?q=&categoryId=
+ *
+ * @param accessToken - Opcional. Quando o backend exigir autenticação, passar o token do cliente.
  */
 export async function searchProfessionals(
   payload: SearchProfessionalsPayload,
+  accessToken?: string,
 ): Promise<SearchProfessionalsResponse> {
-  // TODO(backend): substituir mock quando POST /client/professionals/search estiver pronto
-  return mockSearchProfessionals(payload);
+  if (USE_MOCK) {
+    return mockSearchProfessionals(payload);
+  }
 
-  // return apiFetch<SearchProfessionalsResponse>("/client/professionals/search", {
-  //   method: "POST",
-  //   body: JSON.stringify(payload),
-  // });
+  const params = new URLSearchParams();
+  if (payload.query) params.set("q", payload.query);
+  if (payload.categoryId) params.set("categoryId", payload.categoryId);
+  if (payload.page != null) params.set("page", String(payload.page));
+  if (payload.limit != null) params.set("limit", String(payload.limit));
+
+  const qs = params.toString();
+  const path = `/providers/search${qs ? `?${qs}` : ""}`;
+
+  const data = accessToken
+    ? await apiFetchAuth<ProviderSearchResult[]>(path, accessToken)
+    : await apiFetch<ProviderSearchResult[]>(path);
+
+  return {
+    professionals: data,
+    total: data.length,
+  };
 }

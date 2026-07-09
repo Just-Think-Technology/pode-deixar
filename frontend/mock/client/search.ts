@@ -74,18 +74,18 @@ export function mockSearchProfessionals(
   const professionals = CLIENT_MOCK_PROFESSIONALS.filter((professional) => {
     const matchesQuery =
       !query ||
-      professional.title.toLowerCase().includes(query) ||
-      professional.providerName.toLowerCase().includes(query) ||
-      professional.description.toLowerCase().includes(query) ||
-      professional.category.toLowerCase().includes(query);
+      professional.user.complete_name.toLowerCase().includes(query) ||
+      professional.bio?.toLowerCase().includes(query) ||
+      professional.skills.some((skill) => skill.toLowerCase().includes(query));
 
+    const categoryName = professional.services[0]?.category.name ?? "";
     const matchesCategory =
       !categoryLabel ||
       (payload.categoryId === "outros"
         ? !POPULAR_CATEGORIES.slice(0, -1).some(
-            (category) => category.label === professional.category,
+            (cat) => cat.label === categoryName,
           )
-        : professional.category === categoryLabel);
+        : categoryName === categoryLabel);
 
     return matchesQuery && matchesCategory;
   });
