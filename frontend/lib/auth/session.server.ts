@@ -33,6 +33,15 @@ export async function saveAuthSession(data: LoginResponse): Promise<void> {
   );
 }
 
+async function saveSession(session: AuthSession): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(
+    AUTH_SESSION_COOKIE,
+    JSON.stringify(session),
+    cookieOptions(session.expires_in),
+  );
+}
+
 export async function getAuthSession(): Promise<AuthSession | null> {
   const cookieStore = await cookies();
   const raw = cookieStore.get(AUTH_SESSION_COOKIE)?.value;
@@ -66,10 +75,15 @@ export async function updateAuthSessionUser(
     user: { ...session.user, ...partial },
   };
 
-  const cookieStore = await cookies();
-  cookieStore.set(
-    AUTH_SESSION_COOKIE,
-    JSON.stringify(updated),
-    cookieOptions(session.expires_in),
-  );
+  await saveSession(updated);
+}
+
+export async function updateAuthSessionTokens(partial: Pick<AuthSession, "access_token" | "refresh_token" | "token_type">): Promise<void> {
+  const session = await getAuthSession();
+  if (!session) return;
+
+  await saveSession({
+    ...session,
+    ...partial,
+  });
 }

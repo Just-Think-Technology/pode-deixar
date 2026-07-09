@@ -10,7 +10,6 @@ import {
   Phone,
   Star,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -264,7 +263,7 @@ export default function ClientProviderProfilePage({
           className="w-full gap-2"
           size="lg"
           onClick={() =>
-            toast.info("Em breve você poderá solicitar orçamentos por aqui.")
+            router.push(`/client/providers/${profile.id}/quote`)
           }
         >
           <MessageSquare className="size-4" />
