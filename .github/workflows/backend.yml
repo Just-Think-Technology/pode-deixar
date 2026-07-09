@@ -1,13 +1,19 @@
-name: CI
+name: Backend
 
 on:
   push:
     branches: [develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
   pull_request:
     branches: [main, develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
 
 jobs:
-  backend-setup:
+  setup:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -41,8 +47,8 @@ jobs:
             backend/prisma/generated
           key: backend-${{ github.sha }}
 
-  backend-auth:
-    needs: backend-setup
+  auth:
+    needs: setup
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -106,8 +112,8 @@ jobs:
       - run: pnpm run --filter @pode-deixar/auth lint
       - run: pnpm run --filter @pode-deixar/auth test
 
-  backend-users:
-    needs: backend-setup
+  users:
+    needs: setup
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -171,8 +177,8 @@ jobs:
       - run: pnpm run --filter @pode-deixar/users lint
       - run: pnpm run --filter @pode-deixar/users test
 
-  backend-service-orders:
-    needs: backend-setup
+  service-orders:
+    needs: setup
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -235,29 +241,3 @@ jobs:
       - run: pnpm run --filter @pode-deixar/service-orders build
       - run: pnpm run --filter @pode-deixar/service-orders lint
       - run: pnpm run --filter @pode-deixar/service-orders test
-
-  frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-
-    steps:
-      - uses: actions/checkout@v5
-      - run: corepack enable && corepack prepare pnpm@latest --activate
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Lint and build in parallel
-        shell: bash
-        run: |
-          pnpm run lint &
-          pnpm run build &
-          FAIL=0
-          for job in $(jobs -p); do wait $job || FAIL=1; done
-          exit $FAIL
