@@ -354,7 +354,7 @@ Alterar senha do usuário autenticado. Requer **Bearer token**.
 
 ## Users Service
 
-**Porta:** `3002` | **Proxy Caddy:** `/api/profiles/*`, `/api/providers/*`, `/api/categories/*`
+**Porta:** `3002` | **Proxy Caddy:** `/api/profiles/*`, `/api/providers/*`, `/api/categories/*`, `/api/storage/*`
 
 ### Health
 
@@ -799,6 +799,92 @@ Desativar serviço (soft delete — marca `is_active = false`).
 | Serviço não pertence a este prestador | `400` |
 
 > O registro permanece no banco, apenas `is_active` é alterado para `false`.
+
+---
+
+### Imagens do Serviço
+
+**Prefixo:** `providers/me/services/:serviceId/images` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+
+#### `POST /providers/me/services/:serviceId/images`
+
+Fazer upload de imagem para um serviço. Multipart form-data, campo `file`.
+
+**Parâmetros de URL:**
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `serviceId` | `string` (UUID) | ID do serviço |
+
+**Request (multipart/form-data):**
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `file` | `binary` | sim | JPEG, PNG, WebP ou GIF, máx 5MB |
+
+**Resposta `201`:**
+```json
+{
+  "id": "uuid",
+  "provider_service_id": "uuid",
+  "url": "http://localhost:8080/api/storage/service-images/uuid-nome-do-arquivo",
+  "created_at": "2026-07-09T10:00:00.000Z"
+}
+```
+
+| Erro | Código |
+|------|--------|
+| Arquivo não enviado | `400` |
+| Formato inválido | `400` |
+| Serviço não encontrado | `404` |
+
+---
+
+#### `GET /providers/me/services/:serviceId/images`
+
+Listar imagens de um serviço.
+
+**Resposta `200`:**
+```json
+[
+  {
+    "id": "uuid",
+    "provider_service_id": "uuid",
+    "url": "http://localhost:8080/api/storage/service-images/uuid-nome-do-arquivo",
+    "created_at": "2026-07-09T10:00:00.000Z"
+  }
+]
+```
+
+| Erro | Código |
+|------|--------|
+| Serviço não encontrado | `404` |
+
+---
+
+#### `DELETE /providers/me/services/:serviceId/images/:imageId`
+
+Remover imagem de um serviço.
+
+**Parâmetros de URL:**
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `serviceId` | `string` (UUID) | ID do serviço |
+| `imageId` | `string` (UUID) | ID da imagem |
+
+**Resposta `200`:**
+```json
+{
+  "id": "uuid",
+  "provider_service_id": "uuid",
+  "url": "http://localhost:8080/api/storage/service-images/uuid-nome-do-arquivo",
+  "created_at": "2026-07-09T10:00:00.000Z"
+}
+```
+
+| Erro | Código |
+|------|--------|
+| Imagem ou serviço não encontrado | `404` |
+
+> As imagens são armazenadas no MinIO e servidas via proxy Caddy (`/api/storage/*` → `minio:9000`), sem passar pelo backend NestJS.
 
 ---
 
@@ -1430,9 +1516,19 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `fixed_price` | Decimal | Preço fixo |
 | `category_id` | UUID | FK → Category |
 | `category` | Category | Objeto da categoria (via include) |
+| `images` | `ServiceImage[]` | Imagens do serviço (via include) |
 | `is_active` | Boolean | Ativo? (soft delete) |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
+
+### `ServiceImage`
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `id` | UUID | Primary key |
+| `provider_service_id` | UUID | FK → ProviderService (cascade on delete) |
+| `url` | String | URL pública da imagem no MinIO |
+| `created_at` | DateTime | |
 
 ### `ServiceOrder`
 
@@ -1489,6 +1585,7 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `/api/categories/*` | `:3002` | Users |
 | `/api/services/*` | `:3003` | Service Orders |
 | `/api/proposals/*` | `:3003` | Service Orders |
+| `/api/storage/*` | `:9000` | MinIO (via proxy reverso) |
 | `/*` (demais) | `:3000` | Frontend |
 
 ### Auth Service (12 endpoints)
@@ -1508,7 +1605,7 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `POST` | `/auth/reset-password` | — | — | Redefinir senha |
 | `PUT` | `/auth/change-password` | Bearer | — | Alterar senha |
 
-### Users Service (20 endpoints)
+### Users Service (23 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1527,6 +1624,9 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `GET` | `/providers/me/services` | Bearer | PROVIDER | Meus serviços |
 | `PATCH` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Atualizar serviço |
 | `DELETE` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Desativar serviço |
+| `POST` | `/providers/me/services/:serviceId/images` | Bearer | PROVIDER | Upload imagem |
+| `GET` | `/providers/me/services/:serviceId/images` | Bearer | PROVIDER | Listar imagens |
+| `DELETE` | `/providers/me/services/:serviceId/images/:imageId` | Bearer | PROVIDER | Remover imagem |
 | `GET` | `/providers/:providerId/services` | — | — | Serviços públicos |
 | `GET` | `/categories` | — | — | Listar categorias |
 | `POST` | `/categories` | Bearer | ADMIN | Criar categoria |
@@ -1565,10 +1665,10 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **55** |
+| **Endpoints** | **58** |
 | **Serviços** | **3** |
-| **Controllers** | **27** |
+| **Controllers** | **28** |
 | **DTOs** | **23** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **32 endpoints** |
+| **Bearer + Roles** | **35 endpoints** |
 | **Públicos (sem auth)** | **21 endpoints** |
