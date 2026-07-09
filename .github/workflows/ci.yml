@@ -88,6 +88,20 @@ jobs:
   backend-auth:
     needs: backend-setup
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pode-deixar
+          POSTGRES_PASSWORD: pode-deixar
+          POSTGRES_DB: pode-deixar-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 3
     defaults:
       run:
         working-directory: backend
@@ -133,6 +147,20 @@ jobs:
   backend-users:
     needs: backend-setup
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pode-deixar
+          POSTGRES_PASSWORD: pode-deixar
+          POSTGRES_DB: pode-deixar-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 3
     defaults:
       run:
         working-directory: backend
@@ -178,6 +206,20 @@ jobs:
   backend-service-orders:
     needs: backend-setup
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pode-deixar
+          POSTGRES_PASSWORD: pode-deixar
+          POSTGRES_DB: pode-deixar-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 3
     defaults:
       run:
         working-directory: backend
