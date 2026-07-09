@@ -1,4 +1,5 @@
-import type { MockProfessional, ServiceCategory } from "@/mock/types";
+import type { ServiceCategory } from "@/mock/types";
+import type { ProviderSearchResult } from "@/lib/client/search/types";
 
 export const CLIENT_CATEGORY_ALL = "Todos";
 
@@ -11,95 +12,173 @@ export const CLIENT_SERVICE_CATEGORIES: ServiceCategory[] = [
   { id: "automotivo", label: "Automotivo" },
 ];
 
-export const CLIENT_MOCK_PROFESSIONALS: MockProfessional[] = [
+export const CLIENT_MOCK_PROFESSIONALS: ProviderSearchResult[] = [
   {
     id: "1",
-    providerName: "João Silva",
-    title: "Pintura residencial e comercial",
-    description:
-      "Profissional com mais de 10 anos de experiência em pintura de interiores e exteriores. Trabalho com tintas de alta qualidade e acabamento impecável.",
-    category: "Pintura",
-    location: "São Paulo, SP",
+    user: {
+      id: "u1",
+      complete_name: "João Silva",
+      email: "joao.silva@example.com",
+      phone: "+5511999999999",
+      postal_code: "01234-567",
+    },
+    avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80",
+    cover_image_url: "https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=800&q=80",
+    bio: "Profissional com mais de 10 anos de experiência em pintura de interiores e exteriores. Trabalho com tintas de alta qualidade e acabamento impecável.",
+    hourly_rate: 85.00,
+    skills: ["Pintura residencial", "Pintura comercial", "Acabamento"],
     rating: 4.8,
-    reviewCount: 124,
-    coverImageUrl:
-      "https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=800&q=80",
-    avatarImageUrl:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80",
+    total_reviews: 124,
+    is_available: true,
+    services: [
+      {
+        id: "s1",
+        title: "Pintura de paredes internas",
+        description: "Pintura completa de paredes com tinta acrílica de alta qualidade.",
+        fixed_price: 200.00,
+        category_id: "pintura",
+        category: { id: "pintura", name: "Pintura", slug: "pintura" },
+      },
+    ],
   },
   {
     id: "2",
-    providerName: "Maria Santos",
-    title: "Limpeza residencial e comercial",
-    description:
-      "Serviços de limpeza profunda, organização e higienização. Equipe treinada e produtos eco-friendly.",
-    category: "Limpeza",
-    location: "São Paulo, SP",
+    user: {
+      id: "u2",
+      complete_name: "Maria Santos",
+      email: "maria.santos@example.com",
+      phone: "+5511988888888",
+      postal_code: "04567-890",
+    },
+    avatar_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80",
+    cover_image_url: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80",
+    bio: "Serviços de limpeza profunda, organização e higienização. Equipe treinada e produtos eco-friendly.",
+    hourly_rate: 60.00,
+    skills: ["Limpeza residencial", "Limpeza comercial", "Higienização"],
     rating: 4.9,
-    reviewCount: 156,
-    coverImageUrl:
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80",
-    avatarImageUrl:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80",
+    total_reviews: 156,
+    is_available: true,
+    services: [
+      {
+        id: "s2",
+        title: "Limpeza completa residencial",
+        description: "Limpeza profunda de toda a residência com produtos eco-friendly.",
+        fixed_price: 150.00,
+        category_id: "limpeza",
+        category: { id: "limpeza", name: "Limpeza", slug: "limpeza" },
+      },
+    ],
   },
   {
     id: "3",
-    providerName: "Carlos Oliveira",
-    title: "Instalações elétricas",
-    description:
-      "Eletricista certificado para instalações, manutenção e reparos. Atendimento rápido e seguro.",
-    category: "Elétrica",
-    location: "São Paulo, SP",
+    user: {
+      id: "u3",
+      complete_name: "Carlos Oliveira",
+      email: "carlos.oliveira@example.com",
+      phone: "+5511977777777",
+      postal_code: "05678-901",
+    },
+    avatar_url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80",
+    cover_image_url: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=80",
+    bio: "Eletricista certificado para instalações, manutenção e reparos. Atendimento rápido e seguro.",
+    hourly_rate: 95.00,
+    skills: ["Instalações elétricas", "Manutenção", "Reparos"],
     rating: 4.7,
-    reviewCount: 89,
-    coverImageUrl:
-      "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=80",
-    avatarImageUrl:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80",
+    total_reviews: 89,
+    is_available: true,
+    services: [
+      {
+        id: "s3",
+        title: "Instalação de chuveiro elétrico",
+        description: "Instalação completa com garantia de 90 dias.",
+        fixed_price: 150.00,
+        category_id: "eletrica",
+        category: { id: "eletrica", name: "Elétrica", slug: "eletrica" },
+      },
+    ],
   },
   {
     id: "4",
-    providerName: "Ana Costa",
-    title: "Construção e reformas",
-    description:
-      "Reformas completas, construção civil e acabamentos. Orçamento detalhado e prazos cumpridos.",
-    category: "Construção",
-    location: "São Paulo, SP",
+    user: {
+      id: "u4",
+      complete_name: "Ana Costa",
+      email: "ana.costa@example.com",
+      phone: "+5511966666666",
+      postal_code: "06789-012",
+    },
+    avatar_url: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80",
+    cover_image_url: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80",
+    bio: "Reformas completas, construção civil e acabamentos. Orçamento detalhado e prazos cumpridos.",
+    hourly_rate: 110.00,
+    skills: ["Construção civil", "Reformas", "Acabamentos"],
     rating: 4.8,
-    reviewCount: 203,
-    coverImageUrl:
-      "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80",
-    avatarImageUrl:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80",
+    total_reviews: 203,
+    is_available: true,
+    services: [
+      {
+        id: "s4",
+        title: "Reforma de banheiro",
+        description: "Reforma completa incluindo troca de revestimentos, louças e metais.",
+        fixed_price: 3500.00,
+        category_id: "construcao",
+        category: { id: "construcao", name: "Construção", slug: "construcao" },
+      },
+    ],
   },
   {
     id: "5",
-    providerName: "Pedro Lima",
-    title: "Jardinagem e paisagismo",
-    description:
-      "Manutenção de jardins, poda, paisagismo e irrigação. Transformo seu espaço verde.",
-    category: "Jardinagem",
-    location: "São Paulo, SP",
+    user: {
+      id: "u5",
+      complete_name: "Pedro Lima",
+      email: "pedro.lima@example.com",
+      phone: "+5511955555555",
+      postal_code: "07890-123",
+    },
+    avatar_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80",
+    cover_image_url: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80",
+    bio: "Manutenção de jardins, poda, paisagismo e irrigação. Transformo seu espaço verde.",
+    hourly_rate: 70.00,
+    skills: ["Jardinagem", "Paisagismo", "Poda", "Irrigação"],
     rating: 4.6,
-    reviewCount: 67,
-    coverImageUrl:
-      "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80",
-    avatarImageUrl:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80",
+    total_reviews: 67,
+    is_available: false,
+    services: [
+      {
+        id: "s5",
+        title: "Manutenção de jardim mensal",
+        description: "Manutenção completa incluindo poda, limpeza e irrigação.",
+        fixed_price: 250.00,
+        category_id: "jardinagem",
+        category: { id: "jardinagem", name: "Jardinagem", slug: "jardinagem" },
+      },
+    ],
   },
   {
     id: "6",
-    providerName: "Roberto Silva",
-    title: "Serviços automotivos",
-    description:
-      "Mecânica, estética automotiva e revisões. Atendimento em domicílio ou oficina parceira.",
-    category: "Automotivo",
-    location: "São Paulo, SP",
+    user: {
+      id: "u6",
+      complete_name: "Roberto Silva",
+      email: "roberto.silva@example.com",
+      phone: "+5511944444444",
+      postal_code: "08901-234",
+    },
+    avatar_url: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&q=80",
+    cover_image_url: "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&q=80",
+    bio: "Mecânica, estética automotiva e revisões. Atendimento em domicílio ou oficina parceira.",
+    hourly_rate: 90.00,
+    skills: ["Mecânica", "Estética automotiva", "Revisões"],
     rating: 4.9,
-    reviewCount: 142,
-    coverImageUrl:
-      "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&q=80",
-    avatarImageUrl:
-      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&q=80",
+    total_reviews: 142,
+    is_available: true,
+    services: [
+      {
+        id: "s6",
+        title: "Revisão completa veicular",
+        description: "Revisão completa com checklist detalhado de todos os sistemas.",
+        fixed_price: 400.00,
+        category_id: "automotivo",
+        category: { id: "automotivo", name: "Automotivo", slug: "automotivo" },
+      },
+    ],
   },
 ];

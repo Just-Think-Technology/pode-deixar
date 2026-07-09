@@ -8,13 +8,17 @@ import PopularCategories from "@/components/client/search/popular-categories";
 import SearchHero from "@/components/client/search/search-hero";
 import SearchResults from "@/components/client/search/search-results";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import type { MockProfessional } from "@/mock/types";
+import type { ProviderSearchResult } from "@/lib/client/search/types";
 import { POPULAR_CATEGORIES } from "@/mock/client/search";
 
-export default function ClientSearchPage() {
+type ClientSearchPageProps = {
+  accessToken?: string;
+};
+
+export default function ClientSearchPage({ accessToken }: ClientSearchPageProps) {
   const [query, setQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
-  const [results, setResults] = useState<MockProfessional[]>([]);
+  const [results, setResults] = useState<ProviderSearchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -28,10 +32,13 @@ export default function ClientSearchPage() {
     setHasSearched(true);
 
     try {
-      const response = await searchProfessionals({
-        query: nextQuery.trim() || undefined,
-        categoryId: nextCategoryId,
-      });
+      const response = await searchProfessionals(
+        {
+          query: nextQuery.trim() || undefined,
+          categoryId: nextCategoryId,
+        },
+        accessToken,
+      );
 
       setResults(response.professionals);
       setTotal(response.total);
