@@ -82,7 +82,7 @@ export class ServiceImagesService {
     await this.getProviderService(providerProfileId, serviceId);
 
     const ext = extname(file.originalname);
-    const fileName = `${randomUUID()}${ext}`;
+    const fileName = `${providerProfileId}/${serviceId}/${randomUUID()}${ext}`;
 
     const url = await this.minio.uploadFile(
       fileName,
