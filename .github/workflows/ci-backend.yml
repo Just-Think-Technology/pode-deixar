@@ -16,7 +16,7 @@ env:
   NODE_VERSION: 22
 
 jobs:
-  test:
+  ci:
     strategy:
       fail-fast: false
       matrix:
