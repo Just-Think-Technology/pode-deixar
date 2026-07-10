@@ -97,15 +97,50 @@ export class UsersLoggerService {
     );
   }
 
+  logServiceImageUploaded(
+    providerProfileId: string,
+    serviceId: string,
+    imageId: string,
+    ip?: string,
+  ) {
+    this.logger.info(
+      "service_image_uploaded",
+      `Image uploaded for service ${serviceId}`,
+      { providerProfileId, serviceId, imageId, ip },
+    );
+  }
+
+  logServiceImageDeleted(
+    providerProfileId: string,
+    serviceId: string,
+    imageId: string,
+    ip?: string,
+  ) {
+    this.logger.info(
+      "service_image_deleted",
+      `Image deleted for service ${serviceId}`,
+      { providerProfileId, serviceId, imageId, ip },
+    );
+  }
+
   logCategoryCreated(name: string, ip?: string) {
-    this.logger.info("category_created", `Category created: ${name}`, { name, ip });
+    this.logger.info("category_created", `Category created: ${name}`, {
+      name,
+      ip,
+    });
   }
 
   logCategoryUpdated(name: string, ip?: string) {
-    this.logger.info("category_updated", `Category updated: ${name}`, { name, ip });
+    this.logger.info("category_updated", `Category updated: ${name}`, {
+      name,
+      ip,
+    });
   }
 
   logCategoryDeleted(name: string, ip?: string) {
-    this.logger.info("category_deleted", `Category deleted: ${name}`, { name, ip });
+    this.logger.info("category_deleted", `Category deleted: ${name}`, {
+      name,
+      ip,
+    });
   }
 }

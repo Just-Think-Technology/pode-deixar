@@ -4,6 +4,7 @@ import {
   ServiceOrdersController,
   MyServiceOrdersController,
   PublicServiceOrdersController,
+  ProviderReceivedOrdersController,
   ServiceOrderDetailController,
 } from "./service-orders.controller";
 import { PrismaModule } from "../prisma/prisma.module";
@@ -15,6 +16,7 @@ import { SharedModule } from "../shared/shared.module";
     ServiceOrdersController,
     MyServiceOrdersController,
     PublicServiceOrdersController,
+    ProviderReceivedOrdersController,
     ServiceOrderDetailController,
   ],
   providers: [ServiceOrdersService],

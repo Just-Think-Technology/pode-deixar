@@ -5,17 +5,21 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { MinioService } from "../storage/minio.service";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateClientProfileDto } from "./dto/create-client-profile.dto";
 import { UpdateClientProfileDto } from "./dto/update-client-profile.dto";
 import { CreateProviderProfileDto } from "./dto/create-provider-profile.dto";
 import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
 import { Prisma } from "@prisma/client";
+import { randomUUID } from "crypto";
+import { extname } from "path";
 
 @Injectable()
 export class ProfilesService {
   constructor(
     private prisma: PrismaService,
+    private minio: MinioService,
     private usersLogger: UsersLoggerService,
   ) {}
 
@@ -248,13 +252,22 @@ export class ProfilesService {
   async uploadAvatar(
     userId: string,
     role: string,
-    avatarUrl: string,
+    file: Express.Multer.File,
     ip?: string,
   ) {
     const user = await this.getUser(userId);
     if (!user) {
       throw new NotFoundException("Usuário não encontrado");
     }
+
+    const ext = extname(file.originalname);
+    const fileName = `${randomUUID()}${ext}`;
+    const url = await this.minio.uploadFile(
+      fileName,
+      file.buffer,
+      file.mimetype,
+      this.minio.avatarBucket,
+    );
 
     if (role === "PROVIDER") {
       const existingProfile = await this.prisma.providerProfile.findUnique({
@@ -264,9 +277,17 @@ export class ProfilesService {
         throw new NotFoundException("Perfil de prestador não encontrado");
       }
 
+      if (existingProfile.avatarUrl) {
+        const oldFileName = this.minio.extractFileName(
+          existingProfile.avatarUrl,
+          this.minio.avatarBucket,
+        );
+        await this.minio.deleteFile(oldFileName, this.minio.avatarBucket).catch(() => {});
+      }
+
       const profile = await this.prisma.providerProfile.update({
         where: { userId },
-        data: { avatarUrl },
+        data: { avatarUrl: url },
       });
       this.usersLogger.logAvatarUploaded(userId, role, ip);
       return this.formatProviderProfile(profile, user);
@@ -280,9 +301,17 @@ export class ProfilesService {
         throw new NotFoundException("Perfil de cliente não encontrado");
       }
 
+      if (existingProfile.avatarUrl) {
+        const oldFileName = this.minio.extractFileName(
+          existingProfile.avatarUrl,
+          this.minio.avatarBucket,
+        );
+        await this.minio.deleteFile(oldFileName, this.minio.avatarBucket).catch(() => {});
+      }
+
       const profile = await this.prisma.clientProfile.update({
         where: { userId },
-        data: { avatarUrl },
+        data: { avatarUrl: url },
       });
       this.usersLogger.logAvatarUploaded(userId, role, ip);
       return this.formatClientProfile(profile, user);

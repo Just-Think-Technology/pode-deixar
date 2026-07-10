@@ -21,14 +21,22 @@ export class SearchProvidersQueryDto {
   @MaxLength(100)
   q?: string;
 
-  @ApiPropertyOptional({ description: "Número da página", example: 1, default: 1 })
+  @ApiPropertyOptional({
+    description: "Número da página",
+    example: 1,
+    default: 1,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: "Itens por página", example: 10, default: 10 })
+  @ApiPropertyOptional({
+    description: "Itens por página",
+    example: 10,
+    default: 10,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

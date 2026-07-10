@@ -7,10 +7,13 @@ import { ValidationError } from "class-validator";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ServiceOrdersModule } from "./service-orders/service-orders.module";
 import { ProposalsModule } from "./proposals/proposals.module";
+import { CounterProposalsModule } from "./counter-proposals/counter-proposals.module";
 import { HealthModule } from "./health/health.module";
 import { SharedModule } from "./shared/shared.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
+import { AppController } from "./app.controller";
+import { AppService } from "./app.service";
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
@@ -18,10 +21,13 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     description: "Descrição",
     categoryId: "Categoria",
     price: "Preço",
+    providerServiceId: "Serviço do prestador",
     budgetMin: "Orçamento mínimo",
     budgetMax: "Orçamento máximo",
+    providerId: "Prestador",
     estimatedDuration: "Duração estimada",
     serviceOrderId: "ID do pedido",
+    proposalId: "ID da proposta",
   };
 
   const traducoes: Record<string, (r: string) => string> = {
@@ -69,10 +75,13 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     PrismaModule,
     ServiceOrdersModule,
     ProposalsModule,
+    CounterProposalsModule,
     HealthModule,
     SharedModule,
   ],
+  controllers: [AppController],
   providers: [
+    AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

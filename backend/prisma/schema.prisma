@@ -100,8 +100,19 @@ model ProviderService {
   isActive          Boolean          @default(true) @map("is_active")
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
+  images            ServiceImage[]
 
   @@map("provider_services")
+}
+
+model ServiceImage {
+  id                String          @id @default(uuid())
+  providerService   ProviderService @relation(fields: [providerServiceId], references: [id], onDelete: Cascade)
+  providerServiceId String          @map("provider_service_id")
+  url               String
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  @@map("service_images")
 }
 
 enum ServiceOrderStatus {
@@ -118,9 +129,18 @@ enum ProposalStatus {
   WITHDRAWN
 }
 
+enum CounterProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 model ServiceOrder {
   id          String             @id @default(uuid())
   clientId    String             @map("client_id")
+  providerId  String?            @map("provider_id")
+  providerServiceId String?      @map("provider_service_id")
+  agreedPrice Decimal?           @map("agreed_price") @db.Decimal(10, 2)
   title       String
   description String             @db.Text
   categoryId  String             @map("category_id")
@@ -146,9 +166,25 @@ model Proposal {
   status           ProposalStatus @default(PENDING)
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
-  serviceOrder     ServiceOrder   @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrder      ServiceOrder      @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  counterProposals  CounterProposal[]
 
   @@map("proposals")
+}
+
+model CounterProposal {
+  id               String                @id @default(uuid())
+  proposalId       String                @map("proposal_id")
+  senderId         String                @map("sender_id")
+  price            Decimal               @db.Decimal(10, 2)
+  description      String                @db.Text
+  estimatedDuration String?              @map("estimated_duration")
+  status           CounterProposalStatus @default(PENDING)
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+  proposal         Proposal              @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@map("counter_proposals")
 }
 
 model TokenBlacklist {

@@ -49,6 +49,11 @@
         reverse_proxy service-orders:3003
     }
 
+    # ─── Storage (MinIO) ────────────────────────────────────
+    handle /api/storage/* {
+        reverse_proxy minio:9000
+    }
+
     # ─── Frontend ────────────────────────────────────────────
     reverse_proxy frontend:3000
 }

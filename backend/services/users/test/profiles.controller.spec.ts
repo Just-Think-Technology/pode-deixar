@@ -132,23 +132,30 @@ describe("ProfilesController", () => {
   });
 
   describe("uploadAvatar", () => {
-    it("should call service.uploadAvatar with userId, role, avatarUrl and ip", async () => {
+    it("should call service.uploadAvatar with userId, role, file and ip", async () => {
       const req = mockRequest();
-      const avatarUrl = "http://new-avatar.com";
+      const file = {
+        fieldname: "file",
+        originalname: "avatar.png",
+        mimetype: "image/png",
+        buffer: Buffer.from("content"),
+      } as Express.Multer.File;
 
       mockProfilesService.uploadAvatar.mockResolvedValue({
-        avatar_url: avatarUrl,
+        avatar_url: "http://localhost:8080/api/storage/avatars/uuid.png",
       });
 
-      const result = await controller.uploadAvatar(req, avatarUrl);
+      const result = await controller.uploadAvatar(req, file);
 
       expect(mockProfilesService.uploadAvatar).toHaveBeenCalledWith(
         "user-1",
         "CLIENT",
-        avatarUrl,
+        file,
         "127.0.0.1",
       );
-      expect(result.avatar_url).toBe(avatarUrl);
+      expect(result.avatar_url).toBe(
+        "http://localhost:8080/api/storage/avatars/uuid.png",
+      );
     });
   });
 

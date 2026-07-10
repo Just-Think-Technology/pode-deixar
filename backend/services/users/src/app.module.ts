@@ -7,11 +7,15 @@ import { ValidationError } from "class-validator";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProfilesModule } from "./profiles/profiles.module";
 import { ProviderServicesModule } from "./provider-services/provider-services.module";
+import { ServiceImagesModule } from "./service-images/service-images.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { HealthModule } from "./health/health.module";
 import { SharedModule } from "./shared/shared.module";
+import { MinioModule } from "./storage/minio.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
+import { AppController } from "./app.controller";
+import { AppService } from "./app.service";
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
@@ -78,11 +82,15 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     PrismaModule,
     ProfilesModule,
     ProviderServicesModule,
+    ServiceImagesModule,
     CategoriesModule,
     HealthModule,
     SharedModule,
+    MinioModule,
   ],
+  controllers: [AppController],
   providers: [
+    AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

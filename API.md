@@ -354,7 +354,7 @@ Alterar senha do usuário autenticado. Requer **Bearer token**.
 
 ## Users Service
 
-**Porta:** `3002` | **Proxy Caddy:** `/api/profiles/*`, `/api/providers/*`, `/api/categories/*`
+**Porta:** `3002` | **Proxy Caddy:** `/api/profiles/*`, `/api/providers/*`, `/api/categories/*`, `/api/storage/*`
 
 ### Health
 
@@ -639,26 +639,24 @@ Atualizar perfil de prestador.
 
 #### `PATCH /profiles/avatar`
 
-Atualizar URL do avatar (para ambos os tipos de perfil).
+Fazer upload de avatar (para ambos os tipos de perfil). Multipart form-data, campo `file`.
 
 **Roles:** `CLIENT`, `PROVIDER`
 
-**Request body (raw):**
-```json
-{
-  "avatarUrl": "https://nova-url-do-avatar"
-}
-```
+**Request (multipart/form-data):**
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `file` | `binary` | sim | JPEG, PNG, WebP ou GIF, máx 2MB |
 
-| Campo | Tipo | Obrigatório |
-|-------|------|-------------|
-| `avatarUrl` | `string` | sim |
-
-**Resposta `200`:** Perfil atualizado (mesma estrutura de `GET /profiles/me`).
+**Resposta `200`:** Perfil atualizado (mesma estrutura de `GET /profiles/me`), com `avatar_url` apontando para o MinIO.
 
 | Erro | Código |
 |------|--------|
+| Arquivo não enviado | `400` |
+| Formato inválido | `400` |
 | Perfil não encontrado | `404` |
+
+> O avatar antigo é automaticamente removido do MinIO ao enviar um novo.
 
 ---
 
@@ -802,6 +800,92 @@ Desativar serviço (soft delete — marca `is_active = false`).
 
 ---
 
+### Imagens do Serviço
+
+**Prefixo:** `providers/me/services/:serviceId/images` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+
+#### `POST /providers/me/services/:serviceId/images`
+
+Fazer upload de imagem para um serviço. Multipart form-data, campo `file`.
+
+**Parâmetros de URL:**
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `serviceId` | `string` (UUID) | ID do serviço |
+
+**Request (multipart/form-data):**
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `file` | `binary` | sim | JPEG, PNG, WebP ou GIF, máx 5MB |
+
+**Resposta `201`:**
+```json
+{
+  "id": "uuid",
+  "provider_service_id": "uuid",
+  "url": "http://localhost:8080/api/storage/service-images/uuid-nome-do-arquivo",
+  "created_at": "2026-07-09T10:00:00.000Z"
+}
+```
+
+| Erro | Código |
+|------|--------|
+| Arquivo não enviado | `400` |
+| Formato inválido | `400` |
+| Serviço não encontrado | `404` |
+
+---
+
+#### `GET /providers/me/services/:serviceId/images`
+
+Listar imagens de um serviço.
+
+**Resposta `200`:**
+```json
+[
+  {
+    "id": "uuid",
+    "provider_service_id": "uuid",
+    "url": "http://localhost:8080/api/storage/service-images/uuid-nome-do-arquivo",
+    "created_at": "2026-07-09T10:00:00.000Z"
+  }
+]
+```
+
+| Erro | Código |
+|------|--------|
+| Serviço não encontrado | `404` |
+
+---
+
+#### `DELETE /providers/me/services/:serviceId/images/:imageId`
+
+Remover imagem de um serviço.
+
+**Parâmetros de URL:**
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `serviceId` | `string` (UUID) | ID do serviço |
+| `imageId` | `string` (UUID) | ID da imagem |
+
+**Resposta `200`:**
+```json
+{
+  "id": "uuid",
+  "provider_service_id": "uuid",
+  "url": "http://localhost:8080/api/storage/service-images/uuid-nome-do-arquivo",
+  "created_at": "2026-07-09T10:00:00.000Z"
+}
+```
+
+| Erro | Código |
+|------|--------|
+| Imagem ou serviço não encontrado | `404` |
+
+> As imagens são armazenadas no MinIO e servidas via proxy Caddy (`/api/storage/*` → `minio:9000`), sem passar pelo backend NestJS.
+
+---
+
 ### Busca de Prestadores
 
 **Prefixo:** `providers/search` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
@@ -911,7 +995,7 @@ Idênticos ao [Auth Service Health](#health).
 
 #### `POST /services/me`
 
-Criar novo pedido de serviço.
+Criar novo pedido de serviço. Se `providerId` for informado, o pedido é direcionado a um prestador específico (solicitação direta de orçamento).
 
 **Request body (`CreateServiceOrderDto`):**
 ```json
@@ -919,6 +1003,7 @@ Criar novo pedido de serviço.
   "title": "Preciso de um encanador para consertar vazamento",
   "description": "O chuveiro está vazando e precisa de reparo urgente",
   "categoryId": "uuid-da-categoria",
+  "providerId": "uuid-do-prestador",
   "budgetMin": 50.00,
   "budgetMax": 200.00
 }
@@ -929,6 +1014,7 @@ Criar novo pedido de serviço.
 | `title` | `string` | sim | Máx. 200 caracteres |
 | `description` | `string` | sim | Máx. 2000 caracteres |
 | `categoryId` | `string` (UUID) | sim | ID da categoria |
+| `providerId` | `string` (UUID) | não | ID do prestador (solicitação direta) |
 | `budgetMin` | `number` | não | Orçamento mínimo (≥ 0) |
 | `budgetMax` | `number` | não | Orçamento máximo (> 0) |
 
@@ -939,6 +1025,7 @@ Criar novo pedido de serviço.
 {
   "id": "uuid",
   "client_id": "uuid",
+  "provider_id": "uuid",
   "title": "Preciso de um encanador para consertar vazamento",
   "description": "O chuveiro está vazando e precisa de reparo urgente",
   "category_id": "uuid",
@@ -962,6 +1049,37 @@ Listar todos os pedidos do cliente autenticado.
 
 ---
 
+#### `POST /services/me/hire`
+
+Contratar serviço com valor fixo diretamente (sem proposta). Cria pedido com status `IN_PROGRESS`.
+
+**Request body (`HireProviderServiceDto`):**
+```json
+{
+  "providerServiceId": "uuid-do-servico"
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `providerServiceId` | `string` (UUID) | sim | ID do serviço do prestador |
+
+**Resposta `201`:** Mesma estrutura do `POST /services/me`, com acréscimos:
+
+| Campo | Descrição |
+|-------|-----------|
+| `provider_service_id` | ID do serviço contratado |
+| `agreed_price` | Valor fixo acordado (copiado do serviço) |
+| `status` | `IN_PROGRESS` (já inicia em andamento) |
+
+| Erro | Código |
+|------|--------|
+| Serviço do prestador não encontrado | `404` |
+| Serviço não está disponível | `400` |
+| Não é possível contratar próprio serviço | `400` |
+
+---
+
 ### Pedidos de Serviço (Dono)
 
 **Prefixo:** `services/me/:orderId` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
@@ -977,9 +1095,10 @@ Obter detalhe de um pedido (apenas dono).
 
 **Resposta `200`:**
 ```json
-{
+ {
   "id": "uuid",
   "client_id": "uuid",
+  "provider_id": null,
   "title": "Preciso de um encanador para consertar vazamento",
   "description": "O chuveiro está vazando e precisa de reparo urgente",
   "category_id": "uuid",
@@ -1036,6 +1155,22 @@ Cancelar pedido (apenas dono). Altera status para `CANCELLED`.
 |------|--------|
 | Pedido não encontrado | `404` |
 | Pedido não pertence ao cliente | `400` |
+
+---
+
+### Pedidos de Serviço (Prestador)
+
+**Prefixo:** `services/requests/received` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+
+#### `GET /services/requests/received`
+
+Listar pedidos direcionados ao prestador logado (solicitações recebidas).
+
+**Resposta `200`:** Array da mesma estrutura do `POST /services/me`.
+
+| Erro | Código |
+|------|--------|
+| Token inválido | `401` |
 
 ---
 
@@ -1180,6 +1315,106 @@ Rejeitar proposta (apenas dono do pedido).
 
 ---
 
+### Contrapropostas
+
+**Prefixo:** `counter-proposals` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
+
+#### `POST /counter-proposals`
+
+Criar contraproposta para uma proposta pendente. Pode ser enviada pelo cliente (dono do pedido) ou pelo prestador (dono da proposta).
+
+**Request body (`CreateCounterProposalDto`):**
+```json
+{
+  "proposalId": "uuid-da-proposta",
+  "price": 180.00,
+  "description": "Posso fazer por este valor com prazo maior",
+  "estimatedDuration": "3 dias"
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `proposalId` | `string` (UUID) | sim | ID da proposta original |
+| `price` | `number` | sim | Valor contraproposto |
+| `description` | `string` | sim | Máx. 2000 caracteres |
+| `estimatedDuration` | `string` | não | Máx. 100 caracteres |
+
+**Resposta `201`:**
+```json
+{
+  "id": "uuid",
+  "proposal_id": "uuid",
+  "sender_id": "uuid",
+  "price": 180.00,
+  "description": "Posso fazer por este valor com prazo maior",
+  "estimated_duration": "3 dias",
+  "status": "PENDING",
+  "created_at": "2026-07-05T10:00:00.000Z",
+  "updated_at": "2026-07-05T10:00:00.000Z"
+}
+```
+
+| Erro | Código |
+|------|--------|
+| Proposta não encontrada | `404` |
+| Proposta não está pendente | `400` |
+| Sem permissão para contrapor | `400` |
+| Já possui contraproposta pendente | `400` |
+
+---
+
+#### `GET /counter-proposals/me`
+
+Listar minhas contrapropostas enviadas.
+
+**Resposta `200`:** Array da mesma estrutura do `POST` acima, com campo adicional `proposal`.
+
+---
+
+#### `GET /counter-proposals/proposal/:proposalId`
+
+Listar contrapropostas de uma proposta específica.
+
+| Erro | Código |
+|------|--------|
+| Proposta não encontrada | `404` |
+
+---
+
+### Contrapropostas (Aceitar/Rejeitar)
+
+**Prefixo:** `counter-proposals/:counterProposalId` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
+
+#### `POST /counter-proposals/:counterProposalId/accept`
+
+Aceitar contraproposta. Finaliza o acordo: proposta vira `ACCEPTED`, pedido vira `IN_PROGRESS`, demais propostas/contrapropostas pendentes são rejeitadas.
+
+**Resposta `200`:** Contraproposta com status `ACCEPTED`.
+
+| Erro | Código |
+|------|--------|
+| Contraproposta não encontrada | `404` |
+| Contraproposta não está pendente | `400` |
+| Não pode aceitar a própria contraproposta | `400` |
+| Pedido não está aberto | `400` |
+
+---
+
+#### `POST /counter-proposals/:counterProposalId/reject`
+
+Rejeitar contraproposta. A proposta original permanece pendente.
+
+**Resposta `200`:** Contraproposta com status `REJECTED`.
+
+| Erro | Código |
+|------|--------|
+| Contraproposta não encontrada | `404` |
+| Contraproposta não está pendente | `400` |
+| Não pode rejeitar a própria contraproposta | `400` |
+
+---
+
 ## Enums
 
 ### `Role`
@@ -1279,9 +1514,19 @@ Rejeitar proposta (apenas dono do pedido).
 | `fixed_price` | Decimal | Preço fixo |
 | `category_id` | UUID | FK → Category |
 | `category` | Category | Objeto da categoria (via include) |
+| `images` | `ServiceImage[]` | Imagens do serviço (via include) |
 | `is_active` | Boolean | Ativo? (soft delete) |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
+
+### `ServiceImage`
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `id` | UUID | Primary key |
+| `provider_service_id` | UUID | FK → ProviderService (cascade on delete) |
+| `url` | String | URL pública da imagem no MinIO |
+| `created_at` | DateTime | |
 
 ### `ServiceOrder`
 
@@ -1289,6 +1534,9 @@ Rejeitar proposta (apenas dono do pedido).
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `client_id` | UUID | FK → User |
+| `provider_id` | UUID? | FK → User (prestador alvo, solicitação direta) |
+| `provider_service_id` | UUID? | FK → ProviderService (contratação direta) |
+| `agreed_price` | Decimal? | Valor fixo acordado (contratação direta) |
 | `title` | String | Título |
 | `description` | Text | Descrição |
 | `category_id` | UUID | FK → Category |
@@ -1335,6 +1583,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `/api/categories/*` | `:3002` | Users |
 | `/api/services/*` | `:3003` | Service Orders |
 | `/api/proposals/*` | `:3003` | Service Orders |
+| `/api/storage/*` | `:9000` | MinIO (via proxy reverso) |
 | `/*` (demais) | `:3000` | Frontend |
 
 ### Auth Service (12 endpoints)
@@ -1354,7 +1603,7 @@ Rejeitar proposta (apenas dono do pedido).
 | `POST` | `/auth/reset-password` | — | — | Redefinir senha |
 | `PUT` | `/auth/change-password` | Bearer | — | Alterar senha |
 
-### Users Service (20 endpoints)
+### Users Service (23 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1373,13 +1622,16 @@ Rejeitar proposta (apenas dono do pedido).
 | `GET` | `/providers/me/services` | Bearer | PROVIDER | Meus serviços |
 | `PATCH` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Atualizar serviço |
 | `DELETE` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Desativar serviço |
+| `POST` | `/providers/me/services/:serviceId/images` | Bearer | PROVIDER | Upload imagem |
+| `GET` | `/providers/me/services/:serviceId/images` | Bearer | PROVIDER | Listar imagens |
+| `DELETE` | `/providers/me/services/:serviceId/images/:imageId` | Bearer | PROVIDER | Remover imagem |
 | `GET` | `/providers/:providerId/services` | — | — | Serviços públicos |
 | `GET` | `/categories` | — | — | Listar categorias |
 | `POST` | `/categories` | Bearer | ADMIN | Criar categoria |
 | `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
 | `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
 
-### Service Orders Service (16 endpoints)
+### Service Orders Service (23 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1387,27 +1639,34 @@ Rejeitar proposta (apenas dono do pedido).
 | `GET` | `/health/ready` | — | — | Prontidão |
 | `GET` | `/health/live` | — | — | Atividade |
 | `POST` | `/services/me` | Bearer | CLIENT | Criar pedido |
+| `POST` | `/services/me/hire` | Bearer | CLIENT | Contratar serviço fixo |
 | `GET` | `/services/me` | Bearer | CLIENT | Meus pedidos |
 | `GET` | `/services/me/:orderId` | Bearer | CLIENT | Detalhe do pedido (dono) |
 | `PATCH` | `/services/me/:orderId` | Bearer | CLIENT | Atualizar pedido |
 | `DELETE` | `/services/me/:orderId` | Bearer | CLIENT | Cancelar pedido |
 | `GET` | `/services` | — | — | Pedidos abertos |
 | `GET` | `/services/:orderId` | — | — | Detalhe do pedido (público) |
+| `GET` | `/services/requests/received` | Bearer | PROVIDER | Solicitações recebidas |
 | `POST` | `/proposals` | Bearer | PROVIDER | Criar proposta |
 | `GET` | `/proposals/me` | Bearer | PROVIDER | Minhas propostas |
 | `PATCH` | `/proposals/:proposalId` | Bearer | PROVIDER | Atualizar proposta |
 | `DELETE` | `/proposals/:proposalId` | Bearer | PROVIDER | Retirar proposta |
 | `POST` | `/proposals/:proposalId/accept` | Bearer | CLIENT | Aceitar proposta |
 | `POST` | `/proposals/:proposalId/reject` | Bearer | CLIENT | Rejeitar proposta |
+| `POST` | `/counter-proposals` | Bearer | CLIENT, PROVIDER | Criar contraproposta |
+| `GET` | `/counter-proposals/me` | Bearer | CLIENT, PROVIDER | Minhas contrapropostas |
+| `GET` | `/counter-proposals/proposal/:proposalId` | Bearer | CLIENT, PROVIDER | Contrapropostas da proposta |
+| `POST` | `/counter-proposals/:counterProposalId/accept` | Bearer | CLIENT, PROVIDER | Aceitar contraproposta |
+| `POST` | `/counter-proposals/:counterProposalId/reject` | Bearer | CLIENT, PROVIDER | Rejeitar contraproposta |
 
 ### Totais
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **48** |
+| **Endpoints** | **58** |
 | **Serviços** | **3** |
-| **Controllers** | **24** |
-| **DTOs** | **21** |
+| **Controllers** | **28** |
+| **DTOs** | **23** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **25 endpoints** |
+| **Bearer + Roles** | **35 endpoints** |
 | **Públicos (sem auth)** | **21 endpoints** |

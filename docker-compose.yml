@@ -1,16 +1,6 @@
-# Pode Deixar - Docker Compose
-# Inicializa toda a plataforma com um comando:
-#   docker compose up -d
-#
-# Para rebuildar as imagens:
-#   docker compose build
-#
-# ATENÇÃO: Remove o serviço postgres porque usamos Neon DB externo
-# As credenciais do banco ficam em backend/.env.staging
-
 services:
 
-  # ─── Auth Service ────────────────────────────────────────
+  # -- Auth Service --
   auth:
     build:
       context: ./backend
@@ -25,7 +15,7 @@ services:
     depends_on:
       - mailpit
 
-  # ─── Users Service ───────────────────────────────────────
+  # -- Users Service --
   users:
     build:
       context: ./backend
@@ -39,7 +29,7 @@ services:
       auth:
         condition: service_started
 
-  # ─── Service Orders Service ──────────────────────────────
+  # -- Service Orders Service --
   service-orders:
     build:
       context: ./backend
@@ -53,7 +43,7 @@ services:
       auth:
         condition: service_started
 
-  # ─── Frontend (Next.js) ──────────────────────────────────
+  # -- Frontend (Next.js) --
   frontend:
     build:
       context: ./frontend
@@ -65,14 +55,50 @@ services:
       - auth
       - users
 
-  # ─── Mailpit (SMTP Testing) ─────────────────────────────
+  # -- MinIO --
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    env_file: ./backend/.env.staging
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -- MinIO Client (Bucket Setup) --
+  minio-setup:
+    image: minio/mc:latest
+    env_file: ./backend/.env.staging
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:$${MINIO_PORT:-9000} $${MINIO_ACCESS_KEY:-minioadmin} $${MINIO_SECRET_KEY:-minioadmin} &&
+      mc mb local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} --ignore-existing &&
+      mc anonymous set public local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} &&
+      mc mb local/$${MINIO_AVATARS_BUCKET:-avatars} --ignore-existing &&
+      mc anonymous set public local/$${MINIO_AVATARS_BUCKET:-avatars} &&
+      echo 'Buckets created successfully'
+      "
+
+  # -- Mailpit (SMTP Testing) --
   mailpit:
     image: axllent/mailpit:latest
     ports:
       - "1025:1025"
       - "8025:8025"
 
-  # ─── Proxy Reverso (Caddy) ───────────────────────────────
+  # -- Proxy Reverso (Caddy) --
   caddy:
     image: caddy:2-alpine
     ports:
@@ -84,3 +110,6 @@ services:
       - users
       - service-orders
       - frontend
+
+volumes:
+  minio_data:

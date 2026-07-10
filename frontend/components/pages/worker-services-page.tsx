@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Briefcase,
   Calendar,
@@ -35,11 +36,12 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import ServiceImageGallery from "@/components/shared/service-image-gallery";
 import {
   deleteServiceAction,
   updateServiceAction,
 } from "@/lib/auth/actions";
-import type { ProviderService } from "@/lib/auth/types";
+import type { ProviderService, ServiceImage } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
 
 type WorkerServicesPageProps = {
@@ -93,6 +95,7 @@ export default function WorkerServicesPage({
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [galleryImages, setGalleryImages] = useState<ServiceImage[]>([]);
 
   function openEdit(service: ProviderService) {
     setEditingService(service);
@@ -230,15 +233,27 @@ export default function WorkerServicesPage({
                 key={service.id}
                 className="overflow-hidden border-border/80 bg-card py-0 shadow-sm transition-shadow hover:shadow-md"
               >
-                <div
-                  className={cn(
-                    "flex h-36 items-center justify-center bg-gradient-to-br",
-                    gradient,
-                  )}
-                  aria-hidden
-                >
-                  <span className="text-5xl drop-shadow-sm">{icon}</span>
-                </div>
+                {service.images && service.images.length > 0 ? (
+                  <div className="relative h-36 overflow-hidden">
+                    <Image
+                      src={service.images[0].url}
+                      alt={service.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={cn(
+                      "flex h-36 items-center justify-center bg-gradient-to-br",
+                      gradient,
+                    )}
+                    aria-hidden
+                  >
+                    <span className="text-5xl drop-shadow-sm">{icon}</span>
+                  </div>
+                )}
 
                 <CardContent className="space-y-3 px-4 pb-0 pt-4">
                   <div className="flex items-start justify-between gap-2">
@@ -278,7 +293,10 @@ export default function WorkerServicesPage({
                   <Dialog
                     open={detailsOpen && selectedService?.id === service.id}
                     onOpenChange={(open) => {
-                      if (open) setSelectedService(service);
+                      if (open) {
+                        setSelectedService(service);
+                        setGalleryImages(service.images ?? []);
+                      }
                       setDetailsOpen(open);
                     }}
                   >
@@ -350,6 +368,21 @@ export default function WorkerServicesPage({
                               </div>
                             </div>
                           </div>
+
+                          <ServiceImageGallery
+                            serviceId={selectedService.id}
+                            images={galleryImages}
+                            onImagesChange={(imgs) => {
+                              setGalleryImages(imgs);
+                              setServices((prev) =>
+                                prev.map((s) =>
+                                  s.id === selectedService.id
+                                    ? { ...s, images: imgs }
+                                    : s,
+                                ),
+                              );
+                            }}
+                          />
 
                           <DialogFooter showCloseButton>
                             <Button
