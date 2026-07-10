@@ -56,6 +56,21 @@ export function mapApiErrorToFieldErrors(
     if (msg.includes("portfolio")) {
       fieldErrors.portfolio = error.message;
     }
+    if (msg.includes("title")) {
+      fieldErrors.title = error.message;
+    }
+    if (msg.includes("description")) {
+      fieldErrors.description = error.message;
+    }
+    if (msg.includes("categoryid") || msg.includes("category_id")) {
+      fieldErrors.categoryId = error.message;
+    }
+    if (msg.includes("budgetmin") || msg.includes("budget_min")) {
+      fieldErrors.budgetMin = error.message;
+    }
+    if (msg.includes("budgetmax") || msg.includes("budget_max")) {
+      fieldErrors.budgetMax = error.message;
+    }
     if (msg.includes("isavailable") || msg.includes("is_available") || msg.includes("available")) {
       fieldErrors.isAvailable = error.message;
     }

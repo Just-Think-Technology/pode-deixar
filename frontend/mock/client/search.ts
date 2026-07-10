@@ -1,12 +1,3 @@
-import {
-  Briefcase,
-  Car,
-  Hammer,
-  Home,
-  Paintbrush,
-  Wrench,
-} from "lucide-react";
-
 import type {
   PopularCategory,
   SearchProfessionalsPayload,
@@ -18,42 +9,42 @@ export const POPULAR_CATEGORIES: PopularCategory[] = [
   {
     id: "limpeza",
     label: "Limpeza",
-    icon: Home,
+    iconKey: "home",
     iconBgClassName: "bg-blue-100",
     iconClassName: "text-blue-600",
   },
   {
     id: "pintura",
     label: "Pintura",
-    icon: Paintbrush,
+    iconKey: "paintbrush",
     iconBgClassName: "bg-purple-100",
     iconClassName: "text-purple-600",
   },
   {
     id: "eletrica",
     label: "Elétrica",
-    icon: Wrench,
+    iconKey: "wrench",
     iconBgClassName: "bg-amber-100",
     iconClassName: "text-amber-600",
   },
   {
     id: "construcao",
     label: "Construção",
-    icon: Hammer,
+    iconKey: "hammer",
     iconBgClassName: "bg-green-100",
     iconClassName: "text-green-600",
   },
   {
     id: "automotivo",
     label: "Automotivo",
-    icon: Car,
+    iconKey: "car",
     iconBgClassName: "bg-red-100",
     iconClassName: "text-red-600",
   },
   {
     id: "outros",
     label: "Outros",
-    icon: Briefcase,
+    iconKey: "briefcase",
     iconBgClassName: "bg-gray-100",
     iconClassName: "text-gray-600",
   },
