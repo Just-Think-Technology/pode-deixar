@@ -1,16 +1,16 @@
-name: Backend
+name: ci-backend
 
 on:
   push:
     branches: [develop]
     paths:
       - "backend/**"
-      - ".github/workflows/backend.yml"
+      - ".github/workflows/ci-backend.yml"
   pull_request:
     branches: [main, develop]
     paths:
       - "backend/**"
-      - ".github/workflows/backend.yml"
+      - ".github/workflows/ci-backend.yml"
 
 env:
   NODE_VERSION: 22
