@@ -33,7 +33,7 @@
     }
 
     # ─── Users Service (Categories) ─────────────────────────
-    handle /api/categories/* {
+    handle /api/categories* {
         uri strip_prefix /api
         reverse_proxy users:3002
     }

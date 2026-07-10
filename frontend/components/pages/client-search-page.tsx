@@ -3,19 +3,28 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { searchProfessionals } from "@/api/client/search";
 import PopularCategories from "@/components/client/search/popular-categories";
 import SearchHero from "@/components/client/search/search-hero";
 import SearchResults from "@/components/client/search/search-results";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import type { ProviderSearchResult } from "@/lib/client/search/types";
-import { POPULAR_CATEGORIES } from "@/mock/client/search";
+import { searchProfessionalsAction } from "@/lib/client/search/actions";
+import type {
+  PopularCategory,
+  ProviderSearchResult,
+} from "@/lib/client/search/types";
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type ClientSearchPageProps = {
-  accessToken?: string;
+  categories: PopularCategory[];
+  categoriesError?: string;
 };
 
-export default function ClientSearchPage({ accessToken }: ClientSearchPageProps) {
+export default function ClientSearchPage({
+  categories,
+  categoriesError,
+}: ClientSearchPageProps) {
   const [query, setQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
   const [results, setResults] = useState<ProviderSearchResult[]>([]);
@@ -25,20 +34,19 @@ export default function ClientSearchPage({ accessToken }: ClientSearchPageProps)
 
   async function handleSearch(options?: { query?: string; categoryId?: string }) {
     const nextQuery = options?.query ?? query;
-    const nextCategoryId =
+    const rawCategoryId =
       options && "categoryId" in options ? options.categoryId : selectedCategoryId;
+    const nextCategoryId =
+      rawCategoryId && UUID_REGEX.test(rawCategoryId) ? rawCategoryId : undefined;
 
     setIsLoading(true);
     setHasSearched(true);
 
     try {
-      const response = await searchProfessionals(
-        {
-          query: nextQuery.trim() || undefined,
-          categoryId: nextCategoryId,
-        },
-        accessToken,
-      );
+      const response = await searchProfessionalsAction({
+        query: nextQuery.trim() || undefined,
+        categoryId: nextCategoryId,
+      });
 
       setResults(response.professionals);
       setTotal(response.total);
@@ -59,7 +67,7 @@ export default function ClientSearchPage({ accessToken }: ClientSearchPageProps)
   }
 
   function handleCategorySelect(categoryId: string) {
-    const category = POPULAR_CATEGORIES.find((item) => item.id === categoryId);
+    const category = categories.find((item) => item.id === categoryId);
     if (!category) return;
 
     setSelectedCategoryId(categoryId);
@@ -81,10 +89,14 @@ export default function ClientSearchPage({ accessToken }: ClientSearchPageProps)
       />
 
       <PopularCategories
-        categories={POPULAR_CATEGORIES}
+        categories={categories}
         selectedCategoryId={selectedCategoryId}
         onCategorySelect={handleCategorySelect}
       />
+
+      {categoriesError ? (
+        <p className="text-sm text-destructive">{categoriesError}</p>
+      ) : null}
 
       <SearchResults
         professionals={results}

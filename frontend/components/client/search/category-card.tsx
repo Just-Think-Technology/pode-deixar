@@ -1,5 +1,6 @@
 "use client";
 
+import { CategoryIcon } from "@/lib/client/search/category-icons";
 import type { PopularCategory } from "@/lib/client/search/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -15,8 +16,6 @@ export default function CategoryCard({
   isSelected = false,
   onSelect,
 }: CategoryCardProps) {
-  const Icon = category.icon;
-
   return (
     <button
       type="button"
@@ -36,7 +35,10 @@ export default function CategoryCard({
               category.iconBgClassName,
             )}
           >
-            <Icon className={cn("size-6", category.iconClassName)} />
+            <CategoryIcon
+              iconKey={category.iconKey}
+              className={cn("size-6", category.iconClassName)}
+            />
           </div>
           <span className="text-sm font-medium text-foreground">{category.label}</span>
         </CardContent>

@@ -47,7 +47,11 @@ export async function apiFetch<T>(
           ? data.message
           : Array.isArray(data?.message)
             ? data.message.join(", ")
-            : "Erro na requisição";
+            : res.status === 401
+              ? "Sessão expirada. Faça login novamente."
+              : res.status === 403
+                ? "Você não tem permissão para realizar esta ação."
+                : "Erro na requisição";
       throw new ApiError(message, res.status, data);
     }
 
