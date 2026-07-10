@@ -12,84 +12,53 @@ on:
       - "backend/**"
       - ".github/workflows/backend.yml"
 
+env:
+  NODE_VERSION: 22
+
 jobs:
-  setup:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, users, service-orders]
+
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pode-deixar
+          POSTGRES_PASSWORD: pode-deixar
+          POSTGRES_DB: pode-deixar-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 3
 
     steps:
       - uses: actions/checkout@v5
       - run: corepack enable && corepack prepare pnpm@latest --activate
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - run: pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/email build
 
-      - name: Generate Prisma client
-        run: pnpm exec prisma generate --schema=prisma/schema.prisma
-
-      - name: Build shared packages
-        run: pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/email build
-
-      - name: Cache backend dependencies
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            backend/node_modules
-            backend/packages/logger/dist
-            backend/packages/email/dist
-            backend/services/*/node_modules
-            backend/prisma/generated
-          key: backend-${{ github.sha }}
-
-  auth:
-    needs: setup
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: pode-deixar
-          POSTGRES_PASSWORD: pode-deixar
-          POSTGRES_DB: pode-deixar-test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 3s
-          --health-timeout 3s
-          --health-retries 3
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v5
-      - run: corepack enable && corepack prepare pnpm@latest --activate
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            backend/node_modules
-            backend/packages/logger/dist
-            backend/packages/email/dist
-            backend/services/*/node_modules
-            backend/prisma/generated
-          key: backend-${{ github.sha }}
       - name: Create .env.staging for CI
         shell: bash
         run: |
           cat > .env.staging << 'EOF'
           NODE_ENV=test
-          AUTH_PORT=3001
-          USERS_PORT=3002
-          SERVICE_ORDERS_PORT=3003
           JWT_ACCESS_SECRET=ci-test-access-secret
           JWT_REFRESH_SECRET=ci-test-refresh-secret
           SMTP_HOST=localhost
@@ -102,142 +71,14 @@ jobs:
           DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
           DIRECT_DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
           EOF
-      - name: Run Prisma migrations
-        shell: bash
-        run: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
-        env:
-          DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-      - run: pnpm run --filter @pode-deixar/auth build
-      - run: pnpm run --filter @pode-deixar/auth lint
-      - run: pnpm run --filter @pode-deixar/auth test
 
-  users:
-    needs: setup
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: pode-deixar
-          POSTGRES_PASSWORD: pode-deixar
-          POSTGRES_DB: pode-deixar-test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 3s
-          --health-timeout 3s
-          --health-retries 3
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v5
-      - run: corepack enable && corepack prepare pnpm@latest --activate
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            backend/node_modules
-            backend/packages/logger/dist
-            backend/packages/email/dist
-            backend/services/*/node_modules
-            backend/prisma/generated
-          key: backend-${{ github.sha }}
-      - name: Create .env.staging for CI
-        shell: bash
-        run: |
-          cat > .env.staging << 'EOF'
-          NODE_ENV=test
-          AUTH_PORT=3001
-          USERS_PORT=3002
-          SERVICE_ORDERS_PORT=3003
-          JWT_ACCESS_SECRET=ci-test-access-secret
-          JWT_REFRESH_SECRET=ci-test-refresh-secret
-          SMTP_HOST=localhost
-          SMTP_PORT=1025
-          SMTP_USER=
-          SMTP_PASS=
-          SMTP_FROM=noreply@pode-deixar.com
-          MAX_LOGIN_ATTEMPTS=5
-          LOCKOUT_DURATION_MINUTES=15
-          DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          DIRECT_DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          EOF
       - name: Run Prisma migrations
         shell: bash
         run: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
         env:
           DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
           DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-      - run: pnpm run --filter @pode-deixar/users build
-      - run: pnpm run --filter @pode-deixar/users lint
-      - run: pnpm run --filter @pode-deixar/users test
 
-  service-orders:
-    needs: setup
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: pode-deixar
-          POSTGRES_PASSWORD: pode-deixar
-          POSTGRES_DB: pode-deixar-test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 3s
-          --health-timeout 3s
-          --health-retries 3
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v5
-      - run: corepack enable && corepack prepare pnpm@latest --activate
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            backend/node_modules
-            backend/packages/logger/dist
-            backend/packages/email/dist
-            backend/services/*/node_modules
-            backend/prisma/generated
-          key: backend-${{ github.sha }}
-      - name: Create .env.staging for CI
-        shell: bash
-        run: |
-          cat > .env.staging << 'EOF'
-          NODE_ENV=test
-          AUTH_PORT=3001
-          USERS_PORT=3002
-          SERVICE_ORDERS_PORT=3003
-          JWT_ACCESS_SECRET=ci-test-access-secret
-          JWT_REFRESH_SECRET=ci-test-refresh-secret
-          SMTP_HOST=localhost
-          SMTP_PORT=1025
-          SMTP_USER=
-          SMTP_PASS=
-          SMTP_FROM=noreply@pode-deixar.com
-          MAX_LOGIN_ATTEMPTS=5
-          LOCKOUT_DURATION_MINUTES=15
-          DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          DIRECT_DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          EOF
-      - name: Run Prisma migrations
-        shell: bash
-        run: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
-        env:
-          DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-      - run: pnpm run --filter @pode-deixar/service-orders build
-      - run: pnpm run --filter @pode-deixar/service-orders lint
-      - run: pnpm run --filter @pode-deixar/service-orders test
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
