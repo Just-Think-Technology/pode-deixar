@@ -34,7 +34,10 @@ services:
       sh -c "pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
              pnpm run --filter @pode-deixar/auth start:dev"
     volumes:
-      - ./backend/services/auth:/app/services/auth
+      - ./backend/services/auth/src:/app/services/auth/src
+      - ./backend/services/auth/tsconfig.json:/app/services/auth/tsconfig.json
+      - ./backend/services/auth/tsconfig.build.json:/app/services/auth/tsconfig.build.json
+      - ./backend/services/auth/nest-cli.json:/app/services/auth/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/email:/app/shared/email
       - ./backend/prisma:/app/prisma
@@ -58,7 +61,10 @@ services:
       - "3002:3002"
     command: pnpm run --filter @pode-deixar/users start:dev
     volumes:
-      - ./backend/services/users:/app/services/users
+      - ./backend/services/users/src:/app/services/users/src
+      - ./backend/services/users/tsconfig.json:/app/services/users/tsconfig.json
+      - ./backend/services/users/tsconfig.build.json:/app/services/users/tsconfig.build.json
+      - ./backend/services/users/nest-cli.json:/app/services/users/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/prisma:/app/prisma
     depends_on:
@@ -79,7 +85,10 @@ services:
       - "3003:3003"
     command: pnpm run --filter @pode-deixar/service-orders start:dev
     volumes:
-      - ./backend/services/service-orders:/app/services/service-orders
+      - ./backend/services/service-orders/src:/app/services/service-orders/src
+      - ./backend/services/service-orders/tsconfig.json:/app/services/service-orders/tsconfig.json
+      - ./backend/services/service-orders/tsconfig.build.json:/app/services/service-orders/tsconfig.build.json
+      - ./backend/services/service-orders/nest-cli.json:/app/services/service-orders/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/prisma:/app/prisma
     depends_on:
