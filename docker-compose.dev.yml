@@ -2,25 +2,8 @@ services:
   # -- MinIO (com defaults para dev) --
   minio:
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
-  # -- Postgres (local dev) --
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: pode-deixar
-      POSTGRES_PASSWORD: pode-deixar
-      POSTGRES_DB: pode-deixar
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pode-deixar"]
-      interval: 3s
-      timeout: 3s
-      retries: 5
-
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
   # -- Auth Service (dev, hot-reload) --
   auth:
     build:
@@ -31,8 +14,6 @@ services:
       FRONTEND_URL: http://localhost:8080
       SMTP_HOST: mailpit
       TZ: America/Sao_Paulo
-      DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
-      DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
     ports:
       - "3001:3001"
     command: >
@@ -47,8 +28,6 @@ services:
       - ./backend/shared/email:/app/shared/email
       - ./backend/prisma:/app/prisma
     depends_on:
-      postgres:
-        condition: service_healthy
       mailpit:
         condition: service_started
 
@@ -60,8 +39,6 @@ services:
     env_file: ./backend/.env.staging
     environment:
       TZ: America/Sao_Paulo
-      DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
-      DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
     ports:
       - "3002:3002"
     command: pnpm run --filter @pode-deixar/users start:dev
@@ -72,9 +49,6 @@ services:
       - ./backend/services/users/nest-cli.json:/app/services/users/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/prisma:/app/prisma
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   # -- Service Orders Service (dev, hot-reload) --
   service-orders:
@@ -84,8 +58,6 @@ services:
     env_file: ./backend/.env.staging
     environment:
       TZ: America/Sao_Paulo
-      DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
-      DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
     ports:
       - "3003:3003"
     command: pnpm run --filter @pode-deixar/service-orders start:dev
@@ -96,9 +68,3 @@ services:
       - ./backend/services/service-orders/nest-cli.json:/app/services/service-orders/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/prisma:/app/prisma
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-volumes:
-  pgdata:
