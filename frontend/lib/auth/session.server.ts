@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import type { AuthSession, AuthUser, LoginResponse } from "@/lib/auth/types";
 
 const AUTH_SESSION_COOKIE = "auth_session";
+const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60;
 
 function cookieOptions(maxAge: number) {
   return {
@@ -29,7 +30,7 @@ export async function saveAuthSession(data: LoginResponse): Promise<void> {
   cookieStore.set(
     AUTH_SESSION_COOKIE,
     JSON.stringify(session),
-    cookieOptions(data.expires_in),
+    cookieOptions(SEVEN_DAYS_SECONDS),
   );
 }
 
@@ -86,4 +87,38 @@ export async function updateAuthSessionTokens(partial: Pick<AuthSession, "access
     ...session,
     ...partial,
   });
+}
+
+export async function refreshAuthSession(): Promise<AuthSession | null> {
+  const session = await getAuthSession();
+  if (!session?.refresh_token) {
+    await clearAuthSession();
+    return null;
+  }
+
+  try {
+    const { refreshAccessToken } = await import(
+      "@/api/auth/refresh-token"
+    );
+
+    const tokens = await refreshAccessToken(session.refresh_token);
+
+    const updated: AuthSession = {
+      ...session,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+    };
+
+    const cookieStore = await cookies();
+    cookieStore.set(
+      AUTH_SESSION_COOKIE,
+      JSON.stringify(updated),
+      cookieOptions(SEVEN_DAYS_SECONDS),
+    );
+
+    return updated;
+  } catch {
+    await clearAuthSession();
+    return null;
+  }
 }

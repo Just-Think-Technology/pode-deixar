@@ -188,6 +188,12 @@ export type UpdateServicePayload = {
   category?: string;
 };
 
+export type ServiceImage = {
+  id: string;
+  url: string;
+  created_at: string;
+};
+
 export type ProviderService = {
   id: string;
   provider_profile_id: string;
@@ -195,6 +201,7 @@ export type ProviderService = {
   description: string;
   fixed_price: number;
   category: string;
+  images: ServiceImage[];
   is_active: boolean;
   created_at: string;
   updated_at: string;

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
@@ -14,7 +18,14 @@ export class CategoriesService {
   async findAll() {
     const categories = await this.prisma.category.findMany({
       orderBy: { order: "asc" },
-      select: { id: true, name: true, slug: true, description: true, icon: true, order: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        icon: true,
+        order: true,
+      },
     });
     return categories.map((c) => ({
       id: c.id,

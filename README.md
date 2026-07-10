@@ -101,31 +101,58 @@ O projeto foi concebido utilizando uma arquitetura baseada em microsserviços, p
 
 ---
 
-## Desenvolvimento Local com Docker
+## Desenvolvimento Local
 
-### Subir os serviços
+### Com Docker (toda a stack)
+
+O projeto oferece dois modos de execução com Docker:
+
+#### Produção
+
+Sobe todos os serviços com código compilado (sem hot-reload):
 
 ```bash
 docker compose up -d
 ```
 
-### Reconstruir imagens e subir (após alterações em dependências ou código)
+#### Desenvolvimento (hot-reload)
+
+Sobe Postgres, MinIO, Mailpit e Caddy + os 3 microserviços com **recarga automática** ao alterar arquivos:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+Neste modo, o código-fonte é montado como volume dentro dos containers, e cada serviço roda com `nest start --watch` — qualquer alteração nos arquivos `.ts` reinicia o servidor automaticamente.
+
+#### Reconstruir imagens (após alterações em dependências)
 
 ```bash
 docker compose build --no-cache && docker compose up -d
 ```
 
-### Parar os serviços
+#### Parar os serviços
 
 ```bash
 docker compose down
 ```
 
-### Logs
+#### Logs
 
 ```bash
 docker compose logs -f <service>
 ```
+
+### Sem Docker (apenas serviços Node localmente)
+
+Execute cada microsserviço diretamente na máquina host com hot-reload:
+
+```bash
+cd backend
+pnpm dev
+```
+
+Os serviços serão iniciados nas portas `3001` (auth), `3002` (users) e `3003` (service-orders). Neste modo, você precisará do Postgres e MinIO rodando separadamente (via Docker ou instalados localmente).
 
 ---
 

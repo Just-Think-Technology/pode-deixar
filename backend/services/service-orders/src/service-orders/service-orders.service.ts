@@ -7,6 +7,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ServicesLoggerService } from "../shared/services-logger.service";
 import { CreateServiceOrderDto } from "./dto/create-service-order.dto";
 import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
+import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 
 @Injectable()
 export class ServiceOrdersService {
@@ -19,6 +20,9 @@ export class ServiceOrdersService {
     return {
       id: order.id,
       client_id: order.clientId,
+      provider_id: order.providerId ?? null,
+      provider_service_id: order.providerServiceId ?? null,
+      agreed_price: order.agreedPrice ?? null,
       title: order.title,
       description: order.description,
       category_id: order.categoryId,
@@ -38,10 +42,36 @@ export class ServiceOrdersService {
     };
   }
 
+  private async validateProvider(providerId: string, clientId: string) {
+    if (providerId === clientId) {
+      throw new BadRequestException(
+        "Você não pode solicitar orçamento para si mesmo",
+      );
+    }
+
+    const provider = await this.prisma.user.findUnique({
+      where: { id: providerId },
+      select: { id: true, role: true },
+    });
+
+    if (!provider) {
+      throw new BadRequestException("Prestador não encontrado");
+    }
+
+    if (provider.role !== "PROVIDER") {
+      throw new BadRequestException("Usuário não é um prestador");
+    }
+  }
+
   async create(clientId: string, dto: CreateServiceOrderDto, ip?: string) {
+    if (dto.providerId) {
+      await this.validateProvider(dto.providerId, clientId);
+    }
+
     const order = await this.prisma.serviceOrder.create({
       data: {
         clientId,
+        providerId: dto.providerId ?? null,
         title: dto.title,
         description: dto.description,
         categoryId: dto.categoryId,
@@ -56,6 +86,18 @@ export class ServiceOrdersService {
     this.logger.logServiceOrderCreated(clientId, order.id, ip);
 
     return this.formatOrder(order);
+  }
+
+  async findReceivedByProvider(providerId: string) {
+    const orders = await this.prisma.serviceOrder.findMany({
+      where: { providerId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    return orders.map((o) => this.formatOrder(o));
   }
 
   async findByClient(clientId: string) {
@@ -186,6 +228,66 @@ export class ServiceOrdersService {
     });
 
     this.logger.logServiceOrderCancelled(clientId, orderId, ip);
+
+    return this.formatOrder(order);
+  }
+
+  async hireFromProvider(
+    clientId: string,
+    dto: HireProviderServiceDto,
+    ip?: string,
+  ) {
+    const providerService = await this.prisma.providerService.findUnique({
+      where: { id: dto.providerServiceId },
+      include: {
+        providerProfile: true,
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    if (!providerService) {
+      throw new NotFoundException("Serviço do prestador não encontrado");
+    }
+
+    if (!providerService.isActive) {
+      throw new BadRequestException("Serviço não está disponível");
+    }
+
+    const providerUserId = providerService.providerProfile.userId;
+
+    if (providerUserId === clientId) {
+      throw new BadRequestException(
+        "Você não pode contratar seu próprio serviço",
+      );
+    }
+
+    const order = await this.prisma.serviceOrder.create({
+      data: {
+        clientId,
+        providerId: providerUserId,
+        providerServiceId: providerService.id,
+        agreedPrice: providerService.fixedPrice,
+        title: providerService.title,
+        description: providerService.description,
+        categoryId: providerService.categoryId,
+        status: "IN_PROGRESS",
+      },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    this.logger.logInfo(
+      "service_order_hired",
+      `Service hired by client ${clientId}`,
+      {
+        clientId,
+        orderId: order.id,
+        providerServiceId: providerService.id,
+        agreedPrice: providerService.fixedPrice,
+        ip,
+      },
+    );
 
     return this.formatOrder(order);
   }

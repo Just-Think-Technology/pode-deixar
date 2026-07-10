@@ -1,0 +1,70 @@
+services:
+  # -- MinIO (com defaults para dev) --
+  minio:
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+  # -- Auth Service (dev, hot-reload) --
+  auth:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file: ./backend/.env.staging
+    environment:
+      FRONTEND_URL: http://localhost:8080
+      SMTP_HOST: mailpit
+      TZ: America/Sao_Paulo
+    ports:
+      - "3001:3001"
+    command: >
+      sh -c "pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
+             pnpm run --filter @pode-deixar/auth start:dev"
+    volumes:
+      - ./backend/services/auth/src:/app/services/auth/src
+      - ./backend/services/auth/tsconfig.json:/app/services/auth/tsconfig.json
+      - ./backend/services/auth/tsconfig.build.json:/app/services/auth/tsconfig.build.json
+      - ./backend/services/auth/nest-cli.json:/app/services/auth/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/email:/app/shared/email
+      - ./backend/prisma:/app/prisma
+    depends_on:
+      mailpit:
+        condition: service_started
+
+  # -- Users Service (dev, hot-reload) --
+  users:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file: ./backend/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+    ports:
+      - "3002:3002"
+    command: pnpm run --filter @pode-deixar/users start:dev
+    volumes:
+      - ./backend/services/users/src:/app/services/users/src
+      - ./backend/services/users/tsconfig.json:/app/services/users/tsconfig.json
+      - ./backend/services/users/tsconfig.build.json:/app/services/users/tsconfig.build.json
+      - ./backend/services/users/nest-cli.json:/app/services/users/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/prisma:/app/prisma
+
+  # -- Service Orders Service (dev, hot-reload) --
+  service-orders:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file: ./backend/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+    ports:
+      - "3003:3003"
+    command: pnpm run --filter @pode-deixar/service-orders start:dev
+    volumes:
+      - ./backend/services/service-orders/src:/app/services/service-orders/src
+      - ./backend/services/service-orders/tsconfig.json:/app/services/service-orders/tsconfig.json
+      - ./backend/services/service-orders/tsconfig.build.json:/app/services/service-orders/tsconfig.build.json
+      - ./backend/services/service-orders/nest-cli.json:/app/services/service-orders/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/prisma:/app/prisma

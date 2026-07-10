@@ -34,6 +34,14 @@ export class CreateServiceOrderDto {
   categoryId: string;
 
   @ApiPropertyOptional({
+    description: "ID do prestador (para solicitação direta)",
+    example: "uuid-do-prestador",
+  })
+  @IsOptional()
+  @IsString()
+  providerId?: string;
+
+  @ApiPropertyOptional({
     description: "Orçamento mínimo",
     example: 50.0,
   })
