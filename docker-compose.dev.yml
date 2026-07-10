@@ -1,4 +1,9 @@
 services:
+  # -- MinIO (com defaults para dev) --
+  minio:
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
   # -- Postgres (local dev) --
   postgres:
     image: postgres:16
