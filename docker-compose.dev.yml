@@ -1,0 +1,90 @@
+services:
+  # -- Postgres (local dev) --
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: pode-deixar
+      POSTGRES_PASSWORD: pode-deixar
+      POSTGRES_DB: pode-deixar
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pode-deixar"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  # -- Auth Service (dev, hot-reload) --
+  auth:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file: ./backend/.env.staging
+    environment:
+      FRONTEND_URL: http://localhost:8080
+      SMTP_HOST: mailpit
+      TZ: America/Sao_Paulo
+      DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
+      DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
+    ports:
+      - "3001:3001"
+    command: >
+      sh -c "pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
+             pnpm run --filter @pode-deixar/auth start:dev"
+    volumes:
+      - ./backend/services/auth:/app/services/auth
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/email:/app/shared/email
+      - ./backend/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  # -- Users Service (dev, hot-reload) --
+  users:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file: ./backend/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+      DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
+      DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
+    ports:
+      - "3002:3002"
+    command: pnpm run --filter @pode-deixar/users start:dev
+    volumes:
+      - ./backend/services/users:/app/services/users
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # -- Service Orders Service (dev, hot-reload) --
+  service-orders:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file: ./backend/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+      DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
+      DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@postgres:5432/pode-deixar
+    ports:
+      - "3003:3003"
+    command: pnpm run --filter @pode-deixar/service-orders start:dev
+    volumes:
+      - ./backend/services/service-orders:/app/services/service-orders
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
