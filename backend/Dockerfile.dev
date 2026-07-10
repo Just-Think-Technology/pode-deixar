@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:22-alpine AS base
 RUN apk update && apk add --no-cache openssl
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -13,3 +13,7 @@ COPY prisma ./prisma
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm exec prisma generate --schema=prisma/schema.prisma
+
+FROM base AS auth-build
+FROM base AS users-build
+FROM base AS service-orders-build
