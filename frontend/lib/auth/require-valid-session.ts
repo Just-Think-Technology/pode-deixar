@@ -45,11 +45,6 @@ async function callVerify(accessToken: string): Promise<VerifyOutcome> {
   }
 }
 
-/**
- * Valida a sessão no backend (GET /auth/verify) antes de renderizar
- * páginas autenticadas. Mutações de cookie (refresh/clear/sync) ficam
- * em Route Handlers — layouts Server Component não podem set/delete cookies.
- */
 export async function requireValidSession(area: AppArea): Promise<AuthSession> {
   const session = await getAuthSession();
   const requiredRole = AREA_REQUIRED_ROLE[area];
@@ -67,7 +62,6 @@ export async function requireValidSession(area: AppArea): Promise<AuthSession> {
       );
     }
 
-    // Usa dados do verify na renderização; sync de cookie só via Route Handler
     return {
       ...session,
       access_token: outcome.access_token,
@@ -89,7 +83,6 @@ export async function requireValidSession(area: AppArea): Promise<AuthSession> {
     return session;
   }
 
-  // Token inválido/expirado: tenta refresh em Route Handler (pode mutar cookies)
   const next = encodeURIComponent(ROLE_HOME_HREF[requiredRole]);
   redirect(`/auth/session/refresh?area=${area}&next=${next}`);
 }
