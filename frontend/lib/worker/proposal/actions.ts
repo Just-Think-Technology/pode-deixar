@@ -12,6 +12,8 @@ import {
   getMockProposals,
 } from "@/mock/worker/proposals";
 
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+
 async function withTokenRefresh<T>(
   fn: (token: string) => Promise<T>,
 ): Promise<T> {
@@ -35,6 +37,10 @@ async function withTokenRefresh<T>(
 }
 
 export async function getMyProposalsAction(): Promise<WorkerProposal[]> {
+  if (USE_MOCK) {
+    return getMockProposals();
+  }
+
   try {
     return await withTokenRefresh((token) => getMyProposals(token));
   } catch (err) {
@@ -58,6 +64,10 @@ export async function getMyProposalsAction(): Promise<WorkerProposal[]> {
 export async function getMyProposalByIdAction(
   proposalId: string,
 ): Promise<WorkerProposal | null> {
+  if (USE_MOCK) {
+    return getMockProposalById(proposalId);
+  }
+
   try {
     const proposals = await withTokenRefresh((token) => getMyProposals(token));
     return proposals.find((proposal) => proposal.id === proposalId) ?? null;
