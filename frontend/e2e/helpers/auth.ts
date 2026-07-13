@@ -15,6 +15,19 @@ const MOCK_WORKER_SESSION = {
   },
 };
 
+const MOCK_CLIENT_SESSION = {
+  access_token: "mock-access-token",
+  refresh_token: "mock-refresh-token",
+  expires_in: 86_400,
+  token_type: "Bearer",
+  user: {
+    id: "mock-client-id",
+    complete_name: "Cliente Mock",
+    email: "cliente@mock.local",
+    role: "CLIENT" as const,
+  },
+};
+
 /** Cookie de sessão mock para área do prestador (NEXT_PUBLIC_USE_MOCK=true). */
 export async function loginAsWorkerMock(
   page: Page,
@@ -24,6 +37,22 @@ export async function loginAsWorkerMock(
     {
       name: "auth_session",
       value: JSON.stringify(MOCK_WORKER_SESSION),
+      url: E2E_ORIGIN,
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
+}
+
+/** Cookie de sessão mock para área do cliente (NEXT_PUBLIC_USE_MOCK=true). */
+export async function loginAsClientMock(
+  page: Page,
+  context: BrowserContext = page.context(),
+) {
+  await context.addCookies([
+    {
+      name: "auth_session",
+      value: JSON.stringify(MOCK_CLIENT_SESSION),
       url: E2E_ORIGIN,
       httpOnly: true,
       sameSite: "Lax",
