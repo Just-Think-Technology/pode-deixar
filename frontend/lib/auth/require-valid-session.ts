@@ -14,6 +14,8 @@ import {
 import { getAuthSession } from "@/lib/auth/session.server";
 import type { AuthSession, AuthUser, PublicRole } from "@/lib/auth/types";
 
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+
 function isPublicRole(role: string): role is PublicRole {
   return role === "CLIENT" || role === "PROVIDER";
 }
@@ -51,6 +53,16 @@ export async function requireValidSession(area: AppArea): Promise<AuthSession> {
 
   if (!session?.access_token || !session.user.role) {
     redirect(getLoginHrefForArea(area));
+  }
+
+  // Em modo mock (e2e / UI sem backend), confia no cookie de sessão.
+  if (USE_MOCK) {
+    if (session.user.role !== requiredRole) {
+      redirect(
+        `/auth/session/clear?to=${encodeURIComponent(ROLE_LOGIN_HREF[session.user.role])}`,
+      );
+    }
+    return session;
   }
 
   const outcome = await callVerify(session.access_token);
