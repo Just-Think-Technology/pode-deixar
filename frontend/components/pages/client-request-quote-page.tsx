@@ -205,7 +205,26 @@ export default function ClientRequestQuotePage({
             <div className="flex w-full flex-col gap-2 sm:flex-row">
               <Button
                 type="button"
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() =>
+                  router.push(`/client/orders/${createdOrder.id}`)
+                }
+              >
+                Ver solicitação
+              </Button>
+              <Button
+                type="button"
                 variant="outline"
+                className="flex-1"
+                onClick={() => router.push("/client/orders")}
+              >
+                Minhas solicitações
+              </Button>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="ghost"
                 className="flex-1"
                 onClick={() => router.push("/client/home")}
               >
@@ -213,7 +232,8 @@ export default function ClientRequestQuotePage({
               </Button>
               <Button
                 type="button"
-                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                variant="ghost"
+                className="flex-1"
                 onClick={() => router.push("/client/search")}
               >
                 Buscar outros profissionais

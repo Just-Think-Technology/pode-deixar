@@ -76,6 +76,10 @@ export type AuthSession = {
   user: AuthUser;
 };
 
+export type VerifySessionResponse =
+  | { authorized: true; user: AuthUser; access_token: string }
+  | { authorized: false; access_token: string | null };
+
 export type VerifyEmailPayload = {
   token: string;
 };

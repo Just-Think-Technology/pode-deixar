@@ -133,6 +133,43 @@ Atualizar access token usando refresh token.
 
 ---
 
+#### `GET /auth/verify`
+
+Validar o access token e retornar os dados atuais do usuário. Usado pelo frontend para confirmar a sessão antes de carregar áreas autenticadas.
+
+**Headers:**
+| Header | Obrigatório | Valor |
+|--------|-------------|-------|
+| `Authorization` | não | `Bearer eyJ...` (sem token → `authorized: false`) |
+
+**Resposta `200` (token válido):**
+```json
+{
+  "authorized": true,
+  "user": {
+    "id": "uuid",
+    "email": "john.doe@example.com",
+    "role": "CLIENT",
+    "complete_name": "John Doe"
+  },
+  "access_token": "eyJ..."
+}
+```
+
+**Resposta `200` (token ausente, inválido, expirado, revogado ou inconsistente):**
+```json
+{
+  "authorized": false,
+  "access_token": "eyJ...|null"
+}
+```
+
+> Sempre retorna HTTP `200`. O frontend deve olhar o campo `authorized`, não o status HTTP.
+>
+> Valida assinatura JWT, tipo `access`, blacklist (`jti`), existência do usuário e consistência de `email`/`role` com o banco.
+
+---
+
 #### `POST /auth/logout`
 
 Invalidar tokens do usuário. Requer **Bearer token**.
@@ -1586,7 +1623,7 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `/api/storage/*` | `:9000` | MinIO (via proxy reverso) |
 | `/*` (demais) | `:3000` | Frontend |
 
-### Auth Service (12 endpoints)
+### Auth Service (13 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -1595,6 +1632,7 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `GET` | `/health/live` | — | — | Atividade |
 | `POST` | `/auth/login` | — | — | Login |
 | `POST` | `/auth/refresh-token` | — | — | Refresh token |
+| `GET` | `/auth/verify` | Bearer (opcional) | — | Validar sessão / access token |
 | `POST` | `/auth/logout` | Bearer | — | Logout |
 | `POST` | `/auth/register` | — | — | Registro |
 | `POST` | `/auth/verify-email` | — | — | Verificar email |
@@ -1663,7 +1701,7 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **58** |
+| **Endpoints** | **59** |
 | **Serviços** | **3** |
 | **Controllers** | **28** |
 | **DTOs** | **23** |
