@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { loginAsClientMock } from "./helpers/auth";
 
-test.describe("Solicitações do cliente (JTT-82)", () => {
+test.describe("Solicitações do cliente (JTT-79)", () => {
   // Mock mutável compartilhado: accept/reject precisam rodar em sequência.
   test.describe.configure({ mode: "serial" });
 
@@ -20,6 +20,7 @@ test.describe("Solicitações do cliente (JTT-82)", () => {
     await expect(
       page.getByText("Conserto de vazamento no chuveiro"),
     ).toBeVisible();
+    await expect(page.getByText("2 propostas").first()).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Ver propostas" }).first(),
     ).toBeVisible();
