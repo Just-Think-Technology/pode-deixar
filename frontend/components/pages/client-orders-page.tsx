@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, ClipboardList, Tag, Wallet } from "lucide-react";
+import { Calendar, ClipboardList, MessageSquare, Tag, Wallet } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -32,6 +33,12 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
   CANCELLED: "border-slate-200 bg-slate-50 text-slate-700",
 };
 
+function proposalCountLabel(count: number): string {
+  if (count === 0) return "Nenhuma proposta";
+  if (count === 1) return "1 proposta";
+  return `${count} propostas`;
+}
+
 export default function ClientOrdersPage({ orders }: ClientOrdersPageProps) {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -55,64 +62,83 @@ export default function ClientOrdersPage({ orders }: ClientOrdersPageProps) {
               Quando você solicitar um orçamento, o pedido aparecerá aqui.
             </EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            <Link
+              href="/client/search"
+              className={cn(buttonVariants({ variant: "default" }))}
+            >
+              Buscar profissionais
+            </Link>
+          </EmptyContent>
         </Empty>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
-          {orders.map((order) => (
-            <li key={order.id}>
-              <Card className="flex h-full flex-col">
-                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
-                  <div className="min-w-0 space-y-1">
-                    <p className="line-clamp-2 text-lg font-semibold text-foreground">
-                      {order.title}
+          {orders.map((order) => {
+            const proposals = order.proposals;
+            const showProposalCount = Array.isArray(proposals);
+
+            return (
+              <li key={order.id}>
+                <Card className="flex h-full flex-col">
+                  <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
+                    <div className="min-w-0 space-y-1">
+                      <p className="line-clamp-2 text-lg font-semibold text-foreground">
+                        {order.title}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        Pedido {order.id.slice(0, 8)}…
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        STATUS_BADGE_CLASS[order.status] ??
+                          "border-slate-200 bg-slate-50 text-slate-700",
+                      )}
+                    >
+                      {getOrderStatusLabel(order.status)}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="flex-1 space-y-3">
+                    <p className="line-clamp-3 text-sm text-muted-foreground">
+                      {order.description}
                     </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      Pedido {order.id.slice(0, 8)}…
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      STATUS_BADGE_CLASS[order.status] ??
-                        "border-slate-200 bg-slate-50 text-slate-700",
-                    )}
-                  >
-                    {getOrderStatusLabel(order.status)}
-                  </Badge>
-                </CardHeader>
-                <CardContent className="flex-1 space-y-3">
-                  <p className="line-clamp-3 text-sm text-muted-foreground">
-                    {order.description}
-                  </p>
-                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      <Tag className="size-3.5" />
-                      {order.category.name}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Wallet className="size-3.5" />
-                      {formatOrderBudget(order.budget_min, order.budget_max)}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Calendar className="size-3.5" />
-                      {formatOrderDate(order.created_at)}
-                    </span>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Link
-                    href={`/client/orders/${order.id}`}
-                    className={cn(
-                      buttonVariants({ variant: "outline" }),
-                      "w-full",
-                    )}
-                  >
-                    Ver propostas
-                  </Link>
-                </CardFooter>
-              </Card>
-            </li>
-          ))}
+                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Tag className="size-3.5" />
+                        {order.category.name}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Wallet className="size-3.5" />
+                        {formatOrderBudget(order.budget_min, order.budget_max)}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar className="size-3.5" />
+                        {formatOrderDate(order.created_at)}
+                      </span>
+                      {showProposalCount ? (
+                        <span className="inline-flex items-center gap-1">
+                          <MessageSquare className="size-3.5" />
+                          {proposalCountLabel(proposals.length)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Link
+                      href={`/client/orders/${order.id}`}
+                      className={cn(
+                        buttonVariants({ variant: "outline" }),
+                        "w-full",
+                      )}
+                    >
+                      Ver propostas
+                    </Link>
+                  </CardFooter>
+                </Card>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

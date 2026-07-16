@@ -123,10 +123,13 @@ export function resetMockClientOrders() {
 }
 
 export function getMockClientOrders(): ClientOrder[] {
-  return getRuntimeOrders().map((order) => ({
-    ...order,
-    proposals: undefined,
-  }));
+  // Mantém proposals no mock para a lista poder exibir contagem;
+  // a API real pode omitir o campo — a UI trata como opcional.
+  return structuredClone(getRuntimeOrders());
+}
+
+export function appendMockClientOrder(order: ClientOrder): void {
+  getRuntimeOrders().unshift(structuredClone(order));
 }
 
 export function getMockClientOrderById(id: string): ClientOrder | null {

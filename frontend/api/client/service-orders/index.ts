@@ -11,6 +11,7 @@ import {
   getMockClientOrderById,
   getMockClientOrders,
 } from "@/mock/client/orders";
+import { mockCreateServiceOrder } from "@/mock/client/service-orders";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
@@ -23,6 +24,10 @@ export function createServiceOrder(
   accessToken: string,
   payload: CreateServiceOrderPayload,
 ) {
+  if (USE_MOCK) {
+    return Promise.resolve(mockCreateServiceOrder(payload));
+  }
+
   return apiFetchAuth<ServiceOrder>(SERVICE_ORDERS_ROUTES.me, accessToken, {
     method: "POST",
     body: JSON.stringify({
