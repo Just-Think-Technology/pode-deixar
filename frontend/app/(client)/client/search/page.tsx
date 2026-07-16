@@ -29,5 +29,10 @@ export default async function ClientSearchRoute() {
     }
   }
 
-  return <ClientSearchPage accessToken={accessToken ?? undefined} />;
+  return (
+    <ClientSearchPage
+      categories={categories}
+      categoriesError={categoriesError}
+    />
+  );
 }

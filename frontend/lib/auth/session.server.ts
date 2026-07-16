@@ -66,7 +66,7 @@ export async function clearAuthSession(): Promise<void> {
 }
 
 export async function updateAuthSessionUser(
-  partial: Pick<AuthUser, "complete_name" | "email">,
+  partial: Partial<AuthUser>,
 ): Promise<void> {
   const session = await getAuthSession();
   if (!session) return;

@@ -1,9 +1,12 @@
-const baseUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL;
-
 const FETCH_TIMEOUT = 10_000;
 
 export function getApiBaseUrl(): string {
+  const internalUrl = process.env.BACKEND_INTERNAL_URL;
+  const publicUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  // No servidor (RSC/actions), preferir URL interna da rede Docker.
+  const baseUrl =
+    typeof window === "undefined" && internalUrl ? internalUrl : publicUrl;
+
   if (!baseUrl) {
     throw new Error(
       "NEXT_PUBLIC_BACKEND_URL não está definida no .env",

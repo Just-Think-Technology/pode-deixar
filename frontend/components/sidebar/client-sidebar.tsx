@@ -63,7 +63,9 @@ export default function ClientSidebar({ user }: ClientSidebarProps) {
                     <SidebarGroupContent>
                         <SidebarMenu className="gap-1">
                             {clientNavItems.map((item) => {
-                                const isActive = pathname === item.href;
+                                const isActive =
+                                    pathname === item.href ||
+                                    pathname.startsWith(`${item.href}/`);
                                 return (
                                     <SidebarMenuItem key={item.href}>
                                         {item.enabled ? (
