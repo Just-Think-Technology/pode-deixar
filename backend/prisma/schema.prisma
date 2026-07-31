@@ -152,6 +152,7 @@ model ServiceOrder {
   createdAt   DateTime           @default(now()) @map("created_at")
   updatedAt   DateTime           @updatedAt @map("updated_at")
   proposals   Proposal[]
+  photos      OrderPhoto[]
 
   @@map("service_orders")
 }
@@ -185,6 +186,16 @@ model CounterProposal {
   proposal         Proposal              @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
   @@map("counter_proposals")
+}
+
+model OrderPhoto {
+  id        String   @id @default(uuid())
+  serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrderId String   @map("service_order_id")
+  url       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("order_photos")
 }
 
 model TokenBlacklist {
