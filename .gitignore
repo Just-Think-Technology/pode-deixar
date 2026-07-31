@@ -4,6 +4,3 @@ node_modules/
 # Environment files (staging/prod não versionados)
 .env.staging
 .env.prod
-
-# opnecode
-AGENTS.md
