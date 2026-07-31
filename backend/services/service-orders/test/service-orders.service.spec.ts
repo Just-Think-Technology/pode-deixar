@@ -239,6 +239,7 @@ describe("ServiceOrdersService", () => {
 
       mockPrisma.serviceOrder.findUnique.mockResolvedValue({
         ...mockOrder,
+        clientId: "client-1",
         proposals: mockProposals,
       });
 
@@ -305,7 +306,7 @@ describe("ServiceOrdersService", () => {
         proposals: mockProposals,
       });
 
-      const result = await service.findByIdWithAccess(
+      const result: any = await service.findByIdWithAccess(
         "order-1",
         "client-1",
         "CLIENT",
@@ -316,38 +317,24 @@ describe("ServiceOrdersService", () => {
       expect(result.proposals).toHaveLength(2);
     });
 
-    it("should return order with only own proposal when PROVIDER has a proposal", async () => {
-      const mockProposals = [
-        {
-          id: "prop-1",
-          providerId: "provider-1",
-          price: 150,
-          description: "Faço o serviço",
-          estimatedDuration: "2 horas",
-          status: "PENDING",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          serviceOrderId: "order-1",
-        },
-        {
-          id: "prop-2",
-          providerId: "provider-2",
-          price: 180,
-          description: "Outra proposta",
-          estimatedDuration: "3 horas",
-          status: "PENDING",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          serviceOrderId: "order-1",
-        },
-      ];
-
+    it("should return order with own proposal when PROVIDER has a proposal", async () => {
       mockPrisma.serviceOrder.findUnique.mockResolvedValue({
         ...mockOrder,
-        proposals: mockProposals,
+        proposals: [
+          {
+            id: "prop-1",
+            providerId: "provider-1",
+            price: 150,
+            description: "Proposta",
+            estimatedDuration: "2h",
+            status: "PENDING",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
       });
 
-      const result = await service.findByIdWithAccess(
+      const result: any = await service.findByIdWithAccess(
         "order-1",
         "provider-1",
         "PROVIDER",
@@ -359,28 +346,33 @@ describe("ServiceOrdersService", () => {
       expect(result.proposals[0].provider_id).toBe("provider-1");
     });
 
-    it("should throw ForbiddenException when PROVIDER has no proposal on this order", async () => {
-      const mockProposals = [
-        {
-          id: "prop-1",
-          providerId: "provider-1",
-          price: 150,
-          description: "Faço o serviço",
-          estimatedDuration: "2 horas",
-          status: "PENDING",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          serviceOrderId: "order-1",
-        },
-      ];
-
+    it("should return order without proposals when PROVIDER is the target but has no proposal", async () => {
       mockPrisma.serviceOrder.findUnique.mockResolvedValue({
         ...mockOrder,
-        proposals: mockProposals,
+        providerId: "provider-1",
+        proposals: [],
+      });
+
+      const result: any = await service.findByIdWithAccess(
+        "order-1",
+        "provider-1",
+        "PROVIDER",
+      );
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe("order-1");
+      expect(result.proposals).toBeUndefined();
+    });
+
+    it("should throw ForbiddenException when PROVIDER is not the target and has no proposal", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        providerId: "provider-2",
+        proposals: [],
       });
 
       await expect(
-        service.findByIdWithAccess("order-1", "provider-3", "PROVIDER"),
+        service.findByIdWithAccess("order-1", "provider-1", "PROVIDER"),
       ).rejects.toThrow(ForbiddenException);
     });
 

@@ -88,6 +88,8 @@ services:
       mc anonymous set public local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} &&
       mc mb local/$${MINIO_AVATARS_BUCKET:-avatars} --ignore-existing &&
       mc anonymous set public local/$${MINIO_AVATARS_BUCKET:-avatars} &&
+      mc mb local/$${MINIO_ORDER_PHOTOS_BUCKET:-order-photos} --ignore-existing &&
+      mc anonymous set public local/$${MINIO_ORDER_PHOTOS_BUCKET:-order-photos} &&
       echo 'Buckets created successfully'
       "
 

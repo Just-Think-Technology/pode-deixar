@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ServicesLoggerService } from "../shared/services-logger.service";
@@ -68,6 +69,12 @@ export class ProposalsService {
     if (order.clientId === providerId) {
       throw new BadRequestException(
         "Você não pode fazer proposta para o seu próprio pedido",
+      );
+    }
+
+    if (order.providerId && order.providerId !== providerId) {
+      throw new ForbiddenException(
+        "Este pedido é direcionado a outro prestador",
       );
     }
 

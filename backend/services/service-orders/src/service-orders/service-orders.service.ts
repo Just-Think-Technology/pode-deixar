@@ -182,6 +182,10 @@ export class ServiceOrdersService {
     }
 
     if (role === "PROVIDER") {
+      if (order.providerId && order.providerId !== userId) {
+        throw new ForbiddenException("Acesso negado a este pedido");
+      }
+
       const proposal = order.proposals.find((p) => p.providerId === userId);
       if (proposal) {
         return {
@@ -198,6 +202,10 @@ export class ServiceOrdersService {
             },
           ],
         };
+      }
+
+      if (order.providerId === userId) {
+        return this.formatOrder(order);
       }
     }
 
