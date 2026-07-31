@@ -53,7 +53,7 @@ describe("CategoriesService", () => {
       const result = await service.findAll();
 
       expect(mockPrisma.category.findMany).toHaveBeenCalledWith({
-        orderBy: { order: "asc" },
+        orderBy: { serviceOrders: { _count: "desc" } },
         select: { id: true, name: true, slug: true, description: true, icon: true, order: true },
       });
       expect(result).toHaveLength(2);

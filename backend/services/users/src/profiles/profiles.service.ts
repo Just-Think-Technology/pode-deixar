@@ -282,7 +282,9 @@ export class ProfilesService {
           existingProfile.avatarUrl,
           this.minio.avatarBucket,
         );
-        await this.minio.deleteFile(oldFileName, this.minio.avatarBucket).catch(() => {});
+        await this.minio
+          .deleteFile(oldFileName, this.minio.avatarBucket)
+          .catch(() => {});
       }
 
       const profile = await this.prisma.providerProfile.update({
@@ -306,7 +308,9 @@ export class ProfilesService {
           existingProfile.avatarUrl,
           this.minio.avatarBucket,
         );
-        await this.minio.deleteFile(oldFileName, this.minio.avatarBucket).catch(() => {});
+        await this.minio
+          .deleteFile(oldFileName, this.minio.avatarBucket)
+          .catch(() => {});
       }
 
       const profile = await this.prisma.clientProfile.update({
