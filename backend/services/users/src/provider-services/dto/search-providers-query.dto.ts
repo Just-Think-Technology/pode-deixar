@@ -22,6 +22,14 @@ export class SearchProvidersQueryDto {
   q?: string;
 
   @ApiPropertyOptional({
+    description: "CEP do cliente para ordenar por proximidade",
+    example: "01001000",
+  })
+  @IsOptional()
+  @IsString()
+  postalCode?: string;
+
+  @ApiPropertyOptional({
     description: "Número da página",
     example: 1,
     default: 1,

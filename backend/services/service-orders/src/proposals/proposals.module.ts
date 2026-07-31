@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import { ProposalsService } from "./proposals.service";
 import {
   ProposalsController,
-  MyProposalsController,
   ProposalDetailController,
   AcceptRejectController,
 } from "./proposals.controller";
@@ -13,7 +12,6 @@ import { SharedModule } from "../shared/shared.module";
   imports: [PrismaModule, SharedModule],
   controllers: [
     ProposalsController,
-    MyProposalsController,
     ProposalDetailController,
     AcceptRejectController,
   ],

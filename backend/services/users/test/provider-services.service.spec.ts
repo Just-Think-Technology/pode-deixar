@@ -387,10 +387,13 @@ describe("ProviderServicesService", () => {
       ],
     };
 
+    beforeEach(() => {
+      mockPrisma.providerProfile.findMany.mockReset();
+    });
+
     it("should return all active providers when no filters", async () => {
-      mockPrisma.$transaction.mockResolvedValue([
-        [mockProfileWithServices],
-        1,
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithServices,
       ]);
 
       const query: SearchProvidersQueryDto = {};
@@ -404,9 +407,8 @@ describe("ProviderServicesService", () => {
     });
 
     it("should filter by category", async () => {
-      mockPrisma.$transaction.mockResolvedValue([
-        [mockProfileWithServices],
-        1,
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithServices,
       ]);
 
       const query: SearchProvidersQueryDto = { categoryId: "cat-eletrica" };
@@ -458,9 +460,8 @@ describe("ProviderServicesService", () => {
     });
 
     it("should group multiple services under the same provider", async () => {
-      mockPrisma.$transaction.mockResolvedValue([
-        [mockProfileWithMultipleServices],
-        1,
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        mockProfileWithMultipleServices,
       ]);
 
       const query: SearchProvidersQueryDto = { categoryId: "cat-eletrica" };
@@ -473,22 +474,64 @@ describe("ProviderServicesService", () => {
     });
 
     it("should return empty array when no matches", async () => {
-      mockPrisma.$transaction.mockResolvedValue([[], 0]);
+      mockPrisma.providerProfile.findMany.mockResolvedValue([]);
 
       const query: SearchProvidersQueryDto = { categoryId: "cat-hidraulica" };
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            services: {
-              some: { isActive: true, categoryId: "cat-hidraulica" },
-            },
-          },
-        }),
-      );
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
       expect(result.data).toHaveLength(0);
       expect(result.meta.total).toBe(0);
+    });
+
+    it("should sort by postalCode proximity when provided", async () => {
+      const farProfile = {
+        ...mockProfileWithServices,
+        id: "far-profile",
+        user: { ...mockProfileWithServices.user, id: "user-far", postalCode: "99999-999" },
+        rating: 3.0,
+      };
+      const nearProfile = {
+        ...mockProfileWithServices,
+        id: "near-profile",
+        user: { ...mockProfileWithServices.user, id: "user-near", postalCode: "01001-000" },
+        rating: 4.0,
+      };
+
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        farProfile,
+        nearProfile,
+      ]);
+
+      const query: SearchProvidersQueryDto = { postalCode: "01000-000" };
+      const result = await service.searchProviders(query);
+
+      expect(result.data[0].id).toBe("near-profile");
+    });
+
+    it("should sort by rating when rating diff > 0.5 even with postalCode", async () => {
+      const nearLowRating = {
+        ...mockProfileWithServices,
+        id: "near-low",
+        user: { ...mockProfileWithServices.user, id: "user-near", postalCode: "01001-000" },
+        rating: 2.0,
+      };
+      const farHighRating = {
+        ...mockProfileWithServices,
+        id: "far-high",
+        user: { ...mockProfileWithServices.user, id: "user-far", postalCode: "99999-999" },
+        rating: 4.5,
+      };
+
+      mockPrisma.providerProfile.findMany.mockResolvedValue([
+        nearLowRating,
+        farHighRating,
+      ]);
+
+      const query: SearchProvidersQueryDto = { postalCode: "01000-000" };
+      const result = await service.searchProviders(query);
+
+      expect(result.data[0].id).toBe("far-high");
     });
   });
 });

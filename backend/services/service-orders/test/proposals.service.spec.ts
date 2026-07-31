@@ -26,7 +26,14 @@ describe("ProposalsService", () => {
     id: "order-1",
     clientId: "client-1",
     title: "Test Order",
+    description: "Test order description",
     status: "OPEN",
+    category: { id: "cat-1", name: "Hidráulica", slug: "hidraulica" },
+  };
+
+  const mockProposalWithOrder = {
+    ...mockProposal,
+    serviceOrder: mockServiceOrder,
   };
 
   const mockPrisma = {
@@ -127,14 +134,50 @@ describe("ProposalsService", () => {
     });
   });
 
-  describe("findByProvider", () => {
-    it("should return proposals for a provider", async () => {
-      mockPrisma.proposal.findMany.mockResolvedValue([mockProposal]);
+  describe("findByIdForProvider", () => {
+    it("should return proposal with service_order detail", async () => {
+      mockPrisma.proposal.findUnique.mockResolvedValue(mockProposalWithOrder);
 
-      const result = await service.findByProvider("provider-1");
+      const result: any = await service.findByIdForProvider("proposal-1", "provider-1");
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe("proposal-1");
+      expect(result.service_order).toBeDefined();
+      expect(result.service_order.id).toBe("order-1");
+      expect(result.service_order.title).toBe("Test Order");
+      expect(result.service_order.category.name).toBe("Hidráulica");
+    });
+
+    it("should throw NotFoundException when proposal does not exist", async () => {
+      mockPrisma.proposal.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.findByIdForProvider("invalid-id", "provider-1"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw NotFoundException when provider does not own the proposal", async () => {
+      mockPrisma.proposal.findUnique.mockResolvedValue({
+        ...mockProposalWithOrder,
+        providerId: "other-provider",
+      });
+
+      await expect(
+        service.findByIdForProvider("proposal-1", "provider-1"),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe("findByProvider", () => {
+    it("should return proposals with service_order summary", async () => {
+      mockPrisma.proposal.findMany.mockResolvedValue([mockProposalWithOrder]);
+
+      const result: any[] = await service.findByProvider("provider-1");
 
       expect(result).toHaveLength(1);
       expect(result[0].provider_id).toBe("provider-1");
+      expect(result[0].service_order).toBeDefined();
+      expect(result[0].service_order.title).toBe("Test Order");
     });
   });
 
