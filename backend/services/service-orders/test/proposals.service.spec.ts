@@ -5,6 +5,7 @@ import { ServicesLoggerService } from "../src/shared/services-logger.service";
 import {
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 
 describe("ProposalsService", () => {
@@ -27,6 +28,15 @@ describe("ProposalsService", () => {
     clientId: "client-1",
     title: "Test Order",
     status: "OPEN",
+    providerId: null,
+  };
+
+  const mockServiceOrderWithProvider = {
+    id: "order-2",
+    clientId: "client-1",
+    title: "Directed Order",
+    status: "OPEN",
+    providerId: "provider-2",
   };
 
   const mockPrisma = {
@@ -124,6 +134,36 @@ describe("ProposalsService", () => {
       await expect(service.create("provider-1", dto)).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it("should throw ForbiddenException when order is directed to another provider", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue(
+        mockServiceOrderWithProvider,
+      );
+
+      await expect(
+        service.create("provider-1", { ...dto, serviceOrderId: "order-2" }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("should create a proposal when order is directed to this provider", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue(
+        mockServiceOrderWithProvider,
+      );
+      mockPrisma.proposal.findFirst.mockResolvedValue(null);
+      mockPrisma.proposal.create.mockResolvedValue({
+        ...mockProposal,
+        providerId: "provider-2",
+        serviceOrderId: "order-2",
+      });
+
+      const result = await service.create("provider-2", {
+        ...dto,
+        serviceOrderId: "order-2",
+      });
+
+      expect(result).toBeDefined();
+      expect(result.provider_id).toBe("provider-2");
     });
   });
 
