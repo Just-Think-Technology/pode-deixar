@@ -67,6 +67,20 @@ export class ProposalsController {
 export class ProposalDetailController {
   constructor(private readonly proposalsService: ProposalsService) {}
 
+  @Get()
+  @Roles("PROVIDER")
+  @ApiOperation({ summary: "Obter detalhe de uma proposta (apenas dono)" })
+  @ApiParam({ name: "proposalId", description: "ID da proposta" })
+  @ApiResponse({
+    status: 200,
+    description: "Detalhe da proposta retornado com sucesso",
+  })
+  @ApiResponse({ status: 404, description: "Proposta não encontrada" })
+  async findOne(@Request() req: any, @Param("proposalId") proposalId: string) {
+    const userId = req.user.sub;
+    return this.proposalsService.findByIdForProvider(proposalId, userId);
+  }
+
   @Patch()
   @Roles("PROVIDER")
   @ApiOperation({
@@ -95,26 +109,6 @@ export class ProposalDetailController {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.proposalsService.withdraw(userId, proposalId, ip);
-  }
-}
-
-@ApiTags("Propostas do Prestador (Listagem)")
-@Controller("proposals/me")
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth()
-export class MyProposalsController {
-  constructor(private readonly proposalsService: ProposalsService) {}
-
-  @Get()
-  @Roles("PROVIDER")
-  @ApiOperation({ summary: "Listar minhas propostas" })
-  @ApiResponse({
-    status: 200,
-    description: "Lista de propostas retornada com sucesso",
-  })
-  async findMyProposals(@Request() req: any) {
-    const userId = req.user.sub;
-    return this.proposalsService.findByProvider(userId);
   }
 }
 
