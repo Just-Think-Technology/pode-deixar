@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ServicesLoggerService } from "../shared/services-logger.service";
@@ -35,6 +36,21 @@ export class ServiceOrdersService {
       status: order.status,
       created_at: order.createdAt,
       updated_at: order.updatedAt,
+    };
+  }
+
+  private formatOrderWithProposals(order: any) {
+    return {
+      ...this.formatOrder(order),
+      proposals: order.proposals.map((p: any) => ({
+        id: p.id,
+        provider_id: p.providerId,
+        price: p.price,
+        description: p.description,
+        estimated_duration: p.estimatedDuration,
+        status: p.status,
+        created_at: p.createdAt,
+      })),
     };
   }
 
@@ -83,18 +99,67 @@ export class ServiceOrdersService {
       throw new NotFoundException("Pedido de serviço não encontrado");
     }
 
-    return {
-      ...this.formatOrder(order),
-      proposals: order.proposals.map((p) => ({
-        id: p.id,
-        provider_id: p.providerId,
-        price: p.price,
-        description: p.description,
-        estimated_duration: p.estimatedDuration,
-        status: p.status,
-        created_at: p.createdAt,
-      })),
-    };
+    return this.formatOrderWithProposals(order);
+  }
+
+  async findByIdForClient(orderId: string, clientId: string) {
+    const order = await this.prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        proposals: true,
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException("Pedido de serviço não encontrado");
+    }
+
+    if (order.clientId !== clientId) {
+      throw new ForbiddenException("Pedido não pertence ao cliente");
+    }
+
+    return this.formatOrderWithProposals(order);
+  }
+
+  async findByIdWithAccess(orderId: string, userId: string, role: string) {
+    const order = await this.prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        proposals: true,
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException("Pedido de serviço não encontrado");
+    }
+
+    if (role === "CLIENT" && order.clientId === userId) {
+      return this.formatOrderWithProposals(order);
+    }
+
+    if (role === "PROVIDER") {
+      const proposal = order.proposals.find((p) => p.providerId === userId);
+      if (proposal) {
+        return {
+          ...this.formatOrder(order),
+          proposals: [
+            {
+              id: proposal.id,
+              provider_id: proposal.providerId,
+              price: proposal.price,
+              description: proposal.description,
+              estimated_duration: proposal.estimatedDuration,
+              status: proposal.status,
+              created_at: proposal.createdAt,
+            },
+          ],
+        };
+      }
+    }
+
+    throw new ForbiddenException("Acesso negado a este pedido");
   }
 
   async findOpenOrders() {

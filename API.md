@@ -1007,7 +1007,7 @@ Obter detalhe de um pedido (apenas dono).
 | Erro | Código |
 |------|--------|
 | Pedido não encontrado | `404` |
-| Pedido não pertence ao cliente | `400` |
+| Pedido não pertence ao cliente | `403` |
 
 ---
 
@@ -1041,9 +1041,11 @@ Cancelar pedido (apenas dono). Altera status para `CANCELLED`.
 
 ### Pedidos de Serviço (Público)
 
-**Prefixo:** `services` | **Sem autenticação**
+**Prefixo:** `services`
 
 #### `GET /services`
+
+**Sem autenticação**
 
 Listar pedidos abertos (para prestadores encontrarem oportunidades).
 
@@ -1053,13 +1055,20 @@ Listar pedidos abertos (para prestadores encontrarem oportunidades).
 
 #### `GET /services/:orderId`
 
-Obter detalhe de um pedido (público).
+**Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
 
-**Resposta `200`:** Mesma estrutura com proposals do `GET /services/me/:orderId`.
+Obter detalhe de um pedido com acesso controlado por papel:
+
+- **CLIENT dono do pedido:** retorna dados completos com todas as propostas
+- **PROVIDER com proposta neste pedido:** retorna dados do pedido + apenas sua própria proposta
+- **Demais casos:** `403 Forbidden`
+
+**Resposta `200`:** Mesma estrutura com proposals do `GET /services/me/:orderId` (para CLIENT dono). Para PROVIDER com proposta, apenas a própria proposta é incluída.
 
 | Erro | Código |
 |------|--------|
 | Pedido não encontrado | `404` |
+| Acesso negado a este pedido | `403` |
 
 ---
 
