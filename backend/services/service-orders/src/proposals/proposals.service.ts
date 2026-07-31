@@ -29,6 +29,27 @@ export class ProposalsService {
     };
   }
 
+  private formatProposalWithOrder(proposal: any) {
+    return {
+      ...this.formatProposal(proposal),
+      service_order: proposal.serviceOrder
+        ? {
+            id: proposal.serviceOrder.id,
+            title: proposal.serviceOrder.title,
+            description: proposal.serviceOrder.description,
+            status: proposal.serviceOrder.status,
+            category: proposal.serviceOrder.category
+              ? {
+                  id: proposal.serviceOrder.category.id,
+                  name: proposal.serviceOrder.category.name,
+                  slug: proposal.serviceOrder.category.slug,
+                }
+              : null,
+          }
+        : null,
+    };
+  }
+
   async create(providerId: string, dto: CreateProposalDto, ip?: string) {
     const order = await this.prisma.serviceOrder.findUnique({
       where: { id: dto.serviceOrderId },
@@ -79,13 +100,39 @@ export class ProposalsService {
     return this.formatProposal(proposal);
   }
 
+  async findByIdForProvider(proposalId: string, providerId: string) {
+    const proposal = await this.prisma.proposal.findUnique({
+      where: { id: proposalId },
+      include: {
+        serviceOrder: {
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+          },
+        },
+      },
+    });
+
+    if (!proposal || proposal.providerId !== providerId) {
+      throw new NotFoundException("Proposta não encontrada");
+    }
+
+    return this.formatProposalWithOrder(proposal);
+  }
+
   async findByProvider(providerId: string) {
     const proposals = await this.prisma.proposal.findMany({
       where: { providerId },
       orderBy: { createdAt: "desc" },
+      include: {
+        serviceOrder: {
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+          },
+        },
+      },
     });
 
-    return proposals.map((p) => this.formatProposal(p));
+    return proposals.map((p) => this.formatProposalWithOrder(p));
   }
 
   async findByServiceOrder(serviceOrderId: string) {
