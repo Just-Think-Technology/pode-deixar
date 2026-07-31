@@ -284,51 +284,57 @@ export class ProviderServicesService {
       },
     } as const;
 
+    const allProfiles = await this.prisma.providerProfile.findMany({
+      where: profileFilter,
+      include: includeClause,
+    });
+
+    let result = allProfiles.map((p) => this.formatProfileResult(p));
+
     if (query.q) {
-      const allProfiles = await this.prisma.providerProfile.findMany({
-        where: profileFilter,
-        include: includeClause,
-      });
-
       const termo = this.removerAcentos(query.q);
-      const filtrados = allProfiles
-        .map((p) => this.formatProfileResult(p))
-        .filter((p) => {
-          const nome = this.removerAcentos(p.user.complete_name);
-          if (nome.includes(termo)) return true;
-          return p.services.some(
-            (s: any) =>
-              this.removerAcentos(s.title).includes(termo) ||
-              this.removerAcentos(s.description).includes(termo),
-          );
-        });
-
-      const paginados = filtrados.slice(skip, skip + limit);
-
-      return {
-        data: paginados,
-        meta: {
-          total: filtrados.length,
-          page,
-          limit,
-          totalPages: Math.ceil(filtrados.length / limit),
-        },
-      };
+      result = result.filter((p) => {
+        const nome = this.removerAcentos(p.user.complete_name);
+        if (nome.includes(termo)) return true;
+        return p.services.some(
+          (s: any) =>
+            this.removerAcentos(s.title).includes(termo) ||
+            this.removerAcentos(s.description).includes(termo),
+        );
+      });
     }
 
-    const [profiles, total] = await this.prisma.$transaction([
-      this.prisma.providerProfile.findMany({
-        where: profileFilter,
-        skip,
-        take: limit,
-        include: includeClause,
-      }),
-      this.prisma.providerProfile.count({ where: profileFilter }),
-    ]);
+    if (query.postalCode) {
+      const clientCep = parseInt(query.postalCode.replace(/\D/g, ""), 10);
+      result.sort((a, b) => {
+        const ratingDiff = Math.abs(b.rating - a.rating);
+        if (ratingDiff > 0.5) {
+          return b.rating - a.rating;
+        }
+        const cepA = parseInt(
+          (a.user.postal_code || "").replace(/\D/g, ""),
+          10,
+        );
+        const cepB = parseInt(
+          (b.user.postal_code || "").replace(/\D/g, ""),
+          10,
+        );
+        return Math.abs(cepA - clientCep) - Math.abs(cepB - clientCep);
+      });
+    } else {
+      result.sort((a, b) => b.rating - a.rating);
+    }
+
+    const paginados = result.slice(skip, skip + limit);
 
     return {
-      data: profiles.map((p) => this.formatProfileResult(p)),
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      data: paginados,
+      meta: {
+        total: result.length,
+        page,
+        limit,
+        totalPages: Math.ceil(result.length / limit),
+      },
     };
   }
 }

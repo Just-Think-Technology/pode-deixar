@@ -17,7 +17,7 @@ export class CategoriesService {
 
   async findAll() {
     const categories = await this.prisma.category.findMany({
-      orderBy: { order: "asc" },
+      orderBy: { serviceOrders: { _count: "desc" } },
       select: {
         id: true,
         name: true,
