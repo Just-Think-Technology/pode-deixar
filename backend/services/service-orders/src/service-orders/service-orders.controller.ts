@@ -87,8 +87,10 @@ export class MyServiceOrdersController {
     description: "Detalhe do pedido retornado com sucesso",
   })
   @ApiResponse({ status: 404, description: "Pedido não encontrado" })
-  async findOne(@Param("orderId") orderId: string) {
-    return this.serviceOrdersService.findById(orderId);
+  @ApiResponse({ status: 403, description: "Pedido não pertence ao cliente" })
+  async findOne(@Request() req: any, @Param("orderId") orderId: string) {
+    const userId = req.user.sub;
+    return this.serviceOrdersService.findByIdForClient(orderId, userId);
   }
 
   @Patch()
@@ -141,15 +143,24 @@ export class PublicServiceOrdersController {
   }
 
   @Get(":orderId")
-  @ApiOperation({ summary: "Obter detalhe de um pedido (público)" })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CLIENT", "PROVIDER")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Obter detalhe de um pedido (autenticado)" })
   @ApiParam({ name: "orderId", description: "ID do pedido" })
   @ApiResponse({
     status: 200,
     description: "Detalhe do pedido retornado com sucesso",
   })
   @ApiResponse({ status: 404, description: "Pedido não encontrado" })
-  async findOnePublic(@Param("orderId") orderId: string) {
-    return this.serviceOrdersService.findById(orderId);
+  @ApiResponse({ status: 403, description: "Acesso negado a este pedido" })
+  async findOnePublic(
+    @Request() req: any,
+    @Param("orderId") orderId: string,
+  ): Promise<any> {
+    const userId = req.user.sub;
+    const role = req.user.role;
+    return this.serviceOrdersService.findByIdWithAccess(orderId, userId, role);
   }
 }
 
@@ -172,23 +183,5 @@ export class ProviderReceivedOrdersController {
   async findReceived(@Request() req: any) {
     const userId = req.user.sub;
     return this.serviceOrdersService.findReceivedByProvider(userId);
-  }
-}
-
-@ApiTags("Pedidos de Serviço (Detalhe)")
-@Controller("services/:orderId")
-export class ServiceOrderDetailController {
-  constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
-
-  @Get()
-  @ApiOperation({ summary: "Obter detalhe de um pedido" })
-  @ApiParam({ name: "orderId", description: "ID do pedido" })
-  @ApiResponse({
-    status: 200,
-    description: "Detalhe do pedido retornado com sucesso",
-  })
-  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
-  async findOne(@Param("orderId") orderId: string) {
-    return this.serviceOrdersService.findById(orderId);
   }
 }

@@ -5,6 +5,7 @@ import { ServicesLoggerService } from "../src/shared/services-logger.service";
 import {
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 
 describe("ServiceOrdersService", () => {
@@ -217,6 +218,139 @@ describe("ServiceOrdersService", () => {
       await expect(service.findById("nonexistent")).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe("findByIdForClient", () => {
+    it("should return order with proposals when client is the owner", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        clientId: "client-1",
+        proposals: [],
+      });
+
+      const result = await service.findByIdForClient("order-1", "client-1");
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe("order-1");
+    });
+
+    it("should throw NotFoundException when order does not exist", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.findByIdForClient("invalid-id", "client-1"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw ForbiddenException when client is not the owner", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        clientId: "other-client",
+        proposals: [],
+      });
+
+      await expect(
+        service.findByIdForClient("order-1", "client-1"),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe("findByIdWithAccess", () => {
+    it("should return full order when CLIENT is the owner", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        clientId: "client-1",
+        proposals: [],
+      });
+
+      const result: any = await service.findByIdWithAccess(
+        "order-1",
+        "client-1",
+        "CLIENT",
+      );
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe("order-1");
+    });
+
+    it("should return order with own proposal when PROVIDER has a proposal", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        providerId: "provider-1",
+        proposals: [
+          {
+            id: "prop-1",
+            providerId: "provider-1",
+            price: 150,
+            description: "Proposta",
+            estimatedDuration: "2h",
+            status: "PENDING",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+      });
+
+      const result: any = await service.findByIdWithAccess(
+        "order-1",
+        "provider-1",
+        "PROVIDER",
+      );
+
+      expect(result).toBeDefined();
+      expect(result.proposals).toHaveLength(1);
+      expect(result.proposals[0].provider_id).toBe("provider-1");
+    });
+
+    it("should return order without proposals when PROVIDER is the target but has no proposal", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        providerId: "provider-1",
+        proposals: [],
+      });
+
+      const result: any = await service.findByIdWithAccess(
+        "order-1",
+        "provider-1",
+        "PROVIDER",
+      );
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe("order-1");
+      expect(result.proposals).toBeUndefined();
+    });
+
+    it("should throw ForbiddenException when PROVIDER is not the target and has no proposal", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        providerId: "provider-2",
+        proposals: [],
+      });
+
+      await expect(
+        service.findByIdWithAccess("order-1", "provider-1", "PROVIDER"),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("should throw ForbiddenException when CLIENT is not the owner", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        clientId: "other-client",
+        proposals: [],
+      });
+
+      await expect(
+        service.findByIdWithAccess("order-1", "client-1", "CLIENT"),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("should throw NotFoundException when order does not exist", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.findByIdWithAccess("invalid-id", "client-1", "CLIENT"),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
