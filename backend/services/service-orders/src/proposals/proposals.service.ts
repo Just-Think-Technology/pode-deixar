@@ -174,7 +174,7 @@ export class ProposalsService {
     }
 
     if (existing.providerId !== providerId) {
-      throw new BadRequestException("Proposta não pertence a este prestador");
+      throw new ForbiddenException("Proposta não pertence a este prestador");
     }
 
     if (existing.status !== "PENDING") {
@@ -208,7 +208,7 @@ export class ProposalsService {
     }
 
     if (existing.providerId !== providerId) {
-      throw new BadRequestException("Proposta não pertence a este prestador");
+      throw new ForbiddenException("Proposta não pertence a este prestador");
     }
 
     if (existing.status !== "PENDING") {
@@ -238,7 +238,7 @@ export class ProposalsService {
     }
 
     if (proposal.serviceOrder.clientId !== clientId) {
-      throw new BadRequestException("O pedido não pertence a este cliente");
+      throw new ForbiddenException("O pedido não pertence a este cliente");
     }
 
     if (proposal.serviceOrder.status !== "OPEN") {
@@ -284,7 +284,7 @@ export class ProposalsService {
     }
 
     if (proposal.serviceOrder.clientId !== clientId) {
-      throw new BadRequestException("O pedido não pertence a este cliente");
+      throw new ForbiddenException("O pedido não pertence a este cliente");
     }
 
     if (proposal.status !== "PENDING") {

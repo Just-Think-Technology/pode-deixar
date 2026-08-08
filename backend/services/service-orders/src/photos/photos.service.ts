@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { MinioService } from "../storage/minio.service";
 import sharp from "sharp";
@@ -25,7 +25,7 @@ export class PhotosService {
     }
 
     if (order.clientId !== clientId) {
-      throw new BadRequestException("Pedido não pertence ao cliente");
+      throw new ForbiddenException("Pedido não pertence ao cliente");
     }
 
     if (!files || files.length === 0) {

@@ -67,8 +67,9 @@ export class CounterProposalsController {
     status: 200,
     description: "Lista de contrapropostas retornada com sucesso",
   })
-  async findByProposal(@Param("proposalId") proposalId: string) {
-    return this.counterProposalsService.findByProposal(proposalId);
+  async findByProposal(@Request() req: any, @Param("proposalId") proposalId: string) {
+    const userId = req.user.sub;
+    return this.counterProposalsService.findByProposal(userId, proposalId);
   }
 }
 

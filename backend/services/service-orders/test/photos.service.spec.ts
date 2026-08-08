@@ -2,7 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { PhotosService } from "../src/photos/photos.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { MinioService } from "../src/storage/minio.service";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 
 jest.mock("sharp", () => {
   return jest.fn().mockImplementation(() => ({
@@ -83,7 +83,7 @@ describe("PhotosService", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw BadRequestException when client is not the owner", async () => {
+    it("should throw ForbiddenException when client is not the owner", async () => {
       mockPrisma.serviceOrder.findUnique.mockResolvedValue({
         ...mockOrder,
         clientId: "other-client",
@@ -91,7 +91,7 @@ describe("PhotosService", () => {
 
       await expect(
         service.upload("order-1", "client-1", [mockFile]),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it("should throw BadRequestException when no files provided", async () => {

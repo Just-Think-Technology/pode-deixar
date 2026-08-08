@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersLoggerService } from "../shared/users-logger.service";
@@ -145,7 +146,7 @@ export class ProviderServicesService {
     }
 
     if (existing.providerProfileId !== providerProfileId) {
-      throw new BadRequestException("Serviço não pertence a este prestador");
+      throw new ForbiddenException("Serviço não pertence a este prestador");
     }
 
     const service = await this.prisma.providerService.update({
@@ -184,7 +185,7 @@ export class ProviderServicesService {
     }
 
     if (existing.providerProfileId !== providerProfileId) {
-      throw new BadRequestException("Serviço não pertence a este prestador");
+      throw new ForbiddenException("Serviço não pertence a este prestador");
     }
 
     const service = await this.prisma.providerService.update({

@@ -17,6 +17,7 @@ import {
   ApiConsumes,
 } from "@nestjs/swagger";
 import { FilesInterceptor } from "@nestjs/platform-express";
+import { Throttle } from "@nestjs/throttler";
 import { PhotosService } from "./photos.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
@@ -31,6 +32,7 @@ export class PhotosController {
 
   @Post()
   @Roles("CLIENT")
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @UseInterceptors(FilesInterceptor("photos", 10))
   @ApiOperation({ summary: "Enviar fotos do local de trabalho (máx 10)" })
   @ApiParam({ name: "orderId", description: "ID do pedido" })

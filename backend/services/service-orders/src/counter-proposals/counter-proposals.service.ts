@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ServicesLoggerService } from "../shared/services-logger.service";
@@ -48,7 +49,7 @@ export class CounterProposalsService {
     const isProvider = proposal.providerId === senderId;
 
     if (!isClient && !isProvider) {
-      throw new BadRequestException(
+      throw new ForbiddenException(
         "Você não tem permissão para contrapor esta proposta",
       );
     }
@@ -119,7 +120,7 @@ export class CounterProposalsService {
     const isProvider = cp.proposal.providerId === userId;
 
     if (!isClient && !isProvider) {
-      throw new BadRequestException(
+      throw new ForbiddenException(
         "Você não tem permissão para aceitar esta contraproposta",
       );
     }
@@ -196,7 +197,7 @@ export class CounterProposalsService {
     const isProvider = cp.proposal.providerId === userId;
 
     if (!isClient && !isProvider) {
-      throw new BadRequestException(
+      throw new ForbiddenException(
         "Você não tem permissão para rejeitar esta contraproposta",
       );
     }
@@ -215,13 +216,23 @@ export class CounterProposalsService {
     return this.formatCounterProposal(updated);
   }
 
-  async findByProposal(proposalId: string) {
+  async findByProposal(userId: string, proposalId: string) {
     const proposal = await this.prisma.proposal.findUnique({
       where: { id: proposalId },
+      include: { serviceOrder: true },
     });
 
     if (!proposal) {
       throw new NotFoundException("Proposta não encontrada");
+    }
+
+    const isClient = proposal.serviceOrder.clientId === userId;
+    const isProvider = proposal.providerId === userId;
+
+    if (!isClient && !isProvider) {
+      throw new ForbiddenException(
+        "Você não tem permissão para ver as contrapropostas desta proposta",
+      );
     }
 
     const counterProposals = await this.prisma.counterProposal.findMany({

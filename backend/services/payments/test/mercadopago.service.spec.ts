@@ -176,7 +176,8 @@ describe("MercadoPagoService", () => {
     it("deve validar assinatura HMAC correta", () => {
       process.env.MERCADO_PAGO_WEBHOOK_SECRET = "secret-de-teste";
       const crypto = require("node:crypto");
-      const manifest = "id:123;request-id:req-1;ts:1700000000000;";
+      const tsAtual = Math.floor(Date.now() / 1000);
+      const manifest = `id:123;request-id:req-1;ts:${tsAtual};`;
       const esperado = crypto
         .createHmac("sha256", "secret-de-teste")
         .update(manifest)
@@ -184,13 +185,34 @@ describe("MercadoPagoService", () => {
 
       const valid = service.validateWebhookSignature(
         {
-          "x-signature": `ts=1700000000000&v1=${esperado}`,
+          "x-signature": `ts=${tsAtual}&v1=${esperado}`,
           "x-request-id": "req-1",
         },
         { id: "123" },
       );
 
       expect(valid).toBe(true);
+    });
+
+    it("deve rejeitar assinatura válida mas fora da janela de tempo (anti-replay)", () => {
+      process.env.MERCADO_PAGO_WEBHOOK_SECRET = "secret-de-teste";
+      const crypto = require("node:crypto");
+      const tsVelho = Math.floor(Date.now() / 1000) - 3600;
+      const manifest = `id:123;request-id:req-1;ts:${tsVelho};`;
+      const esperado = crypto
+        .createHmac("sha256", "secret-de-teste")
+        .update(manifest)
+        .digest("hex");
+
+      const valid = service.validateWebhookSignature(
+        {
+          "x-signature": `ts=${tsVelho}&v1=${esperado}`,
+          "x-request-id": "req-1",
+        },
+        { id: "123" },
+      );
+
+      expect(valid).toBe(false);
     });
 
     it("deve rejeitar assinatura inválida", () => {

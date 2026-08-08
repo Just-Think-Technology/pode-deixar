@@ -7,6 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
+  app.getHttpAdapter().getInstance().set("trust proxy", 1);
   app.enableCors({
     origin: process.env.CORS_ORIGIN || "*",
     credentials: true,

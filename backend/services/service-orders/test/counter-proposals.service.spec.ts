@@ -5,6 +5,7 @@ import { ServicesLoggerService } from "../src/shared/services-logger.service";
 import {
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 
 describe("CounterProposalsService", () => {
@@ -132,14 +133,14 @@ describe("CounterProposalsService", () => {
       );
     });
 
-    it("should throw BadRequestException when sender is not related", async () => {
+    it("should throw ForbiddenException when sender is not related", async () => {
       mockPrisma.proposal.findUnique.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder },
       });
 
       await expect(service.create("stranger", dto)).rejects.toThrow(
-        BadRequestException,
+        ForbiddenException,
       );
     });
 
@@ -292,22 +293,52 @@ describe("CounterProposalsService", () => {
   });
 
   describe("findByProposal", () => {
-    it("should return counter-proposals for a proposal", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(mockProposal);
-      mockPrisma.counterProposal.findMany.mockResolvedValue([mockCounterProposal]);
+    it("should return counter-proposals for a proposal as client", async () => {
+      mockPrisma.proposal.findUnique.mockResolvedValue({
+        ...mockProposal,
+        serviceOrder: { ...mockServiceOrder },
+      });
+      mockPrisma.counterProposal.findMany.mockResolvedValue([
+        mockCounterProposal,
+      ]);
 
-      const result = await service.findByProposal("proposal-1");
+      const result = await service.findByProposal("client-1", "proposal-1");
 
       expect(result).toHaveLength(1);
       expect(result[0].proposal_id).toBe("proposal-1");
     });
 
+    it("should return counter-proposals for a proposal as provider", async () => {
+      mockPrisma.proposal.findUnique.mockResolvedValue({
+        ...mockProposal,
+        serviceOrder: { ...mockServiceOrder },
+      });
+      mockPrisma.counterProposal.findMany.mockResolvedValue([
+        mockCounterProposal,
+      ]);
+
+      const result = await service.findByProposal("provider-1", "proposal-1");
+
+      expect(result).toHaveLength(1);
+    });
+
+    it("should throw ForbiddenException when user is unrelated", async () => {
+      mockPrisma.proposal.findUnique.mockResolvedValue({
+        ...mockProposal,
+        serviceOrder: { ...mockServiceOrder },
+      });
+
+      await expect(
+        service.findByProposal("stranger", "proposal-1"),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it("should throw NotFoundException when proposal not found", async () => {
       mockPrisma.proposal.findUnique.mockResolvedValue(null);
 
-      await expect(service.findByProposal("nonexistent")).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findByProposal("client-1", "nonexistent"),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

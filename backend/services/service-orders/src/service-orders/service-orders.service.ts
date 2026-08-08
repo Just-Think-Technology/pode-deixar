@@ -239,7 +239,7 @@ export class ServiceOrdersService {
     }
 
     if (existing.clientId !== clientId) {
-      throw new BadRequestException("Pedido não pertence a este cliente");
+      throw new ForbiddenException("Pedido não pertence a este cliente");
     }
 
     if (existing.status !== "OPEN") {
@@ -279,7 +279,7 @@ export class ServiceOrdersService {
     }
 
     if (existing.clientId !== clientId) {
-      throw new BadRequestException("Pedido não pertence a este cliente");
+      throw new ForbiddenException("Pedido não pertence a este cliente");
     }
 
     if (existing.status === "CANCELLED") {

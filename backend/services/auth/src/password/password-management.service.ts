@@ -69,7 +69,7 @@ export class PasswordManagementService {
     });
     if (!user) {
       this.authLogger.logSecurityEvent('password_reset_invalid_token', {
-        token: dto.token,
+        token_suffix: dto.token.slice(-4),
       });
       throw new BadRequestException(
         'Token de redefinição inválido ou expirado',

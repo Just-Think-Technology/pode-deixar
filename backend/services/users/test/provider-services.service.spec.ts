@@ -2,7 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ProviderServicesService } from "../src/provider-services/provider-services.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
-import { NotFoundException, BadRequestException } from "@nestjs/common";
+import { NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { SearchProvidersQueryDto } from "../src/provider-services/dto/search-providers-query.dto";
 
 describe("ProviderServicesService", () => {
@@ -252,7 +252,7 @@ describe("ProviderServicesService", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw BadRequestException when service belongs to another provider", async () => {
+    it("should throw ForbiddenException when service belongs to another provider", async () => {
       mockPrisma.providerService.findUnique.mockResolvedValue({
         ...mockService,
         providerProfileId: "other-profile",
@@ -265,7 +265,7 @@ describe("ProviderServicesService", () => {
           updateDto,
           "127.0.0.1",
         ),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -299,7 +299,7 @@ describe("ProviderServicesService", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw BadRequestException when service belongs to another provider", async () => {
+    it("should throw ForbiddenException when service belongs to another provider", async () => {
       mockPrisma.providerService.findUnique.mockResolvedValue({
         ...mockService,
         providerProfileId: "other-profile",
@@ -307,7 +307,7 @@ describe("ProviderServicesService", () => {
 
       await expect(
         service.deleteService("provider-profile-1", "service-1", "127.0.0.1"),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

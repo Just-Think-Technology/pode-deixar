@@ -434,12 +434,12 @@ describe("ServiceOrdersService", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw BadRequestException when client does not own order", async () => {
+    it("should throw ForbiddenException when client does not own order", async () => {
       mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockOrder);
 
       await expect(
         service.update("other-client", "order-1", {}),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it("should throw BadRequestException when order is not OPEN", async () => {
@@ -497,12 +497,12 @@ describe("ServiceOrdersService", () => {
       );
     });
 
-    it("should throw BadRequestException when client does not own order", async () => {
+    it("should throw ForbiddenException when client does not own order", async () => {
       mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockOrder);
 
       await expect(
         service.cancel("other-client", "order-1"),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

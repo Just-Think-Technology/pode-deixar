@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { MinioService } from "../storage/minio.service";
@@ -42,7 +43,7 @@ export class ServiceImagesService {
     }
 
     if (service.providerProfileId !== providerProfileId) {
-      throw new BadRequestException("Serviço não pertence a este prestador");
+      throw new ForbiddenException("Serviço não pertence a este prestador");
     }
 
     return service;

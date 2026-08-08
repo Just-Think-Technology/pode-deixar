@@ -129,6 +129,17 @@ export class MercadoPagoService {
       return false;
     }
 
+    const tsNumero = Number(ts);
+    if (!Number.isFinite(tsNumero)) {
+      return false;
+    }
+
+    const JANELA_ACEITAVEL_S = 5 * 60;
+    const agoraS = Math.floor(Date.now() / 1000);
+    if (Math.abs(agoraS - tsNumero) > JANELA_ACEITAVEL_S) {
+      return false;
+    }
+
     const manifest = `id:${body.id};request-id:${xRequestId};ts:${ts};`;
     const esperado = Buffer.from(
       createHmac("sha256", this.webhookSecret).update(manifest).digest("hex"),

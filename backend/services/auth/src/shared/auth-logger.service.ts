@@ -67,7 +67,11 @@ export class AuthLoggerService {
 
   logEmailVerificationTokenFailure(token: string, reason: string) {
     this.logger.warn(
-      { event: 'auth.email_verification_token_failure', token, reason },
+      {
+        event: 'auth.email_verification_token_failure',
+        token_matches: token ? token.slice(-4) : undefined,
+        reason,
+      },
       'Email verification token failure',
     );
   }

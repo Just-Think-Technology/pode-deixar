@@ -263,12 +263,12 @@ describe("ProposalsService", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw BadRequestException when not the owner", async () => {
+    it("should throw ForbiddenException when not the owner", async () => {
       mockPrisma.proposal.findUnique.mockResolvedValue(mockProposal);
 
       await expect(
         service.update("other-provider", "proposal-1", {}),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it("should throw BadRequestException when proposal is not PENDING", async () => {
@@ -304,12 +304,12 @@ describe("ProposalsService", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw BadRequestException when not the owner", async () => {
+    it("should throw ForbiddenException when not the owner", async () => {
       mockPrisma.proposal.findUnique.mockResolvedValue(mockProposal);
 
       await expect(
         service.withdraw("other-provider", "proposal-1"),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it("should throw BadRequestException when proposal is not PENDING", async () => {
@@ -353,7 +353,7 @@ describe("ProposalsService", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw BadRequestException when client does not own the order", async () => {
+    it("should throw ForbiddenException when client does not own the order", async () => {
       mockPrisma.proposal.findUnique.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder, clientId: "other-client" },
@@ -361,7 +361,7 @@ describe("ProposalsService", () => {
 
       await expect(
         service.accept("client-1", "proposal-1"),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it("should throw BadRequestException when order is not OPEN", async () => {
@@ -445,7 +445,7 @@ describe("ProposalsService", () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw BadRequestException when client does not own the order", async () => {
+    it("should throw ForbiddenException when client does not own the order", async () => {
       mockPrisma.proposal.findUnique.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder, clientId: "other-client" },
@@ -453,7 +453,7 @@ describe("ProposalsService", () => {
 
       await expect(
         service.reject("client-1", "proposal-1"),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it("should throw BadRequestException when proposal is not PENDING", async () => {

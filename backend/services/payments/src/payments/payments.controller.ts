@@ -10,6 +10,7 @@ import {
   ForbiddenException,
   ParseUUIDPipe,
 } from "@nestjs/common";
+import * as crypto from "crypto";
 import {
   ApiTags,
   ApiOperation,
@@ -111,10 +112,23 @@ export class PaymentsController {
     @Headers("x-webhook-key") webhookKey: string | undefined,
     @Body() dto: PaymentWebhookDto,
   ) {
-    if (webhookKey !== process.env.MOCK_WEBHOOK_KEY) {
+    if (!this.validarChaveWebhook(webhookKey)) {
       throw new ForbiddenException("Chave de webhook inválida");
     }
     return this.paymentsService.confirmPayment(dto);
+  }
+
+  private validarChaveWebhook(webhookKey: string | undefined): boolean {
+    const esperada = process.env.MOCK_WEBHOOK_KEY || "";
+    if (!webhookKey || !esperada) {
+      return false;
+    }
+    const a = Buffer.from(webhookKey);
+    const b = Buffer.from(esperada);
+    if (a.length !== b.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(a, b);
   }
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Post("webhook/mercadopago")
