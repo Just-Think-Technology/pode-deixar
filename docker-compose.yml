@@ -43,6 +43,20 @@ services:
       auth:
         condition: service_started
 
+  # -- Payments Service --
+  payments:
+    build:
+      context: ./backend
+      target: payments-build
+    env_file: ./backend/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+    ports:
+      - "3004:3004"
+    depends_on:
+      auth:
+        condition: service_started
+
   # -- Frontend (Next.js) --
   frontend:
     build:
@@ -111,6 +125,7 @@ services:
       - auth
       - users
       - service-orders
+      - payments
       - frontend
 
 volumes:

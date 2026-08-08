@@ -15,6 +15,12 @@
         reverse_proxy users:3002
     }
 
+    # ─── Payments Health ───────────────────────────────────────
+    handle /api/payments/health* {
+        uri strip_prefix /api/payments
+        reverse_proxy payments:3004
+    }
+
     # ─── Auth Service ────────────────────────────────────────
     handle /api/auth/* {
         uri strip_prefix /api
@@ -47,6 +53,12 @@
     handle /api/proposals/* {
         uri strip_prefix /api
         reverse_proxy service-orders:3003
+    }
+
+    # ─── Payments Service ───────────────────────────────────
+    handle /api/payments/* {
+        uri strip_prefix /api
+        reverse_proxy payments:3004
     }
 
     # ─── Storage (MinIO) ────────────────────────────────────

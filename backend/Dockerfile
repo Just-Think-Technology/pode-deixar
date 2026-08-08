@@ -11,6 +11,7 @@ COPY shared/email/package.json ./shared/email/
 COPY services/auth/package.json ./services/auth/
 COPY services/users/package.json ./services/users/
 COPY services/service-orders/package.json ./services/service-orders/
+COPY services/payments/package.json ./services/payments/
 RUN pnpm install --frozen-lockfile
 
 # -- Prisma Generate --
@@ -47,3 +48,11 @@ COPY services/service-orders ./services/service-orders
 RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/service-orders build
 EXPOSE 3003
 CMD ["node", "services/service-orders/dist/main.js"]
+
+# -- Payments Service --
+FROM prisma AS payments-build
+COPY shared/logger ./shared/logger
+COPY services/payments ./services/payments
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/payments build
+EXPOSE 3004
+CMD ["node", "services/payments/dist/main.js"]

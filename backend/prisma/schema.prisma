@@ -135,6 +135,19 @@ enum CounterProposalStatus {
   REJECTED
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+}
+
 model ServiceOrder {
   id          String             @id @default(uuid())
   clientId    String             @map("client_id")
@@ -153,6 +166,7 @@ model ServiceOrder {
   updatedAt   DateTime           @updatedAt @map("updated_at")
   proposals   Proposal[]
   photos      OrderPhoto[]
+  payments    Payment[]
 
   @@map("service_orders")
 }
@@ -196,6 +210,21 @@ model OrderPhoto {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("order_photos")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  serviceOrder   ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrderId String        @map("service_order_id")
+  amount         Decimal       @db.Decimal(10, 2)
+  method         PaymentMethod @default(PIX)
+  status         PaymentStatus @default(PENDING)
+  externalRef    String?       @map("external_ref")
+  paidAt         DateTime?     @map("paid_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@map("payments")
 }
 
 model TokenBlacklist {
