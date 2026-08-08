@@ -5,11 +5,24 @@ import {
   Body,
   Param,
   Headers,
+  UseGuards,
+  Request,
   ForbiddenException,
+  ParseUUIDPipe,
 } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { PaymentsService } from "./payments.service";
 import { MercadoPagoService } from "../mercadopago/mercadopago.service";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { RolesGuard } from "../auth/roles.guard";
+import { Roles } from "../auth/roles.decorator";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
 import { MercadoPagoWebhookDto } from "./dto/mercadopago-webhook.dto";
@@ -23,21 +36,32 @@ export class PaymentsController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: "Lista todos os pagamentos" })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CLIENT")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Lista pagamentos do cliente autenticado" })
   @ApiResponse({ status: 200, description: "Lista de pagamentos retornada" })
-  findAll() {
-    return this.paymentsService.findAll();
+  findAll(@Request() req: any) {
+    return this.paymentsService.findAll(req.user.sub);
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CLIENT")
+  @ApiBearerAuth()
   @ApiOperation({ summary: "Registrar transação de pagamento no banco" })
   @ApiResponse({ status: 201, description: "Pagamento registrado (PENDING)" })
   @ApiResponse({ status: 400, description: "Dados inválidos" })
-  create(@Body() dto: CreatePaymentDto) {
-    return this.paymentsService.create(dto);
+  @ApiResponse({ status: 403, description: "Pedido não pertence ao cliente" })
+  create(@Request() req: any, @Body() dto: CreatePaymentDto) {
+    return this.paymentsService.create(req.user.sub, dto);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post(":paymentId/charge")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CLIENT")
+  @ApiBearerAuth()
   @ApiOperation({
     summary: "Gerar cobrança após aceite de proposta (mock ou gateway)",
     description:
@@ -47,19 +71,33 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: "Cobrança gerada" })
   @ApiResponse({ status: 404, description: "Pagamento não encontrado" })
   @ApiResponse({ status: 400, description: "Pagamento não está pendente" })
-  generateCharge(@Param("paymentId") paymentId: string) {
-    return this.paymentsService.generateCharge(paymentId);
+  generateCharge(
+    @Request() req: any,
+    @Param("paymentId", ParseUUIDPipe) paymentId: string,
+  ) {
+    return this.paymentsService.generateCharge(req.user.sub, paymentId);
   }
 
   @Get(":paymentId/status")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CLIENT")
+  @ApiBearerAuth()
   @ApiOperation({ summary: "Consultar status do pagamento" })
   @ApiParam({ name: "paymentId", description: "ID do pagamento" })
   @ApiResponse({ status: 200, description: "Status do pagamento retornado" })
   @ApiResponse({ status: 404, description: "Pagamento não encontrado" })
-  getStatus(@Param("paymentId") paymentId: string) {
-    return this.paymentsService.getStatus(paymentId);
+  @ApiResponse({
+    status: 403,
+    description: "Pagamento não pertence ao cliente",
+  })
+  getStatus(
+    @Request() req: any,
+    @Param("paymentId", ParseUUIDPipe) paymentId: string,
+  ) {
+    return this.paymentsService.getStatus(req.user.sub, paymentId);
   }
 
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post("webhook")
   @ApiOperation({
     summary: "Webhook (mock) — confirmar pagamento recebido",
@@ -68,15 +106,22 @@ export class PaymentsController {
   })
   @ApiResponse({ status: 200, description: "Pagamento confirmado (PAID)" })
   @ApiResponse({ status: 404, description: "Pagamento não encontrado" })
-  webhook(@Body() dto: PaymentWebhookDto) {
+  @ApiResponse({ status: 403, description: "Chave de webhook inválida" })
+  async webhook(
+    @Headers("x-webhook-key") webhookKey: string | undefined,
+    @Body() dto: PaymentWebhookDto,
+  ) {
+    if (webhookKey !== process.env.MOCK_WEBHOOK_KEY) {
+      throw new ForbiddenException("Chave de webhook inválida");
+    }
     return this.paymentsService.confirmPayment(dto);
   }
-
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Post("webhook/mercadopago")
   @ApiOperation({
     summary: "Webhook do Mercado Pago — confirmação de pagamento",
     description:
-      "Recebe as notificações do Mercado Pago, valida a assinatura (se configurada) e atualiza o status do pagamento conforme o gateway.",
+      "Recebe as notificações do Mercado Pago, valida a assinatura e atualiza o status do pagamento conforme o gateway.",
   })
   @ApiResponse({ status: 200, description: "Webhook processado" })
   @ApiResponse({ status: 404, description: "Pagamento não encontrado" })

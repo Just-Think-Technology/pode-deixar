@@ -1,4 +1,10 @@
-import { IsString, IsNumber, IsNotEmpty, IsPositive } from "class-validator";
+import {
+  IsString,
+  IsNumber,
+  IsNotEmpty,
+  IsPositive,
+  IsUUID,
+} from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class PaymentWebhookDto {
@@ -6,8 +12,7 @@ export class PaymentWebhookDto {
     description: "ID do pagamento no sistema (Pode Deixar)",
     example: "uuid-do-pagamento",
   })
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   paymentId: string;
 
   @ApiProperty({

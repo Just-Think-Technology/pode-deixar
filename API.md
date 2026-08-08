@@ -1469,7 +1469,14 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 > | Sem `MERCADO_PAGO_ACCESS_TOKEN` | **Mock** — nenhuma chamada externa |
 > | `MERCADO_PAGO_ACCESS_TOKEN=TEST-...` | **Gateway sandbox** para PIX; cartão de crédito continua **mock** |
 > | `MERCADO_PAGO_ACCESS_TOKEN=TEST-...` + `MERCADO_PAGO_NOTIFICATION_URL` | Igual acima + Mercado Pago notifica o webhook real |
-> | `MERCADO_PAGO_WEBHOOK_SECRET` definido | Webhook MP valida assinatura HMAC (recomendado) |
+> | `MERCADO_PAGO_WEBHOOK_SECRET` definido | Webhook MP **exige** assinatura HMAC válida (`x-signature` + `x-request-id`) |
+>
+> **Segurança obrigatória:** os endpoints de transação (`GET/POST /payments`,
+> `charge`, `status`) exigem **autenticação JWT** (Bearer) com role `CLIENT` e
+> somente acessam pedidos **do próprio cliente**. O webhook oficial do Mercado
+> Pago **rejeita** requisições sem `MERCADO_PAGO_WEBHOOK_SECRET` configurado
+> (fail-closed). O webhook mock exige o header `x-webhook-key` igual a
+> `MOCK_WEBHOOK_KEY`.
 >
 > Guia de configuração do sandbox: [`backend/services/payments/SANDBOX.md`](backend/services/payments/SANDBOX.md)
 >
@@ -1477,9 +1484,12 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 > | Variável | Necessária para | Obrigatória |
 > |----------|-----------------|-------------|
 > | `MERCADO_PAGO_ACCESS_TOKEN` | Gateway real (modo sandbox) | não (mock sem ela) |
-> | `MERCADO_PAGO_NOTIFICATION_URL` | Mercado Pago notificar o webhook | não (mock sem ela) |
-> | `MERCADO_PAGO_WEBHOOK_SECRET` | Validar assinatura do webhook | não (sem ela, webhook aceita sem validação) |
+> | `MERCADO_PAGO_NOTIFICATION_URL` | Mercado Pago notificar o webhook | não |
+> | `MERCADO_PAGO_WEBHOOK_SECRET` | Validar assinatura do webhook MP | **sim** (sem ela o webhook MP é rejeitado) |
 > | `MERCADO_PAGO_PAYER_EMAIL` | Email do pagador nas cobranças sandbox | não (default `sandbox@pode-deixar.com`) |
+> | `MOCK_WEBHOOK_KEY` | Webhook mock confirmar pagamento | não (sem ela o webhook mock é rejeitado) |
+>
+> **CORS:** restrito em `ALLOWED_ORIGINS` (lista separada por vírgulas; default `http://localhost:3000`).
 >
 > **Tabela de modo por endpoint:**
 > | Endpoint | Modo (sem token) | Modo (com token `TEST-`) |
@@ -1517,8 +1527,8 @@ Idênticos ao [Auth Service Health](#health).
 #### `GET /payments`
 
 - **Modo:** `Mock` (sempre — lê apenas o banco local)
-- **Requisitos:** nenhum
-- **Retorno:** `200` com todos os pagamentos registrados, ordenados por criação (mais recentes primeiro)
+- **Requisitos:** autenticação JWT (Bearer) com role `CLIENT`
+- **Retorno:** `200` com os pagamentos **do cliente autenticado**, ordenados por criação (mais recentes primeiro)
 
 ```json
 [
@@ -1541,30 +1551,35 @@ Idênticos ao [Auth Service Health](#health).
 #### `POST /payments`
 
 - **Modo:** `Mock` e `Gateway` (mesmo comportamento — apenas registra no banco)
-- **Requisita:** `CreatePaymentDto` no body (sem autenticação)
+- **Requisita:** `CreatePaymentDto` no body
+- **Requisitos:** autenticação JWT (Bearer) com role `CLIENT`; o pedido deve pertencer ao cliente autenticado
 - **Retorno:** `201` com o pagamento criado em `PENDING`
 
-Registra a transação de pagamento no banco. Nenhuma chamada externa é feita — a cobrança é gerada depois, no `charge`. Para operação real, deve ser chamado logo após o aceite da proposta (ver fluxo abaixo).
+Registra a transação de pagamento no banco. O **preço não é enviado pelo frontend**
+— o valor é obtido pelo backend a partir do **preço acordado** (`agreedPrice`) ou da
+**proposta aceita** do pedido. Nenhuma chamada externa é feita — a cobrança é gerada
+depois, no `charge`.
+Para operação real, deve ser chamado logo após o aceite da proposta (ver fluxo abaixo).
 
 **Request body (`CreatePaymentDto`):**
 ```json
 {
   "serviceOrderId": "uuid-do-pedido",
-  "amount": 150.00,
   "method": "PIX"
 }
 ```
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
-| `serviceOrderId` | `string` (UUID) | sim | ID do pedido de serviço |
-| `amount` | `number` (Decimal) | sim | Valor do pagamento (> 0, máx. 2 casas decimais) |
+| `serviceOrderId` | `string` (UUID) | sim | ID do pedido de serviço (deve pertencer ao cliente) |
 | `method` | `PaymentMethod` | sim | `PIX` ou `CREDIT_CARD` |
 
 | Status | Código | Retorno |
 |--------|--------|---------|
-| Sucesso | `201` | Payment criado (`status: "PENDING"`) |
+| Sucesso | `201` | Payment criado (`status: "PENDING"`, valor vindo do backend) |
 | Validação | `400` | `BadRequestException` — { message, errors[] } |
+| Pedido não pertence ao cliente | `403` | `ForbiddenException` |
+| Sem preço definido | `400` | `BadRequestException` (pedido sem proposta aceita) |
 
 ---
 
@@ -1578,6 +1593,7 @@ Registra a transação de pagamento no banco. Nenhuma chamada externa é feita �
 > - **CREDIT_CARD**: **mock** sempre (fluxo de card token ainda não implementado).
 
 - **Requisita:** pagamento existente (`404` se não) com `status: PENDING` (`400` caso contrário) — a cobrança só pode ser gerada uma vez por transação pendente.
+- **Requisitos:** autenticação JWT (Bearer) com role `CLIENT`; o pagamento deve pertencer ao cliente autenticado (`403` caso contrário). Rate limit: 10 req/min.
 - **Variáveis necessárias:** `MERCADO_PAGO_ACCESS_TOKEN` (modo real); `MERCADO_PAGO_PAYER_EMAIL` (opcional).
 - **Retorno:** `200` com `paymentId`, `chargeRef`, `status` e `cobranca` (campos variam por método/modo).
 
@@ -1628,6 +1644,7 @@ Registra a transação de pagamento no banco. Nenhuma chamada externa é feita �
 |--------|--------|---------|
 | Sucesso | `200` | Cobrança gerada (ver campos acima) |
 | Pagamento não encontrado | `404` | `NotFoundException` |
+| Pagamento não pertence ao cliente | `403` | `ForbiddenException` |
 | Pagamento não pendente | `400` | `BadRequestException` |
 
 ---
@@ -1636,6 +1653,7 @@ Registra a transação de pagamento no banco. Nenhuma chamada externa é feita �
 
 - **Modo:** `Mock` sempre (lê a situação do banco local, independente do gateway)
 - **Requisita:** pagamento existente (`404` se não)
+- **Requisitos:** autenticação JWT (Bearer) com role `CLIENT`; o pagamento deve pertencer a um pedido do cliente autenticado (`403` caso contrário)
 - **Retorno:** `200` com o status atual do pagamento (podendo refletir atualização feita pelo webhook)
 
 **Resposta `200`:**
@@ -1655,6 +1673,7 @@ Registra a transação de pagamento no banco. Nenhuma chamada externa é feita �
 |--------|--------|---------|
 | Sucesso | `200` | status/method/amount/externalRef/paidAt |
 | Pagamento não encontrado | `404` | `NotFoundException` |
+| Pagamento não pertence ao cliente | `403` | `ForbiddenException` |
 
 ---
 
@@ -1665,10 +1684,10 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 #### `POST /payments/webhook` (simulador mock)
 
 - **Modo:** `Mock` — simula manualmente a confirmação de pagamento do gateway
-- **Requisita:** `PaymentWebhookDto` (body) e pagamento existente
+- **Requisita:** `PaymentWebhookDto` (body), pagamento existente e header **`x-webhook-key`** igual a `MOCK_WEBHOOK_KEY` (sem chave válida → `403`)
 - **Retorno:** `200` com o pagamento atualizado para `PAID` (idempotente — reenvio não altera um pagamento já `PAID`)
 
-> O `amount` recebido **não** é comparado com o valor da transação — validação a implementar junto com o gateway real.
+> O `amount` recebido **é comparado** com o valor registrado na transação — se diferente, o webhook é rejeitado (`400`).
 
 **Request body:**
 ```json
@@ -1683,12 +1702,16 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 |-------|------|-------------|-----------|
 | `paymentId` | `string` (UUID) | sim | ID do pagamento no sistema |
 | `externalId` | `string` | sim | ID da transação no gateway (mock) |
-| `amount` | `number` | sim | Valor confirmado (> 0, máx. 2 casas decimais) |
+| `amount` | `number` | sim | Valor confirmado (deve conferir com o registrado) |
+
+**Header:** `x-webhook-key: <MOCK_WEBHOOK_KEY>`
 
 | Status | Código | Retorno |
 |--------|--------|---------|
 | Sucesso | `200` | Payment atualizado (`status: "PAID"`, `paidAt` preenchido) |
 | Pagamento não encontrado | `404` | `NotFoundException` |
+| Chave de webhook inválida | `403` | `ForbiddenException` |
+| Valor não confere | `400` | `BadRequestException` |
 
 ---
 
@@ -1698,9 +1721,10 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 - **Requisita:**
   - Em prod: `MERCADO_PAGO_NOTIFICATION_URL` apontando para a URL pública deste endpoint (ex: `https://dominio/api/payments/webhook/mercadopago`; dev: tunnel ngrok)
   - Pagamento local cujo `externalRef` seja o ID retornado pelo charge (vínculo entre gateway e banco)
-  - `MERCADO_PAGO_WEBHOOK_SECRET` se quiser validação de assinatura (header `x-signature` + `x-request-id`); sem o secret, aceita sem validação (apenas dev)
+  - **`MERCADO_PAGO_WEBHOOK_SECRET` obrigatório** — sem ele, o webhook é rejeitado (`403`); assinatura HMAC validada via headers `x-signature` (`ts`+`v1`) e `x-request-id` (fail-closed)
+  - Valor do payload do gateway deve conferir com o `amount` registrado (`400` se divergir)
 - **Retorno:** `200` com o pagamento sincronizado com o status do gateway
-- **Necessita de:** nenhuma autenticação para o MercadoPago (webhook externo)
+- **Necessita de:** nenhuma autenticação de usuário para o Mercado Pago (webhook externo)
 
 **Request body (`MercadoPagoWebhookDto`) — payload oficial do MP:**
 ```json
@@ -1732,7 +1756,8 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 |--------|--------|---------|
 | Sucesso | `200` | Pagamento local sincronizado (status + paidAt + externalRef) |
 | Pagamento local não encontrado | `404` | `NotFoundException` |
-| Assinatura inválida | `403` | `ForbiddenException` |
+| Assinatura inválida ou secret ausente | `403` | `ForbiddenException` |
+| Valor do gateway não confere | `400` | `BadRequestException` |
 
 ---
 
@@ -2033,12 +2058,12 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 | `GET` | `/health` | — | — | Saúde do serviço |
 | `GET` | `/health/ready` | — | — | Prontidão |
 | `GET` | `/health/live` | — | — | Atividade |
-| `GET` | `/payments` | — | — | Listar pagamentos |
-| `POST` | `/payments` | — | — | Registrar transação (PENDING) |
-| `POST` | `/payments/:paymentId/charge` | — | — | Gerar cobrança (MP PIX se configurado, senão mock) |
-| `GET` | `/payments/:paymentId/status` | — | — | Consultar status do pagamento |
-| `POST` | `/payments/webhook` | — | — | Webhook (mock) — confirmar pagamento (PAID) |
-| `POST` | `/payments/webhook/mercadopago` | — | — | Webhook do Mercado Pago (sandbox) — sincronizar status |
+| `GET` | `/payments` | JWT + Roles | CLIENT | Listar pagamentos do cliente |
+| `POST` | `/payments` | JWT + Roles | CLIENT | Registrar transação (PENDING) |
+| `POST` | `/payments/:paymentId/charge` | JWT + Roles | CLIENT | Gerar cobrança (MP PIX se configurado, senão mock) |
+| `GET` | `/payments/:paymentId/status` | JWT + Roles | CLIENT | Consultar status do pagamento |
+| `POST` | `/payments/webhook` | Chave `x-webhook-key` | — | Webhook (mock) — confirmar pagamento (PAID) |
+| `POST` | `/payments/webhook/mercadopago` | Assinatura HMAC | — | Webhook do Mercado Pago — sincronizar status |
 
 > Sem `MERCADO_PAGO_ACCESS_TOKEN` (TEST-), os endpoints de pagamento operam com valores mockados. Ver [modo de operação](#payments-service).
 
@@ -2051,5 +2076,5 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 | **Controllers** | **29** |
 | **DTOs** | **27** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **35 endpoints** |
-| **Públicos (sem auth)** | **30 endpoints** |
+| **Bearer + Roles** | **39 endpoints** |
+| **Públicos (sem auth)** | **27 endpoints** |

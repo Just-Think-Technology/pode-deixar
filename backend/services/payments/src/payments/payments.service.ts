@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { PaymentMethod } from "@prisma/client";
@@ -20,31 +21,87 @@ export class PaymentsService {
     private readonly mercadoPago: MercadoPagoService,
   ) {}
 
-  findAll() {
+  private async buscarPagamentoDentroDoModelo(
+    paymentId: string,
+    userId: string,
+  ) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { serviceOrder: { select: { clientId: true } } },
+    });
+
+    if (!payment) {
+      throw new NotFoundException(`Pagamento ${paymentId} não encontrado`);
+    }
+
+    if (payment.serviceOrder.clientId !== userId) {
+      throw new ForbiddenException(
+        "Pagamento não pertence a um pedido deste cliente",
+      );
+    }
+
+    return payment;
+  }
+
+  findAll(userId: string) {
     return this.prisma.payment.findMany({
+      where: { serviceOrder: { clientId: userId } },
+      include: {
+        serviceOrder: {
+          select: {
+            id: true,
+            title: true,
+            clientId: true,
+            status: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
   }
 
-  create(dto: CreatePaymentDto) {
+  async create(userId: string, dto: CreatePaymentDto) {
+    const order = await this.prisma.serviceOrder.findUnique({
+      where: { id: dto.serviceOrderId },
+      include: {
+        proposals: {
+          where: { status: "ACCEPTED" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(
+        `Pedido ${dto.serviceOrderId} não encontrado`,
+      );
+    }
+
+    if (order.clientId !== userId) {
+      throw new ForbiddenException("Este pedido não pertence a este cliente");
+    }
+
+    const amount = order.agreedPrice ?? order.proposals[0]?.price ?? null;
+
+    if (amount === null) {
+      throw new BadRequestException(
+        "Pedido não possui preço definido (proposta aceita não encontrada)",
+      );
+    }
+
     return this.prisma.payment.create({
       data: {
-        serviceOrderId: dto.serviceOrderId,
-        amount: dto.amount,
+        serviceOrderId: order.id,
+        amount,
         method: dto.method,
         status: "PENDING",
       },
     });
   }
 
-  async generateCharge(paymentId: string) {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: paymentId },
-    });
-
-    if (!payment) {
-      throw new NotFoundException(`Pagamento ${paymentId} não encontrado`);
-    }
+  async generateCharge(userId: string, paymentId: string) {
+    const payment = await this.buscarPagamentoDentroDoModelo(paymentId, userId);
 
     if (payment.status !== "PENDING") {
       throw new BadRequestException(
@@ -59,14 +116,8 @@ export class PaymentsService {
     return this.gerarCobrancaMock(payment);
   }
 
-  async getStatus(paymentId: string) {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: paymentId },
-    });
-
-    if (!payment) {
-      throw new NotFoundException(`Pagamento ${paymentId} não encontrado`);
-    }
+  async getStatus(userId: string, paymentId: string) {
+    const payment = await this.buscarPagamentoDentroDoModelo(paymentId, userId);
 
     return {
       paymentId: payment.id,
@@ -87,6 +138,8 @@ export class PaymentsService {
     if (!payment) {
       throw new NotFoundException(`Pagamento ${dto.paymentId} não encontrado`);
     }
+
+    this.conferirValorGateway(payment.amount, dto.amount);
 
     if (payment.status === "PAID") {
       return payment;
@@ -115,11 +168,13 @@ export class PaymentsService {
       );
     }
 
+    this.conferirValorGateway(payment.amount, mpPayment.transactionAmount);
+
+    const status = this.traduzirStatusMercadoPago(mpPayment.status);
+
     if (payment.status === "PAID") {
       return payment;
     }
-
-    const status = this.traduzirStatusMercadoPago(mpPayment.status);
 
     return this.prisma.payment.update({
       where: { id: payment.id },
@@ -129,6 +184,14 @@ export class PaymentsService {
         externalRef: String(mpPayment.id),
       },
     });
+  }
+
+  private conferirValorGateway(valorLocal: unknown, valorGateway: number) {
+    if (Number(valorLocal) !== Number(valorGateway)) {
+      throw new BadRequestException(
+        "Valor informado pelo gateway não corresponde ao valor registrado",
+      );
+    }
   }
 
   private async gerarCobrancaMercadoPago(payment: {

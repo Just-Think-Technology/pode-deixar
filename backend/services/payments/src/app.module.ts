@@ -8,6 +8,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { MercadoPagoModule } from "./mercadopago/mercadopago.module";
 import { HealthModule } from "./health/health.module";
+import { SharedModule } from "./shared/shared.module";
 import { CommonModule } from "./shared/common.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
@@ -67,6 +68,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     MercadoPagoModule,
     HealthModule,
     CommonModule,
+    SharedModule,
   ],
   controllers: [AppController],
   providers: [

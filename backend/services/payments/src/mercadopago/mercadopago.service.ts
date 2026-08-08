@@ -102,7 +102,7 @@ export class MercadoPagoService {
     body: { id: string },
   ): boolean {
     if (!this.webhookSecret) {
-      return true;
+      return false;
     }
 
     const xSignature = headers["x-signature"] || "";

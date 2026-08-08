@@ -23,13 +23,18 @@ No `.env.staging` (e `.env` para dev local) do projeto:
 
 ```dotenv
 MERCADO_PAGO_ACCESS_TOKEN="TEST-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxx"
-MERCADO_PAGO_WEBHOOK_SECRET=""          # opcional durante testes (ver seção 4)
-MERCADO_PAGO_NOTIFICATION_URL=""        # URL pública do webhook (ver seção 3)
+MERCADO_PAGO_WEBHOOK_SECRET="..."            # OBRIGATÓRIO (ver seção 4) — sem ele o webhook real é rejeitado
+MERCADO_PAGO_NOTIFICATION_URL=""             # URL pública do webhook (ver seção 3)
 MERCADO_PAGO_PAYER_EMAIL="teste@pode-deixar.com"
+MOCK_WEBHOOK_KEY=""                          # chave do webhook mock (x-webhook-key), se quiser testar manualmente
 ```
 
 > `MERCADO_PAGO_PAYER_EMAIL` é o email do pagador usado nas cobranças de teste.
 > Em produção será substituído pelo email do cliente autenticado.
+
+> **Autenticação:** os endpoints de transação (`GET/POST /payments`, `charge`,
+> `status`) exigem Bearer JWT com role `CLIENT` e acessam apenas os pedidos do
+> próprio cliente. Use o token do JWT de login do dev.
 
 ## 3. Webhook de notificações (cobranças PIX)
 
@@ -50,23 +55,28 @@ http://<tunel>.ngrok.io/api/payments/webhook/mercadopago
 A cobrança é criada com o `notification_url` do body — o valor atual de
 `MERCADO_PAGO_NOTIFICATION_URL` é usado automaticamente em cada cobrança.
 
-## 4. Validar assinatura do webhook (opcional)
+## 4. Validar assinatura do webhook (obrigatório para o modo real)
 
-Para validar que as notificações vêm do Mercado Pago, configure um secret da
-aplicação no painel **Webhooks** e preencha `MERCADO_PAGO_WEBHOOK_SECRET`.
-Sem o secret configurado, o endpoint aceita notificações sem validação (útil
-apenas em dev).
+Configure um secret da aplicação no painel **Webhooks** do Mercado Pago e
+preencha `MERCADO_PAGO_WEBHOOK_SECRET`. A assinatura HMAC é validada nos
+headers `x-signature` (`ts`+`v1`) e `x-request-id`.
+
+> **Fail-closed:** sem `MERCADO_PAGO_WEBHOOK_SECRET`, o endpoint
+> `POST /payments/webhook/mercadopago` rejeita as notificações com `403`.
 
 ## 5. Testar com valores reais do sandbox
 
 ### Fluxo PIX
 
-1. `POST /payments` — registra pagamento (`method: "PIX"`)
+1. `POST /payments` — registra o pagamento (`method: "PIX"`); o valor é obtido
+   pelo backend do pedido/proposta aceita (não vem do frontend)
 2. `POST /payments/:paymentId/charge` — gera cobrança PIX real. A resposta
    contém `pixCopiaECola` (copia-e-cola) e `qrCodeBase64` (QR code)
 3. Pague com o app do pagador de teste (ou use a API de produção do sandbox)
 4. O Mercado Pago chama `POST /payments/webhook/mercadopago` e o status vira `PAID`
 5. `GET /payments/:paymentId/status` confirma o status
+6. Todos esses endpoints exigem Bearer token (role CLIENT); o webhook mock usa
+   o header `x-webhook-key` para simular sua confirmação em dev
 
 ### Cartões de teste do Mercado Pago (sandbox)
 
@@ -88,9 +98,12 @@ ideal é validar por ambiente.
 
 ## Pontos de atenção
 
-- O valor de `amount` informado no `POST /payments` é gravado como `Decimal`
+- O valor do pagamento **não vem do frontend** — o backend obtém do `agreedPrice`
+  do pedido ou da proposta aceita (`ACCEPTED`)
 - O `external_reference` do MP é o nosso `paymentId` (vínculo via `externalRef`)
 - O webhook MP só altera pagamentos que tenham `externalRef` igual ao ID do MP
+  e exige que o valor do payload confira com o registrado (`400` caso contrário)
 - A integração de cartão de crédito **ainda não gera cobrança real** — quando
   o gateway está configurado, PIX usa o MP; cartão continua com mock enquanto
   o fluxo de cartão (card token no frontend) não for definido
+- O webhook mock exige header `x-webhook-key` = `MOCK_WEBHOOK_KEY`

@@ -152,9 +152,9 @@ describe("MercadoPagoService", () => {
       process.env.MERCADO_PAGO_WEBHOOK_SECRET = originalSecret;
     });
 
-    it("deve permitir quando não há secret configurado (dev)", () => {
+    it("deve rejeitar quando não há secret configurado (fail-closed)", () => {
       delete process.env.MERCADO_PAGO_WEBHOOK_SECRET;
-      expect(service.validateWebhookSignature({}, { id: "123" })).toBe(true);
+      expect(service.validateWebhookSignature({}, { id: "123" })).toBe(false);
     });
 
     it("deve validar assinatura HMAC correta", () => {

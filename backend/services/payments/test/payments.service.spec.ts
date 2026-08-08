@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import {
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { PaymentMethod } from "@prisma/client";
 import { PaymentsService } from "../src/payments/payments.service";
@@ -17,12 +18,17 @@ describe("PaymentsService", () => {
       findUnique: jest.Mock;
       update: jest.Mock;
     };
+    serviceOrder: {
+      findUnique: jest.Mock;
+    };
   };
   let mercadoPago: {
     isConfigured: boolean;
     createPixCharge: jest.Mock;
     getPayment: jest.Mock;
   };
+
+  const userId = "user-1";
 
   beforeEach(async () => {
     prisma = {
@@ -31,6 +37,9 @@ describe("PaymentsService", () => {
         create: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
+      },
+      serviceOrder: {
+        findUnique: jest.fn(),
       },
     };
     mercadoPago = {
@@ -55,7 +64,7 @@ describe("PaymentsService", () => {
   });
 
   describe("findAll", () => {
-    it("deve retornar todos os pagamentos ordenados por criação", async () => {
+    it("deve filtrar pagamentos do cliente autenticado", async () => {
       const pagamentos = [
         {
           id: "payment-1",
@@ -64,45 +73,62 @@ describe("PaymentsService", () => {
           method: "PIX",
           status: "PAID",
         },
-        {
-          id: "payment-2",
-          serviceOrderId: "order-2",
-          amount: 80,
-          method: "CREDIT_CARD",
-          status: "PENDING",
-        },
       ];
       prisma.payment.findMany.mockResolvedValue(pagamentos);
 
-      const result = await service.findAll();
+      const result = await service.findAll(userId);
 
       expect(prisma.payment.findMany).toHaveBeenCalledWith({
+        where: { serviceOrder: { clientId: userId } },
+        include: {
+          serviceOrder: {
+            select: {
+              id: true,
+              title: true,
+              clientId: true,
+              status: true,
+            },
+          },
+        },
         orderBy: { createdAt: "desc" },
       });
       expect(result).toEqual(pagamentos);
     });
-
-    it("deve retornar lista vazia quando não houver pagamentos", async () => {
-      prisma.payment.findMany.mockResolvedValue([]);
-
-      const result = await service.findAll();
-
-      expect(result).toEqual([]);
-    });
   });
 
   describe("create", () => {
-    it("deve registrar transação com status PENDING", async () => {
-      const dto = {
+    const dto = {
+      serviceOrderId: "order-1",
+      method: PaymentMethod.PIX,
+    };
+
+    it("deve registrar transação com preço vindo do pedido", async () => {
+      prisma.serviceOrder.findUnique.mockResolvedValue({
+        id: "order-1",
+        clientId: userId,
+        agreedPrice: 150,
+        proposals: [],
+      });
+      prisma.payment.create.mockResolvedValue({
+        id: "payment-1",
         serviceOrderId: "order-1",
         amount: 150,
-        method: PaymentMethod.PIX,
-      };
-      const pagamento = { id: "payment-1", ...dto, status: "PENDING" };
-      prisma.payment.create.mockResolvedValue(pagamento);
+        method: "PIX",
+        status: "PENDING",
+      });
 
-      const result = await service.create(dto);
+      const result = await service.create(userId, dto);
 
+      expect(prisma.serviceOrder.findUnique).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        include: {
+          proposals: {
+            where: { status: "ACCEPTED" },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
+      });
       expect(prisma.payment.create).toHaveBeenCalledWith({
         data: {
           serviceOrderId: "order-1",
@@ -111,7 +137,63 @@ describe("PaymentsService", () => {
           status: "PENDING",
         },
       });
-      expect(result).toEqual(pagamento);
+      expect(result.amount).toBe(150);
+    });
+
+    it("deve usar o preço da proposta aceita quando não há agreedPrice", async () => {
+      prisma.serviceOrder.findUnique.mockResolvedValue({
+        id: "order-1",
+        clientId: userId,
+        agreedPrice: null,
+        proposals: [{ id: "proposal-1", price: 220 }],
+      });
+      prisma.payment.create.mockResolvedValue({
+        id: "payment-1",
+        amount: 220,
+      });
+
+      await service.create(userId, dto);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ amount: 220 }),
+        }),
+      );
+    });
+
+    it("deve lançar NotFoundException quando o pedido não existe", async () => {
+      prisma.serviceOrder.findUnique.mockResolvedValue(null);
+
+      await expect(service.create(userId, dto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it("deve lançar ForbiddenException quando o pedido não pertence ao cliente", async () => {
+      prisma.serviceOrder.findUnique.mockResolvedValue({
+        id: "order-1",
+        clientId: "outro-usuario",
+        agreedPrice: 150,
+        proposals: [],
+      });
+
+      await expect(service.create(userId, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
+
+    it("deve lançar BadRequestException quando o pedido não tem preço definido", async () => {
+      prisma.serviceOrder.findUnique.mockResolvedValue({
+        id: "order-1",
+        clientId: userId,
+        agreedPrice: null,
+        proposals: [],
+      });
+
+      await expect(service.create(userId, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -119,36 +201,48 @@ describe("PaymentsService", () => {
     it("deve lançar NotFoundException quando o pagamento não existe", async () => {
       prisma.payment.findUnique.mockResolvedValue(null);
 
-      await expect(service.generateCharge("payment-x")).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.generateCharge(userId, "payment-x"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("deve lançar ForbiddenException quando o pagamento não pertence ao cliente", async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PENDING",
+        serviceOrder: { clientId: "outro-usuario" },
+      });
+
+      await expect(
+        service.generateCharge(userId, "payment-1"),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it("deve lançar BadRequestException quando o pagamento não está pendente", async () => {
       prisma.payment.findUnique.mockResolvedValue({
         id: "payment-1",
         status: "PAID",
+        serviceOrder: { clientId: userId },
       });
 
-      await expect(service.generateCharge("payment-1")).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.generateCharge(userId, "payment-1"),
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
     describe("sem gateway configurado (mock)", () => {
-      it("deve gerar cobrança mock e gravar externalRef", async () => {
+      it("deve gerar cobrança mock", async () => {
         prisma.payment.findUnique.mockResolvedValue({
           id: "payment-1",
           method: PaymentMethod.PIX,
           status: "PENDING",
           amount: 150,
+          serviceOrder: { clientId: userId },
         });
-        prisma.payment.update.mockResolvedValue({});
 
-        const result = await service.generateCharge("payment-1");
+        const result = await service.generateCharge(userId, "payment-1");
 
-        expect(prisma.payment.update).not.toHaveBeenCalled();
         expect(result.paymentId).toBe("payment-1");
         expect(result.chargeRef).toMatch(/^chg_mock_/);
         expect(result.status).toBe("PENDING");
@@ -161,9 +255,10 @@ describe("PaymentsService", () => {
           method: PaymentMethod.CREDIT_CARD,
           status: "PENDING",
           amount: 80,
+          serviceOrder: { clientId: userId },
         });
 
-        const result = await service.generateCharge("payment-2");
+        const result = await service.generateCharge(userId, "payment-2");
 
         expect(
           (result.cobranca as Record<string, string>).linkCheckout,
@@ -182,6 +277,7 @@ describe("PaymentsService", () => {
           method: PaymentMethod.PIX,
           status: "PENDING",
           amount: 150,
+          serviceOrder: { clientId: userId },
         });
         mercadoPago.createPixCharge.mockResolvedValue({
           id: "12345",
@@ -191,7 +287,7 @@ describe("PaymentsService", () => {
         });
         prisma.payment.update.mockResolvedValue({});
 
-        const result = await service.generateCharge("payment-1");
+        const result = await service.generateCharge(userId, "payment-1");
 
         expect(mercadoPago.createPixCharge).toHaveBeenCalledWith({
           amount: 150,
@@ -223,6 +319,7 @@ describe("PaymentsService", () => {
           method: PaymentMethod.PIX,
           status: "PENDING",
           amount: 150,
+          serviceOrder: { clientId: userId },
         });
         mercadoPago.createPixCharge.mockResolvedValue({
           id: "12345",
@@ -232,7 +329,7 @@ describe("PaymentsService", () => {
         });
         prisma.payment.update.mockResolvedValue({});
 
-        await service.generateCharge("payment-1");
+        await service.generateCharge(userId, "payment-1");
 
         expect(mercadoPago.createPixCharge).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -249,9 +346,10 @@ describe("PaymentsService", () => {
           method: PaymentMethod.CREDIT_CARD,
           status: "PENDING",
           amount: 80,
+          serviceOrder: { clientId: userId },
         });
 
-        const result = await service.generateCharge("payment-2");
+        const result = await service.generateCharge(userId, "payment-2");
 
         expect(mercadoPago.createPixCharge).not.toHaveBeenCalled();
         expect(result.chargeRef).toMatch(/^chg_mock_/);
@@ -269,15 +367,17 @@ describe("PaymentsService", () => {
       externalRef: "tx_mock_123",
       paidAt: new Date("2026-08-08T12:30:00.000Z"),
       createdAt: new Date("2026-08-08T10:00:00.000Z"),
+      serviceOrder: { clientId: userId },
     };
 
     it("deve retornar o status do pagamento", async () => {
       prisma.payment.findUnique.mockResolvedValue(pagamentoCompleto);
 
-      const result = await service.getStatus("payment-1");
+      const result = await service.getStatus(userId, "payment-1");
 
       expect(prisma.payment.findUnique).toHaveBeenCalledWith({
         where: { id: "payment-1" },
+        include: { serviceOrder: { select: { clientId: true } } },
       });
       expect(result).toEqual({
         paymentId: "payment-1",
@@ -290,10 +390,21 @@ describe("PaymentsService", () => {
       });
     });
 
+    it("deve lançar ForbiddenException quando o pagamento não pertence ao cliente", async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        serviceOrder: { clientId: "outro-usuario" },
+      });
+
+      await expect(service.getStatus(userId, "payment-1")).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
     it("deve lançar NotFoundException quando o pagamento não existe", async () => {
       prisma.payment.findUnique.mockResolvedValue(null);
 
-      await expect(service.getStatus("payment-99")).rejects.toThrow(
+      await expect(service.getStatus(userId, "payment-99")).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -310,6 +421,7 @@ describe("PaymentsService", () => {
       prisma.payment.findUnique.mockResolvedValue({
         id: "payment-1",
         status: "PENDING",
+        amount: 150,
       });
       prisma.payment.update.mockResolvedValue({
         id: "payment-1",
@@ -330,6 +442,19 @@ describe("PaymentsService", () => {
       expect(result.status).toBe("PAID");
     });
 
+    it("deve lançar BadRequestException quando o valor não confere", async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PENDING",
+        amount: 150,
+      });
+
+      await expect(
+        service.confirmPayment({ ...dto, amount: 1 }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
     it("deve lançar NotFoundException quando o pagamento não existe", async () => {
       prisma.payment.findUnique.mockResolvedValue(null);
 
@@ -343,6 +468,7 @@ describe("PaymentsService", () => {
       prisma.payment.findUnique.mockResolvedValue({
         id: "payment-1",
         status: "PAID",
+        amount: 150,
         paidAt: new Date(),
       });
 
@@ -364,6 +490,7 @@ describe("PaymentsService", () => {
       prisma.payment.findUnique.mockResolvedValue({
         id: "payment-1",
         status: "PENDING",
+        amount: 150,
       });
       prisma.payment.update.mockResolvedValue({
         id: "payment-1",
@@ -389,6 +516,29 @@ describe("PaymentsService", () => {
       expect(result.status).toBe("PAID");
     });
 
+    it("deve lançar BadRequestException quando o valor do gateway não confere", async () => {
+      mercadoPago.getPayment.mockResolvedValue({
+        id: "12345",
+        status: "approved",
+        transactionAmount: 1,
+        externalReference: "payment-1",
+      });
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PENDING",
+        amount: 150,
+      });
+
+      await expect(
+        service.handleMercadoPagoWebhook({
+          type: "payment",
+          action: "payment.updated",
+          data: { id: "12345" },
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
     it("deve traduzir status rejected para FAILED", async () => {
       mercadoPago.getPayment.mockResolvedValue({
         id: "12345",
@@ -399,6 +549,7 @@ describe("PaymentsService", () => {
       prisma.payment.findUnique.mockResolvedValue({
         id: "payment-1",
         status: "PENDING",
+        amount: 150,
       });
       prisma.payment.update.mockResolvedValue({
         id: "payment-1",
