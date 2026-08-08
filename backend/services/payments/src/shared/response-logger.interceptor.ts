@@ -8,6 +8,7 @@ import {
 import { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 import { Request, Response } from "express";
+import { sanitizarDadosSensiveis } from "./sanitizar-dados-sensiveis";
 
 @Injectable()
 export class ResponseLoggerInterceptor implements NestInterceptor {
@@ -24,14 +25,18 @@ export class ResponseLoggerInterceptor implements NestInterceptor {
         next: () => {
           const duration = Date.now() - now;
           this.logger.log(
-            `${request.method} ${request.url} - ${response.statusCode} - ${duration}ms`,
+            sanitizarDadosSensiveis(
+              `${request.method} ${request.url} - ${response.statusCode} - ${duration}ms`,
+            ),
           );
         },
         error: (error: any) => {
           const duration = Date.now() - now;
           this.logger.error(
-            `${request.method} ${request.url} - ${error.status || 500} - ${duration}ms`,
-            error.stack,
+            sanitizarDadosSensiveis(
+              `${request.method} ${request.url} - ${error.status || 500} - ${duration}ms`,
+            ),
+            sanitizarDadosSensiveis(error.stack || ""),
           );
         },
       }),
