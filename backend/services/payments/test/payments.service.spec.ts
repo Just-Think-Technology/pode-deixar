@@ -6,6 +6,7 @@ import {
 import { PaymentMethod } from "@prisma/client";
 import { PaymentsService } from "../src/payments/payments.service";
 import { PrismaService } from "../src/prisma/prisma.service";
+import { MercadoPagoService } from "../src/mercadopago/mercadopago.service";
 
 describe("PaymentsService", () => {
   let service: PaymentsService;
@@ -17,6 +18,11 @@ describe("PaymentsService", () => {
       update: jest.Mock;
     };
   };
+  let mercadoPago: {
+    isConfigured: boolean;
+    createPixCharge: jest.Mock;
+    getPayment: jest.Mock;
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -27,11 +33,17 @@ describe("PaymentsService", () => {
         update: jest.fn(),
       },
     };
+    mercadoPago = {
+      isConfigured: false,
+      createPixCharge: jest.fn(),
+      getPayment: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: MercadoPagoService, useValue: mercadoPago },
       ],
     }).compile();
 
@@ -104,41 +116,6 @@ describe("PaymentsService", () => {
   });
 
   describe("generateCharge", () => {
-    it("deve gerar cobrança mock e gravar externalRef", async () => {
-      prisma.payment.findUnique.mockResolvedValue({
-        id: "payment-1",
-        method: PaymentMethod.PIX,
-        status: "PENDING",
-      });
-      prisma.payment.update.mockResolvedValue({});
-
-      const result = await service.generateCharge("payment-1");
-
-      expect(prisma.payment.update).toHaveBeenCalledWith({
-        where: { id: "payment-1" },
-        data: { externalRef: expect.stringMatching(/^chg_mock_/) },
-      });
-      expect(result.paymentId).toBe("payment-1");
-      expect(result.chargeRef).toMatch(/^chg_mock_/);
-      expect(result.status).toBe("PENDING");
-      expect(result.cobranca.pixCopiaECola).toContain("br.gov.bcb.pix");
-    });
-
-    it("deve gerar link de checkout para cartão de crédito", async () => {
-      prisma.payment.findUnique.mockResolvedValue({
-        id: "payment-2",
-        method: PaymentMethod.CREDIT_CARD,
-        status: "PENDING",
-      });
-      prisma.payment.update.mockResolvedValue({});
-
-      const result = await service.generateCharge("payment-2");
-
-      expect(result.cobranca.linkCheckout).toMatch(
-        /^https:\/\/checkout\.mock\.pode-deixar\.com\//,
-      );
-    });
-
     it("deve lançar NotFoundException quando o pagamento não existe", async () => {
       prisma.payment.findUnique.mockResolvedValue(null);
 
@@ -157,6 +134,128 @@ describe("PaymentsService", () => {
         BadRequestException,
       );
       expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    describe("sem gateway configurado (mock)", () => {
+      it("deve gerar cobrança mock e gravar externalRef", async () => {
+        prisma.payment.findUnique.mockResolvedValue({
+          id: "payment-1",
+          method: PaymentMethod.PIX,
+          status: "PENDING",
+          amount: 150,
+        });
+        prisma.payment.update.mockResolvedValue({});
+
+        const result = await service.generateCharge("payment-1");
+
+        expect(prisma.payment.update).not.toHaveBeenCalled();
+        expect(result.paymentId).toBe("payment-1");
+        expect(result.chargeRef).toMatch(/^chg_mock_/);
+        expect(result.status).toBe("PENDING");
+        expect(result.cobranca.pixCopiaECola).toContain("br.gov.bcb.pix");
+      });
+
+      it("deve gerar link de checkout para cartão de crédito", async () => {
+        prisma.payment.findUnique.mockResolvedValue({
+          id: "payment-2",
+          method: PaymentMethod.CREDIT_CARD,
+          status: "PENDING",
+          amount: 80,
+        });
+
+        const result = await service.generateCharge("payment-2");
+
+        expect(
+          (result.cobranca as Record<string, string>).linkCheckout,
+        ).toMatch(/^https:\/\/checkout\.mock\.pode-deixar\.com\//);
+      });
+    });
+
+    describe("com gateway configurado (Mercado Pago)", () => {
+      beforeEach(() => {
+        mercadoPago.isConfigured = true;
+      });
+
+      it("deve gerar cobrança PIX via gateway e persistir externalRef", async () => {
+        prisma.payment.findUnique.mockResolvedValue({
+          id: "payment-1",
+          method: PaymentMethod.PIX,
+          status: "PENDING",
+          amount: 150,
+        });
+        mercadoPago.createPixCharge.mockResolvedValue({
+          id: "12345",
+          status: "pending",
+          qrCode: "00020126580014br.gov.bcb.pix...",
+          qrCodeBase64: "iVBORw0KGgo...",
+        });
+        prisma.payment.update.mockResolvedValue({});
+
+        const result = await service.generateCharge("payment-1");
+
+        expect(mercadoPago.createPixCharge).toHaveBeenCalledWith({
+          amount: 150,
+          externalReference: "payment-1",
+          payerEmail: "sandbox@pode-deixar.com",
+          notificationUrl: undefined,
+        });
+        expect(prisma.payment.update).toHaveBeenCalledWith({
+          where: { id: "payment-1" },
+          data: { externalRef: "12345" },
+        });
+        expect(result).toEqual({
+          paymentId: "payment-1",
+          chargeRef: "12345",
+          status: "PENDING",
+          cobranca: {
+            pixCopiaECola: "00020126580014br.gov.bcb.pix...",
+            qrCodeBase64: "iVBORw0KGgo...",
+            mercadoPagoId: "12345",
+          },
+        });
+      });
+
+      it("deve usar o notificationUrl configurado nas variáveis de ambiente", async () => {
+        process.env.MERCADO_PAGO_NOTIFICATION_URL =
+          "https://exemplo.com/api/payments/webhook/mercadopago";
+        prisma.payment.findUnique.mockResolvedValue({
+          id: "payment-1",
+          method: PaymentMethod.PIX,
+          status: "PENDING",
+          amount: 150,
+        });
+        mercadoPago.createPixCharge.mockResolvedValue({
+          id: "12345",
+          status: "pending",
+          qrCode: "...",
+          qrCodeBase64: "...",
+        });
+        prisma.payment.update.mockResolvedValue({});
+
+        await service.generateCharge("payment-1");
+
+        expect(mercadoPago.createPixCharge).toHaveBeenCalledWith(
+          expect.objectContaining({
+            notificationUrl:
+              "https://exemplo.com/api/payments/webhook/mercadopago",
+          }),
+        );
+        delete process.env.MERCADO_PAGO_NOTIFICATION_URL;
+      });
+
+      it("deve manter mock para cartão de crédito mesmo com gateway configurado", async () => {
+        prisma.payment.findUnique.mockResolvedValue({
+          id: "payment-2",
+          method: PaymentMethod.CREDIT_CARD,
+          status: "PENDING",
+          amount: 80,
+        });
+
+        const result = await service.generateCharge("payment-2");
+
+        expect(mercadoPago.createPixCharge).not.toHaveBeenCalled();
+        expect(result.chargeRef).toMatch(/^chg_mock_/);
+      });
     });
   });
 
@@ -200,7 +299,7 @@ describe("PaymentsService", () => {
     });
   });
 
-  describe("confirmPayment", () => {
+  describe("confirmPayment (webhook mock)", () => {
     const dto = {
       paymentId: "payment-1",
       externalId: "tx_mock_123",
@@ -251,6 +350,94 @@ describe("PaymentsService", () => {
 
       expect(prisma.payment.update).not.toHaveBeenCalled();
       expect(result.status).toBe("PAID");
+    });
+  });
+
+  describe("handleMercadoPagoWebhook", () => {
+    it("deve atualizar o pagamento para PAID quando o gateway retorna approved", async () => {
+      mercadoPago.getPayment.mockResolvedValue({
+        id: "12345",
+        status: "approved",
+        transactionAmount: 150,
+        externalReference: "payment-1",
+      });
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PENDING",
+      });
+      prisma.payment.update.mockResolvedValue({
+        id: "payment-1",
+        status: "PAID",
+      });
+
+      const dto = {
+        type: "payment",
+        action: "payment.updated",
+        data: { id: "12345" },
+      };
+      const result = await service.handleMercadoPagoWebhook(dto);
+
+      expect(mercadoPago.getPayment).toHaveBeenCalledWith("12345");
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: "payment-1" },
+        data: {
+          status: "PAID",
+          paidAt: expect.any(Date),
+          externalRef: "12345",
+        },
+      });
+      expect(result.status).toBe("PAID");
+    });
+
+    it("deve traduzir status rejected para FAILED", async () => {
+      mercadoPago.getPayment.mockResolvedValue({
+        id: "12345",
+        status: "rejected",
+        transactionAmount: 150,
+        externalReference: "payment-1",
+      });
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PENDING",
+      });
+      prisma.payment.update.mockResolvedValue({
+        id: "payment-1",
+        status: "FAILED",
+      });
+
+      const resultado = await service.handleMercadoPagoWebhook({
+        type: "payment",
+        action: "payment.updated",
+        data: { id: "12345" },
+      });
+
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: "payment-1" },
+        data: {
+          status: "FAILED",
+          paidAt: null,
+          externalRef: "12345",
+        },
+      });
+      expect(resultado.status).toBe("FAILED");
+    });
+
+    it("deve lançar NotFoundException quando o pagamento local não existe", async () => {
+      mercadoPago.getPayment.mockResolvedValue({
+        id: "12345",
+        status: "approved",
+        transactionAmount: 150,
+        externalReference: "payment-inexistente",
+      });
+      prisma.payment.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.handleMercadoPagoWebhook({
+          type: "payment",
+          action: "payment.updated",
+          data: { id: "12345" },
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

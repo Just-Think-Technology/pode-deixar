@@ -1457,16 +1457,56 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 
 **Porta:** `3004` | **Proxy Caddy:** `/api/payments/*`
 
-> **Aviso:** A integração com o gateway de pagamento ainda não está configurada.
-> Os endpoints abaixo operam com **valores mockados** para validação do fluxo.
+> **Modo de operação — Gateway Mercado Pago (sandbox) vs Mock:**
+>
+> A integração com o **Mercado Pago (sandbox)** está preparada. O modo real
+> é ativado quando a variável `MERCADO_PAGO_ACCESS_TOKEN` (começando com
+> `TEST-`) está presente no ambiente. Sem o token, todos os endpoints operam
+> com **valores mockados**.
+>
+> | Configuração | Comportamento |
+> |---|---|
+> | Sem `MERCADO_PAGO_ACCESS_TOKEN` | **Mock** — nenhuma chamada externa |
+> | `MERCADO_PAGO_ACCESS_TOKEN=TEST-...` | **Gateway sandbox** para PIX; cartão de crédito continua **mock** |
+> | `MERCADO_PAGO_ACCESS_TOKEN=TEST-...` + `MERCADO_PAGO_NOTIFICATION_URL` | Igual acima + Mercado Pago notifica o webhook real |
+> | `MERCADO_PAGO_WEBHOOK_SECRET` definido | Webhook MP valida assinatura HMAC (recomendado) |
+>
+> Guia de configuração do sandbox: [`backend/services/payments/SANDBOX.md`](backend/services/payments/SANDBOX.md)
+>
+> **Variáveis de ambiente** (todas no `.env.staging` / `.env`):
+> | Variável | Necessária para | Obrigatória |
+> |----------|-----------------|-------------|
+> | `MERCADO_PAGO_ACCESS_TOKEN` | Gateway real (modo sandbox) | não (mock sem ela) |
+> | `MERCADO_PAGO_NOTIFICATION_URL` | Mercado Pago notificar o webhook | não (mock sem ela) |
+> | `MERCADO_PAGO_WEBHOOK_SECRET` | Validar assinatura do webhook | não (sem ela, webhook aceita sem validação) |
+> | `MERCADO_PAGO_PAYER_EMAIL` | Email do pagador nas cobranças sandbox | não (default `sandbox@pode-deixar.com`) |
+>
+> **Tabela de modo por endpoint:**
+> | Endpoint | Modo (sem token) | Modo (com token `TEST-`) |
+> |----------|------------------|--------------------------|
+> | `GET /health` | — | — |
+> | `GET /health/ready` | — | — |
+> | `GET /health/live` | — | — |
+> | `GET /payments` | Mock | Mock |
+> | `POST /payments` | Mock | Mock |
+> | `POST /payments/:paymentId/charge` | Mock | **Gateway** (PIX) / Mock (CREDIT_CARD) |
+> | `GET /payments/:paymentId/status` | Mock | Mock (lê o banco) |
+> | `POST /payments/webhook` | **Mock** | **Mock** (apenas simulação manual) |
+> | `POST /payments/webhook/mercadopago` | Mock (não usado) | **Real** (eventos do Mercado Pago) |
 
 ### Health
 
 #### `GET /health`
 
+Verificação de saúde do serviço (banco de dados). Sem autenticação. Sem mock.
+
 #### `GET /health/ready`
 
+Verificação de prontidão (banco de dados). Sem autenticação. Sem mock.
+
 #### `GET /health/live`
+
+Verificação de atividade. Sem autenticação. Sem mock.
 
 Idênticos ao [Auth Service Health](#health).
 
@@ -1476,9 +1516,10 @@ Idênticos ao [Auth Service Health](#health).
 
 #### `GET /payments`
 
-Lista todos os pagamentos registrados, ordenados por data de criação (mais recentes primeiro). Sem autenticação.
+- **Modo:** `Mock` (sempre — lê apenas o banco local)
+- **Requisitos:** nenhum
+- **Retorno:** `200` com todos os pagamentos registrados, ordenados por criação (mais recentes primeiro)
 
-**Resposta `200`:**
 ```json
 [
   {
@@ -1499,7 +1540,11 @@ Lista todos os pagamentos registrados, ordenados por data de criação (mais rec
 
 #### `POST /payments`
 
-Registrar transação de pagamento no banco. O pagamento é criado com status `PENDING`, aguardando confirmação via webhook. Sem autenticação.
+- **Modo:** `Mock` e `Gateway` (mesmo comportamento — apenas registra no banco)
+- **Requisita:** `CreatePaymentDto` no body (sem autenticação)
+- **Retorno:** `201` com o pagamento criado em `PENDING`
+
+Registra a transação de pagamento no banco. Nenhuma chamada externa é feita — a cobrança é gerada depois, no `charge`. Para operação real, deve ser chamado logo após o aceite da proposta (ver fluxo abaixo).
 
 **Request body (`CreatePaymentDto`):**
 ```json
@@ -1513,60 +1558,13 @@ Registrar transação de pagamento no banco. O pagamento é criado com status `P
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
 | `serviceOrderId` | `string` (UUID) | sim | ID do pedido de serviço |
-| `amount` | `number` | sim | Valor do pagamento (> 0, máx. 2 casas decimais) |
+| `amount` | `number` (Decimal) | sim | Valor do pagamento (> 0, máx. 2 casas decimais) |
 | `method` | `PaymentMethod` | sim | `PIX` ou `CREDIT_CARD` |
 
-**Resposta `201`:** Pagamento criado com `status: "PENDING"`.
-
-| Resposta | Código | Descrição |
-|----------|--------|-----------|
-| Payment | `201` | Transação registrada |
-| `BadRequestException` | `400` | Dados inválidos (validação) |
-
----
-
-#### `POST /payments/webhook`
-
-Webhook (mock) que simula o retorno do gateway de pagamento e confirma que o pagamento foi recebido, marcando a transação como `PAID` (grava `externalRef` e `paidAt`).
-
-**Endpoint idempotente:** reenvios do gateway não alteram um pagamento já `PAID`. Sem autenticação.
-
-**Request body (`PaymentWebhookDto`):**
-```json
-{
-  "paymentId": "uuid-do-pagamento",
-  "externalId": "tx_mock_1234567890",
-  "amount": 150.00
-}
-```
-
-| Campo | Tipo | Obrigatório | Descrição |
-|-------|------|-------------|-----------|
-| `paymentId` | `string` (UUID) | sim | ID do pagamento no sistema Pode Deixar |
-| `externalId` | `string` | sim | ID da transação no gateway (mock) |
-| `amount` | `number` | sim | Valor confirmado pelo gateway (> 0, máx. 2 casas decimais) |
-
-> O `amount` recebido ainda **não** é comparado com o valor da transação — será validado quando o gateway real for integrado.
-
-**Resposta `200`:**
-```json
-{
-  "id": "uuid-do-pagamento",
-  "serviceOrderId": "uuid-do-pedido",
-  "amount": 150.00,
-  "method": "PIX",
-  "status": "PAID",
-  "externalRef": "tx_mock_1234567890",
-  "paidAt": "2026-08-08T12:30:00.000Z",
-  "createdAt": "2026-08-08T10:00:00.000Z",
-  "updatedAt": "2026-08-08T12:30:00.000Z"
-}
-```
-
-| Resposta | Código | Descrição |
-|----------|--------|-----------|
-| Payment | `200` | Pagamento confirmado (`PAID`) |
-| `NotFoundException` | `404` | Pagamento não encontrado |
+| Status | Código | Retorno |
+|--------|--------|---------|
+| Sucesso | `201` | Payment criado (`status: "PENDING"`) |
+| Validação | `400` | `BadRequestException` — { message, errors[] } |
 
 ---
 
@@ -1574,11 +1572,21 @@ Webhook (mock) que simula o retorno do gateway de pagamento e confirma que o pag
 
 #### `POST /payments/:paymentId/charge`
 
-Gera cobrança para um pagamento pendente (fluxo: proposta aceita → cobrança). Simula a criação da cobrança no gateway — os dados retornados são mockados e um `chargeRef` (`chg_mock_...`) é persistido em `externalRef`. Sem autenticação.
+> **Modo:**
+> - **PIX + gateway configurado (`TEST-...`)**: **real** — cria cobrança no Mercado Pago (responde QR code real do sandbox).
+> - **PIX sem gateway**: **mock** — gera `chg_mock_...`.
+> - **CREDIT_CARD**: **mock** sempre (fluxo de card token ainda não implementado).
 
-**Aplicação do gatilho:** a cobrança não pode ser gerada para pagamento não pendente (`400`).
+- **Requisita:** pagamento existente (`404` se não) com `status: PENDING` (`400` caso contrário) — a cobrança só pode ser gerada uma vez por transação pendente.
+- **Variáveis necessárias:** `MERCADO_PAGO_ACCESS_TOKEN` (modo real); `MERCADO_PAGO_PAYER_EMAIL` (opcional).
+- **Retorno:** `200` com `paymentId`, `chargeRef`, `status` e `cobranca` (campos variam por método/modo).
 
-**Resposta `200`:**
+**Fluxo real (PIX, modo gateway):**
+1. `POST /payments/:paymentId/charge` é chamado com gateway configurado
+2. Mercado Pago retorna `external_ref` = `paymentId` local + `notification_url` configurada
+3. Resposta contém `pixCopiaECola` (texto copia-e-cola) e `qrCodeBase64` (imagem)
+
+**Resposta `200` (mock PIX ou gateway PIX):**
 ```json
 {
   "paymentId": "uuid-do-pagamento",
@@ -1590,24 +1598,45 @@ Gera cobrança para um pagamento pendente (fluxo: proposta aceita → cobrança)
 }
 ```
 
-Para `method: CREDIT_CARD`, o campo `cobranca` é:
+**Resposta `200` (gateway PIX real) — adiciona `qrCodeBase64` e `mercadoPagoId`:**
 ```json
 {
-  "linkCheckout": "https://checkout.mock.pode-deixar.com/chg_mock_a1b2c3d4e5f6"
+  "paymentId": "uuid-do-pagamento",
+  "chargeRef": "123456789",
+  "status": "PENDING",
+  "cobranca": {
+    "pixCopiaECola": "00020126580014br.gov.bcb.pix0136...",
+    "qrCodeBase64": "iVBORw0KGgo...",
+    "mercadoPagoId": 123456789
+  }
 }
 ```
 
-| Resposta | Código | Descrição |
-|----------|--------|-----------|
-| Cobrança mock | `200` | Cobrança gerada |
-| `NotFoundException` | `404` | Pagamento não encontrado |
-| `BadRequestException` | `400` | Pagamento não está pendente |
+**Resposta `200` (CREDIT_CARD — mock):**
+```json
+{
+  "paymentId": "uuid-do-pagamento",
+  "chargeRef": "chg_mock_a1b2c3d4e5f6",
+  "status": "PENDING",
+  "cobranca": {
+    "linkCheckout": "https://checkout.pode-deixar.com/chg_mock_a1b2c3d4e5f6"
+  }
+}
+```
+
+| Status | Código | Retorno |
+|--------|--------|---------|
+| Sucesso | `200` | Cobrança gerada (ver campos acima) |
+| Pagamento não encontrado | `404` | `NotFoundException` |
+| Pagamento não pendente | `400` | `BadRequestException` |
 
 ---
 
 #### `GET /payments/:paymentId/status`
 
-Consulta o status de um pagamento. Sem autenticação.
+- **Modo:** `Mock` sempre (lê a situação do banco local, independente do gateway)
+- **Requisita:** pagamento existente (`404` se não)
+- **Retorno:** `200` com o status atual do pagamento (podendo refletir atualização feita pelo webhook)
 
 **Resposta `200`:**
 ```json
@@ -1622,10 +1651,101 @@ Consulta o status de um pagamento. Sem autenticação.
 }
 ```
 
-| Resposta | Código | Descrição |
-|----------|--------|-----------|
-| status | `200` | Status do pagamento |
-| `NotFoundException` | `404` | Pagamento não encontrado |
+| Status | Código | Retorno |
+|--------|--------|---------|
+| Sucesso | `200` | status/method/amount/externalRef/paidAt |
+| Pagamento não encontrado | `404` | `NotFoundException` |
+
+---
+
+### Webhooks de Confirmação
+
+São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do Mercado Pago** (usado em produção/sandbox).
+
+#### `POST /payments/webhook` (simulador mock)
+
+- **Modo:** `Mock` — simula manualmente a confirmação de pagamento do gateway
+- **Requisita:** `PaymentWebhookDto` (body) e pagamento existente
+- **Retorno:** `200` com o pagamento atualizado para `PAID` (idempotente — reenvio não altera um pagamento já `PAID`)
+
+> O `amount` recebido **não** é comparado com o valor da transação — validação a implementar junto com o gateway real.
+
+**Request body:**
+```json
+{
+  "paymentId": "uuid-do-pagamento",
+  "externalId": "tx_mock_1234567890",
+  "amount": 150.00
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `paymentId` | `string` (UUID) | sim | ID do pagamento no sistema |
+| `externalId` | `string` | sim | ID da transação no gateway (mock) |
+| `amount` | `number` | sim | Valor confirmado (> 0, máx. 2 casas decimais) |
+
+| Status | Código | Retorno |
+|--------|--------|---------|
+| Sucesso | `200` | Payment atualizado (`status: "PAID"`, `paidAt` preenchido) |
+| Pagamento não encontrado | `404` | `NotFoundException` |
+
+---
+
+#### `POST /payments/webhook/mercadopago` (oficial)
+
+- **Modo:** **Real** — endpoint público chamado pelo Mercado Pago (sandbox ou produção) com os eventos de pagamento
+- **Requisita:**
+  - Em prod: `MERCADO_PAGO_NOTIFICATION_URL` apontando para a URL pública deste endpoint (ex: `https://dominio/api/payments/webhook/mercadopago`; dev: tunnel ngrok)
+  - Pagamento local cujo `externalRef` seja o ID retornado pelo charge (vínculo entre gateway e banco)
+  - `MERCADO_PAGO_WEBHOOK_SECRET` se quiser validação de assinatura (header `x-signature` + `x-request-id`); sem o secret, aceita sem validação (apenas dev)
+- **Retorno:** `200` com o pagamento sincronizado com o status do gateway
+- **Necessita de:** nenhuma autenticação para o MercadoPago (webhook externo)
+
+**Request body (`MercadoPagoWebhookDto`) — payload oficial do MP:**
+```json
+{
+  "type": "payment",
+  "action": "payment.updated",
+  "data": { "id": "123456789" }
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `type` | `string` | sim | Tipo do evento (`payment`) |
+| `action` | `string` | sim | `payment.created` ou `payment.updated` |
+| `data.id` | `string` | sim | ID do pagamento no Mercado Pago |
+
+**Headers (com secret):** `x-signature` (`ts` e `v1`), `x-request-id`.
+
+**Tradução de status do gateway:**
+| Gateway | Pode Deixar |
+|---------|-------------|
+| `approved` | `PAID` |
+| `pending`, `in_process` | `PENDING` |
+| `rejected` | `FAILED` |
+| `cancelled` | `CANCELLED` |
+| `refunded` | `REFUNDED` |
+
+| Status | Código | Retorno |
+|--------|--------|---------|
+| Sucesso | `200` | Pagamento local sincronizado (status + paidAt + externalRef) |
+| Pagamento local não encontrado | `404` | `NotFoundException` |
+| Assinatura inválida | `403` | `ForbiddenException` |
+
+---
+
+### Fluxo completo recomendado (proposta aceita)
+
+```
+1. POST /payments                    → cria transação com status PENDING
+2. POST /payments/:paymentId/charge  → cobrança (real PIX no sandbox OU mock)
+3. Cliente paga (QR/copia-e-cola/checkout)
+4. POST /payments/webhook/mercadopago → Mercado Pago notifica (real)
+   OU POST /payments/webhook          → simula confirmação (mock)
+5. GET  /payments/:paymentId/status   → status final (PAID)
+```
 
 ---
 
@@ -1906,7 +2026,7 @@ Consulta o status de um pagamento. Sem autenticação.
 | `POST` | `/counter-proposals/:counterProposalId/accept` | Bearer | CLIENT, PROVIDER | Aceitar contraproposta |
 | `POST` | `/counter-proposals/:counterProposalId/reject` | Bearer | CLIENT, PROVIDER | Rejeitar contraproposta |
 
-### Payments Service (8 endpoints)
+### Payments Service (9 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|--------------|-------|-----------|
@@ -1915,20 +2035,21 @@ Consulta o status de um pagamento. Sem autenticação.
 | `GET` | `/health/live` | — | — | Atividade |
 | `GET` | `/payments` | — | — | Listar pagamentos |
 | `POST` | `/payments` | — | — | Registrar transação (PENDING) |
-| `POST` | `/payments/:paymentId/charge` | — | — | Gerar cobrança (mock) |
+| `POST` | `/payments/:paymentId/charge` | — | — | Gerar cobrança (MP PIX se configurado, senão mock) |
 | `GET` | `/payments/:paymentId/status` | — | — | Consultar status do pagamento |
 | `POST` | `/payments/webhook` | — | — | Webhook (mock) — confirmar pagamento (PAID) |
+| `POST` | `/payments/webhook/mercadopago` | — | — | Webhook do Mercado Pago (sandbox) — sincronizar status |
 
-> Os endpoints do Payments Service aguardam a configuração do gateway real para definição de autenticação.
+> Sem `MERCADO_PAGO_ACCESS_TOKEN` (TEST-), os endpoints de pagamento operam com valores mockados. Ver [modo de operação](#payments-service).
 
 ### Totais
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **67** |
+| **Endpoints** | **68** |
 | **Serviços** | **4** |
 | **Controllers** | **29** |
-| **DTOs** | **25** |
+| **DTOs** | **27** |
 | **Autenticação (Bearer)** | **2 endpoints** |
 | **Bearer + Roles** | **35 endpoints** |
-| **Públicos (sem auth)** | **29 endpoints** |
+| **Públicos (sem auth)** | **30 endpoints** |

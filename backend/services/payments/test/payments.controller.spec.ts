@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { PaymentMethod } from "@prisma/client";
 import { PaymentsController } from "../src/payments/payments.controller";
 import { PaymentsService } from "../src/payments/payments.service";
+import { MercadoPagoService } from "../src/mercadopago/mercadopago.service";
 
 describe("PaymentsController", () => {
   let controller: PaymentsController;
@@ -11,6 +12,11 @@ describe("PaymentsController", () => {
     generateCharge: jest.Mock;
     getStatus: jest.Mock;
     confirmPayment: jest.Mock;
+    handleMercadoPagoWebhook: jest.Mock;
+  };
+  let mercadoPago: {
+    validateWebhookSignature: jest.Mock;
+    isConfigured: boolean;
   };
 
   beforeEach(async () => {
@@ -20,11 +26,19 @@ describe("PaymentsController", () => {
       generateCharge: jest.fn(),
       getStatus: jest.fn(),
       confirmPayment: jest.fn(),
+      handleMercadoPagoWebhook: jest.fn(),
+    };
+    mercadoPago = {
+      validateWebhookSignature: jest.fn().mockReturnValue(true),
+      isConfigured: false,
     };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PaymentsController],
-      providers: [{ provide: PaymentsService, useValue: service }],
+      providers: [
+        { provide: PaymentsService, useValue: service },
+        { provide: MercadoPagoService, useValue: mercadoPago },
+      ],
     }).compile();
 
     controller = module.get<PaymentsController>(PaymentsController);
@@ -87,7 +101,7 @@ describe("PaymentsController", () => {
     });
   });
 
-  describe("webhook", () => {
+  describe("webhook (mock)", () => {
     it("deve repassar o payload ao confirmPayment", async () => {
       const dto = {
         paymentId: "payment-1",
@@ -101,6 +115,37 @@ describe("PaymentsController", () => {
 
       expect(service.confirmPayment).toHaveBeenCalledWith(dto);
       expect(result).toEqual(pagamento);
+    });
+  });
+
+  describe("webhook/mercadopago", () => {
+    const dto = {
+      type: "payment",
+      action: "payment.updated",
+      data: { id: "123456789" },
+    };
+
+    it("deve validar assinatura e repassar ao service", async () => {
+      const result = { id: "payment-1", status: "PAID" };
+      service.handleMercadoPagoWebhook.mockResolvedValue(result);
+
+      const response = await controller.mercadopagoWebhook({}, dto);
+
+      expect(mercadoPago.validateWebhookSignature).toHaveBeenCalledWith(
+        {},
+        { id: "123456789" },
+      );
+      expect(service.handleMercadoPagoWebhook).toHaveBeenCalledWith(dto);
+      expect(response).toEqual(result);
+    });
+
+    it("deve lançar 403 quando a assinatura é inválida", async () => {
+      mercadoPago.validateWebhookSignature.mockReturnValue(false);
+
+      await expect(controller.mercadopagoWebhook({}, dto)).rejects.toThrow(
+        "Assinatura de webhook inválida",
+      );
+      expect(service.handleMercadoPagoWebhook).not.toHaveBeenCalled();
     });
   });
 });
