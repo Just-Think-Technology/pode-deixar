@@ -1,5 +1,23 @@
 services:
 
+  # -- PostgreSQL --
+  postgres:
+    image: postgres:16-alpine
+    env_file: ./.env.staging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pode_deixar}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-pode_deixar}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # -- Auth Service --
   auth:
     build:
@@ -13,7 +31,10 @@ services:
     ports:
       - "3001:3001"
     depends_on:
-      - mailpit
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
 
   # -- Users Service --
   users:
@@ -26,6 +47,8 @@ services:
     ports:
       - "3002:3002"
     depends_on:
+      postgres:
+        condition: service_healthy
       auth:
         condition: service_started
 
@@ -40,6 +63,8 @@ services:
     ports:
       - "3003:3003"
     depends_on:
+      postgres:
+        condition: service_healthy
       auth:
         condition: service_started
 
@@ -54,6 +79,8 @@ services:
     ports:
       - "3004:3004"
     depends_on:
+      postgres:
+        condition: service_healthy
       auth:
         condition: service_started
 
@@ -114,6 +141,46 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # -- PostgreSQL Backup (pg_dump cron) --
+  postgres-backup:
+    image: postgres:16-alpine
+    env_file: ./.env.staging
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-pode_deixar}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      BACKUP_SCHEDULE: "0 3 * * *"  # Diário às 03:00 UTC
+      BACKUP_RETENTION_DAYS: "7"
+      BACKUP_DIR: /backups
+    volumes:
+      - backup_data:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      apk add --no-cache cron &&
+      echo \"${BACKUP_SCHEDULE} /usr/local/bin/backup.sh >> /var/log/cron.log 2>&1\" > /etc/crontabs/root &&
+      cat > /usr/local/bin/backup.sh << 'EOF'
+      #!/bin/sh
+      set -e
+      TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
+      FILE=\"$${BACKUP_DIR}/pode_deixar_$${TIMESTAMP}.sql.gz\"
+      echo \"[$$(date)] Iniciando backup para $${FILE}\"
+      pg_dump -h $${POSTGRES_HOST} -U $${POSTGRES_USER} -d $${POSTGRES_DB} | gzip > $${FILE}
+      echo \"[$$(date)] Backup concluído: $${FILE}\"
+      # Limpeza de backups antigos
+      find $${BACKUP_DIR} -name 'pode_deixar_*.sql.gz' -mtime +$${BACKUP_RETENTION_DAYS} -delete
+      echo \"[$$(date)] Limpeza de backups antigos (> $${BACKUP_RETENTION_DAYS} dias) concluída\"
+      EOF
+      chmod +x /usr/local/bin/backup.sh &&
+      # Executa backup inicial imediatamente
+      /usr/local/bin/backup.sh &&
+      # Inicia cron em foreground
+      crond -f -l 2
+      "
+
   # -- Proxy Reverso (Caddy) --
   caddy:
     image: caddy:2-alpine
@@ -130,3 +197,5 @@ services:
 
 volumes:
   minio_data:
+  postgres_data:
+  backup_data:

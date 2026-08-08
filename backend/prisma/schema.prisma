@@ -226,6 +226,7 @@ model Payment {
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
   webhookEvents  PaymentWebhookEvent[]
+  statusHistory  PaymentStatusHistory[]
 
   @@unique([serviceOrderId, idempotencyKey])
   @@map("payments")
@@ -242,6 +243,20 @@ model PaymentWebhookEvent {
 
   @@unique([gateway, eventId])
   @@map("payment_webhook_events")
+}
+
+model PaymentStatusHistory {
+  id           String         @id @default(uuid())
+  payment      Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId    String         @map("payment_id")
+  statusAnterior PaymentStatus? @map("status_anterior")
+  statusNovo    PaymentStatus   @map("status_novo")
+  actor        String         // "MOCK" | "MERCADO_PAGO" | "USER" | "SYSTEM"
+  motivo       String?        @map("motivo")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  @@index([paymentId, createdAt])
+  @@map("payment_status_history")
 }
 
 model TokenBlacklist {

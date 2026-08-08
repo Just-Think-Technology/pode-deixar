@@ -23,6 +23,9 @@ describe("PaymentsService", () => {
       findUnique: jest.Mock;
       create: jest.Mock;
     };
+    paymentStatusHistory: {
+      create: jest.Mock;
+    };
     serviceOrder: {
       findUnique: jest.Mock;
     };
@@ -46,6 +49,9 @@ describe("PaymentsService", () => {
       },
       paymentWebhookEvent: {
         findUnique: jest.fn(),
+        create: jest.fn(),
+      },
+      paymentStatusHistory: {
         create: jest.fn(),
       },
       serviceOrder: {
@@ -558,6 +564,7 @@ describe("PaymentsService", () => {
     beforeEach(() => {
       prisma.paymentWebhookEvent.findUnique.mockResolvedValue(null);
       prisma.paymentWebhookEvent.create.mockResolvedValue({});
+      prisma.paymentStatusHistory.create.mockResolvedValue({});
     });
 
     it("deve marcar como PAID e registrar event_id único", async () => {
@@ -674,6 +681,7 @@ describe("PaymentsService", () => {
     beforeEach(() => {
       prisma.paymentWebhookEvent.findUnique.mockResolvedValue(null);
       prisma.paymentWebhookEvent.create.mockResolvedValue({});
+      prisma.paymentStatusHistory.create.mockResolvedValue({});
     });
 
     it("deve atualizar o pagamento para PAID quando o gateway retorna approved", async () => {

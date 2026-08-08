@@ -4,8 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
-import { PaymentMethod, PaymentStatus } from "@prisma/client";
+import { Prisma, PaymentMethod, PaymentStatus } from ".prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MercadoPagoService } from "../mercadopago/mercadopago.service";
 import { CreatePaymentDto, MOEDAS_SUPORTADAS } from "./dto/create-payment.dto";
@@ -256,6 +255,14 @@ export class PaymentsService {
       );
     }
 
+    await this.registrarHistoricoStatus(
+      payment.id,
+      payment.status,
+      "PAID",
+      GATEWAY_MOCK,
+      "Confirmação via webhook mock",
+    );
+
     return { payment: transacao.pagamento };
   }
 
@@ -324,12 +331,38 @@ export class PaymentsService {
       );
     }
 
+    await this.registrarHistoricoStatus(
+      payment.id,
+      payment.status,
+      status,
+      GATEWAY_MERCADO_PAGO,
+      `Status do gateway: ${mpPayment.status}`,
+    );
+
     return { payment: transacao.pagamento };
   }
 
   private async eventoJaProcessado(gateway: string, eventId: string) {
     return this.prisma.paymentWebhookEvent.findUnique({
       where: { gateway_eventId: { gateway, eventId } },
+    });
+  }
+
+  private async registrarHistoricoStatus(
+    paymentId: string,
+    statusAnterior: PaymentStatus | null,
+    statusNovo: PaymentStatus,
+    actor: string,
+    motivo?: string,
+  ) {
+    await this.prisma.paymentStatusHistory.create({
+      data: {
+        paymentId,
+        statusAnterior: statusAnterior ?? undefined,
+        statusNovo,
+        actor,
+        motivo,
+      },
     });
   }
 
