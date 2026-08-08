@@ -117,6 +117,21 @@ describe("MercadoPagoService", () => {
         }),
       ).rejects.toThrow(BadGatewayException);
     });
+
+    it("deve rejeitar notification_url sem HTTPS (fail-closed)", async () => {
+      const fetchMock = jest.fn();
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await expect(
+        service.createPixCharge({
+          amount: 150,
+          externalReference: "payment-1",
+          payerEmail: "teste@example.com",
+          notificationUrl: "http://exemplo.com/webhook",
+        }),
+      ).rejects.toThrow(/HTTPS/);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
   });
 
   describe("getPayment", () => {

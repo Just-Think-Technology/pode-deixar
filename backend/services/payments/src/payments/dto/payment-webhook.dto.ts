@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsPositive,
   IsUUID,
+  IsOptional,
 } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
@@ -14,6 +15,14 @@ export class PaymentWebhookDto {
   })
   @IsUUID()
   paymentId: string;
+
+  @ApiProperty({
+    description: "ID único do evento (usado para idempotência/anti-replay)",
+    example: "evt_mock_abcdef",
+  })
+  @IsString()
+  @IsNotEmpty()
+  eventId: string;
 
   @ApiProperty({
     description: "ID da transação no gateway de pagamento (mock)",
@@ -30,4 +39,13 @@ export class PaymentWebhookDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
   amount: number;
+
+  @ApiProperty({
+    description: "Timestamp do evento (Unix seconds) para anti-replay",
+    required: false,
+    example: "1710000000",
+  })
+  @IsOptional()
+  @IsString()
+  timestamp?: string;
 }

@@ -115,11 +115,12 @@ describe("PaymentsController", () => {
         paymentId: "uuid-payment-1",
         externalId: "tx_mock_123",
         amount: 150,
+        eventId: "evt_mock_1",
       };
       const pagamento = { id: "uuid-payment-1", status: "PAID" };
       service.confirmPayment.mockResolvedValue(pagamento);
 
-      const result = await controller.webhook("chave-secreta", dto);
+      const result = await controller.webhook({} as any, "chave-secreta", dto);
 
       expect(service.confirmPayment).toHaveBeenCalledWith(dto);
       expect(result).toEqual(pagamento);
@@ -132,12 +133,52 @@ describe("PaymentsController", () => {
         paymentId: "uuid-payment-1",
         externalId: "tx_mock_123",
         amount: 150,
+        eventId: "evt_mock_1",
       };
 
-      await expect(controller.webhook("chave-errada", dto)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        controller.webhook({} as any, "chave-errada", dto),
+      ).rejects.toThrow(ForbiddenException);
       expect(service.confirmPayment).not.toHaveBeenCalled();
+      delete process.env.MOCK_WEBHOOK_KEY;
+    });
+
+    it("deve rejeitar timestamp fora da janela aceitável", async () => {
+      process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
+      const dto = {
+        paymentId: "uuid-payment-1",
+        externalId: "tx_mock_123",
+        amount: 150,
+        eventId: "evt_mock_1",
+        timestamp: "1700000000",
+      };
+
+      await expect(
+        controller.webhook({} as any, "chave-secreta", dto),
+      ).rejects.toThrow(ForbiddenException);
+      expect(service.confirmPayment).not.toHaveBeenCalled();
+      delete process.env.MOCK_WEBHOOK_KEY;
+    });
+
+    it("deve rejeitar quando a req NÃO chega via HTTPS em produção", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
+      const dto = {
+        paymentId: "uuid-payment-1",
+        externalId: "tx_mock_123",
+        amount: 150,
+        eventId: "evt_mock_1",
+      };
+
+      await expect(
+        controller.webhook(
+          { headers: { "x-forwarded-proto": "http" } } as any,
+          "chave-secreta",
+          dto,
+        ),
+      ).rejects.toThrow("Webhook deve ser recebido via HTTPS");
+      expect(service.confirmPayment).not.toHaveBeenCalled();
+      delete process.env.NODE_ENV;
       delete process.env.MOCK_WEBHOOK_KEY;
     });
   });
@@ -149,27 +190,48 @@ describe("PaymentsController", () => {
       data: { id: "123456789" },
     };
 
-    it("deve validar assinatura e repassar ao service", async () => {
+    it("deve validar assinatura e repassar ao service com event_id do header", async () => {
       const result = { id: "payment-1", status: "PAID" };
       service.handleMercadoPagoWebhook.mockResolvedValue(result);
 
-      const response = await controller.mercadopagoWebhook({}, dto);
+      const headers = { "x-request-id": "evt-123", "x-signature": "ts=..&v1=.." };
+      const req = { headers } as any;
+
+      const response = await controller.mercadopagoWebhook(req, headers, dto);
 
       expect(mercadoPago.validateWebhookSignature).toHaveBeenCalledWith(
-        {},
+        headers,
         { id: "123456789" },
       );
-      expect(service.handleMercadoPagoWebhook).toHaveBeenCalledWith(dto);
+      expect(service.handleMercadoPagoWebhook).toHaveBeenCalledWith(
+        dto,
+        "evt-123",
+      );
       expect(response).toEqual(result);
     });
 
     it("deve lançar 403 quando a assinatura é inválida", async () => {
       mercadoPago.validateWebhookSignature.mockReturnValue(false);
 
-      await expect(controller.mercadopagoWebhook({}, dto)).rejects.toThrow(
-        "Assinatura de webhook inválida",
-      );
+      await expect(
+        controller.mercadopagoWebhook({} as any, {}, dto),
+      ).rejects.toThrow("Assinatura de webhook inválida");
       expect(service.handleMercadoPagoWebhook).not.toHaveBeenCalled();
+    });
+
+    it("deve rejeitar quando a req NÃO chega via HTTPS em produção", async () => {
+      process.env.NODE_ENV = "production";
+      mercadoPago.validateWebhookSignature.mockReturnValue(true);
+
+      await expect(
+        controller.mercadopagoWebhook(
+          { headers: { "x-forwarded-proto": "http" } } as any,
+          {},
+          dto,
+        ),
+      ).rejects.toThrow("Webhook deve ser recebido via HTTPS");
+      expect(service.handleMercadoPagoWebhook).not.toHaveBeenCalled();
+      delete process.env.NODE_ENV;
     });
   });
 });

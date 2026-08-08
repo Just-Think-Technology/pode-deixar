@@ -19,6 +19,10 @@ describe("PaymentsService", () => {
       findFirst: jest.Mock;
       update: jest.Mock;
     };
+    paymentWebhookEvent: {
+      findUnique: jest.Mock;
+      create: jest.Mock;
+    };
     serviceOrder: {
       findUnique: jest.Mock;
     };
@@ -39,6 +43,10 @@ describe("PaymentsService", () => {
         findUnique: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn(),
+      },
+      paymentWebhookEvent: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
       },
       serviceOrder: {
         findUnique: jest.fn(),
@@ -544,9 +552,15 @@ describe("PaymentsService", () => {
       paymentId: "payment-1",
       externalId: "tx_mock_123",
       amount: 150,
+      eventId: "evt_mock_1",
     };
 
-    it("deve marcar como PAID e gravar externalRef e paidAt", async () => {
+    beforeEach(() => {
+      prisma.paymentWebhookEvent.findUnique.mockResolvedValue(null);
+      prisma.paymentWebhookEvent.create.mockResolvedValue({});
+    });
+
+    it("deve marcar como PAID e registrar event_id único", async () => {
       prisma.payment.findUnique.mockResolvedValue({
         id: "payment-1",
         status: "PENDING",
@@ -560,6 +574,17 @@ describe("PaymentsService", () => {
 
       const result = await service.confirmPayment(dto);
 
+      expect(prisma.paymentWebhookEvent.findUnique).toHaveBeenCalledWith({
+        where: { gateway_eventId: { gateway: "MOCK", eventId: "evt_mock_1" } },
+      });
+      expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+        data: {
+          gateway: "MOCK",
+          eventId: "evt_mock_1",
+          paymentId: "payment-1",
+          payload: { externalId: "tx_mock_123" },
+        },
+      });
       expect(prisma.payment.update).toHaveBeenCalledWith({
         where: { id: "payment-1" },
         data: {
@@ -568,7 +593,43 @@ describe("PaymentsService", () => {
           externalRef: "tx_mock_123",
         },
       });
-      expect(result.status).toBe("PAID");
+      expect(result.payment.status).toBe("PAID");
+    });
+
+    it("deve ser idempotente: não reprocessar evento já registrado", async () => {
+      prisma.paymentWebhookEvent.findUnique.mockResolvedValue({
+        eventId: "evt_mock_1",
+        paymentId: "payment-1",
+      });
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PAID",
+        amount: 150,
+      });
+
+      const result = await service.confirmPayment(dto);
+
+      expect(result.payment.status).toBe("PAID");
+      expect(result.notice).toContain("duplicado");
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+      expect(prisma.paymentWebhookEvent.create).not.toHaveBeenCalled();
+    });
+
+    it("deve retornar resposta de evento duplicado quando event_id já existe (concorrência)", async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PENDING",
+        amount: 150,
+      });
+
+      const erroP2002 = new Error("Unique constraint failed");
+      (erroP2002 as any).code = "P2002";
+      prisma.paymentWebhookEvent.create.mockRejectedValue(erroP2002);
+
+      const result = await service.confirmPayment(dto);
+
+      expect(result.notice).toContain("duplicado");
+      expect(result.payment.status).toBe("PENDING");
     });
 
     it("deve lançar BadRequestException quando o valor não confere", async () => {
@@ -593,20 +654,6 @@ describe("PaymentsService", () => {
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
-    it("deve ser idempotente: não alterar pagamento já PAID", async () => {
-      prisma.payment.findUnique.mockResolvedValue({
-        id: "payment-1",
-        status: "PAID",
-        amount: 150,
-        paidAt: new Date(),
-      });
-
-      const result = await service.confirmPayment(dto);
-
-      expect(prisma.payment.update).not.toHaveBeenCalled();
-      expect(result.status).toBe("PAID");
-    });
-
     it("deve lançar BadRequestException na transição inválida (pagamento cancelado)", async () => {
       prisma.payment.findUnique.mockResolvedValue({
         id: "payment-1",
@@ -622,6 +669,13 @@ describe("PaymentsService", () => {
   });
 
   describe("handleMercadoPagoWebhook", () => {
+    const eventId = "evt_mp_1";
+
+    beforeEach(() => {
+      prisma.paymentWebhookEvent.findUnique.mockResolvedValue(null);
+      prisma.paymentWebhookEvent.create.mockResolvedValue({});
+    });
+
     it("deve atualizar o pagamento para PAID quando o gateway retorna approved", async () => {
       mercadoPago.getPayment.mockResolvedValue({
         id: "12345",
@@ -644,9 +698,29 @@ describe("PaymentsService", () => {
         action: "payment.updated",
         data: { id: "12345" },
       };
-      const result = await service.handleMercadoPagoWebhook(dto);
+      const result = await service.handleMercadoPagoWebhook(dto, eventId);
 
       expect(mercadoPago.getPayment).toHaveBeenCalledWith("12345");
+      expect(prisma.paymentWebhookEvent.findUnique).toHaveBeenCalledWith({
+        where: {
+          gateway_eventId: {
+            gateway: "MERCADO_PAGO",
+            eventId: "evt_mp_1",
+          },
+        },
+      });
+      expect(prisma.paymentWebhookEvent.create).toHaveBeenCalledWith({
+        data: {
+          gateway: "MERCADO_PAGO",
+          eventId: "evt_mp_1",
+          paymentId: "payment-1",
+          payload: {
+            gatewayId: "12345",
+            statusGateway: "PAID",
+            gatewayStatus: "approved",
+          },
+        },
+      });
       expect(prisma.payment.update).toHaveBeenCalledWith({
         where: { id: "payment-1" },
         data: {
@@ -655,7 +729,33 @@ describe("PaymentsService", () => {
           externalRef: "12345",
         },
       });
-      expect(result.status).toBe("PAID");
+      expect(result.payment.status).toBe("PAID");
+    });
+
+    it("deve ser idempotente: não reprocessar evento já registrado", async () => {
+      prisma.paymentWebhookEvent.findUnique.mockResolvedValue({
+        eventId: "evt_mp_1",
+        paymentId: "payment-1",
+      });
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PAID",
+        amount: 150,
+      });
+
+      const result = await service.handleMercadoPagoWebhook(
+        {
+          type: "payment",
+          action: "payment.updated",
+          data: { id: "12345" },
+        },
+        eventId,
+      );
+
+      expect(result.payment.status).toBe("PAID");
+      expect(result.notice).toContain("idempotente");
+      expect(mercadoPago.getPayment).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
     it("deve lançar BadRequestException quando o valor do gateway não confere", async () => {
@@ -672,11 +772,14 @@ describe("PaymentsService", () => {
       });
 
       await expect(
-        service.handleMercadoPagoWebhook({
-          type: "payment",
-          action: "payment.updated",
-          data: { id: "12345" },
-        }),
+        service.handleMercadoPagoWebhook(
+          {
+            type: "payment",
+            action: "payment.updated",
+            data: { id: "12345" },
+          },
+          eventId,
+        ),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
@@ -698,11 +801,14 @@ describe("PaymentsService", () => {
         status: "FAILED",
       });
 
-      const resultado = await service.handleMercadoPagoWebhook({
-        type: "payment",
-        action: "payment.updated",
-        data: { id: "12345" },
-      });
+      const resultado = await service.handleMercadoPagoWebhook(
+        {
+          type: "payment",
+          action: "payment.updated",
+          data: { id: "12345" },
+        },
+        eventId,
+      );
 
       expect(prisma.payment.update).toHaveBeenCalledWith({
         where: { id: "payment-1" },
@@ -712,7 +818,7 @@ describe("PaymentsService", () => {
           externalRef: "12345",
         },
       });
-      expect(resultado.status).toBe("FAILED");
+      expect(resultado.payment.status).toBe("FAILED");
     });
 
     it("deve lançar NotFoundException quando o pagamento local não existe", async () => {
@@ -725,11 +831,14 @@ describe("PaymentsService", () => {
       prisma.payment.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.handleMercadoPagoWebhook({
-          type: "payment",
-          action: "payment.updated",
-          data: { id: "12345" },
-        }),
+        service.handleMercadoPagoWebhook(
+          {
+            type: "payment",
+            action: "payment.updated",
+            data: { id: "12345" },
+          },
+          eventId,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -747,36 +856,15 @@ describe("PaymentsService", () => {
       });
 
       await expect(
-        service.handleMercadoPagoWebhook({
-          type: "payment",
-          action: "payment.updated",
-          data: { id: "12345" },
-        }),
+        service.handleMercadoPagoWebhook(
+          {
+            type: "payment",
+            action: "payment.updated",
+            data: { id: "12345" },
+          },
+          eventId,
+        ),
       ).rejects.toThrow(BadRequestException);
-      expect(prisma.payment.update).not.toHaveBeenCalled();
-    });
-
-    it("deve ser idempotente quando o pagamento já está PAID", async () => {
-      mercadoPago.getPayment.mockResolvedValue({
-        id: "12345",
-        status: "approved",
-        transactionAmount: 150,
-        externalReference: "payment-1",
-      });
-      prisma.payment.findUnique.mockResolvedValue({
-        id: "payment-1",
-        status: "PAID",
-        amount: 150,
-        paidAt: new Date(),
-      });
-
-      const result = await service.handleMercadoPagoWebhook({
-        type: "payment",
-        action: "payment.updated",
-        data: { id: "12345" },
-      });
-
-      expect(result.status).toBe("PAID");
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
   });

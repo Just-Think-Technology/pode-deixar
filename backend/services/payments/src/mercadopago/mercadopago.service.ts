@@ -55,6 +55,15 @@ export class MercadoPagoService {
   async createPixCharge(
     params: CreatePixChargeParams,
   ): Promise<PixChargeResult> {
+    if (
+      params.notificationUrl &&
+      !params.notificationUrl.startsWith("https://")
+    ) {
+      throw new BadGatewayException(
+        "notificação: Mercado Pago exige URL de webhook exclusivamente via HTTPS",
+      );
+    }
+
     const response = await fetch(`${this.apiBase}/v1/payments`, {
       method: "POST",
       headers: {

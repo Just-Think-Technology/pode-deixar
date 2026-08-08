@@ -5,12 +5,14 @@ import {
   Body,
   Param,
   Headers,
+  Req,
   UseGuards,
   Request,
   ForbiddenException,
   ParseUUIDPipe,
 } from "@nestjs/common";
 import * as crypto from "crypto";
+import { Request as ExpressRequest } from "express";
 import {
   ApiTags,
   ApiOperation,
@@ -103,18 +105,26 @@ export class PaymentsController {
   @ApiOperation({
     summary: "Webhook (mock) — confirmar pagamento recebido",
     description:
-      "Simula o retorno do gateway de pagamento e marca o pagamento como PAID.",
+      "Simula o retorno do gateway de pagamento e marca o pagamento como PAID. Endpoint restrito a HTTPS.",
   })
   @ApiResponse({ status: 200, description: "Pagamento confirmado (PAID)" })
   @ApiResponse({ status: 404, description: "Pagamento não encontrado" })
   @ApiResponse({ status: 403, description: "Chave de webhook inválida" })
   async webhook(
+    @Req() httpRequest: ExpressRequest,
     @Headers("x-webhook-key") webhookKey: string | undefined,
     @Body() dto: PaymentWebhookDto,
   ) {
+    this.garantirRequestHttps(httpRequest);
+
     if (!this.validarChaveWebhook(webhookKey)) {
       throw new ForbiddenException("Chave de webhook inválida");
     }
+
+    if (dto.timestamp) {
+      this.validarTimestampWebhook(dto.timestamp, "Webhook mock");
+    }
+
     return this.paymentsService.confirmPayment(dto);
   }
 
@@ -135,15 +145,18 @@ export class PaymentsController {
   @ApiOperation({
     summary: "Webhook do Mercado Pago — confirmação de pagamento",
     description:
-      "Recebe as notificações do Mercado Pago, valida a assinatura e atualiza o status do pagamento conforme o gateway.",
+      "Recebe as notificações do Mercado Pago, valida a assinatura e atualiza o status do pagamento conforme o gateway. Endpoint restrito a HTTPS.",
   })
   @ApiResponse({ status: 200, description: "Webhook processado" })
   @ApiResponse({ status: 404, description: "Pagamento não encontrado" })
   @ApiResponse({ status: 403, description: "Assinatura de webhook inválida" })
   async mercadopagoWebhook(
+    @Req() httpRequest: ExpressRequest,
     @Headers() headers: Record<string, string>,
     @Body() dto: MercadoPagoWebhookDto,
   ) {
+    this.garantirRequestHttps(httpRequest);
+
     const signatureValid = this.mercadoPago.validateWebhookSignature(
       headers,
       dto.data,
@@ -153,6 +166,46 @@ export class PaymentsController {
       throw new ForbiddenException("Assinatura de webhook inválida");
     }
 
-    return this.paymentsService.handleMercadoPagoWebhook(dto);
+    const eventId = headers["x-request-id"] || `mercadopago:${dto.data.id}`;
+
+    return this.paymentsService.handleMercadoPagoWebhook(dto, eventId);
+  }
+
+  private garantirRequestHttps(req: ExpressRequest) {
+    if (process.env.NODE_ENV !== "production") {
+      return;
+    }
+
+    const protocoloForwarded = req.headers["x-forwarded-proto"];
+
+    const protocolo =
+      typeof protocoloForwarded === "string"
+        ? protocoloForwarded.split(",")[0]?.trim()
+        : req.protocol;
+
+    if (protocolo !== "https") {
+      throw new ForbiddenException("Webhook deve ser recebido via HTTPS");
+    }
+  }
+
+  private validarTimestampWebhook(timestamp?: string, rotulo?: string) {
+    if (!timestamp) {
+      return;
+    }
+
+    const tsNumero = Number(timestamp);
+    if (!Number.isFinite(tsNumero)) {
+      throw new ForbiddenException(
+        `${rotulo || "Webhook"}: timestamp inválido`,
+      );
+    }
+
+    const JANELA_ACEITAVEL_S = 5 * 60;
+    const agoraS = Math.floor(Date.now() / 1000);
+    if (Math.abs(agoraS - tsNumero) > JANELA_ACEITAVEL_S) {
+      throw new ForbiddenException(
+        `${rotulo || "Webhook"}: timestamp fora da janela aceitável`,
+      );
+    }
   }
 }

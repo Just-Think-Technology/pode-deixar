@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PaymentMethod, PaymentStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MercadoPagoService } from "../mercadopago/mercadopago.service";
@@ -13,6 +19,24 @@ const TRANSICOES_VALIDAS: Record<PaymentStatus, PaymentStatus[]> = {
   CANCELLED: [],
   REFUNDED: [],
 };
+
+const GATEWAY_MOCK = "MOCK";
+const GATEWAY_MERCADO_PAGO = "MERCADO_PAGO";
+
+interface EventoWebhook {
+  gateway: string;
+  eventId: string;
+  paymentId?: string;
+  payload?: unknown;
+}
+
+export interface ResultadoWebhook {
+  payment: {
+    id: string;
+    status: PaymentStatus;
+  };
+  notice?: string;
+}
 
 @Injectable()
 export class PaymentsService {
@@ -180,7 +204,19 @@ export class PaymentsService {
     };
   }
 
-  async confirmPayment(dto: PaymentWebhookDto) {
+  async confirmPayment(dto: PaymentWebhookDto): Promise<ResultadoWebhook> {
+    const jaProcessado = await this.eventoJaProcessado(
+      GATEWAY_MOCK,
+      dto.eventId,
+    );
+
+    if (jaProcessado) {
+      return this.retornarPagamentoIdempotente(
+        dto.paymentId,
+        "Pagamento confirmado anteriormente (evento duplicado)",
+      );
+    }
+
     const payment = await this.prisma.payment.findUnique({
       where: { id: dto.paymentId },
     });
@@ -191,23 +227,54 @@ export class PaymentsService {
 
     this.conferirValorGateway(payment.amount, dto.amount);
 
-    if (payment.status === "PAID") {
-      return payment;
+    if (payment.status !== "PAID") {
+      this.validarTransicaoEstado(payment.status, "PAID");
     }
 
-    this.validarTransicaoEstado(payment.status, "PAID");
-
-    return this.prisma.payment.update({
-      where: { id: dto.paymentId },
-      data: {
-        status: "PAID",
-        paidAt: new Date(),
-        externalRef: dto.externalId,
+    const transacao = await this.tentarTransacao(
+      {
+        gateway: GATEWAY_MOCK,
+        eventId: dto.eventId,
+        paymentId: payment.id,
+        payload: { externalId: dto.externalId },
       },
-    });
+      async () =>
+        this.prisma.payment.update({
+          where: { id: dto.paymentId },
+          data: {
+            status: "PAID",
+            paidAt: new Date(),
+            externalRef: dto.externalId,
+          },
+        }),
+    );
+
+    if (transacao.duplicado) {
+      return this.retornarPagamentoIdempotente(
+        dto.paymentId,
+        "Evento duplicado processado concorrentemente",
+      );
+    }
+
+    return { payment: transacao.pagamento };
   }
 
-  async handleMercadoPagoWebhook(dto: MercadoPagoWebhookDto) {
+  async handleMercadoPagoWebhook(
+    dto: MercadoPagoWebhookDto,
+    eventId: string,
+  ): Promise<ResultadoWebhook> {
+    const jaProcessado = await this.eventoJaProcessado(
+      GATEWAY_MERCADO_PAGO,
+      eventId,
+    );
+
+    if (jaProcessado) {
+      return this.retornarPagamentoIdempotente(
+        jaProcessado.paymentId,
+        "Webhook do Mercado Pago já processado (idempotente)",
+      );
+    }
+
     const mpPayment = await this.mercadoPago.getPayment(dto.data.id);
 
     const payment = await this.prisma.payment.findUnique({
@@ -224,26 +291,92 @@ export class PaymentsService {
 
     const status = this.traduzirStatusMercadoPago(mpPayment.status);
 
-    if (payment.status === "PAID" && status === "PAID") {
-      return payment;
+    if (payment.status !== status) {
+      this.validarTransicaoEstado(payment.status, status);
     }
 
-    this.validarTransicaoEstado(payment.status, status);
-
-    return this.prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status,
-        paidAt: status === "PAID" ? new Date() : null,
-        externalRef: String(mpPayment.id),
+    const transacao = await this.tentarTransacao(
+      {
+        gateway: GATEWAY_MERCADO_PAGO,
+        eventId,
+        paymentId: payment.id,
+        payload: {
+          gatewayId: String(mpPayment.id),
+          statusGateway: status,
+          gatewayStatus: mpPayment.status,
+        },
       },
+      async () =>
+        this.prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status,
+            paidAt: status === "PAID" ? new Date() : null,
+            externalRef: String(mpPayment.id),
+          },
+        }),
+    );
+
+    if (transacao.duplicado) {
+      return this.retornarPagamentoIdempotente(
+        payment.id,
+        "Webhook com event_id já registrado (concorrência)",
+      );
+    }
+
+    return { payment: transacao.pagamento };
+  }
+
+  private async eventoJaProcessado(gateway: string, eventId: string) {
+    return this.prisma.paymentWebhookEvent.findUnique({
+      where: { gateway_eventId: { gateway, eventId } },
     });
   }
 
-  private validarTransicaoEstado(
-    atual: PaymentStatus,
-    novo: PaymentStatus,
+  private async retornarPagamentoIdempotente(
+    paymentId?: string | null,
+    mensagem?: string,
   ) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId || "" },
+    });
+
+    if (!payment) {
+      throw new NotFoundException(`Pagamento ${paymentId} não encontrado`);
+    }
+
+    return { ...(mensagem ? { notice: mensagem } : {}), payment };
+  }
+
+  private async tentarTransacao(
+    evento: EventoWebhook,
+    atualizar: () => Promise<{ id: string; status: PaymentStatus }>,
+  ) {
+    const pagamento = await atualizar();
+
+    try {
+      await this.prisma.paymentWebhookEvent.create({
+        data: {
+          gateway: evento.gateway,
+          eventId: evento.eventId,
+          paymentId: evento.paymentId,
+          payload: evento.payload ?? undefined,
+        },
+      });
+      return { duplicado: false, pagamento };
+    } catch (erro) {
+      const codigo =
+        erro instanceof Prisma.PrismaClientKnownRequestError
+          ? erro.code
+          : (erro as { code?: string } | null)?.code;
+      if (codigo === "P2002") {
+        return { duplicado: true, pagamento: undefined as never };
+      }
+      throw erro;
+    }
+  }
+
+  private validarTransicaoEstado(atual: PaymentStatus, novo: PaymentStatus) {
     const permitidas = TRANSICOES_VALIDAS[atual] ?? [];
 
     if (!permitidas.includes(novo)) {

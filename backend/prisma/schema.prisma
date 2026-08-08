@@ -213,21 +213,35 @@ model OrderPhoto {
 }
 
 model Payment {
-  id             String        @id @default(uuid())
-  serviceOrder   ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  serviceOrderId String        @map("service_order_id")
-  amount         Decimal       @db.Decimal(10, 2)
-  currency       String        @default("BRL")
-  method         PaymentMethod @default(PIX)
-  status         PaymentStatus @default(PENDING)
-  externalRef    String?       @map("external_ref")
-  idempotencyKey String?       @map("idempotency_key")
-  paidAt         DateTime?     @map("paid_at")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  id             String              @id @default(uuid())
+  serviceOrder   ServiceOrder        @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrderId String              @map("service_order_id")
+  amount         Decimal             @db.Decimal(10, 2)
+  currency       String              @default("BRL")
+  method         PaymentMethod       @default(PIX)
+  status         PaymentStatus       @default(PENDING)
+  externalRef    String?             @map("external_ref")
+  idempotencyKey String?             @map("idempotency_key")
+  paidAt         DateTime?           @map("paid_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  webhookEvents  PaymentWebhookEvent[]
 
   @@unique([serviceOrderId, idempotencyKey])
   @@map("payments")
+}
+
+model PaymentWebhookEvent {
+  id        String   @id @default(uuid())
+  gateway   String   @map("gateway")
+  eventId   String   @map("event_id")
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId String?  @map("payment_id")
+  payload   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([gateway, eventId])
+  @@map("payment_webhook_events")
 }
 
 model TokenBlacklist {
