@@ -67,6 +67,16 @@ Sempre desenvolver utilizando:
 - **YAGNI** — You Aren't Gonna Need It: não implementar funcionalidades não solicitadas
 - **Composição > Herança** — preferir composição sobre herança
 
+### Segurança primeiro
+
+**Sempre pensar em segurança do sistema ao desenvolver qualquer funcionalidade.** Antes de implementar, considerar:
+
+- **Autenticação e autorização:** quem pode chamar o endpoint? Validação de ownership/roles em recursos por ID (403 para acesso indevido)
+- **Backend é a fonte de verdade** — nunca confiar em valores enviados pelo frontend (preços, IDs, status); buscar/calcular no backend quando aplicável
+- **Validação rigorosa de entrada** — usar DTOs (class-validator), UUIDs reais, limites
+- **Confirmação de eventos externos** — webhooks/gateways devem validar assinatura e conferir valores; fail-closed (rejeitar quando não validado)
+- **Consistência com as regras de segurança deste arquivo** — revisar produção/infra antes de criar exposição desnecessária
+
 ### Fluxo de cada tarefa
 
 1. Entender a tarefa — perguntar se houver ambiguidade
