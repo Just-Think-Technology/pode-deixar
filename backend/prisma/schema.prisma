@@ -217,13 +217,16 @@ model Payment {
   serviceOrder   ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
   serviceOrderId String        @map("service_order_id")
   amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("BRL")
   method         PaymentMethod @default(PIX)
   status         PaymentStatus @default(PENDING)
   externalRef    String?       @map("external_ref")
+  idempotencyKey String?       @map("idempotency_key")
   paidAt         DateTime?     @map("paid_at")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
+  @@unique([serviceOrderId, idempotencyKey])
   @@map("payments")
 }
 

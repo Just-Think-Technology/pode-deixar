@@ -1,18 +1,18 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from "@nestjs/common";
-import { randomUUID } from "node:crypto";
-import { PaymentMethod } from "@prisma/client";
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
+import { PaymentMethod, PaymentStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MercadoPagoService } from "../mercadopago/mercadopago.service";
-import { CreatePaymentDto } from "./dto/create-payment.dto";
+import { CreatePaymentDto, MOEDAS_SUPORTADAS } from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
 import { MercadoPagoWebhookDto } from "./dto/mercadopago-webhook.dto";
 
-type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "CANCELLED";
+const TRANSICOES_VALIDAS: Record<PaymentStatus, PaymentStatus[]> = {
+  PENDING: ["PAID", "FAILED", "CANCELLED"],
+  PAID: ["REFUNDED", "CANCELLED"],
+  FAILED: ["CANCELLED"],
+  CANCELLED: [],
+  REFUNDED: [],
+};
 
 @Injectable()
 export class PaymentsService {
@@ -82,6 +82,12 @@ export class PaymentsService {
       throw new ForbiddenException("Este pedido não pertence a este cliente");
     }
 
+    if (order.status === "CANCELLED") {
+      throw new BadRequestException(
+        "Não é possível criar pagamento para um pedido cancelado",
+      );
+    }
+
     const amount = order.agreedPrice ?? order.proposals[0]?.price ?? null;
 
     if (amount === null) {
@@ -90,13 +96,49 @@ export class PaymentsService {
       );
     }
 
+    const valor = Number(amount);
+    if (!Number.isFinite(valor) || valor <= 0) {
+      throw new BadRequestException("Valor do pagamento inválido");
+    }
+
+    const currency = dto.currency ?? "BRL";
+    if (!MOEDAS_SUPORTADAS.includes(currency)) {
+      throw new BadRequestException(
+        `Moeda não suportada. Use: ${MOEDAS_SUPORTADAS.join(", ")}`,
+      );
+    }
+
+    const existente = await this.buscarPagamentoPorIdempotencia(
+      order.id,
+      dto.idempotencyKey,
+    );
+
+    if (existente) {
+      return existente;
+    }
+
     return this.prisma.payment.create({
       data: {
         serviceOrderId: order.id,
-        amount,
+        amount: valor,
+        currency,
         method: dto.method,
         status: "PENDING",
+        ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
       },
+    });
+  }
+
+  private async buscarPagamentoPorIdempotencia(
+    serviceOrderId: string,
+    idempotencyKey?: string,
+  ) {
+    if (!idempotencyKey) {
+      return null;
+    }
+
+    return this.prisma.payment.findFirst({
+      where: { serviceOrderId, idempotencyKey },
     });
   }
 
@@ -106,6 +148,12 @@ export class PaymentsService {
     if (payment.status !== "PENDING") {
       throw new BadRequestException(
         "Cobrança só pode ser gerada para pagamento pendente",
+      );
+    }
+
+    if (payment.externalRef) {
+      throw new BadRequestException(
+        "Cobrança já gerada para este pagamento (idempotente)",
       );
     }
 
@@ -121,9 +169,11 @@ export class PaymentsService {
 
     return {
       paymentId: payment.id,
+      serviceOrderId: payment.serviceOrderId,
       status: payment.status,
       method: payment.method,
       amount: payment.amount,
+      currency: payment.currency,
       externalRef: payment.externalRef,
       paidAt: payment.paidAt,
       createdAt: payment.createdAt,
@@ -144,6 +194,8 @@ export class PaymentsService {
     if (payment.status === "PAID") {
       return payment;
     }
+
+    this.validarTransicaoEstado(payment.status, "PAID");
 
     return this.prisma.payment.update({
       where: { id: dto.paymentId },
@@ -172,9 +224,11 @@ export class PaymentsService {
 
     const status = this.traduzirStatusMercadoPago(mpPayment.status);
 
-    if (payment.status === "PAID") {
+    if (payment.status === "PAID" && status === "PAID") {
       return payment;
     }
+
+    this.validarTransicaoEstado(payment.status, status);
 
     return this.prisma.payment.update({
       where: { id: payment.id },
@@ -184,6 +238,19 @@ export class PaymentsService {
         externalRef: String(mpPayment.id),
       },
     });
+  }
+
+  private validarTransicaoEstado(
+    atual: PaymentStatus,
+    novo: PaymentStatus,
+  ) {
+    const permitidas = TRANSICOES_VALIDAS[atual] ?? [];
+
+    if (!permitidas.includes(novo)) {
+      throw new BadRequestException(
+        `Transição de estado inválida: ${atual} -> ${novo}`,
+      );
+    }
   }
 
   private conferirValorGateway(valorLocal: unknown, valorGateway: number) {
@@ -226,12 +293,17 @@ export class PaymentsService {
     };
   }
 
-  private gerarCobrancaMock(payment: {
+  private async gerarCobrancaMock(payment: {
     id: string;
     amount: unknown;
     method: string;
   }) {
-    const chargeRef = `chg_mock_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+    const chargeRef = `chg_mock_${payment.id.replace(/-/g, "").slice(0, 12)}`;
+
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: { externalRef: chargeRef },
+    });
 
     return {
       paymentId: payment.id,
