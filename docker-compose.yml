@@ -141,6 +141,20 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # -- Redis (Rate Limiting Distribuído) --
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # -- PostgreSQL Backup (pg_dump cron) --
   postgres-backup:
     image: postgres:16-alpine
@@ -199,3 +213,4 @@ volumes:
   minio_data:
   postgres_data:
   backup_data:
+  redis_data:

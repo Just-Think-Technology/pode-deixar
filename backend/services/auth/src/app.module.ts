@@ -1,7 +1,11 @@
 import { Module, ValidationPipe, BadRequestException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import {
+  ThrottlerGuard,
+  ThrottlerModule,
+  ThrottlerStorage,
+} from '@nestjs/throttler';
 import { TerminusModule } from '@nestjs/terminus';
 import { ValidationError } from 'class-validator';
 import { AppController } from './app.controller';
@@ -13,6 +17,7 @@ import { HealthModule } from './health/health.module';
 import { GlobalExceptionFilter } from './shared/global-exception.filter';
 import { ResponseLoggerInterceptor } from './shared/response-logger.interceptor';
 import { EmailModule } from '@pode-deixar/email';
+import { RedisThrottlerStorage } from '@pode-deixar/security';
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
@@ -65,12 +70,18 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
       isGlobal: true,
       envFilePath: ['../../.env.staging'],
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 100,
+    ThrottlerModule.forRootAsync({
+      useFactory: () => {
+        const isProd = process.env.NODE_ENV === 'production';
+        return [
+          {
+            ttl: 60000,
+            limit: 100,
+            storage: isProd ? new RedisThrottlerStorage() : undefined,
+          },
+        ];
       },
-    ]),
+    }),
     TerminusModule,
     EmailModule,
     PrismaModule,

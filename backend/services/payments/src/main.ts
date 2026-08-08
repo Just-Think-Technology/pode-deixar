@@ -1,12 +1,12 @@
 import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
-import helmet from "helmet";
 import { AppModule } from "./app.module";
+import { getHelmetConfig } from "@pode-deixar/security";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.use(helmet());
+  app.use(getHelmetConfig());
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:3000",

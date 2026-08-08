@@ -1,0 +1,59 @@
+# CodeQL Configuration for Pode Deixar
+# https://github.com/github/codeql-action
+
+name: "Pode Deixar CodeQL Config"
+
+# Disable default queries and use custom suites
+disable-default-queries: false
+
+# Paths to include in analysis
+paths:
+  - backend/
+  - frontend/
+  - shared/
+
+# Paths to ignore
+paths-ignore:
+  - node_modules/
+  - dist/
+  - build/
+  - .git/
+  - .github/
+  - "*.config.js"
+  - "*.config.ts"
+  - "*.d.ts"
+  - "*.spec.ts"
+  - "*.test.ts"
+
+# Additional queries to run
+queries:
+  # Security queries
+  - uses: security-extended
+  # Code quality queries
+  - uses: security-and-quality
+
+# Custom queries (if any)
+# queries:
+#   - uses: ./my-custom-queries
+
+# Language-specific configuration
+languages:
+  - typescript
+  - javascript
+
+# Compiler options
+compilation:
+  # For TypeScript projects
+  target:
+    - node
+  # Include test files for analysis
+  include-tests: false
+
+# Alert thresholds
+alerts:
+  # Minimum severity to report
+  severity-threshold: warning
+
+# Experimental features
+experimental:
+  enable-default-query-packs: true

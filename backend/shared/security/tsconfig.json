@@ -10,7 +10,7 @@
     "esModuleInterop": true,
     "target": "ES2021",
     "sourceMap": true,
-    "rootDir": "./src",
+    "rootDir": "./",
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
@@ -21,11 +21,9 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@pode-deixar/logger": ["../../shared/logger/dist"],
-      "@pode-deixar/logger/*": ["../../shared/logger/dist/*"],
-      ".prisma/client": ["../../node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/.prisma/client"],
-      "@pode-deixar/security": ["../../shared/security/dist"]
+      "@pode-deixar/logger": ["../logger/dist"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["*.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -24,7 +24,8 @@
       "@pode-deixar/logger": ["../../shared/logger/dist"],
       "@pode-deixar/logger/*": ["../../shared/logger/dist/*"],
       "@pode-deixar/email": ["../../shared/email/dist"],
-      "@pode-deixar/email/*": ["../../shared/email/dist/*"]
+      "@pode-deixar/email/*": ["../../shared/email/dist/*"],
+      "@pode-deixar/security": ["../../shared/security/dist"]
     }
   },
   "include": ["src/**/*.ts"]

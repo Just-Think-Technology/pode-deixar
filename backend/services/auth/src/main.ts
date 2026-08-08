@@ -2,8 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import helmet from 'helmet';
 import createLogger from '@pode-deixar/logger';
+import { getHelmetConfig } from '@pode-deixar/security';
 
 const logger = createLogger('auth-service');
 
@@ -12,24 +12,8 @@ async function bootstrap() {
     logger: false,
   });
 
-  // Security headers
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
-        },
-      },
-      hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true,
-      },
-    }),
-  );
+  // Security headers with CSP
+  app.use(getHelmetConfig());
 
   // CORS configuration
   app.enableCors({

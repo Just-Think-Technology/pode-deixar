@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, ForbiddenException } from "@nestjs/common";
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+} from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { MinioService } from "../storage/minio.service";
 import sharp from "sharp";

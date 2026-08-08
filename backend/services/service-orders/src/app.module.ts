@@ -15,6 +15,7 @@ import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { RedisThrottlerStorage } from "@pode-deixar/security";
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
   const rotulos: Record<string, string> = {
@@ -65,13 +66,17 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
       envFilePath:
         process.env.NODE_ENV === "test" ? [] : ["../../.env.staging"],
     }),
-    ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          ttl: 60000,
-          limit: 100,
-        },
-      ],
+    ThrottlerModule.forRootAsync({
+      useFactory: () => {
+        const isProd = process.env.NODE_ENV === "production";
+        return [
+          {
+            ttl: 60000,
+            limit: 100,
+            storage: isProd ? new RedisThrottlerStorage() : undefined,
+          },
+        ];
+      },
     }),
     PrismaModule,
     ServiceOrdersModule,
