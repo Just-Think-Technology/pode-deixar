@@ -13,7 +13,7 @@ import { RolesGuard } from "../auth/roles.guard";
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>("JWT_ACCESS_SECRET") || "default-secret",
+        secret: config.getOrThrow<string>("JWT_ACCESS_SECRET"),
         signOptions: { expiresIn: "1h" },
       }),
       inject: [ConfigService],
