@@ -1640,6 +1640,12 @@ Para operação real, deve ser chamado logo após o aceite da proposta (ver flux
 }
 ```
 
+> **PCI-DSS:** dados de cartão (PAN/CVV) **nunca** são enviados ao backend.
+> Quando o CREDIT_CARD real for implementado, será usado **tokenização do
+> Mercado Pago** (card token no cliente via SDK/Bricks) ou **Checkout Pro
+> hospedado** — o backend só recebe o token/ID da transação. Logs são
+> sanitizados contra PAN/CVV.
+
 | Status | Código | Retorno |
 |--------|--------|---------|
 | Sucesso | `200` | Cobrança gerada (ver campos acima) |

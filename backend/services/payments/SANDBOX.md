@@ -107,3 +107,13 @@ ideal é validar por ambiente.
   o gateway está configurado, PIX usa o MP; cartão continua com mock enquanto
   o fluxo de cartão (card token no frontend) não for definido
 - O webhook mock exige header `x-webhook-key` = `MOCK_WEBHOOK_KEY`
+
+## Política de cartões (PCI-DSS)
+
+O Pode Deixar **não armazena nem recebe** número completo de cartão, CVV, senha
+ou PIN. Quando o CREDIT_CARD real for implementado:
+
+- Use a **tokenização do Mercado Pago**: o card token é gerado no cliente via
+  SDK/Bricks oficial e enviado ao backend — o backend nunca vê o PAN/CVV
+- Ou o **Checkout Pro hospedado** do Mercado Pago (página do gateway)
+- Cartão de teste **não** deve ser enviado aos nossos servidores em nenhum fluxo

@@ -77,6 +77,17 @@ Sempre desenvolver utilizando:
 - **Confirmação de eventos externos** — webhooks/gateways devem validar assinatura e conferir valores; fail-closed (rejeitar quando não validado)
 - **Consistência com as regras de segurança deste arquivo** — revisar produção/infra antes de criar exposição desnecessária
 
+### Dados de cartão (PCI-DSS)
+
+**Nunca armazenar, expor ou registrar PAN/CVV de cartões.** Regras para qualquer funcionalidade:
+
+- **Não armazenar** número completo do cartão, CVV, senha ou PIN em banco, cache ou logs
+- **Não aceitar** dados de cartão no backend — dados só transitam do cliente direto ao gateway (tokenização)
+- **Usar sempre** tokenização do gateway (ex.: card token do Mercado Pago) ou checkout hospedado/componentes oficiais
+- **Nunca enviar** dados de cartão para os nossos servidores se não for necessário — o backend só vê o token/ID da transação, nunca o PAN
+- **Lembrar de logs** — sanitizar qualquer log (interceptor/filter) contra números de cartão e CVV
+- Posições de resposta/erro do gateway **nunca** ecoam campos de cartão
+
 ### Fluxo de cada tarefa
 
 1. Entender a tarefa — perguntar se houver ambiguidade
@@ -187,3 +198,10 @@ Sempre desenvolver utilizando:
 - **Limite:** Máximo 10 fotos por pedido, 5MB por foto
 - **Upload:** Endpoint separado `POST /services/me/:orderId/photos` (multipart), após a criação do pedido
 - **Validação:** Apenas o CLIENT dono do pedido pode enviar fotos
+
+### Pagamentos e dados de cartão (PCI)
+
+- **Fluxo atual:** PIX via Mercado Pago (sandbox/produção) e CREDIT_CARD **mock** (sem dados reais de cartão). Cartão real ainda não implementado.
+- **Quando o CREDIT_CARD real for implementado:** usar **tokenização do Mercado Pago** (card token gerado no cliente via SDK/Bricks oficial) ou **Checkout Pro hospedado** — nunca receber PAN/CVV no backend
+- **Backend vê apenas** o token do cartão/ID da transação do gateway; nunca o número completo
+- **Logs:** interceptor/filter do payments sanitizam PAN e CVV (`sanitizar-dados-sensiveis.ts`)
