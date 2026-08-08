@@ -30,8 +30,22 @@ export class MercadoPagoService {
     return process.env.MERCADO_PAGO_ACCESS_TOKEN || "";
   }
 
-  get isConfigured(): boolean {
+  private get isProductionToken(): boolean {
+    return this.accessToken.startsWith("APP_USR-");
+  }
+
+  private get isSandboxToken(): boolean {
     return this.accessToken.startsWith("TEST-");
+  }
+
+  get isConfigured(): boolean {
+    if (!this.accessToken) {
+      return false;
+    }
+
+    return process.env.NODE_ENV === "production"
+      ? this.isProductionToken
+      : this.isSandboxToken;
   }
 
   private get webhookSecret(): string | undefined {

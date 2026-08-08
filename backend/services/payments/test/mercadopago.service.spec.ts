@@ -19,18 +19,34 @@ describe("MercadoPagoService", () => {
 
   describe("isConfigured", () => {
     const originalToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    const originalNodeEnv = process.env.NODE_ENV;
 
     afterEach(() => {
       process.env.MERCADO_PAGO_ACCESS_TOKEN = originalToken;
+      process.env.NODE_ENV = originalNodeEnv;
     });
 
-    it("deve ser true quando o token começa com TEST-", () => {
+    it("deve ser true em dev quando o token começa com TEST-", () => {
+      process.env.NODE_ENV = "development";
       process.env.MERCADO_PAGO_ACCESS_TOKEN = "TEST-123456789";
       expect(service.isConfigured).toBe(true);
     });
 
-    it("deve ser false quando o token não é de teste", () => {
+    it("deve ser false em dev quando o token é de produção", () => {
+      process.env.NODE_ENV = "development";
       process.env.MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-123456789";
+      expect(service.isConfigured).toBe(false);
+    });
+
+    it("deve ser true em produção quando o token é APP_USR-", () => {
+      process.env.NODE_ENV = "production";
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-123456789";
+      expect(service.isConfigured).toBe(true);
+    });
+
+    it("deve ser false em produção quando o token é de teste", () => {
+      process.env.NODE_ENV = "production";
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = "TEST-123456789";
       expect(service.isConfigured).toBe(false);
     });
 
