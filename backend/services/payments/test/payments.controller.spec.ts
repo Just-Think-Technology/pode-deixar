@@ -4,6 +4,7 @@ import { PaymentMethod } from "@prisma/client";
 import { PaymentsController } from "../src/payments/payments.controller";
 import { PaymentsService } from "../src/payments/payments.service";
 import { MercadoPagoService } from "../src/mercadopago/mercadopago.service";
+import { PaymentLoggerService } from "../src/payments/payment-logger.service";
 
 describe("PaymentsController", () => {
   let controller: PaymentsController;
@@ -19,6 +20,9 @@ describe("PaymentsController", () => {
     validateWebhookSignature: jest.Mock;
     isConfigured: boolean;
   };
+  let logger: {
+    logAuthenticationFailure: jest.Mock;
+  };
 
   beforeEach(async () => {
     service = {
@@ -33,12 +37,16 @@ describe("PaymentsController", () => {
       validateWebhookSignature: jest.fn().mockReturnValue(true),
       isConfigured: false,
     };
+    logger = {
+      logAuthenticationFailure: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PaymentsController],
       providers: [
         { provide: PaymentsService, useValue: service },
         { provide: MercadoPagoService, useValue: mercadoPago },
+        { provide: PaymentLoggerService, useValue: logger },
       ],
     }).compile();
 

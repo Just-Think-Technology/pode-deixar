@@ -7,6 +7,7 @@ import {
 import { Prisma, PaymentMethod, PaymentStatus } from ".prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MercadoPagoService } from "../mercadopago/mercadopago.service";
+import { PaymentLoggerService } from "./payment-logger.service";
 import { CreatePaymentDto, MOEDAS_SUPORTADAS } from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
 import { MercadoPagoWebhookDto } from "./dto/mercadopago-webhook.dto";
@@ -42,6 +43,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mercadoPago: MercadoPagoService,
+    private readonly logger: PaymentLoggerService,
   ) {}
 
   private async buscarPagamentoDentroDoModelo(
@@ -140,16 +142,28 @@ export class PaymentsService {
       return existente;
     }
 
-    return this.prisma.payment.create({
-      data: {
-        serviceOrderId: order.id,
-        amount: valor,
-        currency,
-        method: dto.method,
-        status: "PENDING",
-        ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
-      },
-    });
+    return this.prisma.payment
+      .create({
+        data: {
+          serviceOrderId: order.id,
+          amount: valor,
+          currency,
+          method: dto.method,
+          status: "PENDING",
+          ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
+        },
+      })
+      .then((payment) => {
+        this.logger.logPaymentCreated(
+          payment.id,
+          order.id,
+          valor,
+          currency,
+          dto.method,
+          dto.idempotencyKey,
+        );
+        return payment;
+      });
   }
 
   private async buscarPagamentoPorIdempotencia(
@@ -210,6 +224,14 @@ export class PaymentsService {
     );
 
     if (jaProcessado) {
+      this.logger.logWebhookReceived(
+        dto.paymentId,
+        null,
+        GATEWAY_MOCK,
+        dto.eventId,
+        "duplicado",
+        "Evento já processado anteriormente",
+      );
       return this.retornarPagamentoIdempotente(
         dto.paymentId,
         "Pagamento confirmado anteriormente (evento duplicado)",
@@ -221,6 +243,12 @@ export class PaymentsService {
     });
 
     if (!payment) {
+      this.logger.logPaymentError(
+        dto.paymentId,
+        null,
+        "Pagamento não encontrado",
+        { eventId: dto.eventId, gateway: GATEWAY_MOCK },
+      );
       throw new NotFoundException(`Pagamento ${dto.paymentId} não encontrado`);
     }
 
@@ -249,11 +277,36 @@ export class PaymentsService {
     );
 
     if (transacao.duplicado) {
+      this.logger.logWebhookReceived(
+        dto.paymentId,
+        null,
+        GATEWAY_MOCK,
+        dto.eventId,
+        "duplicado",
+        "Evento duplicado processado concorrentemente",
+      );
       return this.retornarPagamentoIdempotente(
         dto.paymentId,
         "Evento duplicado processado concorrentemente",
       );
     }
+
+    this.logger.logWebhookReceived(
+      dto.paymentId,
+      payment.serviceOrderId,
+      GATEWAY_MOCK,
+      dto.eventId,
+      "sucesso",
+    );
+
+    this.logger.logPaymentStatusChange(
+      payment.id,
+      payment.serviceOrderId,
+      payment.status,
+      "PAID",
+      GATEWAY_MOCK,
+      "Confirmação via webhook mock",
+    );
 
     await this.registrarHistoricoStatus(
       payment.id,
@@ -276,6 +329,14 @@ export class PaymentsService {
     );
 
     if (jaProcessado) {
+      this.logger.logWebhookReceived(
+        jaProcessado.paymentId,
+        null,
+        GATEWAY_MERCADO_PAGO,
+        eventId,
+        "duplicado",
+        "Webhook já processado (idempotente)",
+      );
       return this.retornarPagamentoIdempotente(
         jaProcessado.paymentId,
         "Webhook do Mercado Pago já processado (idempotente)",
@@ -289,6 +350,12 @@ export class PaymentsService {
     });
 
     if (!payment) {
+      this.logger.logPaymentError(
+        mpPayment.externalReference ?? null,
+        null,
+        "Pagamento local não encontrado",
+        { gatewayId: mpPayment.id, gatewayStatus: mpPayment.status, eventId },
+      );
       throw new NotFoundException(
         `Pagamento ${mpPayment.externalReference} não encontrado`,
       );
@@ -325,11 +392,36 @@ export class PaymentsService {
     );
 
     if (transacao.duplicado) {
+      this.logger.logWebhookReceived(
+        payment.id,
+        payment.serviceOrderId,
+        GATEWAY_MERCADO_PAGO,
+        eventId,
+        "duplicado",
+        "Evento duplicado processado concorrentemente",
+      );
       return this.retornarPagamentoIdempotente(
         payment.id,
         "Webhook com event_id já registrado (concorrência)",
       );
     }
+
+    this.logger.logWebhookReceived(
+      payment.id,
+      payment.serviceOrderId,
+      GATEWAY_MERCADO_PAGO,
+      eventId,
+      "sucesso",
+    );
+
+    this.logger.logPaymentStatusChange(
+      payment.id,
+      payment.serviceOrderId,
+      payment.status,
+      status,
+      GATEWAY_MERCADO_PAGO,
+      `Status do gateway: ${mpPayment.status}`,
+    );
 
     await this.registrarHistoricoStatus(
       payment.id,

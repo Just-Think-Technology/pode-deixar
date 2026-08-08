@@ -29,6 +29,7 @@ import { Roles } from "../auth/roles.decorator";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
 import { MercadoPagoWebhookDto } from "./dto/mercadopago-webhook.dto";
+import { PaymentLoggerService } from "./payment-logger.service";
 
 @ApiTags("Pagamentos")
 @Controller("payments")
@@ -36,6 +37,7 @@ export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly mercadoPago: MercadoPagoService,
+    private readonly logger: PaymentLoggerService,
   ) {}
 
   @Get()
@@ -118,11 +120,24 @@ export class PaymentsController {
     this.garantirRequestHttps(httpRequest);
 
     if (!this.validarChaveWebhook(webhookKey)) {
+      this.logger.logAuthenticationFailure("webhook_key", dto.paymentId, null, {
+        eventId: dto.eventId,
+        providedKey: webhookKey ? "[REDACTED]" : "missing",
+      });
       throw new ForbiddenException("Chave de webhook inválida");
     }
 
     if (dto.timestamp) {
-      this.validarTimestampWebhook(dto.timestamp, "Webhook mock");
+      try {
+        this.validarTimestampWebhook(dto.timestamp, "Webhook mock");
+      } catch (e) {
+        this.logger.logAuthenticationFailure("timestamp", dto.paymentId, null, {
+          eventId: dto.eventId,
+          timestamp: dto.timestamp,
+          error: (e as Error).message,
+        });
+        throw e;
+      }
     }
 
     return this.paymentsService.confirmPayment(dto);
@@ -163,6 +178,10 @@ export class PaymentsController {
     );
 
     if (!signatureValid) {
+      this.logger.logAuthenticationFailure("assinatura", null, null, {
+        eventId: headers["x-request-id"] || dto.data.id,
+        gateway: "mercadopago",
+      });
       throw new ForbiddenException("Assinatura de webhook inválida");
     }
 
@@ -184,6 +203,11 @@ export class PaymentsController {
         : req.protocol;
 
     if (protocolo !== "https") {
+      this.logger.logAuthenticationFailure("replay", null, null, {
+        path: req.path,
+        protocol: protocolo,
+        ip: req.ip,
+      });
       throw new ForbiddenException("Webhook deve ser recebido via HTTPS");
     }
   }

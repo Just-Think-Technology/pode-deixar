@@ -8,6 +8,7 @@ import { PaymentMethod } from "@prisma/client";
 import { PaymentsService } from "../src/payments/payments.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { MercadoPagoService } from "../src/mercadopago/mercadopago.service";
+import { PaymentLoggerService } from "../src/payments/payment-logger.service";
 
 describe("PaymentsService", () => {
   let service: PaymentsService;
@@ -34,6 +35,14 @@ describe("PaymentsService", () => {
     isConfigured: boolean;
     createPixCharge: jest.Mock;
     getPayment: jest.Mock;
+  };
+  let logger: {
+    logPaymentCreated: jest.Mock;
+    logPaymentStatusChange: jest.Mock;
+    logWebhookReceived: jest.Mock;
+    logPaymentError: jest.Mock;
+    logSuspiciousActivity: jest.Mock;
+    logAuthenticationFailure: jest.Mock;
   };
 
   const userId = "user-1";
@@ -63,12 +72,21 @@ describe("PaymentsService", () => {
       createPixCharge: jest.fn(),
       getPayment: jest.fn(),
     };
+    logger = {
+      logPaymentCreated: jest.fn(),
+      logPaymentStatusChange: jest.fn(),
+      logWebhookReceived: jest.fn(),
+      logPaymentError: jest.fn(),
+      logSuspiciousActivity: jest.fn(),
+      logAuthenticationFailure: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
         { provide: PrismaService, useValue: prisma },
         { provide: MercadoPagoService, useValue: mercadoPago },
+        { provide: PaymentLoggerService, useValue: logger },
       ],
     }).compile();
 
