@@ -5,6 +5,7 @@
 - [Auth Service](#auth-service) (`:3001`)
 - [Users Service](#users-service) (`:3002`)
 - [Service Orders Service](#service-orders-service) (`:3003`)
+- [Payments Service](#payments-service) (`:3004`)
 - [Enums](#enums)
 - [Modelos (Prisma)](#modelos-prisma)
 - [Tabela Resumo](#tabela-resumo)
@@ -1452,6 +1453,182 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 
 ---
 
+## Payments Service
+
+**Porta:** `3004` | **Proxy Caddy:** `/api/payments/*`
+
+> **Aviso:** A integração com o gateway de pagamento ainda não está configurada.
+> Os endpoints abaixo operam com **valores mockados** para validação do fluxo.
+
+### Health
+
+#### `GET /health`
+
+#### `GET /health/ready`
+
+#### `GET /health/live`
+
+Idênticos ao [Auth Service Health](#health).
+
+---
+
+### Transações de Pagamento
+
+#### `GET /payments`
+
+Lista todos os pagamentos registrados, ordenados por data de criação (mais recentes primeiro). Sem autenticação.
+
+**Resposta `200`:**
+```json
+[
+  {
+    "id": "uuid-do-pagamento",
+    "serviceOrderId": "uuid-do-pedido",
+    "amount": 150.00,
+    "method": "PIX",
+    "status": "PENDING",
+    "externalRef": null,
+    "paidAt": null,
+    "createdAt": "2026-08-08T10:00:00.000Z",
+    "updatedAt": "2026-08-08T10:00:00.000Z"
+  }
+]
+```
+
+---
+
+#### `POST /payments`
+
+Registrar transação de pagamento no banco. O pagamento é criado com status `PENDING`, aguardando confirmação via webhook. Sem autenticação.
+
+**Request body (`CreatePaymentDto`):**
+```json
+{
+  "serviceOrderId": "uuid-do-pedido",
+  "amount": 150.00,
+  "method": "PIX"
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `serviceOrderId` | `string` (UUID) | sim | ID do pedido de serviço |
+| `amount` | `number` | sim | Valor do pagamento (> 0, máx. 2 casas decimais) |
+| `method` | `PaymentMethod` | sim | `PIX` ou `CREDIT_CARD` |
+
+**Resposta `201`:** Pagamento criado com `status: "PENDING"`.
+
+| Resposta | Código | Descrição |
+|----------|--------|-----------|
+| Payment | `201` | Transação registrada |
+| `BadRequestException` | `400` | Dados inválidos (validação) |
+
+---
+
+#### `POST /payments/webhook`
+
+Webhook (mock) que simula o retorno do gateway de pagamento e confirma que o pagamento foi recebido, marcando a transação como `PAID` (grava `externalRef` e `paidAt`).
+
+**Endpoint idempotente:** reenvios do gateway não alteram um pagamento já `PAID`. Sem autenticação.
+
+**Request body (`PaymentWebhookDto`):**
+```json
+{
+  "paymentId": "uuid-do-pagamento",
+  "externalId": "tx_mock_1234567890",
+  "amount": 150.00
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `paymentId` | `string` (UUID) | sim | ID do pagamento no sistema Pode Deixar |
+| `externalId` | `string` | sim | ID da transação no gateway (mock) |
+| `amount` | `number` | sim | Valor confirmado pelo gateway (> 0, máx. 2 casas decimais) |
+
+> O `amount` recebido ainda **não** é comparado com o valor da transação — será validado quando o gateway real for integrado.
+
+**Resposta `200`:**
+```json
+{
+  "id": "uuid-do-pagamento",
+  "serviceOrderId": "uuid-do-pedido",
+  "amount": 150.00,
+  "method": "PIX",
+  "status": "PAID",
+  "externalRef": "tx_mock_1234567890",
+  "paidAt": "2026-08-08T12:30:00.000Z",
+  "createdAt": "2026-08-08T10:00:00.000Z",
+  "updatedAt": "2026-08-08T12:30:00.000Z"
+}
+```
+
+| Resposta | Código | Descrição |
+|----------|--------|-----------|
+| Payment | `200` | Pagamento confirmado (`PAID`) |
+| `NotFoundException` | `404` | Pagamento não encontrado |
+
+---
+
+### Cobrança e Status
+
+#### `POST /payments/:paymentId/charge`
+
+Gera cobrança para um pagamento pendente (fluxo: proposta aceita → cobrança). Simula a criação da cobrança no gateway — os dados retornados são mockados e um `chargeRef` (`chg_mock_...`) é persistido em `externalRef`. Sem autenticação.
+
+**Aplicação do gatilho:** a cobrança não pode ser gerada para pagamento não pendente (`400`).
+
+**Resposta `200`:**
+```json
+{
+  "paymentId": "uuid-do-pagamento",
+  "chargeRef": "chg_mock_a1b2c3d4e5f6",
+  "status": "PENDING",
+  "cobranca": {
+    "pixCopiaECola": "00020126580014br.gov.bcb.pix0136chg_mock_a1b2c3d4e5f6..."
+  }
+}
+```
+
+Para `method: CREDIT_CARD`, o campo `cobranca` é:
+```json
+{
+  "linkCheckout": "https://checkout.mock.pode-deixar.com/chg_mock_a1b2c3d4e5f6"
+}
+```
+
+| Resposta | Código | Descrição |
+|----------|--------|-----------|
+| Cobrança mock | `200` | Cobrança gerada |
+| `NotFoundException` | `404` | Pagamento não encontrado |
+| `BadRequestException` | `400` | Pagamento não está pendente |
+
+---
+
+#### `GET /payments/:paymentId/status`
+
+Consulta o status de um pagamento. Sem autenticação.
+
+**Resposta `200`:**
+```json
+{
+  "paymentId": "uuid-do-pagamento",
+  "status": "PENDING",
+  "method": "PIX",
+  "amount": 150.00,
+  "externalRef": "chg_mock_a1b2c3d4e5f6",
+  "paidAt": null,
+  "createdAt": "2026-08-08T10:00:00.000Z"
+}
+```
+
+| Resposta | Código | Descrição |
+|----------|--------|-----------|
+| status | `200` | Status do pagamento |
+| `NotFoundException` | `404` | Pagamento não encontrado |
+
+---
+
 ## Enums
 
 ### `Role`
@@ -1479,6 +1656,23 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `ACCEPTED` | Aceita pelo cliente |
 | `REJECTED` | Rejeitada pelo cliente |
 | `WITHDRAWN` | Retirada pelo prestador |
+
+### `PaymentStatus`
+
+| Valor | Descrição |
+|-------|-----------|
+| `PENDING` | Transação registrada, aguardando confirmação |
+| `PAID` | Pagamento confirmado (webhook) |
+| `FAILED` | Falhou |
+| `REFUNDED` | Reembolsado |
+| `CANCELLED` | Cancelado |
+
+### `PaymentMethod`
+
+| Valor | Descrição |
+|-------|-----------|
+| `PIX` | PIX |
+| `CREDIT_CARD` | Cartão de crédito |
 
 ---
 
@@ -1606,6 +1800,20 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `jti` | String | JWT ID (primary key) |
 | `expires_at` | DateTime | Data de expiração |
 
+### `Payment`
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `id` | UUID | Primary key |
+| `service_order_id` | UUID | FK → ServiceOrder (cascade on delete) |
+| `amount` | Decimal | Valor da transação |
+| `method` | `PaymentMethod` | PIX ou CREDIT_CARD (default: PIX) |
+| `status` | `PaymentStatus` | Status atual (default: PENDING) |
+| `external_ref` | String? | ID da transação no gateway |
+| `paid_at` | DateTime? | Data da confirmação do pagamento |
+| `created_at` | DateTime | |
+| `updated_at` | DateTime | |
+
 ---
 
 ## Tabela Resumo
@@ -1620,6 +1828,7 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `/api/categories/*` | `:3002` | Users |
 | `/api/services/*` | `:3003` | Service Orders |
 | `/api/proposals/*` | `:3003` | Service Orders |
+| `/api/payments/*` | `:3004` | Payments |
 | `/api/storage/*` | `:9000` | MinIO (via proxy reverso) |
 | `/*` (demais) | `:3000` | Frontend |
 
@@ -1697,14 +1906,29 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 | `POST` | `/counter-proposals/:counterProposalId/accept` | Bearer | CLIENT, PROVIDER | Aceitar contraproposta |
 | `POST` | `/counter-proposals/:counterProposalId/reject` | Bearer | CLIENT, PROVIDER | Rejeitar contraproposta |
 
+### Payments Service (8 endpoints)
+
+| Método | Rota | Autenticação | Roles | Descrição |
+|--------|------|--------------|-------|-----------|
+| `GET` | `/health` | — | — | Saúde do serviço |
+| `GET` | `/health/ready` | — | — | Prontidão |
+| `GET` | `/health/live` | — | — | Atividade |
+| `GET` | `/payments` | — | — | Listar pagamentos |
+| `POST` | `/payments` | — | — | Registrar transação (PENDING) |
+| `POST` | `/payments/:paymentId/charge` | — | — | Gerar cobrança (mock) |
+| `GET` | `/payments/:paymentId/status` | — | — | Consultar status do pagamento |
+| `POST` | `/payments/webhook` | — | — | Webhook (mock) — confirmar pagamento (PAID) |
+
+> Os endpoints do Payments Service aguardam a configuração do gateway real para definição de autenticação.
+
 ### Totais
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **59** |
-| **Serviços** | **3** |
-| **Controllers** | **28** |
-| **DTOs** | **23** |
+| **Endpoints** | **67** |
+| **Serviços** | **4** |
+| **Controllers** | **29** |
+| **DTOs** | **25** |
 | **Autenticação (Bearer)** | **2 endpoints** |
 | **Bearer + Roles** | **35 endpoints** |
-| **Públicos (sem auth)** | **21 endpoints** |
+| **Públicos (sem auth)** | **29 endpoints** |
