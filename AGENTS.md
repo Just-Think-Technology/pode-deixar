@@ -8,33 +8,39 @@ Mantido sempre atualizado com decisões de produto, regras de desenvolvimento e 
 
 - **Backend:** NestJS 11, TypeScript, Prisma 5.22, PostgreSQL
 - **Frontend:** Next.js 16, React 19, shadcn/ui, Tailwind CSS 4
-- **Infra:** Docker Compose, Caddy, pnpm 11 (workspaces)
+- **Infra:** Docker Compose, Caddy, pnpm 11 (workspaces), Redis 7
 
 ## Estrutura do Monorepo
 
 ```
 backend/
 ├── prisma/          # Schema e migrations compartilhados
-├── shared/          # Pacotes compartilhados (logger, email)
+├── shared/          # Pacotes compartilhados (logger, email, security)
+│   ├── logger/          # Logger Pino compartilhado
+│   ├── email/           # Serviço de email compartilhado
+│   └── security/        # Configurações de segurança (helmet CSP, Redis throttler)
 └── services/
     ├── auth/            # :3001 — Autenticação
     ├── users/           # :3002 — Perfis e categorias
-    └── service-orders/  # :3003 — Ordens de serviço e propostas
+    ├── service-orders/  # :3003 — Ordens de serviço e propostas
+    └── payments/        # :3004 — Pagamentos (Mercado Pago, webhooks)
 frontend/
 ├── app/             # Next.js App Router
 ├── api/             # Cliente HTTP
 ├── components/      # Componentes React
 ├── lib/auth/        # Server actions e sessão
 └── mock/            # Dados mockados para dev
+scripts/             # Scripts utilitários (backup, restore, init-db)
+docs/                # Documentação de decisões (security, etc.)
 ```
 
 ## Comandos principais
 
 ```bash
 # Backend — dentro de backend/
-pnpm dev              # Gera Prisma client + sobe os 3 serviços
+pnpm dev              # Gera Prisma client + sobe os 4 serviços
 pnpm build            # Build de shared + serviços
-pnpm test             # Testes dos 3 serviços
+pnpm test             # Testes dos 4 serviços
 
 # Frontend — dentro de frontend/
 pnpm dev              # Dev server
@@ -76,6 +82,67 @@ Sempre desenvolver utilizando:
 - **Validação rigorosa de entrada** — usar DTOs (class-validator), UUIDs reais, limites
 - **Confirmação de eventos externos** — webhooks/gateways devem validar assinatura e conferir valores; fail-closed (rejeitar quando não validado)
 - **Consistência com as regras de segurança deste arquivo** — revisar produção/infra antes de criar exposição desnecessária
+
+### Dados de cartão (PCI-DSS)
+
+**Nunca armazenar, expor ou registrar PAN/CVV de cartões.** Regras para qualquer funcionalidade:
+
+- **Não armazenar** número completo do cartão, CVV, senha ou PIN em banco, cache ou logs
+- **Não aceitar** dados de cartão no backend — dados só transitam do cliente direto ao gateway (tokenização)
+- **Usar sempre** tokenização do gateway (ex.: card token do Mercado Pago) ou checkout hospedado/componentes oficiais
+- **Nunca enviar** dados de cartão para os nossos servidores se não for necessário — o backend só vê o token/ID da transação, nunca o PAN
+- **Lembrar de logs** — sanitizar qualquer log (interceptor/filter) contra números de cartão e CVV
+- Posições de resposta/erro do gateway **nunca** ecoam campos de cartão
+
+### Rate Limiting e Throttling
+
+- **Global:** 100 req/min via `@nestjs/throttler` (memória em dev, Redis em produção)
+- **Endpoints sensíveis:**
+  - `POST /payments/webhook` (mock): 20 req/min
+  - `POST /payments/webhook/mercadopago`: 60 req/min
+  - `POST /services/me/:orderId/photos`: 20 req/min
+  - `POST /payments/:paymentId/charge`: 10 req/min
+- **Implementação:** `ThrottlerModule.forRootAsync` com `RedisThrottlerStorage` em produção, memória em dev/test
+
+### CSP (Content Security Policy)
+
+- Configuração centralizada em `@pode-deixar/security` (`getHelmetConfig()`)
+- `default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`
+- `script-src/style-src` permitem `'unsafe-inline'` apenas para Swagger UI
+- HSTS (1 ano, includeSubDomains, preload), `X-Frame-Options: DENY`
+- Aplicado em todos os 4 serviços via `app.use(getHelmetConfig())`
+
+### Backups e Restauração
+
+- **PostgreSQL Backup:** `pg_dump` diário às 03:00 UTC, retenção 7 dias, gzip
+- **Serviço:** `postgres-backup` no docker-compose (PostgreSQL 16 + cron)
+- **Restauração:** script `scripts/test-restore.sh` — restaura em DB temporário, valida contagem de tabelas/registros, limpa automaticamente
+- **Volume:** `backup_data` persistido
+
+### Rate Limiting Distribuído (Redis)
+
+- Redis 7-alpine no docker-compose (porta 6379, `appendonly`, `maxmemory 256MB`, LRU)
+- `RedisThrottlerStorage` implementa `ThrottlerStorage` do NestJS
+- `ThrottlerModule.forRootAsync` usa Redis em produção (`NODE_ENV=production`), memória em dev/test
+
+### Pipeline de Segurança CI
+
+- **Dependency Audit:** `pnpm audit --prod --audit-level=high` (backend + frontend)
+- **Dependency Review:** `actions/dependency-review-action@v4` em PRs
+- **Secret Scanning:** TruffleHog (`--only-verified --fail`)
+- **CodeQL:** Static Analysis com queries `security-extended` + `security-and-quality`
+- **ESLint Security:** `eslint-plugin-security` em todos os serviços
+- **Dockerfile Scan:** Hadolint
+- **Resumo consolidado** no final — falha se qualquer job falhar
+
+### ESLint Security Plugin
+
+- `eslint-plugin-security` configurado em todos os 4 serviços
+- Regras recomendadas + específicas:
+  - `detect-object-injection`, `detect-non-literal-fs-filename`, `detect-unsafe-regex`
+  - `detect-buffer-noassert`, `detect-child-process`, `detect-disable-mustache-escape`
+  - `detect-eval-with-expression`, `detect-no-csrf-before-method-override`
+  - `detect-non-literal-regexp`, `detect-possible-timing-attacks`, `detect-pseudoRandomBytes`
 
 ### Dados de cartão (PCI-DSS)
 
@@ -205,3 +272,38 @@ Sempre desenvolver utilizando:
 - **Quando o CREDIT_CARD real for implementado:** usar **tokenização do Mercado Pago** (card token gerado no cliente via SDK/Bricks oficial) ou **Checkout Pro hospedado** — nunca receber PAN/CVV no backend
 - **Backend vê apenas** o token do cartão/ID da transação do gateway; nunca o número completo
 - **Logs:** interceptor/filter do payments sanitizam PAN e CVV (`sanitizar-dados-sensiveis.ts`)
+
+### Webhooks de Pagamento (Idempotência e Anti-Replay)
+
+- **Mock:** `eventId` obrigatório no DTO + `timestamp` opcional (janela ±5min)
+- **Mercado Pago:** `x-request-id` header como `eventId` (único por notificação) + assinatura HMAC com timestamp ±5min
+- **Armazenamento:** tabela `payment_webhook_events` com unique `(gateway, eventId)`
+- **Processamento idempotente:** verifica se evento já processado → retorna estado atual sem reprocessar
+- **Race condition:** P2002 (unique violation) tratado como duplicado → retorna estado atual
+- **Validação de valor:** confere `amount` local vs gateway antes de qualquer transição
+- **Confirmação via gateway:** MP webhook chama `getPayment` para confirmar status real (não confia no webhook)
+
+### Logging Estruturado de Pagamentos
+
+- **PaymentLoggerService** em `payments/src/payments/payment-logger.service.ts`
+- Eventos logados:
+  - `payment.created` — criação com `paymentId`, `orderId`, amount, method, idempotencyKey
+  - `payment.status_changed` — transição com actor (MOCK/MERCADO_PAGO/USER/SYSTEM)
+  - `payment.webhook_received` — status sucesso/duplicado/falha, gateway, eventId
+  - `payment.error` — erros com contexto
+  - `payment.auth_failure` — webhook_key, assinatura, timestamp, replay
+  - `payment.suspicious` — atividades suspeitas
+- Sanitização automática via `ResponseLoggerInterceptor` + `sanitizarDadosSensiveis`
+
+### Usuário DB com Menor Privilégio
+
+- Script `scripts/init-db-least-privilege.sql` cria role `pode_deixar_app`
+- Permissões: `SELECT, INSERT, UPDATE, DELETE` nas tabelas, `USAGE` em sequences
+- `REVOKE CREATE` em schema e database
+- Default privileges configuradas para futuras tabelas/sequences
+
+### Criptografia em Repouso
+
+- **Decisão documentada:** `docs/security/encryption-at-rest-decision.md`
+- **Não obrigatório na aplicação:** sem PAN/CVV armazenados, senhas em bcrypt, infra provê LUKS/TDE
+- Reavaliar se: armazenar dados de cartão, LGPD exigir, migração para TDE nativo
