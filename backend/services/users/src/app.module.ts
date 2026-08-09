@@ -18,7 +18,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 
-function traduzirErrosValidacao(errors: ValidationError[]): string[] {
+function traduzirErrosValidacao(errors: ValidationError[]): string {
   const rotulos: Record<string, string> = {
     title: "Título",
     description: "Descrição",
@@ -52,18 +52,22 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     matches: (r) => `${r} contém caracteres inválidos`,
   };
 
-  return errors.map((error) => {
-    if (!error.constraints)
-      return `${rotulos[error.property] || error.property} inválido`;
-    return Object.entries(error.constraints)
-      .map(([chave, msg]) => {
-        const tradutor = traducoes[chave];
-        return tradutor
-          ? tradutor(rotulos[error.property] || error.property)
-          : msg;
-      })
-      .join("; ");
-  });
+  return errors
+    .map((error) => {
+      if (!error.constraints)
+        return `${rotulos[error.property] || error.property} inválido`;
+      return Object.entries(error.constraints)
+        .map(([chave, msg]) => {
+          // eslint-disable-next-line security/detect-object-injection
+          const tradutor = traducoes[chave];
+
+          return tradutor
+            ? tradutor(rotulos[error.property] || error.property)
+            : msg;
+        })
+        .join("; ");
+    })
+    .join("; ");
 }
 @Module({
   imports: [

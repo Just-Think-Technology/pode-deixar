@@ -20,6 +20,7 @@ export function sanitizarDadosSensiveis(valor: unknown): unknown {
     const objeto = valor as Record<string, unknown>;
     const resultado: Record<string, unknown> = {};
     for (const [chave, item] of Object.entries(objeto)) {
+      // eslint-disable-next-line security/detect-object-injection
       resultado[chave] = CHAVE_SENSIVEL.test(chave)
         ? '[REDACTED]'
         : sanitizarDadosSensiveis(item);

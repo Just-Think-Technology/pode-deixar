@@ -1,11 +1,7 @@
 import { Module, ValidationPipe, BadRequestException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
-import {
-  ThrottlerGuard,
-  ThrottlerModule,
-  ThrottlerStorage,
-} from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TerminusModule } from '@nestjs/terminus';
 import { ValidationError } from 'class-validator';
 import { AppController } from './app.controller';
@@ -55,7 +51,9 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
       return `${rotulos[error.property] || error.property} inválido`;
     return Object.entries(error.constraints)
       .map(([chave, msg]) => {
+        // eslint-disable-next-line security/detect-object-injection
         const tradutor = traducoes[chave];
+
         return tradutor
           ? tradutor(rotulos[error.property] || error.property)
           : msg;

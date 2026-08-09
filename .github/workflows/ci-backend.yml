@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [auth, users, service-orders]
+        service: [auth, users, service-orders, payments]
 
     runs-on: ubuntu-latest
     defaults:

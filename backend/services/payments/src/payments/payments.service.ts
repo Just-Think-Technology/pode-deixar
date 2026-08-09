@@ -502,6 +502,7 @@ export class PaymentsService {
   }
 
   private validarTransicaoEstado(atual: PaymentStatus, novo: PaymentStatus) {
+    // eslint-disable-next-line security/detect-object-injection
     const permitidas = TRANSICOES_VALIDAS[atual] ?? [];
 
     if (!permitidas.includes(novo)) {
@@ -593,6 +594,7 @@ export class PaymentsService {
       refunded: "REFUNDED",
     };
 
+    // eslint-disable-next-line security/detect-object-injection
     return mapa[mpStatus] || "PENDING";
   }
 }

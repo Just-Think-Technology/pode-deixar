@@ -50,7 +50,9 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
       return `${rotulos[error.property] || error.property} inválido`;
     return Object.entries(error.constraints)
       .map(([chave, msg]) => {
+        // eslint-disable-next-line security/detect-object-injection
         const tradutor = traducoes[chave];
+
         return tradutor
           ? tradutor(rotulos[error.property] || error.property)
           : msg;

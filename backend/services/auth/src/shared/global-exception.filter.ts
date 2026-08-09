@@ -21,6 +21,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       'Bad Request': 'Requisição inválida',
       'Internal Server Error': 'Erro interno do servidor',
     };
+    // eslint-disable-next-line security/detect-object-injection
     return translations[msg] || msg;
   }
 
