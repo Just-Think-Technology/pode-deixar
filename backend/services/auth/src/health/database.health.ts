@@ -1,13 +1,9 @@
 import { Injectable } from '@nestjs/common';
-<<<<<<< HEAD
 import {
   HealthIndicator,
   HealthIndicatorResult,
   HealthCheckError,
 } from '@nestjs/terminus';
-=======
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
->>>>>>> 68d7f77 (Develop (#13))
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -21,7 +17,6 @@ export class DatabaseHealthIndicator extends HealthIndicator {
       await this.prisma.$queryRaw`SELECT 1`;
       return this.getStatus(key, true);
     } catch (error) {
-<<<<<<< HEAD
       throw new HealthCheckError(
         'Verificação do banco de dados falhou',
         this.getStatus(key, false, { message: error.message }),
@@ -29,9 +24,3 @@ export class DatabaseHealthIndicator extends HealthIndicator {
     }
   }
 }
-=======
-      throw new HealthCheckError('Database check failed', this.getStatus(key, false, { message: error.message }));
-    }
-  }
-}
->>>>>>> 68d7f77 (Develop (#13))

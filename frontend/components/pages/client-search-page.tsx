@@ -3,15 +3,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-<<<<<<< HEAD
-=======
-import { searchProfessionals } from "@/api/client/search";
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
 import PopularCategories from "@/components/client/search/popular-categories";
 import SearchHero from "@/components/client/search/search-hero";
 import SearchResults from "@/components/client/search/search-results";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-<<<<<<< HEAD
 import { searchProfessionalsAction } from "@/lib/client/search/actions";
 import type {
   PopularCategory,
@@ -33,40 +28,22 @@ export default function ClientSearchPage({
   const [query, setQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
   const [results, setResults] = useState<ProviderSearchResult[]>([]);
-=======
-import type { MockProfessional } from "@/mock/types";
-import { POPULAR_CATEGORIES } from "@/mock/client/search";
-
-export default function ClientSearchPage() {
-  const [query, setQuery] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
-  const [results, setResults] = useState<MockProfessional[]>([]);
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
   async function handleSearch(options?: { query?: string; categoryId?: string }) {
     const nextQuery = options?.query ?? query;
-<<<<<<< HEAD
     const rawCategoryId =
       options && "categoryId" in options ? options.categoryId : selectedCategoryId;
     const nextCategoryId =
       rawCategoryId && UUID_REGEX.test(rawCategoryId) ? rawCategoryId : undefined;
-=======
-    const nextCategoryId =
-      options && "categoryId" in options ? options.categoryId : selectedCategoryId;
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
 
     setIsLoading(true);
     setHasSearched(true);
 
     try {
-<<<<<<< HEAD
       const response = await searchProfessionalsAction({
-=======
-      const response = await searchProfessionals({
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
         query: nextQuery.trim() || undefined,
         categoryId: nextCategoryId,
       });
@@ -90,11 +67,7 @@ export default function ClientSearchPage() {
   }
 
   function handleCategorySelect(categoryId: string) {
-<<<<<<< HEAD
     const category = categories.find((item) => item.id === categoryId);
-=======
-    const category = POPULAR_CATEGORIES.find((item) => item.id === categoryId);
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
     if (!category) return;
 
     setSelectedCategoryId(categoryId);
@@ -116,22 +89,15 @@ export default function ClientSearchPage() {
       />
 
       <PopularCategories
-<<<<<<< HEAD
         categories={categories}
-=======
-        categories={POPULAR_CATEGORIES}
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
         selectedCategoryId={selectedCategoryId}
         onCategorySelect={handleCategorySelect}
       />
 
-<<<<<<< HEAD
       {categoriesError ? (
         <p className="text-sm text-destructive">{categoriesError}</p>
       ) : null}
 
-=======
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
       <SearchResults
         professionals={results}
         total={total}
@@ -140,8 +106,4 @@ export default function ClientSearchPage() {
       />
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)

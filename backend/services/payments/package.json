@@ -31,6 +31,7 @@
     "@nestjs/terminus": "^11.1.1",
     "@nestjs/throttler": "^6.2.1",
     "@pode-deixar/logger": "workspace:*",
+    "@pode-deixar/security": "workspace:*",
     "@prisma/client": "5.22.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",

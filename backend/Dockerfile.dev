@@ -6,9 +6,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY shared/logger/package.json ./shared/logger/
 COPY shared/email/package.json ./shared/email/
+COPY shared/security/package.json ./shared/security/
 COPY services/auth/package.json ./services/auth/
 COPY services/users/package.json ./services/users/
 COPY services/service-orders/package.json ./services/service-orders/
+COPY services/payments/package.json ./services/payments/
 COPY prisma ./prisma
 
 RUN pnpm install --frozen-lockfile
@@ -17,3 +19,4 @@ RUN pnpm exec prisma generate --schema=prisma/schema.prisma
 FROM base AS auth-build
 FROM base AS users-build
 FROM base AS service-orders-build
+FROM base AS payments-build

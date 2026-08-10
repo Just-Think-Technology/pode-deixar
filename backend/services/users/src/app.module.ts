@@ -1,13 +1,8 @@
-<<<<<<< HEAD
 import { Module, BadRequestException } from "@nestjs/common";
-=======
-import { Module } from "@nestjs/common";
->>>>>>> 68d7f77 (Develop (#13))
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
-<<<<<<< HEAD
 import { ValidationError } from "class-validator";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProfilesModule } from "./profiles/profiles.module";
@@ -74,22 +69,10 @@ function traduzirErrosValidacao(errors: ValidationError[]): string {
     })
     .join("; ");
 }
-=======
-import { PrismaModule } from "./prisma/prisma.module";
-import { ProfilesModule } from "./profiles/profiles.module";
-import { ProviderServicesModule } from "./provider-services/provider-services.module";
-import { HealthModule } from "./health/health.module";
-import { SharedModule } from "./shared/shared.module";
-import { GlobalExceptionFilter } from "./shared/global-exception.filter";
-import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
-import { UsersLoggerService } from "./shared/users-logger.service";
-
->>>>>>> 68d7f77 (Develop (#13))
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-<<<<<<< HEAD
       envFilePath:
         process.env.NODE_ENV === "test" ? [] : ["../../.env.staging"],
     }),
@@ -104,22 +87,10 @@ import { UsersLoggerService } from "./shared/users-logger.service";
           },
         ];
       },
-=======
-      envFilePath: process.env.NODE_ENV === "test" ? [] : [".env.staging"],
-    }),
-    ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          ttl: 60000,
-          limit: 100,
-        },
-      ],
->>>>>>> 68d7f77 (Develop (#13))
     }),
     PrismaModule,
     ProfilesModule,
     ProviderServicesModule,
-<<<<<<< HEAD
     ServiceImagesModule,
     CategoriesModule,
     HealthModule,
@@ -129,13 +100,6 @@ import { UsersLoggerService } from "./shared/users-logger.service";
   controllers: [AppController],
   providers: [
     AppService,
-=======
-    HealthModule,
-    SharedModule,
-  ],
-  providers: [
-    UsersLoggerService,
->>>>>>> 68d7f77 (Develop (#13))
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
@@ -146,11 +110,8 @@ import { UsersLoggerService } from "./shared/users-logger.service";
         whitelist: true,
         forbidNonWhitelisted: true,
         transform: true,
-<<<<<<< HEAD
         exceptionFactory: (errors) =>
           new BadRequestException(traduzirErrosValidacao(errors)),
-=======
->>>>>>> 68d7f77 (Develop (#13))
       }),
     },
     {

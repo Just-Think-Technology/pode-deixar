@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { getCategories } from "@/api/client/categories";
 import { ApiError } from "@/api/client";
 import ClientSearchPage from "@/components/pages/client-search-page";
@@ -37,12 +36,3 @@ export default async function ClientSearchRoute() {
     />
   );
 }
-=======
-import ClientSearchPage from "@/components/pages/client-search-page";
-
-export default function ClientSearchRoute() {
-  return (
-    <ClientSearchPage />
-  )
-}
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)

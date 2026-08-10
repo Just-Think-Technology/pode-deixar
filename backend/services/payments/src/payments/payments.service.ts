@@ -4,7 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { Prisma, PaymentMethod, PaymentStatus } from ".prisma/client";
+import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MercadoPagoService } from "../mercadopago/mercadopago.service";
 import { PaymentLoggerService } from "./payment-logger.service";
