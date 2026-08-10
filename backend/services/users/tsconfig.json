@@ -18,14 +18,10 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-<<<<<<< HEAD
       "@/*": ["src/*"],
       "rxjs": ["../../node_modules/rxjs"],
       "rxjs/*": ["../../node_modules/rxjs/*"],
       "@pode-deixar/security": ["../../shared/security/dist"]
-=======
-      "@/*": ["src/*"]
->>>>>>> 68d7f77 (Develop (#13))
     }
   }
 }

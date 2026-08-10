@@ -62,15 +62,20 @@ test.describe("Solicitações do cliente (JTT-79)", () => {
     await expect(page.getByText("R$ 220,00")).toBeVisible();
   });
 
-  test("aceita proposta pendente e atualiza status", async ({ page }) => {
+  test("aceita proposta pendente e redireciona ao checkout", async ({
+    page,
+  }) => {
     await page.goto("/client/orders/mock-client-order-001");
 
     await page.getByRole("button", { name: "Aceitar" }).first().click();
     await page.getByRole("button", { name: "Confirmar aceite" }).click();
 
     await expect(page.getByText("Proposta aceita com sucesso!")).toBeVisible();
-    await expect(page.getByText("Aceita", { exact: true })).toBeVisible();
-    await expect(page.getByText("Em andamento").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Aceitar" })).toHaveCount(0);
+    await expect(page).toHaveURL(
+      /\/client\/orders\/mock-client-order-001\/checkout/,
+    );
+    await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
+    await expect(page.getByText("R$ 180,00")).toBeVisible();
   });
 });
+

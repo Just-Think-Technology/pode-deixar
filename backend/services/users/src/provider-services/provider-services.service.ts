@@ -2,19 +2,13 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-<<<<<<< HEAD
   ForbiddenException,
-=======
->>>>>>> 68d7f77 (Develop (#13))
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateProviderServiceDto } from "./dto/create-provider-service.dto";
 import { UpdateProviderServiceDto } from "./dto/update-provider-service.dto";
-<<<<<<< HEAD
 import { SearchProvidersQueryDto } from "./dto/search-providers-query.dto";
-=======
->>>>>>> 68d7f77 (Develop (#13))
 
 @Injectable()
 export class ProviderServicesService {
@@ -28,11 +22,7 @@ export class ProviderServicesService {
       where: { userId },
     });
     if (!profile) {
-<<<<<<< HEAD
       throw new NotFoundException("Perfil de prestador não encontrado");
-=======
-      throw new NotFoundException("Provider profile not found");
->>>>>>> 68d7f77 (Develop (#13))
     }
     return profile;
   }
@@ -42,11 +32,7 @@ export class ProviderServicesService {
       where: { id: providerProfileId },
     });
     if (!profile) {
-<<<<<<< HEAD
       throw new NotFoundException("Perfil de prestador não encontrado");
-=======
-      throw new NotFoundException("Provider profile not found");
->>>>>>> 68d7f77 (Develop (#13))
     }
     return profile;
   }
@@ -58,7 +44,6 @@ export class ProviderServicesService {
       title: service.title,
       description: service.description,
       fixed_price: service.fixedPrice,
-<<<<<<< HEAD
       category_id: service.categoryId,
       category: service.category
         ? {
@@ -74,10 +59,6 @@ export class ProviderServicesService {
             created_at: img.createdAt,
           }))
         : [],
-=======
-      category: service.category,
-      duration_minutes: service.durationMinutes,
->>>>>>> 68d7f77 (Develop (#13))
       is_active: service.isActive,
       created_at: service.createdAt,
       updated_at: service.updatedAt,
@@ -97,7 +78,6 @@ export class ProviderServicesService {
         title: dto.title,
         description: dto.description,
         fixedPrice: dto.fixedPrice,
-<<<<<<< HEAD
         categoryId: dto.categoryId,
         isActive: true,
       },
@@ -108,12 +88,6 @@ export class ProviderServicesService {
           orderBy: { createdAt: "desc" },
         },
       },
-=======
-        category: dto.category,
-        durationMinutes: dto.durationMinutes,
-        isActive: true,
-      },
->>>>>>> 68d7f77 (Develop (#13))
     });
 
     this.usersLogger.logServiceCreated(providerProfileId, service.id, ip);
@@ -127,7 +101,6 @@ export class ProviderServicesService {
     const services = await this.prisma.providerService.findMany({
       where: { providerProfileId },
       orderBy: { createdAt: "desc" },
-<<<<<<< HEAD
       include: {
         category: { select: { id: true, name: true, slug: true } },
         images: {
@@ -135,8 +108,6 @@ export class ProviderServicesService {
           orderBy: { createdAt: "desc" },
         },
       },
-=======
->>>>>>> 68d7f77 (Develop (#13))
     });
 
     return services.map((s) => this.formatService(s));
@@ -148,7 +119,6 @@ export class ProviderServicesService {
     const services = await this.prisma.providerService.findMany({
       where: { providerProfileId, isActive: true },
       orderBy: { createdAt: "desc" },
-<<<<<<< HEAD
       include: {
         category: { select: { id: true, name: true, slug: true } },
         images: {
@@ -156,8 +126,6 @@ export class ProviderServicesService {
           orderBy: { createdAt: "desc" },
         },
       },
-=======
->>>>>>> 68d7f77 (Develop (#13))
     });
 
     return services.map((s) => this.formatService(s));
@@ -174,19 +142,11 @@ export class ProviderServicesService {
     });
 
     if (!existing) {
-<<<<<<< HEAD
       throw new NotFoundException("Serviço não encontrado");
     }
 
     if (existing.providerProfileId !== providerProfileId) {
       throw new ForbiddenException("Serviço não pertence a este prestador");
-=======
-      throw new NotFoundException("Service not found");
-    }
-
-    if (existing.providerProfileId !== providerProfileId) {
-      throw new BadRequestException("Service does not belong to this provider");
->>>>>>> 68d7f77 (Develop (#13))
     }
 
     const service = await this.prisma.providerService.update({
@@ -195,7 +155,6 @@ export class ProviderServicesService {
         title: dto.title ?? existing.title,
         description: dto.description ?? existing.description,
         fixedPrice: dto.fixedPrice ?? existing.fixedPrice,
-<<<<<<< HEAD
         categoryId: dto.categoryId ?? existing.categoryId,
       },
       include: {
@@ -204,10 +163,6 @@ export class ProviderServicesService {
           select: { id: true, url: true, createdAt: true },
           orderBy: { createdAt: "desc" },
         },
-=======
-        category: dto.category ?? existing.category,
-        durationMinutes: dto.durationMinutes ?? existing.durationMinutes,
->>>>>>> 68d7f77 (Develop (#13))
       },
     });
 
@@ -226,25 +181,16 @@ export class ProviderServicesService {
     });
 
     if (!existing) {
-<<<<<<< HEAD
       throw new NotFoundException("Serviço não encontrado");
     }
 
     if (existing.providerProfileId !== providerProfileId) {
       throw new ForbiddenException("Serviço não pertence a este prestador");
-=======
-      throw new NotFoundException("Service not found");
-    }
-
-    if (existing.providerProfileId !== providerProfileId) {
-      throw new BadRequestException("Service does not belong to this provider");
->>>>>>> 68d7f77 (Develop (#13))
     }
 
     const service = await this.prisma.providerService.update({
       where: { id: serviceId },
       data: { isActive: false },
-<<<<<<< HEAD
       include: {
         category: { select: { id: true, name: true, slug: true } },
         images: {
@@ -252,15 +198,12 @@ export class ProviderServicesService {
           orderBy: { createdAt: "desc" },
         },
       },
-=======
->>>>>>> 68d7f77 (Develop (#13))
     });
 
     this.usersLogger.logServiceDeleted(providerProfileId, serviceId, ip);
 
     return this.formatService(service);
   }
-<<<<<<< HEAD
 
   private removerAcentos(texto: string): string {
     return texto
@@ -395,6 +338,4 @@ export class ProviderServicesService {
       },
     };
   }
-=======
->>>>>>> 68d7f77 (Develop (#13))
 }

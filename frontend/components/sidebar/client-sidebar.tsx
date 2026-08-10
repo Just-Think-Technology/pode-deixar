@@ -63,13 +63,9 @@ export default function ClientSidebar({ user }: ClientSidebarProps) {
                     <SidebarGroupContent>
                         <SidebarMenu className="gap-1">
                             {clientNavItems.map((item) => {
-<<<<<<< HEAD
                                 const isActive =
                                     pathname === item.href ||
                                     pathname.startsWith(`${item.href}/`);
-=======
-                                const isActive = pathname === item.href;
->>>>>>> 414c12f (feat: implementar página de busca do cliente com hero, categorias e resultados)
                                 return (
                                     <SidebarMenuItem key={item.href}>
                                         {item.enabled ? (

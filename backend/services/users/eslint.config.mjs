@@ -1,10 +1,7 @@
 // @ts-check
 import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-<<<<<<< HEAD
 import securityPlugin from 'eslint-plugin-security';
-=======
->>>>>>> 68d7f77 (Develop (#13))
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -14,10 +11,7 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
-<<<<<<< HEAD
   securityPlugin.configs.recommended,
-=======
->>>>>>> 68d7f77 (Develop (#13))
   eslintPluginPrettierRecommended,
   {
     languageOptions: {
@@ -42,7 +36,6 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-<<<<<<< HEAD
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
       'security/detect-object-injection': 'warn',
       'security/detect-non-literal-fs-filename': 'warn',
@@ -55,9 +48,6 @@ export default tseslint.config(
       'security/detect-non-literal-regexp': 'warn',
       'security/detect-possible-timing-attacks': 'warn',
       'security/detect-pseudoRandomBytes': 'warn',
-=======
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
->>>>>>> 68d7f77 (Develop (#13))
     },
   },
 );

@@ -37,8 +37,4 @@ export class ResponseLoggerInterceptor implements NestInterceptor {
       }),
     );
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 68d7f77 (Develop (#13))

@@ -132,10 +132,15 @@ export default function ClientOrderDetailPage({
       if (kind === "accept") {
         await acceptProposalAction(proposal.id, currentOrder.id);
         toast.success("Proposta aceita com sucesso!");
-      } else {
-        await rejectProposalAction(proposal.id, currentOrder.id);
-        toast.success("Proposta recusada.");
+        setCurrentOrder((prev) =>
+          applyProposalDecision(prev, proposal.id, kind),
+        );
+        router.push(`/client/orders/${currentOrder.id}/checkout`);
+        return;
       }
+
+      await rejectProposalAction(proposal.id, currentOrder.id);
+      toast.success("Proposta recusada.");
       setCurrentOrder((prev) =>
         applyProposalDecision(prev, proposal.id, kind),
       );

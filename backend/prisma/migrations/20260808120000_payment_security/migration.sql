@@ -1,10 +1,7 @@
--- Payment security: moeda e idempotência
+-- Payment security: moeda e idempotência (idempotente para reexecução)
 
--- Currency (BRL por padrão)
-ALTER TABLE "payments" ADD COLUMN "currency" TEXT NOT NULL DEFAULT 'BRL';
+ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "currency" TEXT NOT NULL DEFAULT 'BRL';
+ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "idempotency_key" TEXT;
 
--- Idempotency key única por pedido (evita pagamento duplicado em reprocessing)
-ALTER TABLE "payments" ADD COLUMN "idempotency_key" TEXT;
-
--- Unique composto: um pagamento por (pedido, chave de idempotência)
-CREATE UNIQUE INDEX "payments_service_order_id_idempotency_key_key" ON "payments"("service_order_id", "idempotency_key");
+CREATE UNIQUE INDEX IF NOT EXISTS "payments_service_order_id_idempotency_key_key"
+  ON "payments"("service_order_id", "idempotency_key");

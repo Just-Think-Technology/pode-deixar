@@ -66,6 +66,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../../shared/logger
+      '@pode-deixar/security':
+        specifier: workspace:*
+        version: link:../../shared/security
       '@prisma/client':
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -235,6 +238,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../../shared/logger
+      '@pode-deixar/security':
+        specifier: workspace:*
+        version: link:../../shared/security
       '@prisma/client':
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -383,6 +389,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../../shared/logger
+      '@pode-deixar/security':
+        specifier: workspace:*
+        version: link:../../shared/security
       '@prisma/client':
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -540,6 +549,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../../shared/logger
+      '@pode-deixar/security':
+        specifier: workspace:*
+        version: link:../../shared/security
       '@prisma/client':
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)

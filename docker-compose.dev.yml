@@ -46,6 +46,7 @@ services:
       - ./backend/services/auth/nest-cli.json:/app/services/auth/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/email:/app/shared/email
+      - ./backend/shared/security:/app/shared/security
       - ./backend/prisma:/app/prisma
     depends_on:
       mailpit:
@@ -68,6 +69,7 @@ services:
       - ./backend/services/users/tsconfig.build.json:/app/services/users/tsconfig.build.json
       - ./backend/services/users/nest-cli.json:/app/services/users/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/security:/app/shared/security
       - ./backend/prisma:/app/prisma
 
   # -- Service Orders Service (dev, hot-reload) --
@@ -90,6 +92,27 @@ services:
       - ./backend/services/service-orders/tsconfig.build.json:/app/services/service-orders/tsconfig.build.json
       - ./backend/services/service-orders/nest-cli.json:/app/services/service-orders/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/security:/app/shared/security
+      - ./backend/prisma:/app/prisma
+
+  # -- Payments Service (dev, hot-reload) --
+  payments:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file: ./backend/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+    ports:
+      - "3004:3004"
+    command: pnpm run --filter @pode-deixar/payments start:dev
+    volumes:
+      - ./backend/services/payments/src:/app/services/payments/src
+      - ./backend/services/payments/tsconfig.json:/app/services/payments/tsconfig.json
+      - ./backend/services/payments/tsconfig.build.json:/app/services/payments/tsconfig.build.json
+      - ./backend/services/payments/nest-cli.json:/app/services/payments/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/security:/app/shared/security
       - ./backend/prisma:/app/prisma
 
 volumes:
