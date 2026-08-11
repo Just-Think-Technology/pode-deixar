@@ -4,12 +4,10 @@ node_modules/
 # Build output
 dist/
 
-# Environment files
+# Environment files (não versionar secrets; manter apenas .env.example)
 .env
-.env.local
-.env.stg
-.env.prod
-.env.staging
+.env.*
+!.env.example
 
 # IDE
 .idea/
