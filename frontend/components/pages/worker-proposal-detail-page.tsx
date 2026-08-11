@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Calendar, Clock, Hash } from "lucide-react";
 
+import WorkerProposalPaymentSection from "@/components/pages/worker-proposal-payment-section";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -121,6 +122,13 @@ export default function WorkerProposalDetailPage({
             </dd>
           </div>
         </dl>
+
+        {proposal.status === "ACCEPTED" ? (
+          <>
+            <Separator />
+            <WorkerProposalPaymentSection proposalId={proposal.id} />
+          </>
+        ) : null}
       </div>
     </div>
   );
