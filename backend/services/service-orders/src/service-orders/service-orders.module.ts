@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ServiceOrdersService } from "./service-orders.service";
 import {
   ServiceOrdersController,
+  ProviderAgendaController,
   MyServiceOrdersController,
   PublicServiceOrdersController,
   ProviderReceivedOrdersController,
@@ -13,6 +14,7 @@ import { SharedModule } from "../shared/shared.module";
   imports: [PrismaModule, SharedModule],
   controllers: [
     ServiceOrdersController,
+    ProviderAgendaController,
     MyServiceOrdersController,
     PublicServiceOrdersController,
     ProviderReceivedOrdersController,

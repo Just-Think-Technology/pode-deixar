@@ -251,7 +251,11 @@ describe("CounterProposalsService", () => {
       });
       expect(mockPrisma.serviceOrder.update).toHaveBeenCalledWith({
         where: { id: "order-1" },
-        data: { status: "IN_PROGRESS" },
+        data: {
+          status: "IN_PROGRESS",
+          providerId: "provider-1",
+          agreedPrice: 180,
+        },
       });
     });
   });

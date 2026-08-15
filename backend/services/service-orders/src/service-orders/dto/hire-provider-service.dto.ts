@@ -1,5 +1,7 @@
-import { IsString } from "class-validator";
-import { ApiProperty } from "@nestjs/swagger";
+import { IsString, IsOptional, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ServiceOrderAddressDto } from "./service-order-address.dto";
 
 export class HireProviderServiceDto {
   @ApiProperty({
@@ -8,4 +10,13 @@ export class HireProviderServiceDto {
   })
   @IsString()
   providerServiceId: string;
+
+  @ApiPropertyOptional({
+    description: "Endereço onde o serviço será realizado",
+    type: ServiceOrderAddressDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ServiceOrderAddressDto)
+  address?: ServiceOrderAddressDto;
 }

@@ -1043,7 +1043,15 @@ Criar novo pedido de serviço. Se `providerId` for informado, o pedido é direci
   "categoryId": "uuid-da-categoria",
   "providerId": "uuid-do-prestador",
   "budgetMin": 50.00,
-  "budgetMax": 200.00
+  "budgetMax": 200.00,
+  "address": {
+    "street": "Rua Augusta",
+    "number": "500",
+    "neighborhood": "Consolação",
+    "city": "São Paulo",
+    "state": "SP",
+    "postalCode": "01305-000"
+  }
 }
 ```
 
@@ -1055,8 +1063,9 @@ Criar novo pedido de serviço. Se `providerId` for informado, o pedido é direci
 | `providerId` | `string` (UUID) | não | ID do prestador (solicitação direta) |
 | `budgetMin` | `number` | não | Orçamento mínimo (≥ 0) |
 | `budgetMax` | `number` | não | Orçamento máximo (> 0) |
+| `address` | `object` | não | Endereço onde o serviço será realizado (campos: `street`, `number`, `neighborhood`, `city`, `state`, `postalCode`) |
 
-> O campo `address` é definido automaticamente a partir do CEP do usuário.
+> O `address` é informado pelo cliente no pedido (todos os campos opcionais). Lat/lng **não** é obrigatório — o front monta o link do Google Maps com o endereço textual.
 
 **Resposta `201`:**
 ```json
@@ -1070,12 +1079,21 @@ Criar novo pedido de serviço. Se `providerId` for informado, o pedido é direci
   "category": { "id": "uuid", "name": "Hidráulica", "slug": "hidraulica" },
   "budget_min": 50.00,
   "budget_max": 200.00,
-  "address": {},
+  "address": {
+    "street": "Rua Augusta",
+    "number": "500",
+    "neighborhood": "Consolação",
+    "city": "São Paulo",
+    "state": "SP",
+    "postal_code": "01305-000"
+  },
   "status": "OPEN",
   "created_at": "2026-06-28T10:00:00.000Z",
   "updated_at": "2026-06-28T10:00:00.000Z"
 }
 ```
+
+> Nas respostas, o endereço é retornado formatado em **snake_case** (`postal_code`), com `null` para campos ausentes.
 
 ---
 
@@ -1094,13 +1112,22 @@ Contratar serviço com valor fixo diretamente (sem proposta). Cria pedido com st
 **Request body (`HireProviderServiceDto`):**
 ```json
 {
-  "providerServiceId": "uuid-do-servico"
+  "providerServiceId": "uuid-do-servico",
+  "address": {
+    "street": "Rua Augusta",
+    "number": "500",
+    "neighborhood": "Consolação",
+    "city": "São Paulo",
+    "state": "SP",
+    "postalCode": "01305-000"
+  }
 }
 ```
 
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
 | `providerServiceId` | `string` (UUID) | sim | ID do serviço do prestador |
+| `address` | `object` | não | Endereço onde o serviço será realizado (mesma estrutura do `POST /services/me`) |
 
 **Resposta `201`:** Mesma estrutura do `POST /services/me`, com acréscimos:
 
@@ -1212,6 +1239,72 @@ Listar pedidos direcionados ao prestador logado (solicitações recebidas).
 
 ---
 
+### Agenda do Prestador (JTT-94)
+
+**Prefixo:** `services/me/agenda` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+
+#### `GET /services/me/agenda?from=YYYY-MM-DD&to=YYYY-MM-DD`
+
+Listar os **serviços pagos e agendados** do prestador autenticado no período — usado para posicionar os jobs no calendário da agenda.
+
+**Critérios de inclusão (todos):**
+- Prestador do pedido: `provider_id` = usuário autenticado **OU** proposta `ACCEPTED` desse prestador no pedido (pedidos de marketplace)
+- Pagamento `PAID` (exclui `REFUNDED`, `FAILED`, `CANCELLED`)
+- Status do pedido `IN_PROGRESS` (a realizar) ou `COMPLETED` (realizado)
+- `scheduled_at` dentro do período `from`/`to`
+
+**Query params:**
+| Parâmetro | Tipo | Obrigatório | Descrição |
+|-----------|------|-------------|-----------|
+| `from` | `string` (YYYY-MM-DD) | sim | Data inicial do período |
+| `to` | `string` (YYYY-MM-DD) | sim | Data final do período — janela **máxima de 92 dias** |
+
+**Resposta `200`:**
+```json
+[
+  {
+    "id": "uuid-do-pedido",
+    "order_id": "uuid-do-pedido",
+    "title": "Trocar chuveiro elétrico",
+    "description": "Meu chuveiro elétrico queimou e preciso trocar urgente.",
+    "scheduled_at": "2026-08-20T14:00:00.000Z",
+    "scheduled_end_at": "2026-08-20T17:00:00.000Z",
+    "order_status": "IN_PROGRESS",
+    "address": {
+      "street": "Rua Augusta",
+      "number": "500",
+      "neighborhood": "Consolação",
+      "city": "São Paulo",
+      "state": "SP",
+      "postal_code": "01305-000"
+    },
+    "photos": [
+      { "id": "uuid-da-foto", "url": "https://minio/order-photos/uuid.webp" }
+    ],
+    "payment": {
+      "status": "PAID",
+      "amount": 150.00,
+      "paid_at": "2026-08-18T10:00:00.000Z"
+    }
+  }
+]
+```
+
+| Campo | Descrição |
+|-------|-----------|
+| `scheduled_at` / `scheduled_end_at` | Data/hora do serviço (agendamento definido pelo cliente no checkout) |
+| `order_status` | `IN_PROGRESS` (futuro) ou `COMPLETED` (passado) — o front decide "realizado vs a realizar" |
+| `address` | Endereço textual completo (link Google Maps montado no front; lat/lng não é enviado) |
+| `photos` | URLs públicas MinIO das fotos do pedido |
+| `payment` | Somente `status`/`amount`/`paid_at` — **nunca** expõe dados de cartão |
+
+| Erro | Código |
+|------|--------|
+| `from`/`to` ausentes ou inválidos | `400` |
+| Janela maior que 92 dias ou `from` > `to` | `400` |
+
+---
+
 ### Pedidos de Serviço (Público)
 
 **Prefixo:** `services` | **Sem autenticação**
@@ -1226,13 +1319,22 @@ Listar pedidos abertos (para prestadores encontrarem oportunidades).
 
 #### `GET /services/:orderId`
 
-Obter detalhe de um pedido (público).
+Obter detalhe de um pedido (autenticado — `CLIENT` ou `PROVIDER`).
 
-**Resposta `200`:** Mesma estrutura com proposals do `GET /services/me/:orderId`.
+**Regras de acesso:**
+- **CLIENT** dono do pedido → vê tudo (propostas + fotos)
+- **PROVIDER** com proposta no pedido (ou prestador alvo) → vê o pedido, apenas sua proposta e as fotos
+- Demais casos → `403 Forbidden`
+
+**Resposta `200`:** Mesma estrutura com proposals do `GET /services/me/:orderId`, acrescida de:
+| Campo | Descrição |
+|-------|-----------|
+| `photos` | Array `[{ id, url }]` com as fotos do pedido (URLs públicas MinIO) |
 
 | Erro | Código |
 |------|--------|
 | Pedido não encontrado | `404` |
+| Sem acesso ao pedido | `403` |
 
 ---
 
@@ -1331,7 +1433,11 @@ Retirar proposta (apenas dono, apenas se pendente). Altera status para `WITHDRAW
 
 Aceitar proposta (apenas dono do pedido).
 
-**Resposta `200`:** Proposta com status `ACCEPTED`. O pedido é alterado para `IN_PROGRESS`.
+**Resposta `200`:** Proposta com status `ACCEPTED`. O pedido é alterado para `IN_PROGRESS` e passa a apontar para o prestador vencedor:
+- `provider_id` ← prestador da proposta aceita
+- `agreed_price` ← valor da proposta
+
+> Sem isso, pedidos de marketplace não aparecem na [agenda do prestador](#agenda-do-prestador-jtt-94).
 
 | Erro | Código |
 |------|--------|
@@ -1426,7 +1532,7 @@ Listar contrapropostas de uma proposta específica.
 
 #### `POST /counter-proposals/:counterProposalId/accept`
 
-Aceitar contraproposta. Finaliza o acordo: proposta vira `ACCEPTED`, pedido vira `IN_PROGRESS`, demais propostas/contrapropostas pendentes são rejeitadas.
+Aceitar contraproposta. Finaliza o acordo: proposta vira `ACCEPTED`, pedido vira `IN_PROGRESS` (com `provider_id` ← prestador e `agreed_price` ← valor da contraproposta), demais propostas/contrapropostas pendentes são rejeitadas.
 
 **Resposta `200`:** Contraproposta com status `ACCEPTED`.
 
@@ -1561,11 +1667,18 @@ Registra a transação de pagamento no banco. O **preço não é enviado pelo fr
 depois, no `charge`.
 Para operação real, deve ser chamado logo após o aceite da proposta (ver fluxo abaixo).
 
+O **agendamento do serviço também é definido aqui** (cliente no checkout): o
+`scheduledAt` (e opcionalmente `scheduledEndAt`) é gravado no pedido. O pagamento só
+pode virar `PAID` se o pedido tiver `scheduled_at` (webhooks rejeitam com `400` caso
+contrário — fail-closed).
+
 **Request body (`CreatePaymentDto`):**
 ```json
 {
   "serviceOrderId": "uuid-do-pedido",
-  "method": "PIX"
+  "method": "PIX",
+  "scheduledAt": "2026-08-20T14:00:00.000Z",
+  "scheduledEndAt": "2026-08-20T17:00:00.000Z"
 }
 ```
 
@@ -1573,6 +1686,8 @@ Para operação real, deve ser chamado logo após o aceite da proposta (ver flux
 |-------|------|-------------|-----------|
 | `serviceOrderId` | `string` (UUID) | sim | ID do pedido de serviço (deve pertencer ao cliente) |
 | `method` | `PaymentMethod` | sim | `PIX` ou `CREDIT_CARD` |
+| `scheduledAt` | `string` (ISO 8601) | sim | Data/hora agendada do serviço — gravada no pedido |
+| `scheduledEndAt` | `string` (ISO 8601) | não | Término previsto do serviço — deve ser posterior a `scheduledAt` |
 
 | Status | Código | Retorno |
 |--------|--------|---------|
@@ -1694,6 +1809,8 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 - **Retorno:** `200` com o pagamento atualizado para `PAID` (idempotente — reenvio não altera um pagamento já `PAID`)
 
 > O `amount` recebido **é comparado** com o valor registrado na transação — se diferente, o webhook é rejeitado (`400`).
+>
+> O pedido precisa ter `scheduled_at` (definido no `POST /payments`) — sem agendamento, a confirmação de `PAID` é rejeitada (`400`).
 
 **Request body:**
 ```json
@@ -1925,7 +2042,9 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 | `category` | Category | Objeto da categoria (via include) |
 | `budget_min` | Decimal? | Orçamento mínimo |
 | `budget_max` | Decimal? | Orçamento máximo |
-| `address` | JSON? | Endereço |
+| `address` | JSON? | Endereço (street, number, neighborhood, city, state, postalCode) |
+| `scheduled_at` | DateTime? | Data/hora agendada do serviço (definida no checkout; obrigatória quando o pagamento vira PAID) |
+| `scheduled_end_at` | DateTime? | Término previsto do serviço |
 | `status` | `ServiceOrderStatus` | Status atual |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
@@ -2029,7 +2148,7 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 | `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
 | `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
 
-### Service Orders Service (23 endpoints)
+### Service Orders Service (24 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -2039,11 +2158,12 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 | `POST` | `/services/me` | Bearer | CLIENT | Criar pedido |
 | `POST` | `/services/me/hire` | Bearer | CLIENT | Contratar serviço fixo |
 | `GET` | `/services/me` | Bearer | CLIENT | Meus pedidos |
+| `GET` | `/services/me/agenda` | Bearer | PROVIDER | Agenda do prestador (serviços pagos, `from`/`to`) |
 | `GET` | `/services/me/:orderId` | Bearer | CLIENT | Detalhe do pedido (dono) |
 | `PATCH` | `/services/me/:orderId` | Bearer | CLIENT | Atualizar pedido |
 | `DELETE` | `/services/me/:orderId` | Bearer | CLIENT | Cancelar pedido |
 | `GET` | `/services` | — | — | Pedidos abertos |
-| `GET` | `/services/:orderId` | — | — | Detalhe do pedido (público) |
+| `GET` | `/services/:orderId` | Bearer | CLIENT, PROVIDER | Detalhe do pedido (autenticado, com fotos) |
 | `GET` | `/services/requests/received` | Bearer | PROVIDER | Solicitações recebidas |
 | `POST` | `/proposals` | Bearer | PROVIDER | Criar proposta |
 | `GET` | `/proposals/me` | Bearer | PROVIDER | Minhas propostas |
@@ -2077,10 +2197,10 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **68** |
+| **Endpoints** | **69** |
 | **Serviços** | **4** |
-| **Controllers** | **29** |
-| **DTOs** | **27** |
+| **Controllers** | **30** |
+| **DTOs** | **29** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **39 endpoints** |
-| **Públicos (sem auth)** | **27 endpoints** |
+| **Bearer + Roles** | **40 endpoints** |
+| **Públicos (sem auth)** | **26 endpoints** |

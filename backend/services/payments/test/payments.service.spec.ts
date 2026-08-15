@@ -29,7 +29,9 @@ describe("PaymentsService", () => {
     };
     serviceOrder: {
       findUnique: jest.Mock;
+      update: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let mercadoPago: {
     isConfigured: boolean;
@@ -65,7 +67,11 @@ describe("PaymentsService", () => {
       },
       serviceOrder: {
         findUnique: jest.fn(),
+        update: jest.fn(),
       },
+      $transaction: jest.fn(async (operacoes: any[]) =>
+        Promise.all(operacoes),
+      ),
     };
     mercadoPago = {
       isConfigured: false,
@@ -131,9 +137,12 @@ describe("PaymentsService", () => {
   });
 
   describe("create", () => {
+    const scheduledAt = "2026-08-20T14:00:00.000Z";
+
     const dto = {
       serviceOrderId: "order-1",
       method: PaymentMethod.PIX,
+      scheduledAt,
     };
 
     it("deve registrar transação com preço vindo do pedido", async () => {
@@ -153,6 +162,7 @@ describe("PaymentsService", () => {
         method: "PIX",
         status: "PENDING",
       });
+      prisma.serviceOrder.update.mockResolvedValue({ id: "order-1" });
 
       const result = await service.create(userId, dto);
 
@@ -166,6 +176,13 @@ describe("PaymentsService", () => {
           },
         },
       });
+      expect(prisma.serviceOrder.update).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: {
+          scheduledAt: new Date(scheduledAt),
+          scheduledEndAt: null,
+        },
+      });
       expect(prisma.payment.create).toHaveBeenCalledWith({
         data: {
           serviceOrderId: "order-1",
@@ -175,7 +192,7 @@ describe("PaymentsService", () => {
           status: "PENDING",
         },
       });
-      expect(result.amount).toBe(150);
+      expect(result).toEqual(expect.objectContaining({ amount: 150 }));
     });
 
     it("deve usar o preço da proposta aceita quando não há agreedPrice", async () => {
@@ -191,6 +208,7 @@ describe("PaymentsService", () => {
         id: "payment-1",
         amount: 220,
       });
+      prisma.serviceOrder.update.mockResolvedValue({ id: "order-1" });
 
       await service.create(userId, dto);
 
@@ -199,6 +217,50 @@ describe("PaymentsService", () => {
           data: expect.objectContaining({ amount: 220 }),
         }),
       );
+    });
+
+    it("deve gravar o término do agendamento quando informado", async () => {
+      prisma.serviceOrder.findUnique.mockResolvedValue({
+        id: "order-1",
+        clientId: userId,
+        status: "IN_PROGRESS",
+        agreedPrice: 150,
+        proposals: [],
+      });
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.payment.create.mockResolvedValue({ id: "payment-1", amount: 150 });
+      prisma.serviceOrder.update.mockResolvedValue({ id: "order-1" });
+
+      await service.create(userId, {
+        ...dto,
+        scheduledEndAt: "2026-08-20T17:00:00.000Z",
+      });
+
+      expect(prisma.serviceOrder.update).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: {
+          scheduledAt: new Date(scheduledAt),
+          scheduledEndAt: new Date("2026-08-20T17:00:00.000Z"),
+        },
+      });
+    });
+
+    it("deve lançar BadRequestException quando o término é anterior ao início", async () => {
+      prisma.serviceOrder.findUnique.mockResolvedValue({
+        id: "order-1",
+        clientId: userId,
+        status: "IN_PROGRESS",
+        agreedPrice: 150,
+        proposals: [],
+      });
+
+      await expect(
+        service.create(userId, {
+          ...dto,
+          scheduledEndAt: "2026-08-20T13:00:00.000Z",
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
     });
 
     it("deve lançar NotFoundException quando o pedido não existe", async () => {
@@ -590,6 +652,7 @@ describe("PaymentsService", () => {
         id: "payment-1",
         status: "PENDING",
         amount: 150,
+        serviceOrder: { scheduledAt: new Date("2026-08-20T14:00:00.000Z") },
       });
       prisma.payment.update.mockResolvedValue({
         id: "payment-1",
@@ -645,6 +708,7 @@ describe("PaymentsService", () => {
         id: "payment-1",
         status: "PENDING",
         amount: 150,
+        serviceOrder: { scheduledAt: new Date("2026-08-20T14:00:00.000Z") },
       });
 
       const erroP2002 = new Error("Unique constraint failed");
@@ -691,6 +755,21 @@ describe("PaymentsService", () => {
       );
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
+
+    it("deve rejeitar PAID (fail-closed) quando o pedido não tem agendamento", async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PENDING",
+        amount: 150,
+        serviceOrder: { scheduledAt: null },
+      });
+
+      await expect(service.confirmPayment(dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+      expect(prisma.paymentWebhookEvent.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("handleMercadoPagoWebhook", () => {
@@ -713,6 +792,7 @@ describe("PaymentsService", () => {
         id: "payment-1",
         status: "PENDING",
         amount: 150,
+        serviceOrder: { scheduledAt: new Date("2026-08-20T14:00:00.000Z") },
       });
       prisma.payment.update.mockResolvedValue({
         id: "payment-1",
@@ -892,6 +972,34 @@ describe("PaymentsService", () => {
         ),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it("deve rejeitar PAID (fail-closed) quando o pedido não tem agendamento", async () => {
+      mercadoPago.getPayment.mockResolvedValue({
+        id: "12345",
+        status: "approved",
+        transactionAmount: 150,
+        externalReference: "payment-1",
+      });
+      prisma.payment.findUnique.mockResolvedValue({
+        id: "payment-1",
+        status: "PENDING",
+        amount: 150,
+        serviceOrder: { scheduledAt: null },
+      });
+
+      await expect(
+        service.handleMercadoPagoWebhook(
+          {
+            type: "payment",
+            action: "payment.updated",
+            data: { id: "12345" },
+          },
+          eventId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+      expect(prisma.paymentWebhookEvent.create).not.toHaveBeenCalled();
     });
   });
 });

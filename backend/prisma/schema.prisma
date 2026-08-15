@@ -161,6 +161,8 @@ model ServiceOrder {
   budgetMin   Decimal?           @map("budget_min") @db.Decimal(10, 2)
   budgetMax   Decimal?           @map("budget_max") @db.Decimal(10, 2)
   address     Json?              @default("{}")
+  scheduledAt DateTime?          @map("scheduled_at")
+  scheduledEndAt DateTime?       @map("scheduled_end_at")
   status      ServiceOrderStatus @default(OPEN)
   createdAt   DateTime           @default(now()) @map("created_at")
   updatedAt   DateTime           @updatedAt @map("updated_at")

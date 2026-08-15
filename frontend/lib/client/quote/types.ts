@@ -7,12 +7,22 @@ export type Category = {
   order?: number;
 };
 
+export type ServiceOrderAddress = {
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+};
+
 export type CreateServiceOrderPayload = {
   title: string;
   description: string;
   categoryId: string;
   budgetMin?: number;
   budgetMax?: number;
+  address?: ServiceOrderAddress;
 };
 
 export type ServiceOrder = {

@@ -264,7 +264,11 @@ export class ProposalsService {
       }),
       this.prisma.serviceOrder.update({
         where: { id: proposal.serviceOrderId },
-        data: { status: "IN_PROGRESS" },
+        data: {
+          status: "IN_PROGRESS",
+          providerId: proposal.providerId,
+          agreedPrice: proposal.price,
+        },
       }),
     ]);
 
