@@ -23,6 +23,10 @@ const TRANSICOES_VALIDAS: Record<PaymentStatus, PaymentStatus[]> = {
 const GATEWAY_MOCK = "MOCK";
 const GATEWAY_MERCADO_PAGO = "MERCADO_PAGO";
 
+const TAXA_PLATAFORMA_PADRAO = 0.1;
+
+const MOEDA_BRL = "BRL";
+
 interface EventoWebhook {
   gateway: string;
   eventId: string;
@@ -68,6 +72,43 @@ export class PaymentsService {
     return payment;
   }
 
+  private get taxaPlataforma(): number {
+    const configurada = Number(process.env.PLATFORM_FEE_RATE);
+    if (Number.isFinite(configurada) && configurada >= 0 && configurada < 1) {
+      return configurada;
+    }
+    return TAXA_PLATAFORMA_PADRAO;
+  }
+
+  private arredondarParaCentavos(valor: number): number {
+    return Number(new Prisma.Decimal(valor).toFixed(2));
+  }
+
+  private calcularFees(valor: number) {
+    const feeRate = this.taxaPlataforma;
+    const feeAmount = this.arredondarParaCentavos(valor * feeRate);
+    const netAmount = this.arredondarParaCentavos(valor - feeAmount);
+    return { feeRate, feeAmount, netAmount };
+  }
+
+  private calcularLiquido(payment: {
+    amount: unknown;
+    feeRate: Prisma.Decimal | null;
+    feeAmount: Prisma.Decimal | null;
+    netAmount: Prisma.Decimal | null;
+  }) {
+    const feeRate = Number(payment.feeRate ?? this.taxaPlataforma);
+    const feeAmount =
+      payment.feeAmount != null
+        ? Number(payment.feeAmount)
+        : this.arredondarParaCentavos(Number(payment.amount) * feeRate);
+    const netAmount =
+      payment.netAmount != null
+        ? Number(payment.netAmount)
+        : this.arredondarParaCentavos(Number(payment.amount) - feeAmount);
+    return { feeRate, feeAmount, netAmount };
+  }
+
   findAll(userId: string) {
     return this.prisma.payment.findMany({
       where: { serviceOrder: { clientId: userId } },
@@ -83,6 +124,218 @@ export class PaymentsService {
       },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  async getProviderFinanceSummary(userId: string) {
+    const payments = await this.buscarPagamentosDoProvider(userId);
+
+    const agregado = payments.reduce(
+      (acc, payment) => {
+        const { feeAmount, netAmount } = this.calcularLiquido(payment);
+        const pagoNoMesAtual =
+          payment.status === "PAID" &&
+          payment.paidAt &&
+          this.pertenceAoMesAtual(payment.paidAt);
+
+        if (payment.status === "PENDING") {
+          acc.pendingNet += netAmount;
+        }
+
+        if (payment.status === "PAID") {
+          acc.grossToReceive += Number(payment.amount);
+          acc.feesOnToReceive += feeAmount;
+          acc.toReceiveNet += netAmount;
+        }
+
+        if (pagoNoMesAtual) {
+          acc.receivedThisMonthNet += netAmount;
+          acc.feesThisMonth += feeAmount;
+        }
+
+        return acc;
+      },
+      {
+        pendingNet: 0,
+        grossToReceive: 0,
+        feesOnToReceive: 0,
+        toReceiveNet: 0,
+        receivedThisMonthNet: 0,
+        feesThisMonth: 0,
+      },
+    );
+
+    return {
+      currency: MOEDA_BRL,
+      feeRate: this.taxaPlataforma,
+      ...agregado,
+    };
+  }
+
+  async getProviderFinanceItems(userId: string, status?: PaymentStatus) {
+    const proposals = await this.buscarProposalsAceitasDoProvider(userId);
+    const orderIds = proposals.map((proposal) => proposal.serviceOrderId);
+
+    if (orderIds.length === 0) {
+      return [];
+    }
+
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        serviceOrderId: { in: orderIds },
+        ...(status ? { status } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const proposalPorPedido = new Map(
+      proposals.map((proposal) => [proposal.serviceOrderId, proposal.id]),
+    );
+
+    return payments.map((payment) =>
+      this.formatFinanceItem(
+        payment,
+        proposalPorPedido.get(payment.serviceOrderId),
+      ),
+    );
+  }
+
+  async getProviderFinanceChart(userId: string, months: number) {
+    const inicio = this.inicioDoPeriodo(months);
+
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        status: "PAID",
+        paidAt: { gte: inicio },
+        serviceOrder: {
+          proposals: {
+            some: { providerId: userId, status: "ACCEPTED" },
+          },
+        },
+      },
+      select: {
+        paidAt: true,
+        feeRate: true,
+        feeAmount: true,
+        netAmount: true,
+        amount: true,
+      },
+    });
+
+    const porMes = new Map<
+      string,
+      { netReceived: number; feesRetained: number }
+    >();
+
+    for (const payment of payments) {
+      const chaveMes = this.chaveDoMes(payment.paidAt);
+      const { feeAmount, netAmount } = this.calcularLiquido(payment);
+      const atual = porMes.get(chaveMes) ?? { netReceived: 0, feesRetained: 0 };
+      atual.netReceived += netAmount;
+      atual.feesRetained += feeAmount;
+      porMes.set(chaveMes, atual);
+    }
+
+    return this.preencherMesesVazios(porMes, months);
+  }
+
+  private async buscarProposalsAceitasDoProvider(userId: string) {
+    return this.prisma.proposal.findMany({
+      where: { providerId: userId, status: "ACCEPTED" },
+      select: { id: true, serviceOrderId: true },
+    });
+  }
+
+  private async buscarPagamentosDoProvider(userId: string) {
+    return this.prisma.payment.findMany({
+      where: {
+        serviceOrder: {
+          proposals: {
+            some: { providerId: userId, status: "ACCEPTED" },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  private formatFinanceItem(
+    payment: {
+      id: string;
+      serviceOrderId: string;
+      amount: Prisma.Decimal;
+      status: PaymentStatus;
+      method: PaymentMethod;
+      feeRate: Prisma.Decimal | null;
+      feeAmount: Prisma.Decimal | null;
+      netAmount: Prisma.Decimal | null;
+      paidAt: Date | null;
+      createdAt: Date;
+    },
+    proposalId: string | undefined,
+  ) {
+    const { feeRate, feeAmount, netAmount } = this.calcularLiquido(payment);
+
+    return {
+      paymentId: payment.id,
+      proposalId,
+      serviceOrderId: payment.serviceOrderId,
+      paymentStatus: payment.status,
+      method: payment.method,
+      grossAmount: Number(payment.amount),
+      feeAmount,
+      netAmount,
+      feeRate,
+      paidAt: payment.paidAt,
+      createdAt: payment.createdAt,
+    };
+  }
+
+  private pertenceAoMesAtual(data: Date): boolean {
+    const agora = new Date();
+    return (
+      data.getUTCFullYear() === agora.getUTCFullYear() &&
+      data.getUTCMonth() === agora.getUTCMonth()
+    );
+  }
+
+  private inicioDoPeriodo(months: number): Date {
+    const agora = new Date();
+    return new Date(
+      Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth() - (months - 1), 1),
+    );
+  }
+
+  private chaveDoMes(data: Date | null): string {
+    if (!data) {
+      return "";
+    }
+    return `${data.getUTCFullYear()}-${String(data.getUTCMonth() + 1).padStart(2, "0")}`;
+  }
+
+  private preencherMesesVazios(
+    porMes: Map<string, { netReceived: number; feesRetained: number }>,
+    months: number,
+  ) {
+    const agora = new Date();
+    const resultado: {
+      month: string;
+      netReceived: number;
+      feesRetained: number;
+    }[] = [];
+
+    for (let i = months - 1; i >= 0; i--) {
+      const data = new Date(
+        Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth() - i, 1),
+      );
+      const chave = this.chaveDoMes(data);
+      resultado.push({
+        month: chave,
+        netReceived: porMes.get(chave)?.netReceived ?? 0,
+        feesRetained: porMes.get(chave)?.feesRetained ?? 0,
+      });
+    }
+
+    return resultado;
   }
 
   async create(userId: string, dto: CreatePaymentDto) {
@@ -161,6 +414,8 @@ export class PaymentsService {
       return existente;
     }
 
+    const fees = this.calcularFees(valor);
+
     const [payment] = await this.prisma.$transaction([
       this.prisma.payment.create({
         data: {
@@ -169,6 +424,9 @@ export class PaymentsService {
           currency,
           method: dto.method,
           status: "PENDING",
+          feeRate: fees.feeRate,
+          feeAmount: fees.feeAmount,
+          netAmount: fees.netAmount,
           ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
         },
       }),

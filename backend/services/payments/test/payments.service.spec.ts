@@ -31,6 +31,9 @@ describe("PaymentsService", () => {
       findUnique: jest.Mock;
       update: jest.Mock;
     };
+    proposal: {
+      findMany: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
   let mercadoPago: {
@@ -68,6 +71,9 @@ describe("PaymentsService", () => {
       serviceOrder: {
         findUnique: jest.fn(),
         update: jest.fn(),
+      },
+      proposal: {
+        findMany: jest.fn(),
       },
       $transaction: jest.fn(async (operacoes: any[]) =>
         Promise.all(operacoes),
@@ -190,9 +196,42 @@ describe("PaymentsService", () => {
           currency: "BRL",
           method: "PIX",
           status: "PENDING",
+          feeRate: 0.1,
+          feeAmount: 15,
+          netAmount: 135,
         },
       });
       expect(result).toEqual(expect.objectContaining({ amount: 150 }));
+    });
+
+    it("deve persistir a taxa da plataforma configurada em PLATFORM_FEE_RATE", async () => {
+      process.env.PLATFORM_FEE_RATE = "0.2";
+      prisma.serviceOrder.findUnique.mockResolvedValue({
+        id: "order-1",
+        clientId: userId,
+        status: "IN_PROGRESS",
+        agreedPrice: 150,
+        proposals: [],
+      });
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.payment.create.mockResolvedValue({
+        id: "payment-1",
+        amount: 150,
+      });
+      prisma.serviceOrder.update.mockResolvedValue({ id: "order-1" });
+
+      await service.create(userId, dto);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            feeRate: 0.2,
+            feeAmount: 30,
+            netAmount: 120,
+          }),
+        }),
+      );
+      delete process.env.PLATFORM_FEE_RATE;
     });
 
     it("deve usar o preço da proposta aceita quando não há agreedPrice", async () => {
@@ -1000,6 +1039,212 @@ describe("PaymentsService", () => {
       ).rejects.toThrow(BadRequestException);
       expect(prisma.payment.update).not.toHaveBeenCalled();
       expect(prisma.paymentWebhookEvent.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Financeiro do prestador", () => {
+    const providerId = "provider-1";
+
+    const agora = new Date();
+    const mesAnterior = new Date(
+      Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth() - 1, 15),
+    );
+    const chaveMesAtual = `${agora.getUTCFullYear()}-${String(agora.getUTCMonth() + 1).padStart(2, "0")}`;
+
+    function criarPagamento(overrides: Record<string, unknown> = {}) {
+      return {
+        id: "payment-1",
+        serviceOrderId: "order-1",
+        amount: 350,
+        status: "PAID",
+        method: "PIX",
+        feeRate: 0.1,
+        feeAmount: 35,
+        netAmount: 315,
+        paidAt: agora,
+        createdAt: agora,
+        ...overrides,
+      };
+    }
+
+    describe("getProviderFinanceSummary", () => {
+      it("deve calcular pendente, a receber e mês atual a partir dos pagamentos", async () => {
+        prisma.payment.findMany.mockResolvedValue([
+          criarPagamento({ id: "payment-pendente", amount: 150, feeRate: null, feeAmount: null, netAmount: null, status: "PENDING", paidAt: null }),
+          criarPagamento({ id: "payment-paid-atual", paidAt: agora }),
+          criarPagamento({ id: "payment-paid-anterior", amount: 200, feeAmount: 20, netAmount: 180, paidAt: mesAnterior }),
+        ]);
+
+        const result = await service.getProviderFinanceSummary(providerId);
+
+        expect(prisma.payment.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              serviceOrder: expect.objectContaining({
+                proposals: {
+                  some: { providerId, status: "ACCEPTED" },
+                },
+              }),
+            }),
+          }),
+        );
+        expect(result).toEqual({
+          currency: "BRL",
+          feeRate: 0.1,
+          pendingNet: 135,
+          grossToReceive: 550,
+          feesOnToReceive: 55,
+          toReceiveNet: 495,
+          receivedThisMonthNet: 315,
+          feesThisMonth: 35,
+        });
+      });
+
+      it("deve retornar zeros quando não há pagamentos vinculados", async () => {
+        prisma.payment.findMany.mockResolvedValue([]);
+
+        const result = await service.getProviderFinanceSummary(providerId);
+
+        expect(result).toEqual({
+          currency: "BRL",
+          feeRate: 0.1,
+          pendingNet: 0,
+          grossToReceive: 0,
+          feesOnToReceive: 0,
+          toReceiveNet: 0,
+          receivedThisMonthNet: 0,
+          feesThisMonth: 0,
+        });
+      });
+    });
+
+    describe("getProviderFinanceItems", () => {
+      it("deve listar itens vinculados à proposta aceita do prestador", async () => {
+        prisma.proposal.findMany.mockResolvedValue([
+          { id: "proposal-1", serviceOrderId: "order-1" },
+          { id: "proposal-2", serviceOrderId: "order-2" },
+        ]);
+        prisma.payment.findMany.mockResolvedValue([
+          criarPagamento({ id: "payment-1", serviceOrderId: "order-1" }),
+          criarPagamento({ id: "payment-2", serviceOrderId: "order-2", amount: 100, feeAmount: 10, netAmount: 90 }),
+        ]);
+
+        const result = await service.getProviderFinanceItems(providerId);
+
+        expect(prisma.payment.findMany).toHaveBeenCalledWith({
+          where: {
+            serviceOrderId: { in: ["order-1", "order-2"] },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+        expect(result).toEqual([
+          expect.objectContaining({
+            paymentId: "payment-1",
+            proposalId: "proposal-1",
+            serviceOrderId: "order-1",
+            paymentStatus: "PAID",
+            method: "PIX",
+            grossAmount: 350,
+            feeAmount: 35,
+            netAmount: 315,
+            feeRate: 0.1,
+            paidAt: agora,
+            createdAt: agora,
+          }),
+          expect.objectContaining({
+            paymentId: "payment-2",
+            proposalId: "proposal-2",
+            grossAmount: 100,
+            feeAmount: 10,
+            netAmount: 90,
+          }),
+        ]);
+      });
+
+      it("deve aplicar o filtro de status informado", async () => {
+        prisma.proposal.findMany.mockResolvedValue([
+          { id: "proposal-1", serviceOrderId: "order-1" },
+        ]);
+        prisma.payment.findMany.mockResolvedValue([
+          criarPagamento({ id: "payment-1", status: "PENDING", paidAt: null }),
+        ]);
+
+        await service.getProviderFinanceItems(providerId, "PENDING");
+
+        expect(prisma.payment.findMany).toHaveBeenCalledWith({
+          where: {
+            serviceOrderId: { in: ["order-1"] },
+            status: "PENDING",
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      });
+
+      it("deve calcular fee e líquido para pagamentos legados sem valores persistidos", async () => {
+        prisma.proposal.findMany.mockResolvedValue([
+          { id: "proposal-1", serviceOrderId: "order-1" },
+        ]);
+        prisma.payment.findMany.mockResolvedValue([
+          criarPagamento({ feeRate: null, feeAmount: null, netAmount: null }),
+        ]);
+
+        const result = await service.getProviderFinanceItems(providerId);
+
+        expect(result[0]).toEqual(
+          expect.objectContaining({ feeAmount: 35, netAmount: 315, feeRate: 0.1 }),
+        );
+      });
+
+      it("deve retornar lista vazia quando o prestador não tem proposta aceita", async () => {
+        prisma.proposal.findMany.mockResolvedValue([]);
+
+        const result = await service.getProviderFinanceItems(providerId);
+
+        expect(result).toEqual([]);
+        expect(prisma.payment.findMany).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("getProviderFinanceChart", () => {
+      it("deve agrupar por mês e preencher meses vazios com zeros", async () => {
+        prisma.payment.findMany.mockResolvedValue([
+          criarPagamento({ id: "payment-1", paidAt: agora }),
+          criarPagamento({ id: "payment-2", amount: 200, feeAmount: 20, netAmount: 180, paidAt: mesAnterior }),
+        ]);
+
+        const result = await service.getProviderFinanceChart(providerId, 6);
+
+        expect(prisma.payment.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              status: "PAID",
+              serviceOrder: expect.objectContaining({
+                proposals: { some: { providerId, status: "ACCEPTED" } },
+              }),
+            }),
+          }),
+        );
+        expect(result).toHaveLength(6);
+        expect(result[result.length - 1]).toEqual({
+          month: chaveMesAtual,
+          netReceived: 315,
+          feesRetained: 35,
+        });
+        expect(result).toContainEqual({
+          month: expect.stringMatching(/^\d{4}-\d{2}$/),
+          netReceived: 180,
+          feesRetained: 20,
+        });
+      });
+
+      it("deve retornar apenas zeros quando não há pagamentos no período", async () => {
+        prisma.payment.findMany.mockResolvedValue([]);
+
+        const result = await service.getProviderFinanceChart(providerId, 6);
+
+        expect(result).toHaveLength(6);
+        expect(result.every((entry) => entry.netReceived === 0 && entry.feesRetained === 0)).toBe(true);
+      });
     });
   });
 });
