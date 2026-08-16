@@ -1594,6 +1594,7 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 > | `MERCADO_PAGO_WEBHOOK_SECRET` | Validar assinatura do webhook MP | **sim** (sem ela o webhook MP é rejeitado) |
 > | `MERCADO_PAGO_PAYER_EMAIL` | Email do pagador nas cobranças sandbox | não (default `sandbox@pode-deixar.com`) |
 > | `MOCK_WEBHOOK_KEY` | Webhook mock confirmar pagamento | não (sem ela o webhook mock é rejeitado) |
+> | `PLATFORM_FEE_RATE` | Taxa retida pela plataforma (0.10 = 10%) | não (default `0.10`) |
 >
 > **CORS:** restrito em `ALLOWED_ORIGINS` (lista separada por vírgulas; default `http://localhost:3000`).
 >
@@ -1607,6 +1608,9 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 > | `POST /payments` | Mock | Mock |
 > | `POST /payments/:paymentId/charge` | Mock | **Gateway** (PIX) / Mock (CREDIT_CARD) |
 > | `GET /payments/:paymentId/status` | Mock | Mock (lê o banco) |
+> | `GET /payments/provider/me/finance/summary` | Mock | Mock (lê o banco) |
+> | `GET /payments/provider/me/finance/items` | Mock | Mock (lê o banco) |
+> | `GET /payments/provider/me/finance/chart` | Mock | Mock (lê o banco) |
 > | `POST /payments/webhook` | **Mock** | **Mock** (apenas simulação manual) |
 > | `POST /payments/webhook/mercadopago` | Mock (não usado) | **Real** (eventos do Mercado Pago) |
 
@@ -1897,6 +1901,117 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 
 ---
 
+### Financeiro do Prestador (JTT-95)
+
+Endpoints de **leitura** para o prestador consultar o que tem a receber com base nas
+propostas aceitas e no status do pagamento do cliente.
+
+> **Fonte da verdade no backend:** bruto, taxa e líquido são **calculados no backend**
+> no momento da criação do pagamento (`POST /payments`) e persistidos no `Payment`
+> (`fee_rate`, `fee_amount`, `net_amount`), usando a taxa configurada em
+> `PLATFORM_FEE_RATE` (default `0.10` = 10%). Pagamentos criados antes desse modelo
+> (campos nulos) têm os valores calculados na leitura com a taxa atual. O frontend
+> **nunca** deve calcular fee/líquido.
+>
+> **Acesso (ownership):** o prestador autenticado só enxerga pagamentos de pedidos
+> em que ele é o provider de uma proposta **ACCEPTED**. Nunca expõe dados de cartão
+> (PCI) — apenas totais e status.
+
+#### `GET /payments/provider/me/finance/summary`
+
+- **Modo:** `Mock` sempre (lê o banco local)
+- **Requisitos:** autenticação JWT (Bearer) com role `PROVIDER`
+- **Retorno:** `200` com o resumo financeiro do prestador autenticado
+
+**Resposta `200`:**
+```json
+{
+  "currency": "BRL",
+  "feeRate": 0.1,
+  "pendingNet": 135.00,
+  "grossToReceive": 550.00,
+  "feesOnToReceive": 55.00,
+  "toReceiveNet": 495.00,
+  "receivedThisMonthNet": 315.00,
+  "feesThisMonth": 35.00
+}
+```
+
+| Campo | Descrição |
+|-------|-----------|
+| `currency` | Moeda (fixa `BRL`) |
+| `feeRate` | Taxa da plataforma vigente (fração, ex.: `0.1`) |
+| `pendingNet` | Líquido a receber de pagamentos `PENDING` (cliente ainda não pagou) |
+| `grossToReceive` | Bruto de pagamentos `PAID` (disponível para repasse) |
+| `feesOnToReceive` | Taxa retida sobre os pagamentos `PAID` |
+| `toReceiveNet` | Líquido de pagamentos `PAID` (bruto − taxa) |
+| `receivedThisMonthNet` | Líquido de pagamentos `PAID` no mês atual |
+| `feesThisMonth` | Taxa retida sobre pagamentos `PAID` no mês atual |
+
+#### `GET /payments/provider/me/finance/items?status=PAID`
+
+- **Modo:** `Mock` sempre (lê o banco local)
+- **Requisitos:** autenticação JWT (Bearer) com role `PROVIDER`
+- **Query opcional:** `status` = `PENDING` \| `PAID` \| `FAILED` \| `REFUNDED` \| `CANCELLED`
+- **Retorno:** `200` com a lista de itens vinculados à proposta aceita do prestador (mais recentes primeiro)
+
+**Resposta `200`:**
+```json
+[
+  {
+    "paymentId": "uuid-do-pagamento",
+    "proposalId": "uuid-da-proposta",
+    "serviceOrderId": "uuid-do-pedido",
+    "paymentStatus": "PAID",
+    "method": "PIX",
+    "grossAmount": 350.00,
+    "feeAmount": 35.00,
+    "netAmount": 315.00,
+    "feeRate": 0.1,
+    "paidAt": "2026-08-10T12:00:00.000Z",
+    "createdAt": "2026-08-08T10:00:00.000Z"
+  }
+]
+```
+
+| Campo | Descrição |
+|-------|-----------|
+| `paymentId` | ID do pagamento |
+| `proposalId` | ID da proposta aceita do prestador no pedido |
+| `serviceOrderId` | ID do pedido |
+| `paymentStatus` | Status do pagamento do cliente |
+| `method` | `PIX` ou `CREDIT_CARD` |
+| `grossAmount` | Valor bruto pago pelo cliente |
+| `feeAmount` | Taxa retida pela plataforma |
+| `netAmount` | Líquido a repassar ao prestador (bruto − taxa) |
+| `feeRate` | Taxa aplicada (fração) |
+| `paidAt` | Data da confirmação do pagamento (null se não pago) |
+| `createdAt` | Data de criação do pagamento |
+
+#### `GET /payments/provider/me/finance/chart?months=6`
+
+- **Modo:** `Mock` sempre (lê o banco local)
+- **Requisitos:** autenticação JWT (Bearer) com role `PROVIDER`
+- **Query opcional:** `months` (1–24, default `6`) — quantidade de meses incluindo o atual
+- **Retorno:** `200` com dados mensais de pagamentos `PAID` (meses sem movimento aparecem com zeros), do mais antigo ao mais recente
+
+**Resposta `200`:**
+```json
+[
+  { "month": "2026-03", "netReceived": 0.00, "feesRetained": 0.00 },
+  { "month": "2026-04", "netReceived": 315.00, "feesRetained": 35.00 },
+  { "month": "2026-05", "netReceived": 180.00, "feesRetained": 20.00 }
+]
+```
+
+| Campo | Descrição |
+|-------|-----------|
+| `month` | Mês no formato `YYYY-MM` |
+| `netReceived` | Líquido recebido no mês (pagamentos `PAID`) |
+| `feesRetained` | Taxa retida pela plataforma no mês |
+
+---
+
 ## Enums
 
 ### `Role`
@@ -2076,10 +2191,15 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `service_order_id` | UUID | FK → ServiceOrder (cascade on delete) |
-| `amount` | Decimal | Valor da transação |
+| `amount` | Decimal | Valor bruto da transação |
+| `currency` | String | Moeda (default: BRL) |
 | `method` | `PaymentMethod` | PIX ou CREDIT_CARD (default: PIX) |
 | `status` | `PaymentStatus` | Status atual (default: PENDING) |
+| `fee_rate` | Decimal? | Taxa da plataforma aplicada no momento da criação (ex.: `0.1`); null para pagamentos legados |
+| `fee_amount` | Decimal? | Taxa retida pela plataforma (bruto × taxa); null para pagamentos legados |
+| `net_amount` | Decimal? | Líquido a repassar ao prestador (bruto − taxa); null para pagamentos legados |
 | `external_ref` | String? | ID da transação no gateway |
+| `idempotency_key` | String? | Chave de idempotência (unique com service_order_id) |
 | `paid_at` | DateTime? | Data da confirmação do pagamento |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
@@ -2177,7 +2297,7 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 | `POST` | `/counter-proposals/:counterProposalId/accept` | Bearer | CLIENT, PROVIDER | Aceitar contraproposta |
 | `POST` | `/counter-proposals/:counterProposalId/reject` | Bearer | CLIENT, PROVIDER | Rejeitar contraproposta |
 
-### Payments Service (9 endpoints)
+### Payments Service (12 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|--------------|-------|-----------|
@@ -2188,6 +2308,9 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 | `POST` | `/payments` | JWT + Roles | CLIENT | Registrar transação (PENDING) |
 | `POST` | `/payments/:paymentId/charge` | JWT + Roles | CLIENT | Gerar cobrança (MP PIX se configurado, senão mock) |
 | `GET` | `/payments/:paymentId/status` | JWT + Roles | CLIENT | Consultar status do pagamento |
+| `GET` | `/payments/provider/me/finance/summary` | JWT + Roles | PROVIDER | Resumo financeiro do prestador |
+| `GET` | `/payments/provider/me/finance/items` | JWT + Roles | PROVIDER | Itens financeiros do prestador (filtro `status`) |
+| `GET` | `/payments/provider/me/finance/chart` | JWT + Roles | PROVIDER | Dados mensais para gráfico (`months`) |
 | `POST` | `/payments/webhook` | Chave `x-webhook-key` | — | Webhook (mock) — confirmar pagamento (PAID) |
 | `POST` | `/payments/webhook/mercadopago` | Assinatura HMAC | — | Webhook do Mercado Pago — sincronizar status |
 
@@ -2197,10 +2320,10 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **69** |
+| **Endpoints** | **72** |
 | **Serviços** | **4** |
-| **Controllers** | **30** |
-| **DTOs** | **29** |
+| **Controllers** | **31** |
+| **DTOs** | **31** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **40 endpoints** |
+| **Bearer + Roles** | **43 endpoints** |
 | **Públicos (sem auth)** | **26 endpoints** |
