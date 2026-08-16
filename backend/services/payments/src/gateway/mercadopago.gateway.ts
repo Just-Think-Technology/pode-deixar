@@ -15,7 +15,7 @@ export class MercadoPagoGateway implements PaymentGateway {
   private readonly apiBase = "https://api.mercadopago.com";
 
   private get accessToken(): string {
-    return process.env.MERCADO_PAGO_ACCESS_TOKEN || "";
+    return process.env.PAYMENT_GATEWAY_ACCESS_TOKEN || "";
   }
 
   private get isProductionToken(): boolean {
@@ -37,11 +37,11 @@ export class MercadoPagoGateway implements PaymentGateway {
   }
 
   private get webhookSecret(): string | undefined {
-    return process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+    return process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET;
   }
 
   async createCharge(params: CreateChargeParams): Promise<ChargeResult> {
-    const notificationUrl = process.env.MERCADO_PAGO_NOTIFICATION_URL;
+    const notificationUrl = process.env.PAYMENT_GATEWAY_NOTIFICATION_URL;
 
     if (notificationUrl && !notificationUrl.startsWith("https://")) {
       throw new BadGatewayException(
@@ -61,7 +61,8 @@ export class MercadoPagoGateway implements PaymentGateway {
         payment_method_id: "pix",
         payer: {
           email:
-            process.env.MERCADO_PAGO_PAYER_EMAIL || "sandbox@pode-deixar.com",
+            process.env.PAYMENT_GATEWAY_PAYER_EMAIL ||
+            "sandbox@pode-deixar.com",
         },
         external_reference: params.externalReference,
         notification_url: notificationUrl,

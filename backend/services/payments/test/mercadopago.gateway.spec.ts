@@ -23,56 +23,56 @@ describe("MercadoPagoGateway", () => {
   });
 
   describe("isConfigured", () => {
-    const originalToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    const originalToken = process.env.PAYMENT_GATEWAY_ACCESS_TOKEN;
     const originalNodeEnv = process.env.NODE_ENV;
 
     afterEach(() => {
-      process.env.MERCADO_PAGO_ACCESS_TOKEN = originalToken;
+      process.env.PAYMENT_GATEWAY_ACCESS_TOKEN = originalToken;
       process.env.NODE_ENV = originalNodeEnv;
     });
 
     it("deve ser true em dev quando o token começa com TEST-", () => {
       process.env.NODE_ENV = "development";
-      process.env.MERCADO_PAGO_ACCESS_TOKEN = "TEST-123456789";
+      process.env.PAYMENT_GATEWAY_ACCESS_TOKEN = "TEST-123456789";
       expect(gateway.isConfigured).toBe(true);
     });
 
     it("deve ser false em dev quando o token é de produção", () => {
       process.env.NODE_ENV = "development";
-      process.env.MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-123456789";
+      process.env.PAYMENT_GATEWAY_ACCESS_TOKEN = "APP_USR-123456789";
       expect(gateway.isConfigured).toBe(false);
     });
 
     it("deve ser true em produção quando o token é APP_USR-", () => {
       process.env.NODE_ENV = "production";
-      process.env.MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-123456789";
+      process.env.PAYMENT_GATEWAY_ACCESS_TOKEN = "APP_USR-123456789";
       expect(gateway.isConfigured).toBe(true);
     });
 
     it("deve ser false em produção quando o token é de teste", () => {
       process.env.NODE_ENV = "production";
-      process.env.MERCADO_PAGO_ACCESS_TOKEN = "TEST-123456789";
+      process.env.PAYMENT_GATEWAY_ACCESS_TOKEN = "TEST-123456789";
       expect(gateway.isConfigured).toBe(false);
     });
 
     it("deve ser false quando o token não está configurado", () => {
-      delete process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      delete process.env.PAYMENT_GATEWAY_ACCESS_TOKEN;
       expect(gateway.isConfigured).toBe(false);
     });
   });
 
   describe("createCharge", () => {
-    const originalPayerEmail = process.env.MERCADO_PAGO_PAYER_EMAIL;
-    const originalNotificationUrl = process.env.MERCADO_PAGO_NOTIFICATION_URL;
+    const originalPayerEmail = process.env.PAYMENT_GATEWAY_PAYER_EMAIL;
+    const originalNotificationUrl = process.env.PAYMENT_GATEWAY_NOTIFICATION_URL;
 
     afterEach(() => {
-      process.env.MERCADO_PAGO_PAYER_EMAIL = originalPayerEmail;
-      process.env.MERCADO_PAGO_NOTIFICATION_URL = originalNotificationUrl;
+      process.env.PAYMENT_GATEWAY_PAYER_EMAIL = originalPayerEmail;
+      process.env.PAYMENT_GATEWAY_NOTIFICATION_URL = originalNotificationUrl;
     });
 
     it("deve criar cobrança PIX e retornar os dados de pagamento", async () => {
-      process.env.MERCADO_PAGO_PAYER_EMAIL = "teste@example.com";
-      process.env.MERCADO_PAGO_NOTIFICATION_URL =
+      process.env.PAYMENT_GATEWAY_PAYER_EMAIL = "teste@example.com";
+      process.env.PAYMENT_GATEWAY_NOTIFICATION_URL =
         "https://exemplo.com/webhook";
 
       const fetchMock = jest.fn().mockResolvedValue({
@@ -122,9 +122,9 @@ describe("MercadoPagoGateway", () => {
       });
     });
 
-    it("deve usar o email padrão quando MERCADO_PAGO_PAYER_EMAIL não existe", async () => {
-      delete process.env.MERCADO_PAGO_PAYER_EMAIL;
-      delete process.env.MERCADO_PAGO_NOTIFICATION_URL;
+    it("deve usar o email padrão quando PAYMENT_GATEWAY_PAYER_EMAIL não existe", async () => {
+      delete process.env.PAYMENT_GATEWAY_PAYER_EMAIL;
+      delete process.env.PAYMENT_GATEWAY_NOTIFICATION_URL;
       const fetchMock = jest.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -168,7 +168,7 @@ describe("MercadoPagoGateway", () => {
     });
 
     it("deve rejeitar notification_url sem HTTPS (fail-closed)", async () => {
-      process.env.MERCADO_PAGO_NOTIFICATION_URL = "http://exemplo.com/webhook";
+      process.env.PAYMENT_GATEWAY_NOTIFICATION_URL = "http://exemplo.com/webhook";
 
       const fetchMock = jest.fn();
       global.fetch = fetchMock as unknown as typeof fetch;
@@ -230,21 +230,21 @@ describe("MercadoPagoGateway", () => {
   });
 
   describe("validateWebhook", () => {
-    const originalSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+    const originalSecret = process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET;
 
     afterEach(() => {
-      process.env.MERCADO_PAGO_WEBHOOK_SECRET = originalSecret;
+      process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = originalSecret;
     });
 
     it("deve rejeitar quando não há secret configurado (fail-closed)", () => {
-      delete process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+      delete process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET;
       expect(
         gateway.validateWebhook({}, { data: { id: "123" } }),
       ).toBe(false);
     });
 
     it("deve validar assinatura HMAC correta", () => {
-      process.env.MERCADO_PAGO_WEBHOOK_SECRET = "secret-de-teste";
+      process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = "secret-de-teste";
       const crypto = require("node:crypto");
       const tsAtual = Math.floor(Date.now() / 1000);
       const manifest = `id:123;request-id:req-1;ts:${tsAtual};`;
@@ -265,7 +265,7 @@ describe("MercadoPagoGateway", () => {
     });
 
     it("deve rejeitar assinatura válida mas fora da janela de tempo (anti-replay)", () => {
-      process.env.MERCADO_PAGO_WEBHOOK_SECRET = "secret-de-teste";
+      process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = "secret-de-teste";
       const crypto = require("node:crypto");
       const tsVelho = Math.floor(Date.now() / 1000) - 3600;
       const manifest = `id:123;request-id:req-1;ts:${tsVelho};`;
@@ -286,7 +286,7 @@ describe("MercadoPagoGateway", () => {
     });
 
     it("deve rejeitar assinatura inválida", () => {
-      process.env.MERCADO_PAGO_WEBHOOK_SECRET = "secret-de-teste";
+      process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = "secret-de-teste";
 
       const valid = gateway.validateWebhook(
         {
@@ -300,7 +300,7 @@ describe("MercadoPagoGateway", () => {
     });
 
     it("deve rejeitar quando faltam campos da assinatura", () => {
-      process.env.MERCADO_PAGO_WEBHOOK_SECRET = "secret-de-teste";
+      process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = "secret-de-teste";
 
       const valid = gateway.validateWebhook(
         { "x-request-id": "req-1" },

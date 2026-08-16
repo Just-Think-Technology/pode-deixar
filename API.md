@@ -1568,21 +1568,21 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 > O serviço usa uma **arquitetura de gateways** (port/adapter): um contrato
 > `PaymentGateway` central e adapters por provedor — hoje `mercadopago` e o
 > `mock` (fallback). O gateway ativo é escolhido automaticamente pela presença
-> de `MERCADO_PAGO_ACCESS_TOKEN`; os webhooks chegam em
+> de `PAYMENT_GATEWAY_ACCESS_TOKEN`; os webhooks chegam em
 > `POST /payments/webhook/:gateway` e cada adapter valida sua própria assinatura.
 > Sem o token, todos os endpoints operam com **valores mockados**.
 >
 > | Configuração | Comportamento |
 > |---|---|
-> | Sem `MERCADO_PAGO_ACCESS_TOKEN` | **Mock** — nenhuma chamada externa |
-> | `MERCADO_PAGO_ACCESS_TOKEN=TEST-...` | **Gateway sandbox** para PIX; cartão de crédito continua **mock** |
-> | `MERCADO_PAGO_ACCESS_TOKEN=TEST-...` + `MERCADO_PAGO_NOTIFICATION_URL` | Igual acima + Mercado Pago notifica o webhook real |
-> | `MERCADO_PAGO_WEBHOOK_SECRET` definido | Webhook MP **exige** assinatura HMAC válida (`x-signature` + `x-request-id`) |
+> | Sem `PAYMENT_GATEWAY_ACCESS_TOKEN` | **Mock** — nenhuma chamada externa |
+> | `PAYMENT_GATEWAY_ACCESS_TOKEN=TEST-...` | **Gateway sandbox** para PIX; cartão de crédito continua **mock** |
+> | `PAYMENT_GATEWAY_ACCESS_TOKEN=TEST-...` + `PAYMENT_GATEWAY_NOTIFICATION_URL` | Igual acima + Mercado Pago notifica o webhook real |
+> | `PAYMENT_GATEWAY_WEBHOOK_SECRET` definido | Webhook MP **exige** assinatura HMAC válida (`x-signature` + `x-request-id`) |
 >
 > **Segurança obrigatória:** os endpoints de transação (`GET/POST /payments`,
 > `charge`, `status`) exigem **autenticação JWT** (Bearer) com role `CLIENT` e
 > somente acessam pedidos **do próprio cliente**. O webhook oficial do Mercado
-> Pago **rejeita** requisições sem `MERCADO_PAGO_WEBHOOK_SECRET` configurado
+> Pago **rejeita** requisições sem `PAYMENT_GATEWAY_WEBHOOK_SECRET` configurado
 > (fail-closed). O webhook mock exige o header `x-webhook-key` igual a
 > `MOCK_WEBHOOK_KEY`.
 >
@@ -1591,10 +1591,10 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 > **Variáveis de ambiente** (todas no `.env.staging` / `.env`):
 > | Variável | Necessária para | Obrigatória |
 > |----------|-----------------|-------------|
-> | `MERCADO_PAGO_ACCESS_TOKEN` | Gateway real (modo sandbox) | não (mock sem ela) |
-> | `MERCADO_PAGO_NOTIFICATION_URL` | Mercado Pago notificar o webhook | não |
-> | `MERCADO_PAGO_WEBHOOK_SECRET` | Validar assinatura do webhook MP | **sim** (sem ela o webhook MP é rejeitado) |
-> | `MERCADO_PAGO_PAYER_EMAIL` | Email do pagador nas cobranças sandbox | não (default `sandbox@pode-deixar.com`) |
+> | `PAYMENT_GATEWAY_ACCESS_TOKEN` | Gateway real (modo sandbox) | não (mock sem ela) |
+> | `PAYMENT_GATEWAY_NOTIFICATION_URL` | Mercado Pago notificar o webhook | não |
+> | `PAYMENT_GATEWAY_WEBHOOK_SECRET` | Validar assinatura do webhook MP | **sim** (sem ela o webhook MP é rejeitado) |
+> | `PAYMENT_GATEWAY_PAYER_EMAIL` | Email do pagador nas cobranças sandbox | não (default `sandbox@pode-deixar.com`) |
 > | `MOCK_WEBHOOK_KEY` | Webhook mock confirmar pagamento | não (sem ela o webhook mock é rejeitado) |
 > | `PLATFORM_FEE_RATE` | Taxa retida pela plataforma (0.10 = 10%) | não (default `0.10`) |
 >
@@ -1715,7 +1715,7 @@ contrário — fail-closed).
 
 - **Requisita:** pagamento existente (`404` se não) com `status: PENDING` (`400` caso contrário) — a cobrança só pode ser gerada uma vez por transação pendente.
 - **Requisitos:** autenticação JWT (Bearer) com role `CLIENT`; o pagamento deve pertencer ao cliente autenticado (`403` caso contrário). Rate limit: 10 req/min.
-- **Variáveis necessárias:** `MERCADO_PAGO_ACCESS_TOKEN` (modo real); `MERCADO_PAGO_PAYER_EMAIL` (opcional).
+- **Variáveis necessárias:** `PAYMENT_GATEWAY_ACCESS_TOKEN` (modo real); `PAYMENT_GATEWAY_PAYER_EMAIL` (opcional).
 - **Retorno:** `200` com `paymentId`, `chargeRef`, `status` e `cobranca` (campos variam por método/modo).
 
 **Fluxo real (PIX, modo gateway):**
@@ -1848,9 +1848,9 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **genérico de
 
 - **Modo:** **Real** — endpoint público chamado pelo gateway (Mercado Pago em sandbox ou produção) com os eventos de pagamento
 - **Requisita:**
-  - Em prod: `MERCADO_PAGO_NOTIFICATION_URL` apontando para a URL pública deste endpoint (ex: `https://dominio/api/payments/webhook/mercadopago`; dev: tunnel ngrok)
+  - Em prod: `PAYMENT_GATEWAY_NOTIFICATION_URL` apontando para a URL pública deste endpoint (ex: `https://dominio/api/payments/webhook/mercadopago`; dev: tunnel ngrok)
   - Pagamento local cujo `externalRef` seja o ID retornado pelo charge (vínculo entre gateway e banco)
-  - **`MERCADO_PAGO_WEBHOOK_SECRET` obrigatório** — sem ele, o webhook é rejeitado (`403`); assinatura HMAC validada via headers `x-signature` (`ts`+`v1`) e `x-request-id` (fail-closed)
+  - **`PAYMENT_GATEWAY_WEBHOOK_SECRET` obrigatório** — sem ele, o webhook é rejeitado (`403`); assinatura HMAC validada via headers `x-signature` (`ts`+`v1`) e `x-request-id` (fail-closed)
   - Valor do payload do gateway deve conferir com o `amount` registrado (`400` se divergir)
 - **Retorno:** `200` com o pagamento sincronizado com o status do gateway
 - **Necessita de:** nenhuma autenticação de usuário para o gateway (webhook externo)
@@ -2316,7 +2316,7 @@ propostas aceitas e no status do pagamento do cliente.
 | `POST` | `/payments/webhook` | Chave `x-webhook-key` | — | Webhook (mock) — confirmar pagamento (PAID) |
 | `POST` | `/payments/webhook/mercadopago` | Assinatura HMAC | — | Webhook do Mercado Pago — sincronizar status (via `POST /payments/webhook/:gateway`) |
 
-> Sem `MERCADO_PAGO_ACCESS_TOKEN` (TEST-), os endpoints de pagamento operam com valores mockados. Ver [modo de operação](#payments-service).
+> Sem `PAYMENT_GATEWAY_ACCESS_TOKEN` (TEST-), os endpoints de pagamento operam com valores mockados. Ver [modo de operação](#payments-service).
 
 ### Totais
 
