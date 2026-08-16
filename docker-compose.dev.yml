@@ -115,5 +115,25 @@ services:
       - ./backend/shared/security:/app/shared/security
       - ./backend/prisma:/app/prisma
 
+  # -- Reviews Service (dev, hot-reload) --
+  reviews:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    env_file: ./backend/.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+    ports:
+      - "3005:3005"
+    command: pnpm run --filter @pode-deixar/reviews start:dev
+    volumes:
+      - ./backend/services/reviews/src:/app/services/reviews/src
+      - ./backend/services/reviews/tsconfig.json:/app/services/reviews/tsconfig.json
+      - ./backend/services/reviews/tsconfig.build.json:/app/services/reviews/tsconfig.build.json
+      - ./backend/services/reviews/nest-cli.json:/app/services/reviews/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/security:/app/shared/security
+      - ./backend/prisma:/app/prisma
+
 volumes:
   frontend_node_modules:
