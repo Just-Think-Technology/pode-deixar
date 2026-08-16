@@ -6,6 +6,7 @@ import {
   IsString,
   IsNotEmpty,
   MaxLength,
+  IsDateString,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { PaymentMethod } from "@prisma/client";
@@ -28,6 +29,23 @@ export class CreatePaymentDto {
   })
   @IsEnum(PaymentMethod)
   method: PaymentMethod;
+
+  @ApiProperty({
+    description:
+      "Data/hora agendada para a realização do serviço (ISO 8601). Obrigatória: o agendamento é definido pelo cliente no checkout e passa a valer quando o pagamento é confirmado.",
+    example: "2026-08-20T14:00:00.000Z",
+  })
+  @IsDateString()
+  scheduledAt: string;
+
+  @ApiPropertyOptional({
+    description:
+      "Data/hora prevista de término do serviço (ISO 8601). Deve ser posterior a scheduledAt.",
+    example: "2026-08-20T17:00:00.000Z",
+  })
+  @IsOptional()
+  @IsDateString()
+  scheduledEndAt?: string;
 
   @ApiPropertyOptional({
     description: "Moeda do pagamento (padrão: BRL)",

@@ -5,8 +5,11 @@ import {
   Min,
   MaxLength,
   IsPositive,
+  ValidateNested,
 } from "class-validator";
+import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ServiceOrderAddressDto } from "./service-order-address.dto";
 
 export class CreateServiceOrderDto {
   @ApiProperty({
@@ -58,4 +61,13 @@ export class CreateServiceOrderDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
   budgetMax?: number;
+
+  @ApiPropertyOptional({
+    description: "Endereço onde o serviço será realizado",
+    type: ServiceOrderAddressDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ServiceOrderAddressDto)
+  address?: ServiceOrderAddressDto;
 }

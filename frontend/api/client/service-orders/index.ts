@@ -36,6 +36,7 @@ export function createServiceOrder(
       categoryId: payload.categoryId,
       ...(payload.budgetMin != null && { budgetMin: payload.budgetMin }),
       ...(payload.budgetMax != null && { budgetMax: payload.budgetMax }),
+      ...(payload.address && { address: payload.address }),
     }),
   });
 }

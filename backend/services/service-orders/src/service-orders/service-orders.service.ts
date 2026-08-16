@@ -9,6 +9,13 @@ import { ServicesLoggerService } from "../shared/services-logger.service";
 import { CreateServiceOrderDto } from "./dto/create-service-order.dto";
 import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
 import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
+import {
+  sanitizarEndereco,
+  formatarEndereco,
+} from "./dto/service-order-address.dto";
+
+const JANELA_AGENDA_MAXIMA_DIAS = 92;
+const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class ServiceOrdersService {
@@ -36,11 +43,18 @@ export class ServiceOrdersService {
         : null,
       budget_min: order.budgetMin,
       budget_max: order.budgetMax,
-      address: order.address,
+      address: formatarEndereco(order.address),
       status: order.status,
       created_at: order.createdAt,
       updated_at: order.updatedAt,
     };
+  }
+
+  private formatPhotos(photos: any[] | undefined) {
+    return (photos ?? []).map((p: any) => ({
+      id: p.id,
+      url: p.url,
+    }));
   }
 
   private formatOrderWithProposals(order: any) {
@@ -84,6 +98,8 @@ export class ServiceOrdersService {
       await this.validateProvider(dto.providerId, clientId);
     }
 
+    const endereco = sanitizarEndereco(dto.address);
+
     const order = await this.prisma.serviceOrder.create({
       data: {
         clientId,
@@ -93,6 +109,7 @@ export class ServiceOrdersService {
         categoryId: dto.categoryId,
         budgetMin: dto.budgetMin ?? null,
         budgetMax: dto.budgetMax ?? null,
+        ...(endereco ? { address: endereco } : {}),
       },
       include: {
         category: { select: { id: true, name: true, slug: true } },
@@ -169,6 +186,10 @@ export class ServiceOrdersService {
       where: { id: orderId },
       include: {
         proposals: true,
+        photos: {
+          select: { id: true, url: true },
+          orderBy: { createdAt: "asc" },
+        },
         category: { select: { id: true, name: true, slug: true } },
       },
     });
@@ -178,7 +199,10 @@ export class ServiceOrdersService {
     }
 
     if (role === "CLIENT" && order.clientId === userId) {
-      return this.formatOrderWithProposals(order);
+      return {
+        ...this.formatOrderWithProposals(order),
+        photos: this.formatPhotos(order.photos),
+      };
     }
 
     if (role === "PROVIDER") {
@@ -201,11 +225,15 @@ export class ServiceOrdersService {
               created_at: proposal.createdAt,
             },
           ],
+          photos: this.formatPhotos(order.photos),
         };
       }
 
       if (order.providerId === userId) {
-        return this.formatOrder(order);
+        return {
+          ...this.formatOrder(order),
+          photos: this.formatPhotos(order.photos),
+        };
       }
     }
 
@@ -334,6 +362,8 @@ export class ServiceOrdersService {
       );
     }
 
+    const endereco = sanitizarEndereco(dto.address);
+
     const order = await this.prisma.serviceOrder.create({
       data: {
         clientId,
@@ -344,6 +374,7 @@ export class ServiceOrdersService {
         description: providerService.description,
         categoryId: providerService.categoryId,
         status: "IN_PROGRESS",
+        ...(endereco ? { address: endereco } : {}),
       },
       include: {
         category: { select: { id: true, name: true, slug: true } },
@@ -363,5 +394,79 @@ export class ServiceOrdersService {
     );
 
     return this.formatOrder(order);
+  }
+
+  async findProviderAgenda(providerId: string, from: string, to: string) {
+    const fromDate = new Date(`${from}T00:00:00.000Z`);
+    const toDate = new Date(`${to}T23:59:59.999Z`);
+
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      throw new BadRequestException("Período informado é inválido");
+    }
+
+    if (fromDate > toDate) {
+      throw new BadRequestException("from deve ser anterior ou igual a to");
+    }
+
+    const dias = Math.ceil(
+      (toDate.getTime() - fromDate.getTime()) / MS_POR_DIA,
+    );
+
+    if (dias > JANELA_AGENDA_MAXIMA_DIAS) {
+      throw new BadRequestException(
+        `A janela máxima de consulta é de ${JANELA_AGENDA_MAXIMA_DIAS} dias`,
+      );
+    }
+
+    const orders = await this.prisma.serviceOrder.findMany({
+      where: {
+        status: { in: ["IN_PROGRESS", "COMPLETED"] },
+        scheduledAt: { gte: fromDate, lte: toDate },
+        payments: { some: { status: "PAID" } },
+        OR: [
+          { providerId },
+          {
+            proposals: { some: { providerId, status: "ACCEPTED" } },
+          },
+        ],
+      },
+      include: {
+        photos: {
+          select: { id: true, url: true },
+          orderBy: { createdAt: "asc" },
+        },
+        payments: {
+          where: { status: "PAID" },
+          orderBy: { paidAt: "desc" },
+          take: 1,
+        },
+      },
+      orderBy: { scheduledAt: "asc" },
+    });
+
+    return orders.map((o) => this.formatAgendaItem(o));
+  }
+
+  private formatAgendaItem(order: any) {
+    const payment = order.payments?.[0] ?? null;
+
+    return {
+      id: order.id,
+      order_id: order.id,
+      title: order.title,
+      description: order.description,
+      scheduled_at: order.scheduledAt,
+      scheduled_end_at: order.scheduledEndAt ?? null,
+      order_status: order.status,
+      address: formatarEndereco(order.address),
+      photos: this.formatPhotos(order.photos),
+      payment: payment
+        ? {
+            status: payment.status,
+            amount: payment.amount,
+            paid_at: payment.paidAt,
+          }
+        : null,
+    };
   }
 }

@@ -76,6 +76,7 @@ describe("PaymentsController", () => {
       const dto = {
         serviceOrderId: "uuid-do-pedido",
         method: PaymentMethod.PIX,
+        scheduledAt: "2026-08-20T14:00:00.000Z",
       };
       const pagamento = { id: "payment-1", status: "PENDING", ...dto };
       service.create.mockResolvedValue(pagamento);

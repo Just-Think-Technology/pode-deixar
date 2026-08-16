@@ -133,6 +133,25 @@ export class PaymentsService {
       );
     }
 
+    const scheduledAt = new Date(dto.scheduledAt);
+    const scheduledEndAt = dto.scheduledEndAt
+      ? new Date(dto.scheduledEndAt)
+      : null;
+
+    if (Number.isNaN(scheduledAt.getTime())) {
+      throw new BadRequestException("Data de agendamento inválida");
+    }
+
+    if (scheduledEndAt && Number.isNaN(scheduledEndAt.getTime())) {
+      throw new BadRequestException("Data de término do agendamento inválida");
+    }
+
+    if (scheduledEndAt && scheduledEndAt <= scheduledAt) {
+      throw new BadRequestException(
+        "O término do agendamento deve ser posterior ao início",
+      );
+    }
+
     const existente = await this.buscarPagamentoPorIdempotencia(
       order.id,
       dto.idempotencyKey,
@@ -142,8 +161,8 @@ export class PaymentsService {
       return existente;
     }
 
-    return this.prisma.payment
-      .create({
+    const [payment] = await this.prisma.$transaction([
+      this.prisma.payment.create({
         data: {
           serviceOrderId: order.id,
           amount: valor,
@@ -152,18 +171,26 @@ export class PaymentsService {
           status: "PENDING",
           ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
         },
-      })
-      .then((payment) => {
-        this.logger.logPaymentCreated(
-          payment.id,
-          order.id,
-          valor,
-          currency,
-          dto.method,
-          dto.idempotencyKey,
-        );
-        return payment;
-      });
+      }),
+      this.prisma.serviceOrder.update({
+        where: { id: order.id },
+        data: {
+          scheduledAt,
+          scheduledEndAt,
+        },
+      }),
+    ]);
+
+    this.logger.logPaymentCreated(
+      payment.id,
+      order.id,
+      valor,
+      currency,
+      dto.method,
+      dto.idempotencyKey,
+    );
+
+    return payment;
   }
 
   private async buscarPagamentoPorIdempotencia(
@@ -240,6 +267,9 @@ export class PaymentsService {
 
     const payment = await this.prisma.payment.findUnique({
       where: { id: dto.paymentId },
+      include: {
+        serviceOrder: { select: { scheduledAt: true } },
+      },
     });
 
     if (!payment) {
@@ -256,6 +286,7 @@ export class PaymentsService {
 
     if (payment.status !== "PAID") {
       this.validarTransicaoEstado(payment.status, "PAID");
+      this.validarAgendamentoParaPagamento(payment.serviceOrder.scheduledAt);
     }
 
     const transacao = await this.tentarTransacao(
@@ -347,6 +378,9 @@ export class PaymentsService {
 
     const payment = await this.prisma.payment.findUnique({
       where: { id: mpPayment.externalReference || "" },
+      include: {
+        serviceOrder: { select: { scheduledAt: true } },
+      },
     });
 
     if (!payment) {
@@ -367,6 +401,9 @@ export class PaymentsService {
 
     if (payment.status !== status) {
       this.validarTransicaoEstado(payment.status, status);
+      if (status === "PAID") {
+        this.validarAgendamentoParaPagamento(payment.serviceOrder.scheduledAt);
+      }
     }
 
     const transacao = await this.tentarTransacao(
@@ -508,6 +545,14 @@ export class PaymentsService {
     if (!permitidas.includes(novo)) {
       throw new BadRequestException(
         `Transição de estado inválida: ${atual} -> ${novo}`,
+      );
+    }
+  }
+
+  private validarAgendamentoParaPagamento(scheduledAt: Date | null) {
+    if (!scheduledAt) {
+      throw new BadRequestException(
+        "O pedido não possui data de agendamento — o checkout deve informar scheduledAt",
       );
     }
   }

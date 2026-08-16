@@ -128,6 +128,37 @@ describe("ServiceOrdersService", () => {
       });
     });
 
+    it("should create a service order with address when provided", async () => {
+      const dtoWithAddress = {
+        ...dto,
+        address: {
+          street: "Rua Augusta",
+          number: "500",
+          neighborhood: "Consolação",
+          city: "São Paulo",
+          state: "SP",
+          postalCode: "01305-000",
+        },
+      };
+      mockPrisma.serviceOrder.create.mockResolvedValue(mockOrder);
+
+      await service.create("client-1", dtoWithAddress);
+
+      expect(mockPrisma.serviceOrder.create).toHaveBeenCalledWith({
+        data: {
+          clientId: "client-1",
+          providerId: null,
+          title: "Test Order",
+          description: "Test Description",
+          categoryId: "cat-1",
+          budgetMin: null,
+          budgetMax: null,
+          address: dtoWithAddress.address,
+        },
+        include: { category: { select: { id: true, name: true, slug: true } } },
+      });
+    });
+
     it("should throw BadRequestException when providerId is the same as clientId", async () => {
       const dtoWithSelf = { ...dto, providerId: "client-1" };
 
@@ -351,6 +382,9 @@ describe("ServiceOrdersService", () => {
         ...mockOrder,
         providerId: "provider-1",
         proposals: [],
+        photos: [
+          { id: "photo-1", url: "https://minio/order-photos/photo-1.webp" },
+        ],
       });
 
       const result: any = await service.findByIdWithAccess(
@@ -362,6 +396,30 @@ describe("ServiceOrdersService", () => {
       expect(result).toBeDefined();
       expect(result.id).toBe("order-1");
       expect(result.proposals).toBeUndefined();
+      expect(result.photos).toEqual([
+        { id: "photo-1", url: "https://minio/order-photos/photo-1.webp" },
+      ]);
+    });
+
+    it("should return photos when CLIENT is the owner", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...mockOrder,
+        clientId: "client-1",
+        proposals: [],
+        photos: [
+          { id: "photo-1", url: "https://minio/order-photos/photo-1.webp" },
+        ],
+      });
+
+      const result: any = await service.findByIdWithAccess(
+        "order-1",
+        "client-1",
+        "CLIENT",
+      );
+
+      expect(result.photos).toEqual([
+        { id: "photo-1", url: "https://minio/order-photos/photo-1.webp" },
+      ]);
     });
 
     it("should throw ForbiddenException when PROVIDER is not the target and has no proposal", async () => {
@@ -409,6 +467,111 @@ describe("ServiceOrdersService", () => {
         orderBy: { createdAt: "desc" },
         include: { category: { select: { id: true, name: true, slug: true } } },
       });
+    });
+  });
+
+  describe("findProviderAgenda", () => {
+    const agendaOrder = {
+      id: "order-1",
+      clientId: "client-1",
+      providerId: "provider-1",
+      title: "Trocar chuveiro",
+      description: "Chuveiro queimou",
+      scheduledAt: new Date("2026-08-20T14:00:00.000Z"),
+      scheduledEndAt: new Date("2026-08-20T17:00:00.000Z"),
+      status: "IN_PROGRESS",
+      address: {
+        street: "Rua Augusta",
+        number: "500",
+        neighborhood: "Consolação",
+        city: "São Paulo",
+        state: "SP",
+        postalCode: "01305-000",
+      },
+      photos: [{ id: "photo-1", url: "https://minio/order-photos/p1.webp" }],
+      payments: [
+        {
+          status: "PAID",
+          amount: 150,
+          paidAt: new Date("2026-08-18T10:00:00.000Z"),
+        },
+      ],
+    };
+
+    it("should return only paid jobs of the provider in the window", async () => {
+      mockPrisma.serviceOrder.findMany.mockResolvedValue([agendaOrder]);
+
+      const result = await service.findProviderAgenda(
+        "provider-1",
+        "2026-08-01",
+        "2026-08-31",
+      );
+
+      expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith({
+        where: {
+          status: { in: ["IN_PROGRESS", "COMPLETED"] },
+          scheduledAt: {
+            gte: new Date("2026-08-01T00:00:00.000Z"),
+            lte: new Date("2026-08-31T23:59:59.999Z"),
+          },
+          payments: { some: { status: "PAID" } },
+          OR: [
+            { providerId: "provider-1" },
+            {
+              proposals: { some: { providerId: "provider-1", status: "ACCEPTED" } },
+            },
+          ],
+        },
+        include: {
+          photos: {
+            select: { id: true, url: true },
+            orderBy: { createdAt: "asc" },
+          },
+          payments: {
+            where: { status: "PAID" },
+            orderBy: { paidAt: "desc" },
+            take: 1,
+          },
+        },
+        orderBy: { scheduledAt: "asc" },
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        id: "order-1",
+        order_id: "order-1",
+        title: "Trocar chuveiro",
+        description: "Chuveiro queimou",
+        scheduled_at: agendaOrder.scheduledAt,
+        scheduled_end_at: agendaOrder.scheduledEndAt,
+        order_status: "IN_PROGRESS",
+        address: {
+          street: "Rua Augusta",
+          number: "500",
+          neighborhood: "Consolação",
+          city: "São Paulo",
+          state: "SP",
+          postal_code: "01305-000",
+        },
+        photos: [{ id: "photo-1", url: "https://minio/order-photos/p1.webp" }],
+        payment: {
+          status: "PAID",
+          amount: 150,
+          paid_at: agendaOrder.payments[0].paidAt,
+        },
+      });
+    });
+
+    it("should throw BadRequestException when window exceeds 92 days", async () => {
+      await expect(
+        service.findProviderAgenda("provider-1", "2026-01-01", "2026-08-31"),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException when from is after to", async () => {
+      await expect(
+        service.findProviderAgenda("provider-1", "2026-08-31", "2026-08-01"),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

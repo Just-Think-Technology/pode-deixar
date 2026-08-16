@@ -156,7 +156,11 @@ export class CounterProposalsService {
       }),
       this.prisma.serviceOrder.update({
         where: { id: cp.proposal.serviceOrderId },
-        data: { status: "IN_PROGRESS" },
+        data: {
+          status: "IN_PROGRESS",
+          providerId: cp.proposal.providerId,
+          agreedPrice: cp.price,
+        },
       }),
     ]);
 

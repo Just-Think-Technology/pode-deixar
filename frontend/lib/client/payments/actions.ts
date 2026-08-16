@@ -65,8 +65,15 @@ function isInfraError(err: unknown): boolean {
 export async function createPaymentAction(
   serviceOrderId: string,
   method: PaymentMethod,
+  scheduledAt?: string,
+  scheduledEndAt?: string,
 ): Promise<Payment> {
-  const payload: CreatePaymentPayload = { serviceOrderId, method };
+  const payload: CreatePaymentPayload = {
+    serviceOrderId,
+    method,
+    ...(scheduledAt ? { scheduledAt } : {}),
+    ...(scheduledEndAt ? { scheduledEndAt } : {}),
+  };
 
   if (USE_MOCK) {
     return mockCreatePayment(payload);
@@ -136,6 +143,8 @@ export async function confirmPaymentMockAction(
 export async function startCheckoutAction(
   serviceOrderId: string,
   method: PaymentMethod,
+  scheduledAt?: string,
+  scheduledEndAt?: string,
 ): Promise<{ payment: Payment; charge: ChargeResponse }> {
   if (USE_MOCK) {
     const existing = mockFindPendingPaymentByOrder(serviceOrderId);
@@ -149,7 +158,12 @@ export async function startCheckoutAction(
 
   try {
     const payment = await withTokenRefresh((token) =>
-      createPayment(token, { serviceOrderId, method }),
+      createPayment(token, {
+        serviceOrderId,
+        method,
+        ...(scheduledAt ? { scheduledAt } : {}),
+        ...(scheduledEndAt ? { scheduledEndAt } : {}),
+      }),
     );
     const charge = await withTokenRefresh((token) =>
       chargePayment(token, payment.id),
