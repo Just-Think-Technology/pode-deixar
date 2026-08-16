@@ -22,14 +22,14 @@ microsserviço de pagamentos.
 No `.env.staging` (e `.env` para dev local) do projeto:
 
 ```dotenv
-MERCADO_PAGO_ACCESS_TOKEN="TEST-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxx"
-MERCADO_PAGO_WEBHOOK_SECRET="..."            # OBRIGATÓRIO (ver seção 4) — sem ele o webhook real é rejeitado
-MERCADO_PAGO_NOTIFICATION_URL=""             # URL pública do webhook (ver seção 3)
-MERCADO_PAGO_PAYER_EMAIL="teste@pode-deixar.com"
+PAYMENT_GATEWAY_ACCESS_TOKEN="TEST-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxxx"
+PAYMENT_GATEWAY_WEBHOOK_SECRET="..."            # OBRIGATÓRIO (ver seção 4) — sem ele o webhook real é rejeitado
+PAYMENT_GATEWAY_NOTIFICATION_URL=""             # URL pública do webhook (ver seção 3)
+PAYMENT_GATEWAY_PAYER_EMAIL="teste@pode-deixar.com"
 MOCK_WEBHOOK_KEY=""                          # chave do webhook mock (x-webhook-key), se quiser testar manualmente
 ```
 
-> `MERCADO_PAGO_PAYER_EMAIL` é o email do pagador usado nas cobranças de teste.
+> `PAYMENT_GATEWAY_PAYER_EMAIL` é o email do pagador usado nas cobranças de teste.
 > Em produção será substituído pelo email do cliente autenticado.
 
 > **Autenticação:** os endpoints de transação (`GET/POST /payments`, `charge`,
@@ -53,15 +53,15 @@ http://<tunel>.ngrok.io/api/payments/webhook/mercadopago
 ```
 
 A cobrança é criada com o `notification_url` do body — o valor atual de
-`MERCADO_PAGO_NOTIFICATION_URL` é usado automaticamente em cada cobrança.
+`PAYMENT_GATEWAY_NOTIFICATION_URL` é usado automaticamente em cada cobrança.
 
 ## 4. Validar assinatura do webhook (obrigatório para o modo real)
 
 Configure um secret da aplicação no painel **Webhooks** do Mercado Pago e
-preencha `MERCADO_PAGO_WEBHOOK_SECRET`. A assinatura HMAC é validada nos
+preencha `PAYMENT_GATEWAY_WEBHOOK_SECRET`. A assinatura HMAC é validada nos
 headers `x-signature` (`ts`+`v1`) e `x-request-id`.
 
-> **Fail-closed:** sem `MERCADO_PAGO_WEBHOOK_SECRET`, o endpoint
+> **Fail-closed:** sem `PAYMENT_GATEWAY_WEBHOOK_SECRET`, o endpoint
 > `POST /payments/webhook/mercadopago` rejeita as notificações com `403`.
 
 ## 5. Testar com valores reais do sandbox
@@ -92,7 +92,7 @@ headers `x-signature` (`ts`+`v1`) e `x-request-id`.
 ## 6. Sair do modo sandbox
 
 Quando tiver as credenciais de produção (`APP_USR-...`), apenas troque
-`MERCADO_PAGO_ACCESS_TOKEN` no `.env` de produção. **Nunca use credenciais de
+`PAYMENT_GATEWAY_ACCESS_TOKEN` no `.env` de produção. **Nunca use credenciais de
 teste em produção** — o serviço detecta `TEST-` para habilitar o real, mas o
 ideal é validar por ambiente.
 

@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  NotFoundException,
   ParseUUIDPipe,
 } from "@nestjs/common";
 import * as crypto from "crypto";
@@ -22,13 +23,12 @@ import {
 } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { PaymentsService } from "./payments.service";
-import { MercadoPagoService } from "../mercadopago/mercadopago.service";
+import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
-import { MercadoPagoWebhookDto } from "./dto/mercadopago-webhook.dto";
 import { PaymentLoggerService } from "./payment-logger.service";
 
 @ApiTags("Pagamentos")
@@ -36,7 +36,7 @@ import { PaymentLoggerService } from "./payment-logger.service";
 export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
-    private readonly mercadoPago: MercadoPagoService,
+    private readonly gateways: PaymentGatewayFactory,
     private readonly logger: PaymentLoggerService,
   ) {}
 
@@ -156,38 +156,36 @@ export class PaymentsController {
     return crypto.timingSafeEqual(a, b);
   }
   @Throttle({ default: { limit: 60, ttl: 60000 } })
-  @Post("webhook/mercadopago")
+  @Post("webhook/:gateway")
   @ApiOperation({
-    summary: "Webhook do Mercado Pago — confirmação de pagamento",
+    summary: "Webhook de gateway de pagamento — sincronização de status",
     description:
-      "Recebe as notificações do Mercado Pago, valida a assinatura e atualiza o status do pagamento conforme o gateway. Endpoint restrito a HTTPS.",
+      "Recebe notificações do gateway (ex.: mercadopago), valida a assinatura e atualiza o status do pagamento. Endpoint restrito a HTTPS.",
+  })
+  @ApiParam({
+    name: "gateway",
+    description: "Nome do gateway (ex.: mercadopago)",
+    example: "mercadopago",
   })
   @ApiResponse({ status: 200, description: "Webhook processado" })
-  @ApiResponse({ status: 404, description: "Pagamento não encontrado" })
+  @ApiResponse({ status: 404, description: "Gateway desconhecido" })
   @ApiResponse({ status: 403, description: "Assinatura de webhook inválida" })
-  async mercadopagoWebhook(
+  async gatewayWebhook(
     @Req() httpRequest: ExpressRequest,
+    @Param("gateway") gatewayName: string,
     @Headers() headers: Record<string, string>,
-    @Body() dto: MercadoPagoWebhookDto,
+    @Body() dto: unknown,
   ) {
     this.garantirRequestHttps(httpRequest);
 
-    const signatureValid = this.mercadoPago.validateWebhookSignature(
-      headers,
-      dto.data,
-    );
-
-    if (!signatureValid) {
-      this.logger.logAuthenticationFailure("assinatura", null, null, {
-        eventId: headers["x-request-id"] || dto.data.id,
-        gateway: "mercadopago",
-      });
-      throw new ForbiddenException("Assinatura de webhook inválida");
+    const gateway = this.gateways.getByName(gatewayName);
+    if (!gateway) {
+      throw new NotFoundException(
+        `Gateway de pagamento desconhecido: ${gatewayName}`,
+      );
     }
 
-    const eventId = headers["x-request-id"] || `mercadopago:${dto.data.id}`;
-
-    return this.paymentsService.handleMercadoPagoWebhook(dto, eventId);
+    return this.paymentsService.handleGatewayWebhook(gateway, headers, dto);
   }
 
   private garantirRequestHttps(req: ExpressRequest) {

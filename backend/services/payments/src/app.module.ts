@@ -6,7 +6,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
 import { PrismaModule } from "./prisma/prisma.module";
 import { PaymentsModule } from "./payments/payments.module";
-import { MercadoPagoModule } from "./mercadopago/mercadopago.module";
+import { GatewayModule } from "./gateway/gateway.module";
 import { HealthModule } from "./health/health.module";
 import { SharedModule } from "./shared/shared.module";
 import { CommonModule } from "./shared/common.module";
@@ -74,7 +74,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     }),
     PrismaModule,
     PaymentsModule,
-    MercadoPagoModule,
+    GatewayModule,
     HealthModule,
     CommonModule,
     SharedModule,

@@ -6,11 +6,11 @@ import {
 } from "@nestjs/common";
 import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { MercadoPagoService } from "../mercadopago/mercadopago.service";
+import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
+import { PaymentGateway } from "../gateway/payment-gateway.interface";
 import { PaymentLoggerService } from "./payment-logger.service";
 import { CreatePaymentDto, MOEDAS_SUPORTADAS } from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
-import { MercadoPagoWebhookDto } from "./dto/mercadopago-webhook.dto";
 
 const TRANSICOES_VALIDAS: Record<PaymentStatus, PaymentStatus[]> = {
   PENDING: ["PAID", "FAILED", "CANCELLED"],
@@ -21,7 +21,6 @@ const TRANSICOES_VALIDAS: Record<PaymentStatus, PaymentStatus[]> = {
 };
 
 const GATEWAY_MOCK = "MOCK";
-const GATEWAY_MERCADO_PAGO = "MERCADO_PAGO";
 
 const TAXA_PLATAFORMA_PADRAO = 0.1;
 
@@ -46,7 +45,7 @@ export interface ResultadoWebhook {
 export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mercadoPago: MercadoPagoService,
+    private readonly gateways: PaymentGatewayFactory,
     private readonly logger: PaymentLoggerService,
   ) {}
 
@@ -479,11 +478,12 @@ export class PaymentsService {
       );
     }
 
-    if (this.mercadoPago.isConfigured && payment.method === PaymentMethod.PIX) {
-      return this.gerarCobrancaMercadoPago(payment);
-    }
+    const gateway =
+      payment.method === PaymentMethod.PIX
+        ? this.gateways.active
+        : this.gateways.mock;
 
-    return this.gerarCobrancaMock(payment);
+    return this.gerarCobranca(payment, gateway);
   }
 
   async getStatus(userId: string, paymentId: string) {
@@ -608,34 +608,43 @@ export class PaymentsService {
     return { payment: transacao.pagamento };
   }
 
-  async handleMercadoPagoWebhook(
-    dto: MercadoPagoWebhookDto,
-    eventId: string,
+  async handleGatewayWebhook(
+    gateway: PaymentGateway,
+    headers: Record<string, string | undefined>,
+    body: unknown,
   ): Promise<ResultadoWebhook> {
-    const jaProcessado = await this.eventoJaProcessado(
-      GATEWAY_MERCADO_PAGO,
-      eventId,
-    );
+    if (!gateway.validateWebhook(headers, body)) {
+      this.logger.logAuthenticationFailure("assinatura", null, null, {
+        eventId: gateway.extractEventId(headers, body),
+        gateway: gateway.name.toLowerCase(),
+      });
+      throw new ForbiddenException("Assinatura de webhook inválida");
+    }
+
+    const eventId = gateway.extractEventId(headers, body);
+
+    const jaProcessado = await this.eventoJaProcessado(gateway.name, eventId);
 
     if (jaProcessado) {
       this.logger.logWebhookReceived(
         jaProcessado.paymentId,
         null,
-        GATEWAY_MERCADO_PAGO,
+        gateway.name,
         eventId,
         "duplicado",
         "Webhook já processado (idempotente)",
       );
       return this.retornarPagamentoIdempotente(
         jaProcessado.paymentId,
-        "Webhook do Mercado Pago já processado (idempotente)",
+        "Webhook já processado (idempotente)",
       );
     }
 
-    const mpPayment = await this.mercadoPago.getPayment(dto.data.id);
+    const gatewayPaymentId = gateway.extractGatewayPaymentId(body);
+    const gatewayPayment = await gateway.getPayment(gatewayPaymentId);
 
     const payment = await this.prisma.payment.findUnique({
-      where: { id: mpPayment.externalReference || "" },
+      where: { id: gatewayPayment.externalReference || "" },
       include: {
         serviceOrder: { select: { scheduledAt: true } },
       },
@@ -643,19 +652,23 @@ export class PaymentsService {
 
     if (!payment) {
       this.logger.logPaymentError(
-        mpPayment.externalReference ?? null,
+        gatewayPayment.externalReference ?? null,
         null,
         "Pagamento local não encontrado",
-        { gatewayId: mpPayment.id, gatewayStatus: mpPayment.status, eventId },
+        {
+          gatewayId: gatewayPayment.id,
+          gatewayStatus: gatewayPayment.status,
+          eventId,
+        },
       );
       throw new NotFoundException(
-        `Pagamento ${mpPayment.externalReference} não encontrado`,
+        `Pagamento ${gatewayPayment.externalReference} não encontrado`,
       );
     }
 
-    this.conferirValorGateway(payment.amount, mpPayment.transactionAmount);
+    this.conferirValorGateway(payment.amount, gatewayPayment.transactionAmount);
 
-    const status = this.traduzirStatusMercadoPago(mpPayment.status);
+    const status = gateway.translateStatus(gatewayPayment.status);
 
     if (payment.status !== status) {
       this.validarTransicaoEstado(payment.status, status);
@@ -666,13 +679,13 @@ export class PaymentsService {
 
     const transacao = await this.tentarTransacao(
       {
-        gateway: GATEWAY_MERCADO_PAGO,
+        gateway: gateway.name,
         eventId,
         paymentId: payment.id,
         payload: {
-          gatewayId: String(mpPayment.id),
+          gatewayId: String(gatewayPayment.id),
           statusGateway: status,
-          gatewayStatus: mpPayment.status,
+          gatewayStatus: gatewayPayment.status,
         },
       },
       async () =>
@@ -681,7 +694,7 @@ export class PaymentsService {
           data: {
             status,
             paidAt: status === "PAID" ? new Date() : null,
-            externalRef: String(mpPayment.id),
+            externalRef: String(gatewayPayment.id),
           },
         }),
     );
@@ -690,7 +703,7 @@ export class PaymentsService {
       this.logger.logWebhookReceived(
         payment.id,
         payment.serviceOrderId,
-        GATEWAY_MERCADO_PAGO,
+        gateway.name,
         eventId,
         "duplicado",
         "Evento duplicado processado concorrentemente",
@@ -704,7 +717,7 @@ export class PaymentsService {
     this.logger.logWebhookReceived(
       payment.id,
       payment.serviceOrderId,
-      GATEWAY_MERCADO_PAGO,
+      gateway.name,
       eventId,
       "sucesso",
     );
@@ -714,16 +727,16 @@ export class PaymentsService {
       payment.serviceOrderId,
       payment.status,
       status,
-      GATEWAY_MERCADO_PAGO,
-      `Status do gateway: ${mpPayment.status}`,
+      gateway.name,
+      `Status do gateway: ${gatewayPayment.status}`,
     );
 
     await this.registrarHistoricoStatus(
       payment.id,
       payment.status,
       status,
-      GATEWAY_MERCADO_PAGO,
-      `Status do gateway: ${mpPayment.status}`,
+      gateway.name,
+      `Status do gateway: ${gatewayPayment.status}`,
     );
 
     return { payment: transacao.pagamento };
@@ -823,19 +836,15 @@ export class PaymentsService {
     }
   }
 
-  private async gerarCobrancaMercadoPago(payment: {
-    id: string;
-    amount: unknown;
-    method: PaymentMethod;
-  }) {
-    const notificationUrl = process.env.MERCADO_PAGO_NOTIFICATION_URL;
-
-    const charge = await this.mercadoPago.createPixCharge({
+  private async gerarCobranca(
+    payment: { id: string; amount: unknown; method: PaymentMethod },
+    gateway: PaymentGateway,
+  ) {
+    const charge = await gateway.createCharge({
       amount: Number(payment.amount),
       externalReference: payment.id,
-      payerEmail:
-        process.env.MERCADO_PAGO_PAYER_EMAIL || "sandbox@pode-deixar.com",
-      notificationUrl,
+      method: payment.method,
+      description: `Pedido ${payment.id}`,
     });
 
     await this.prisma.payment.update({
@@ -847,57 +856,7 @@ export class PaymentsService {
       paymentId: payment.id,
       chargeRef: String(charge.id),
       status: "PENDING",
-      cobranca: {
-        pixCopiaECola: charge.qrCode,
-        qrCodeBase64: charge.qrCodeBase64,
-        mercadoPagoId: charge.id,
-      },
+      cobranca: charge.cobranca,
     };
-  }
-
-  private async gerarCobrancaMock(payment: {
-    id: string;
-    amount: unknown;
-    method: string;
-  }) {
-    const chargeRef = `chg_mock_${payment.id.replace(/-/g, "").slice(0, 12)}`;
-
-    await this.prisma.payment.update({
-      where: { id: payment.id },
-      data: { externalRef: chargeRef },
-    });
-
-    return {
-      paymentId: payment.id,
-      chargeRef,
-      status: "PENDING",
-      cobranca: this.gerarCobrancaMockDetail(payment.method, chargeRef),
-    };
-  }
-
-  private gerarCobrancaMockDetail(method: string, chargeRef: string) {
-    if (method === PaymentMethod.PIX) {
-      return {
-        pixCopiaECola: `00020126580014br.gov.bcb.pix0136${chargeRef}5204000053039865406150.005802BR5913PODE-DEIXAR6009SAO PAULO`,
-      };
-    }
-
-    return {
-      linkCheckout: `https://checkout.mock.pode-deixar.com/${chargeRef}`,
-    };
-  }
-
-  private traduzirStatusMercadoPago(mpStatus: string): PaymentStatus {
-    const mapa: Record<string, PaymentStatus> = {
-      approved: "PAID",
-      pending: "PENDING",
-      in_process: "PENDING",
-      rejected: "FAILED",
-      cancelled: "CANCELLED",
-      refunded: "REFUNDED",
-    };
-
-    // eslint-disable-next-line security/detect-object-injection
-    return mapa[mpStatus] || "PENDING";
   }
 }

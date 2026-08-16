@@ -3,7 +3,7 @@ import { ForbiddenException } from "@nestjs/common";
 import { PaymentMethod } from "@prisma/client";
 import { PaymentsController } from "../src/payments/payments.controller";
 import { PaymentsService } from "../src/payments/payments.service";
-import { MercadoPagoService } from "../src/mercadopago/mercadopago.service";
+import { PaymentGatewayFactory } from "../src/gateway/payment-gateway.factory";
 import { PaymentLoggerService } from "../src/payments/payment-logger.service";
 
 describe("PaymentsController", () => {
@@ -14,11 +14,10 @@ describe("PaymentsController", () => {
     generateCharge: jest.Mock;
     getStatus: jest.Mock;
     confirmPayment: jest.Mock;
-    handleMercadoPagoWebhook: jest.Mock;
+    handleGatewayWebhook: jest.Mock;
   };
-  let mercadoPago: {
-    validateWebhookSignature: jest.Mock;
-    isConfigured: boolean;
+  let gateways: {
+    getByName: jest.Mock;
   };
   let logger: {
     logAuthenticationFailure: jest.Mock;
@@ -31,11 +30,10 @@ describe("PaymentsController", () => {
       generateCharge: jest.fn(),
       getStatus: jest.fn(),
       confirmPayment: jest.fn(),
-      handleMercadoPagoWebhook: jest.fn(),
+      handleGatewayWebhook: jest.fn(),
     };
-    mercadoPago = {
-      validateWebhookSignature: jest.fn().mockReturnValue(true),
-      isConfigured: false,
+    gateways = {
+      getByName: jest.fn(),
     };
     logger = {
       logAuthenticationFailure: jest.fn(),
@@ -45,7 +43,7 @@ describe("PaymentsController", () => {
       controllers: [PaymentsController],
       providers: [
         { provide: PaymentsService, useValue: service },
-        { provide: MercadoPagoService, useValue: mercadoPago },
+        { provide: PaymentGatewayFactory, useValue: gateways },
         { provide: PaymentLoggerService, useValue: logger },
       ],
     }).compile();
@@ -192,54 +190,68 @@ describe("PaymentsController", () => {
     });
   });
 
-  describe("webhook/mercadopago", () => {
+  describe("webhook/:gateway", () => {
     const dto = {
       type: "payment",
       action: "payment.updated",
       data: { id: "123456789" },
     };
+    const gateway = {
+      name: "MERCADO_PAGO",
+      isConfigured: true,
+    };
 
-    it("deve validar assinatura e repassar ao service com event_id do header", async () => {
+    beforeEach(() => {
+      gateways.getByName.mockReturnValue(gateway);
+    });
+
+    it("deve resolver o gateway pelo nome e repassar ao service", async () => {
       const result = { id: "payment-1", status: "PAID" };
-      service.handleMercadoPagoWebhook.mockResolvedValue(result);
+      service.handleGatewayWebhook.mockResolvedValue(result);
 
-      const headers = { "x-request-id": "evt-123", "x-signature": "ts=..&v1=.." };
+      const headers = {
+        "x-request-id": "evt-123",
+        "x-signature": "ts=..&v1=..",
+      };
       const req = { headers } as any;
 
-      const response = await controller.mercadopagoWebhook(req, headers, dto);
-
-      expect(mercadoPago.validateWebhookSignature).toHaveBeenCalledWith(
+      const response = await controller.gatewayWebhook(
+        req,
+        "mercadopago",
         headers,
-        { id: "123456789" },
-      );
-      expect(service.handleMercadoPagoWebhook).toHaveBeenCalledWith(
         dto,
-        "evt-123",
+      );
+
+      expect(gateways.getByName).toHaveBeenCalledWith("mercadopago");
+      expect(service.handleGatewayWebhook).toHaveBeenCalledWith(
+        gateway,
+        headers,
+        dto,
       );
       expect(response).toEqual(result);
     });
 
-    it("deve lançar 403 quando a assinatura é inválida", async () => {
-      mercadoPago.validateWebhookSignature.mockReturnValue(false);
+    it("deve lançar 404 para gateway desconhecido", async () => {
+      gateways.getByName.mockReturnValue(undefined);
 
       await expect(
-        controller.mercadopagoWebhook({} as any, {}, dto),
-      ).rejects.toThrow("Assinatura de webhook inválida");
-      expect(service.handleMercadoPagoWebhook).not.toHaveBeenCalled();
+        controller.gatewayWebhook({} as any, "asaas", {}, dto),
+      ).rejects.toThrow("Gateway de pagamento desconhecido: asaas");
+      expect(service.handleGatewayWebhook).not.toHaveBeenCalled();
     });
 
     it("deve rejeitar quando a req NÃO chega via HTTPS em produção", async () => {
       process.env.NODE_ENV = "production";
-      mercadoPago.validateWebhookSignature.mockReturnValue(true);
 
       await expect(
-        controller.mercadopagoWebhook(
+        controller.gatewayWebhook(
           { headers: { "x-forwarded-proto": "http" } } as any,
+          "mercadopago",
           {},
           dto,
         ),
       ).rejects.toThrow("Webhook deve ser recebido via HTTPS");
-      expect(service.handleMercadoPagoWebhook).not.toHaveBeenCalled();
+      expect(service.handleGatewayWebhook).not.toHaveBeenCalled();
       delete process.env.NODE_ENV;
     });
   });
