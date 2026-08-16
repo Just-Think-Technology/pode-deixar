@@ -1,20 +1,25 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { BadGatewayException } from "@nestjs/common";
-import { MercadoPagoService } from "../src/mercadopago/mercadopago.service";
+import { PaymentMethod } from "@prisma/client";
+import { MercadoPagoGateway } from "../src/gateway/mercadopago.gateway";
 
-describe("MercadoPagoService", () => {
-  let service: MercadoPagoService;
+describe("MercadoPagoGateway", () => {
+  let gateway: MercadoPagoGateway;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MercadoPagoService],
+      providers: [MercadoPagoGateway],
     }).compile();
 
-    service = module.get<MercadoPagoService>(MercadoPagoService);
+    gateway = module.get<MercadoPagoGateway>(MercadoPagoGateway);
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  it("deve expor o nome canônico do gateway", () => {
+    expect(gateway.name).toBe("MERCADO_PAGO");
   });
 
   describe("isConfigured", () => {
@@ -29,35 +34,47 @@ describe("MercadoPagoService", () => {
     it("deve ser true em dev quando o token começa com TEST-", () => {
       process.env.NODE_ENV = "development";
       process.env.MERCADO_PAGO_ACCESS_TOKEN = "TEST-123456789";
-      expect(service.isConfigured).toBe(true);
+      expect(gateway.isConfigured).toBe(true);
     });
 
     it("deve ser false em dev quando o token é de produção", () => {
       process.env.NODE_ENV = "development";
       process.env.MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-123456789";
-      expect(service.isConfigured).toBe(false);
+      expect(gateway.isConfigured).toBe(false);
     });
 
     it("deve ser true em produção quando o token é APP_USR-", () => {
       process.env.NODE_ENV = "production";
       process.env.MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-123456789";
-      expect(service.isConfigured).toBe(true);
+      expect(gateway.isConfigured).toBe(true);
     });
 
     it("deve ser false em produção quando o token é de teste", () => {
       process.env.NODE_ENV = "production";
       process.env.MERCADO_PAGO_ACCESS_TOKEN = "TEST-123456789";
-      expect(service.isConfigured).toBe(false);
+      expect(gateway.isConfigured).toBe(false);
     });
 
     it("deve ser false quando o token não está configurado", () => {
       delete process.env.MERCADO_PAGO_ACCESS_TOKEN;
-      expect(service.isConfigured).toBe(false);
+      expect(gateway.isConfigured).toBe(false);
     });
   });
 
-  describe("createPixCharge", () => {
-    it("deve criar cobrança PIX e retornar o QR code", async () => {
+  describe("createCharge", () => {
+    const originalPayerEmail = process.env.MERCADO_PAGO_PAYER_EMAIL;
+    const originalNotificationUrl = process.env.MERCADO_PAGO_NOTIFICATION_URL;
+
+    afterEach(() => {
+      process.env.MERCADO_PAGO_PAYER_EMAIL = originalPayerEmail;
+      process.env.MERCADO_PAGO_NOTIFICATION_URL = originalNotificationUrl;
+    });
+
+    it("deve criar cobrança PIX e retornar os dados de pagamento", async () => {
+      process.env.MERCADO_PAGO_PAYER_EMAIL = "teste@example.com";
+      process.env.MERCADO_PAGO_NOTIFICATION_URL =
+        "https://exemplo.com/webhook";
+
       const fetchMock = jest.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -73,11 +90,11 @@ describe("MercadoPagoService", () => {
       });
       global.fetch = fetchMock as unknown as typeof fetch;
 
-      const result = await service.createPixCharge({
+      const result = await gateway.createCharge({
         amount: 150,
         externalReference: "payment-1",
-        payerEmail: "teste@example.com",
-        notificationUrl: "https://exemplo.com/webhook",
+        method: PaymentMethod.PIX,
+        description: "Pedido payment-1",
       });
 
       expect(fetchMock).toHaveBeenCalledWith(
@@ -97,9 +114,41 @@ describe("MercadoPagoService", () => {
       expect(result).toEqual({
         id: "12345",
         status: "pending",
-        qrCode: "00020126580014br.gov.bcb.pix...",
-        qrCodeBase64: "iVBORw0KGgo...",
+        cobranca: {
+          pixCopiaECola: "00020126580014br.gov.bcb.pix...",
+          qrCodeBase64: "iVBORw0KGgo...",
+          mercadoPagoId: "12345",
+        },
       });
+    });
+
+    it("deve usar o email padrão quando MERCADO_PAGO_PAYER_EMAIL não existe", async () => {
+      delete process.env.MERCADO_PAGO_PAYER_EMAIL;
+      delete process.env.MERCADO_PAGO_NOTIFICATION_URL;
+      const fetchMock = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: 1,
+          status: "pending",
+          point_of_interaction: { transaction_data: {} },
+        }),
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await gateway.createCharge({
+        amount: 150,
+        externalReference: "payment-1",
+        method: PaymentMethod.PIX,
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: expect.stringContaining(
+            JSON.stringify("sandbox@pode-deixar.com"),
+          ),
+        }),
+      );
     });
 
     it("deve lançar BadGatewayException quando a API retorna erro", async () => {
@@ -110,24 +159,25 @@ describe("MercadoPagoService", () => {
       global.fetch = fetchMock as unknown as typeof fetch;
 
       await expect(
-        service.createPixCharge({
+        gateway.createCharge({
           amount: 150,
           externalReference: "payment-1",
-          payerEmail: "teste@example.com",
+          method: PaymentMethod.PIX,
         }),
       ).rejects.toThrow(BadGatewayException);
     });
 
     it("deve rejeitar notification_url sem HTTPS (fail-closed)", async () => {
+      process.env.MERCADO_PAGO_NOTIFICATION_URL = "http://exemplo.com/webhook";
+
       const fetchMock = jest.fn();
       global.fetch = fetchMock as unknown as typeof fetch;
 
       await expect(
-        service.createPixCharge({
+        gateway.createCharge({
           amount: 150,
           externalReference: "payment-1",
-          payerEmail: "teste@example.com",
-          notificationUrl: "http://exemplo.com/webhook",
+          method: PaymentMethod.PIX,
         }),
       ).rejects.toThrow(/HTTPS/);
       expect(fetchMock).not.toHaveBeenCalled();
@@ -147,12 +197,15 @@ describe("MercadoPagoService", () => {
       });
       global.fetch = fetchMock as unknown as typeof fetch;
 
-      const result = await service.getPayment("12345");
+      const result = await gateway.getPayment("12345");
 
       expect(fetchMock).toHaveBeenCalledWith(
         "https://api.mercadopago.com/v1/payments/12345",
         expect.objectContaining({
-          headers: { Authorization: expect.any(String), "Content-Type": "application/json" },
+          headers: {
+            Authorization: expect.any(String),
+            "Content-Type": "application/json",
+          },
         }),
       );
       expect(result).toEqual({
@@ -170,13 +223,13 @@ describe("MercadoPagoService", () => {
       });
       global.fetch = fetchMock as unknown as typeof fetch;
 
-      await expect(service.getPayment("999")).rejects.toThrow(
+      await expect(gateway.getPayment("999")).rejects.toThrow(
         BadGatewayException,
       );
     });
   });
 
-  describe("validateWebhookSignature", () => {
+  describe("validateWebhook", () => {
     const originalSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
 
     afterEach(() => {
@@ -185,7 +238,9 @@ describe("MercadoPagoService", () => {
 
     it("deve rejeitar quando não há secret configurado (fail-closed)", () => {
       delete process.env.MERCADO_PAGO_WEBHOOK_SECRET;
-      expect(service.validateWebhookSignature({}, { id: "123" })).toBe(false);
+      expect(
+        gateway.validateWebhook({}, { data: { id: "123" } }),
+      ).toBe(false);
     });
 
     it("deve validar assinatura HMAC correta", () => {
@@ -198,12 +253,12 @@ describe("MercadoPagoService", () => {
         .update(manifest)
         .digest("hex");
 
-      const valid = service.validateWebhookSignature(
+      const valid = gateway.validateWebhook(
         {
           "x-signature": `ts=${tsAtual}&v1=${esperado}`,
           "x-request-id": "req-1",
         },
-        { id: "123" },
+        { data: { id: "123" } },
       );
 
       expect(valid).toBe(true);
@@ -219,12 +274,12 @@ describe("MercadoPagoService", () => {
         .update(manifest)
         .digest("hex");
 
-      const valid = service.validateWebhookSignature(
+      const valid = gateway.validateWebhook(
         {
           "x-signature": `ts=${tsVelho}&v1=${esperado}`,
           "x-request-id": "req-1",
         },
-        { id: "123" },
+        { data: { id: "123" } },
       );
 
       expect(valid).toBe(false);
@@ -233,12 +288,12 @@ describe("MercadoPagoService", () => {
     it("deve rejeitar assinatura inválida", () => {
       process.env.MERCADO_PAGO_WEBHOOK_SECRET = "secret-de-teste";
 
-      const valid = service.validateWebhookSignature(
+      const valid = gateway.validateWebhook(
         {
           "x-signature": "ts=1700000000000&v1=assinatura-invalida",
           "x-request-id": "req-1",
         },
-        { id: "123" },
+        { data: { id: "123" } },
       );
 
       expect(valid).toBe(false);
@@ -247,12 +302,53 @@ describe("MercadoPagoService", () => {
     it("deve rejeitar quando faltam campos da assinatura", () => {
       process.env.MERCADO_PAGO_WEBHOOK_SECRET = "secret-de-teste";
 
-      const valid = service.validateWebhookSignature(
+      const valid = gateway.validateWebhook(
         { "x-request-id": "req-1" },
-        { id: "123" },
+        { data: { id: "123" } },
       );
 
       expect(valid).toBe(false);
+    });
+  });
+
+  describe("extractEventId / extractGatewayPaymentId", () => {
+    it("deve usar o header x-request-id como eventId", () => {
+      const eventId = gateway.extractEventId(
+        { "x-request-id": "req-1" },
+        { data: { id: "123" } },
+      );
+      expect(eventId).toBe("req-1");
+    });
+
+    it("deve derivar o eventId do ID do pagamento quando não há x-request-id", () => {
+      const eventId = gateway.extractEventId({}, { data: { id: "123" } });
+      expect(eventId).toBe("mercadopago:123");
+    });
+
+    it("deve extrair o ID do pagamento do payload", () => {
+      expect(
+        gateway.extractGatewayPaymentId({ data: { id: "123" } }),
+      ).toBe("123");
+    });
+
+    it("deve retornar vazio para payload inválido", () => {
+      expect(gateway.extractGatewayPaymentId({})).toBe("");
+      expect(gateway.extractGatewayPaymentId(null)).toBe("");
+    });
+  });
+
+  describe("translateStatus", () => {
+    it("deve traduzir status do gateway para o modelo interno", () => {
+      expect(gateway.translateStatus("approved")).toBe("PAID");
+      expect(gateway.translateStatus("pending")).toBe("PENDING");
+      expect(gateway.translateStatus("in_process")).toBe("PENDING");
+      expect(gateway.translateStatus("rejected")).toBe("FAILED");
+      expect(gateway.translateStatus("cancelled")).toBe("CANCELLED");
+      expect(gateway.translateStatus("refunded")).toBe("REFUNDED");
+    });
+
+    it("deve cair em PENDING para status desconhecido (fail-closed)", () => {
+      expect(gateway.translateStatus("desconhecido")).toBe("PENDING");
     });
   });
 });

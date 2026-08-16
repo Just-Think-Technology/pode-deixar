@@ -1565,10 +1565,12 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 
 > **Modo de operação — Gateway Mercado Pago (sandbox) vs Mock:**
 >
-> A integração com o **Mercado Pago (sandbox)** está preparada. O modo real
-> é ativado quando a variável `MERCADO_PAGO_ACCESS_TOKEN` (começando com
-> `TEST-`) está presente no ambiente. Sem o token, todos os endpoints operam
-> com **valores mockados**.
+> O serviço usa uma **arquitetura de gateways** (port/adapter): um contrato
+> `PaymentGateway` central e adapters por provedor — hoje `mercadopago` e o
+> `mock` (fallback). O gateway ativo é escolhido automaticamente pela presença
+> de `MERCADO_PAGO_ACCESS_TOKEN`; os webhooks chegam em
+> `POST /payments/webhook/:gateway` e cada adapter valida sua própria assinatura.
+> Sem o token, todos os endpoints operam com **valores mockados**.
 >
 > | Configuração | Comportamento |
 > |---|---|
@@ -1612,7 +1614,7 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 > | `GET /payments/provider/me/finance/items` | Mock | Mock (lê o banco) |
 > | `GET /payments/provider/me/finance/chart` | Mock | Mock (lê o banco) |
 > | `POST /payments/webhook` | **Mock** | **Mock** (apenas simulação manual) |
-> | `POST /payments/webhook/mercadopago` | Mock (não usado) | **Real** (eventos do Mercado Pago) |
+> | `POST /payments/webhook/:gateway` | Mock (gateway desconhecido → `404`) | **Real** (ex.: `/webhook/mercadopago` recebe eventos do MP) |
 
 ### Health
 
@@ -1804,7 +1806,7 @@ contrário — fail-closed).
 
 ### Webhooks de Confirmação
 
-São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do Mercado Pago** (usado em produção/sandbox).
+São dois webhooks: o **mock** (para testes manuais do fluxo) e o **genérico de gateway** `POST /payments/webhook/:gateway`, que resolve o adapter pelo nome no path (ex.: `mercadopago`) — gateway desconhecido retorna `404`.
 
 #### `POST /payments/webhook` (simulador mock)
 
@@ -1842,18 +1844,18 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **oficial do M
 
 ---
 
-#### `POST /payments/webhook/mercadopago` (oficial)
+#### `POST /payments/webhook/:gateway` (oficial, ex.: `mercadopago`)
 
-- **Modo:** **Real** — endpoint público chamado pelo Mercado Pago (sandbox ou produção) com os eventos de pagamento
+- **Modo:** **Real** — endpoint público chamado pelo gateway (Mercado Pago em sandbox ou produção) com os eventos de pagamento
 - **Requisita:**
   - Em prod: `MERCADO_PAGO_NOTIFICATION_URL` apontando para a URL pública deste endpoint (ex: `https://dominio/api/payments/webhook/mercadopago`; dev: tunnel ngrok)
   - Pagamento local cujo `externalRef` seja o ID retornado pelo charge (vínculo entre gateway e banco)
   - **`MERCADO_PAGO_WEBHOOK_SECRET` obrigatório** — sem ele, o webhook é rejeitado (`403`); assinatura HMAC validada via headers `x-signature` (`ts`+`v1`) e `x-request-id` (fail-closed)
   - Valor do payload do gateway deve conferir com o `amount` registrado (`400` se divergir)
 - **Retorno:** `200` com o pagamento sincronizado com o status do gateway
-- **Necessita de:** nenhuma autenticação de usuário para o Mercado Pago (webhook externo)
+- **Necessita de:** nenhuma autenticação de usuário para o gateway (webhook externo)
 
-**Request body (`MercadoPagoWebhookDto`) — payload oficial do MP:**
+**Request body — payload oficial do Mercado Pago (JSON puro, sem DTO):**
 ```json
 {
   "type": "payment",
@@ -2312,7 +2314,7 @@ propostas aceitas e no status do pagamento do cliente.
 | `GET` | `/payments/provider/me/finance/items` | JWT + Roles | PROVIDER | Itens financeiros do prestador (filtro `status`) |
 | `GET` | `/payments/provider/me/finance/chart` | JWT + Roles | PROVIDER | Dados mensais para gráfico (`months`) |
 | `POST` | `/payments/webhook` | Chave `x-webhook-key` | — | Webhook (mock) — confirmar pagamento (PAID) |
-| `POST` | `/payments/webhook/mercadopago` | Assinatura HMAC | — | Webhook do Mercado Pago — sincronizar status |
+| `POST` | `/payments/webhook/mercadopago` | Assinatura HMAC | — | Webhook do Mercado Pago — sincronizar status (via `POST /payments/webhook/:gateway`) |
 
 > Sem `MERCADO_PAGO_ACCESS_TOKEN` (TEST-), os endpoints de pagamento operam com valores mockados. Ver [modo de operação](#payments-service).
 
@@ -2323,7 +2325,7 @@ propostas aceitas e no status do pagamento do cliente.
 | **Endpoints** | **72** |
 | **Serviços** | **4** |
 | **Controllers** | **31** |
-| **DTOs** | **31** |
+| **DTOs** | **30** |
 | **Autenticação (Bearer)** | **2 endpoints** |
 | **Bearer + Roles** | **43 endpoints** |
 | **Públicos (sem auth)** | **26 endpoints** |

@@ -1,29 +1,17 @@
 import { Injectable, BadGatewayException } from "@nestjs/common";
 import { createHmac, timingSafeEqual } from "node:crypto";
-
-export interface CreatePixChargeParams {
-  amount: number;
-  externalReference: string;
-  payerEmail: string;
-  notificationUrl?: string;
-}
-
-export interface PixChargeResult {
-  id: string;
-  status: string;
-  qrCode: string;
-  qrCodeBase64: string;
-}
-
-export interface MercadoPagoPaymentStatus {
-  id: string;
-  status: string;
-  transactionAmount: number;
-  externalReference: string | null;
-}
+import { PaymentStatus } from "@prisma/client";
+import {
+  CreateChargeParams,
+  ChargeResult,
+  GatewayPayment,
+  PaymentGateway,
+} from "../gateway/payment-gateway.interface";
 
 @Injectable()
-export class MercadoPagoService {
+export class MercadoPagoGateway implements PaymentGateway {
+  readonly name = "MERCADO_PAGO";
+
   private readonly apiBase = "https://api.mercadopago.com";
 
   private get accessToken(): string {
@@ -52,13 +40,10 @@ export class MercadoPagoService {
     return process.env.MERCADO_PAGO_WEBHOOK_SECRET;
   }
 
-  async createPixCharge(
-    params: CreatePixChargeParams,
-  ): Promise<PixChargeResult> {
-    if (
-      params.notificationUrl &&
-      !params.notificationUrl.startsWith("https://")
-    ) {
+  async createCharge(params: CreateChargeParams): Promise<ChargeResult> {
+    const notificationUrl = process.env.MERCADO_PAGO_NOTIFICATION_URL;
+
+    if (notificationUrl && !notificationUrl.startsWith("https://")) {
       throw new BadGatewayException(
         "notificação: Mercado Pago exige URL de webhook exclusivamente via HTTPS",
       );
@@ -74,10 +59,13 @@ export class MercadoPagoService {
       body: JSON.stringify({
         transaction_amount: params.amount,
         payment_method_id: "pix",
-        payer: { email: params.payerEmail },
+        payer: {
+          email:
+            process.env.MERCADO_PAGO_PAYER_EMAIL || "sandbox@pode-deixar.com",
+        },
         external_reference: params.externalReference,
-        notification_url: params.notificationUrl,
-        description: `Pedido ${params.externalReference}`,
+        notification_url: notificationUrl,
+        description: params.description ?? `Pedido ${params.externalReference}`,
       }),
     });
 
@@ -91,13 +79,17 @@ export class MercadoPagoService {
     return {
       id: String(data.id),
       status: data.status,
-      qrCode: data.point_of_interaction?.transaction_data?.qr_code || "",
-      qrCodeBase64:
-        data.point_of_interaction?.transaction_data?.qr_code_base64 || "",
+      cobranca: {
+        pixCopiaECola:
+          data.point_of_interaction?.transaction_data?.qr_code || "",
+        qrCodeBase64:
+          data.point_of_interaction?.transaction_data?.qr_code_base64 || "",
+        mercadoPagoId: String(data.id),
+      },
     };
   }
 
-  async getPayment(paymentId: string): Promise<MercadoPagoPaymentStatus> {
+  async getPayment(paymentId: string): Promise<GatewayPayment> {
     const response = await fetch(`${this.apiBase}/v1/payments/${paymentId}`, {
       headers: {
         Authorization: `Bearer ${this.accessToken}`,
@@ -120,9 +112,9 @@ export class MercadoPagoService {
     };
   }
 
-  validateWebhookSignature(
+  validateWebhook(
     headers: Record<string, string | undefined>,
-    body: { id: string },
+    body: unknown,
   ): boolean {
     if (!this.webhookSecret) {
       return false;
@@ -149,7 +141,8 @@ export class MercadoPagoService {
       return false;
     }
 
-    const manifest = `id:${body.id};request-id:${xRequestId};ts:${ts};`;
+    const paymentId = this.extractGatewayPaymentId(body);
+    const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts};`;
     const esperado = Buffer.from(
       createHmac("sha256", this.webhookSecret).update(manifest).digest("hex"),
     );
@@ -160,6 +153,43 @@ export class MercadoPagoService {
     }
 
     return timingSafeEqual(esperado, recebido);
+  }
+
+  extractEventId(
+    headers: Record<string, string | undefined>,
+    body: unknown,
+  ): string {
+    const gatewayPaymentId = this.extractGatewayPaymentId(body);
+    const slug = this.name.toLowerCase().replace(/_/g, "");
+    return headers["x-request-id"] || `${slug}:${gatewayPaymentId}`;
+  }
+
+  extractGatewayPaymentId(body: unknown): string {
+    if (
+      typeof body === "object" &&
+      body !== null &&
+      "data" in body &&
+      typeof body.data === "object" &&
+      (body as { data: { id?: unknown } }).data !== null &&
+      "id" in (body as { data: { id?: unknown } }).data
+    ) {
+      return String((body as { data: { id: unknown } }).data.id);
+    }
+    return "";
+  }
+
+  translateStatus(gatewayStatus: string): PaymentStatus {
+    const mapa: Record<string, PaymentStatus> = {
+      approved: "PAID",
+      pending: "PENDING",
+      in_process: "PENDING",
+      rejected: "FAILED",
+      cancelled: "CANCELLED",
+      refunded: "REFUNDED",
+    };
+
+    // eslint-disable-next-line security/detect-object-injection
+    return mapa[gatewayStatus] || "PENDING";
   }
 
   private extrairErro(data: unknown): string {

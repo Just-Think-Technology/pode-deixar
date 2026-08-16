@@ -7,7 +7,8 @@ import {
 import { PaymentMethod } from "@prisma/client";
 import { PaymentsService } from "../src/payments/payments.service";
 import { PrismaService } from "../src/prisma/prisma.service";
-import { MercadoPagoService } from "../src/mercadopago/mercadopago.service";
+import { PaymentGatewayFactory } from "../src/gateway/payment-gateway.factory";
+import { PaymentGateway } from "../src/gateway/payment-gateway.interface";
 import { PaymentLoggerService } from "../src/payments/payment-logger.service";
 
 describe("PaymentsService", () => {
@@ -36,10 +37,10 @@ describe("PaymentsService", () => {
     };
     $transaction: jest.Mock;
   };
-  let mercadoPago: {
-    isConfigured: boolean;
-    createPixCharge: jest.Mock;
-    getPayment: jest.Mock;
+  let gateways: {
+    active: PaymentGateway;
+    mock: PaymentGateway;
+    getByName: jest.Mock;
   };
   let logger: {
     logPaymentCreated: jest.Mock;
@@ -49,6 +50,20 @@ describe("PaymentsService", () => {
     logSuspiciousActivity: jest.Mock;
     logAuthenticationFailure: jest.Mock;
   };
+
+  function criarGateway(overrides: Partial<PaymentGateway> = {}): PaymentGateway {
+    return {
+      name: "MERCADO_PAGO",
+      isConfigured: false,
+      createCharge: jest.fn(),
+      getPayment: jest.fn(),
+      validateWebhook: jest.fn().mockReturnValue(true),
+      extractEventId: jest.fn().mockReturnValue("event-1"),
+      extractGatewayPaymentId: jest.fn().mockReturnValue("12345"),
+      translateStatus: jest.fn().mockReturnValue("PAID"),
+      ...overrides,
+    } as PaymentGateway;
+  }
 
   const userId = "user-1";
 
@@ -79,10 +94,10 @@ describe("PaymentsService", () => {
         Promise.all(operacoes),
       ),
     };
-    mercadoPago = {
-      isConfigured: false,
-      createPixCharge: jest.fn(),
-      getPayment: jest.fn(),
+    gateways = {
+      active: criarGateway(),
+      mock: criarGateway({ name: "MOCK" }),
+      getByName: jest.fn(),
     };
     logger = {
       logPaymentCreated: jest.fn(),
@@ -97,7 +112,7 @@ describe("PaymentsService", () => {
       providers: [
         PaymentsService,
         { provide: PrismaService, useValue: prisma },
-        { provide: MercadoPagoService, useValue: mercadoPago },
+        { provide: PaymentGatewayFactory, useValue: gateways },
         { provide: PaymentLoggerService, useValue: logger },
       ],
     }).compile();
@@ -480,12 +495,24 @@ describe("PaymentsService", () => {
       await expect(
         service.generateCharge(userId, "payment-1"),
       ).rejects.toThrow(BadRequestException);
-      expect(mercadoPago.createPixCharge).not.toHaveBeenCalled();
+      expect(gateways.active.createCharge).not.toHaveBeenCalled();
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
-    describe("sem gateway configurado (mock)", () => {
-      it("deve gerar cobrança mock e persistir externalRef", async () => {
+    describe("sem gateway configurado (mock ativo)", () => {
+      beforeEach(() => {
+        gateways.active = criarGateway({
+          name: "MOCK",
+          isConfigured: true,
+          createCharge: jest.fn().mockResolvedValue({
+            id: "chg_mock_payment1",
+            status: "PENDING",
+            cobranca: { pixCopiaECola: "00020126580014br.gov.bcb.pix..." },
+          }),
+        });
+      });
+
+      it("deve gerar cobrança via gateway ativo e persistir externalRef", async () => {
         prisma.payment.findUnique.mockResolvedValue({
           id: "payment-1",
           method: PaymentMethod.PIX,
@@ -497,17 +524,32 @@ describe("PaymentsService", () => {
 
         const result = await service.generateCharge(userId, "payment-1");
 
+        expect(gateways.active.createCharge).toHaveBeenCalledWith({
+          amount: 150,
+          externalReference: "payment-1",
+          method: PaymentMethod.PIX,
+          description: "Pedido payment-1",
+        });
         expect(prisma.payment.update).toHaveBeenCalledWith({
           where: { id: "payment-1" },
           data: { externalRef: "chg_mock_payment1" },
         });
-        expect(result.paymentId).toBe("payment-1");
-        expect(result.chargeRef).toMatch(/^chg_mock_/);
-        expect(result.status).toBe("PENDING");
-        expect(result.cobranca.pixCopiaECola).toContain("br.gov.bcb.pix");
+        expect(result).toEqual({
+          paymentId: "payment-1",
+          chargeRef: "chg_mock_payment1",
+          status: "PENDING",
+          cobranca: { pixCopiaECola: "00020126580014br.gov.bcb.pix..." },
+        });
       });
 
-      it("deve gerar link de checkout para cartão de crédito", async () => {
+      it("deve gerar link de checkout para cartão de crédito via gateway mock", async () => {
+        (gateways.mock.createCharge as jest.Mock).mockResolvedValue({
+          id: "chg_mock_payment2",
+          status: "PENDING",
+          cobranca: {
+            linkCheckout: "https://checkout.mock.pode-deixar.com/chg_mock_payment2",
+          },
+        });
         prisma.payment.findUnique.mockResolvedValue({
           id: "payment-2",
           method: PaymentMethod.CREDIT_CARD,
@@ -519,6 +561,7 @@ describe("PaymentsService", () => {
 
         const result = await service.generateCharge(userId, "payment-2");
 
+        expect(gateways.mock.createCharge).toHaveBeenCalled();
         expect(
           (result.cobranca as Record<string, string>).linkCheckout,
         ).toMatch(/^https:\/\/checkout\.mock\.pode-deixar\.com\//);
@@ -527,10 +570,21 @@ describe("PaymentsService", () => {
 
     describe("com gateway configurado (Mercado Pago)", () => {
       beforeEach(() => {
-        mercadoPago.isConfigured = true;
+        gateways.active = criarGateway({
+          isConfigured: true,
+          createCharge: jest.fn().mockResolvedValue({
+            id: "12345",
+            status: "pending",
+            cobranca: {
+              pixCopiaECola: "00020126580014br.gov.bcb.pix...",
+              qrCodeBase64: "iVBORw0KGgo...",
+              mercadoPagoId: "12345",
+            },
+          }),
+        });
       });
 
-      it("deve gerar cobrança PIX via gateway e persistir externalRef", async () => {
+      it("deve gerar cobrança PIX via gateway ativo e persistir externalRef", async () => {
         prisma.payment.findUnique.mockResolvedValue({
           id: "payment-1",
           method: PaymentMethod.PIX,
@@ -538,21 +592,15 @@ describe("PaymentsService", () => {
           amount: 150,
           serviceOrder: { clientId: userId },
         });
-        mercadoPago.createPixCharge.mockResolvedValue({
-          id: "12345",
-          status: "pending",
-          qrCode: "00020126580014br.gov.bcb.pix...",
-          qrCodeBase64: "iVBORw0KGgo...",
-        });
         prisma.payment.update.mockResolvedValue({});
 
         const result = await service.generateCharge(userId, "payment-1");
 
-        expect(mercadoPago.createPixCharge).toHaveBeenCalledWith({
+        expect(gateways.active.createCharge).toHaveBeenCalledWith({
           amount: 150,
           externalReference: "payment-1",
-          payerEmail: "sandbox@pode-deixar.com",
-          notificationUrl: undefined,
+          method: PaymentMethod.PIX,
+          description: "Pedido payment-1",
         });
         expect(prisma.payment.update).toHaveBeenCalledWith({
           where: { id: "payment-1" },
@@ -570,36 +618,12 @@ describe("PaymentsService", () => {
         });
       });
 
-      it("deve usar o notificationUrl configurado nas variáveis de ambiente", async () => {
-        process.env.MERCADO_PAGO_NOTIFICATION_URL =
-          "https://exemplo.com/api/payments/webhook/mercadopago";
-        prisma.payment.findUnique.mockResolvedValue({
-          id: "payment-1",
-          method: PaymentMethod.PIX,
-          status: "PENDING",
-          amount: 150,
-          serviceOrder: { clientId: userId },
-        });
-        mercadoPago.createPixCharge.mockResolvedValue({
-          id: "12345",
-          status: "pending",
-          qrCode: "...",
-          qrCodeBase64: "...",
-        });
-        prisma.payment.update.mockResolvedValue({});
-
-        await service.generateCharge(userId, "payment-1");
-
-        expect(mercadoPago.createPixCharge).toHaveBeenCalledWith(
-          expect.objectContaining({
-            notificationUrl:
-              "https://exemplo.com/api/payments/webhook/mercadopago",
-          }),
-        );
-        delete process.env.MERCADO_PAGO_NOTIFICATION_URL;
-      });
-
       it("deve manter mock para cartão de crédito mesmo com gateway configurado", async () => {
+        (gateways.mock.createCharge as jest.Mock).mockResolvedValue({
+          id: "chg_mock_payment2",
+          status: "PENDING",
+          cobranca: { linkCheckout: "https://checkout.mock.pode-deixar.com/x" },
+        });
         prisma.payment.findUnique.mockResolvedValue({
           id: "payment-2",
           method: PaymentMethod.CREDIT_CARD,
@@ -607,10 +631,12 @@ describe("PaymentsService", () => {
           amount: 80,
           serviceOrder: { clientId: userId },
         });
+        prisma.payment.update.mockResolvedValue({});
 
         const result = await service.generateCharge(userId, "payment-2");
 
-        expect(mercadoPago.createPixCharge).not.toHaveBeenCalled();
+        expect(gateways.active.createCharge).not.toHaveBeenCalled();
+        expect(gateways.mock.createCharge).toHaveBeenCalled();
         expect(result.chargeRef).toMatch(/^chg_mock_/);
       });
     });
@@ -811,22 +837,38 @@ describe("PaymentsService", () => {
     });
   });
 
-  describe("handleMercadoPagoWebhook", () => {
+  describe("handleGatewayWebhook", () => {
     const eventId = "evt_mp_1";
+    let gateway: PaymentGateway;
+
+    const headers = { "x-request-id": eventId };
+
+    const dto = {
+      type: "payment",
+      action: "payment.updated",
+      data: { id: "12345" },
+    };
 
     beforeEach(() => {
+      gateway = criarGateway({
+        getPayment: jest.fn(),
+        extractEventId: jest.fn().mockReturnValue(eventId),
+        extractGatewayPaymentId: jest.fn().mockReturnValue("12345"),
+        translateStatus: jest.fn().mockReturnValue("PAID"),
+      });
       prisma.paymentWebhookEvent.findUnique.mockResolvedValue(null);
       prisma.paymentWebhookEvent.create.mockResolvedValue({});
       prisma.paymentStatusHistory.create.mockResolvedValue({});
     });
 
     it("deve atualizar o pagamento para PAID quando o gateway retorna approved", async () => {
-      mercadoPago.getPayment.mockResolvedValue({
+      (gateway.getPayment as jest.Mock).mockResolvedValue({
         id: "12345",
         status: "approved",
         transactionAmount: 150,
         externalReference: "payment-1",
       });
+      (gateway.translateStatus as jest.Mock).mockReturnValue("PAID");
       prisma.payment.findUnique.mockResolvedValue({
         id: "payment-1",
         status: "PENDING",
@@ -838,14 +880,10 @@ describe("PaymentsService", () => {
         status: "PAID",
       });
 
-      const dto = {
-        type: "payment",
-        action: "payment.updated",
-        data: { id: "12345" },
-      };
-      const result = await service.handleMercadoPagoWebhook(dto, eventId);
+      const result = await service.handleGatewayWebhook(gateway, headers, dto);
 
-      expect(mercadoPago.getPayment).toHaveBeenCalledWith("12345");
+      expect(gateway.extractGatewayPaymentId).toHaveBeenCalledWith(dto);
+      expect(gateway.getPayment).toHaveBeenCalledWith("12345");
       expect(prisma.paymentWebhookEvent.findUnique).toHaveBeenCalledWith({
         where: {
           gateway_eventId: {
@@ -877,6 +915,16 @@ describe("PaymentsService", () => {
       expect(result.payment.status).toBe("PAID");
     });
 
+    it("deve lançar ForbiddenException quando a assinatura é inválida", async () => {
+      (gateway.validateWebhook as jest.Mock).mockReturnValue(false);
+
+      await expect(
+        service.handleGatewayWebhook(gateway, headers, dto),
+      ).rejects.toThrow(ForbiddenException);
+      expect(gateway.getPayment).not.toHaveBeenCalled();
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+
     it("deve ser idempotente: não reprocessar evento já registrado", async () => {
       prisma.paymentWebhookEvent.findUnique.mockResolvedValue({
         eventId: "evt_mp_1",
@@ -888,23 +936,16 @@ describe("PaymentsService", () => {
         amount: 150,
       });
 
-      const result = await service.handleMercadoPagoWebhook(
-        {
-          type: "payment",
-          action: "payment.updated",
-          data: { id: "12345" },
-        },
-        eventId,
-      );
+      const result = await service.handleGatewayWebhook(gateway, headers, dto);
 
       expect(result.payment.status).toBe("PAID");
       expect(result.notice).toContain("idempotente");
-      expect(mercadoPago.getPayment).not.toHaveBeenCalled();
+      expect(gateway.getPayment).not.toHaveBeenCalled();
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
     it("deve lançar BadRequestException quando o valor do gateway não confere", async () => {
-      mercadoPago.getPayment.mockResolvedValue({
+      (gateway.getPayment as jest.Mock).mockResolvedValue({
         id: "12345",
         status: "approved",
         transactionAmount: 1,
@@ -917,25 +958,19 @@ describe("PaymentsService", () => {
       });
 
       await expect(
-        service.handleMercadoPagoWebhook(
-          {
-            type: "payment",
-            action: "payment.updated",
-            data: { id: "12345" },
-          },
-          eventId,
-        ),
+        service.handleGatewayWebhook(gateway, headers, dto),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
-    it("deve traduzir status rejected para FAILED", async () => {
-      mercadoPago.getPayment.mockResolvedValue({
+    it("deve aplicar o status traduzido pelo gateway (rejected -> FAILED)", async () => {
+      (gateway.getPayment as jest.Mock).mockResolvedValue({
         id: "12345",
         status: "rejected",
         transactionAmount: 150,
         externalReference: "payment-1",
       });
+      (gateway.translateStatus as jest.Mock).mockReturnValue("FAILED");
       prisma.payment.findUnique.mockResolvedValue({
         id: "payment-1",
         status: "PENDING",
@@ -946,13 +981,10 @@ describe("PaymentsService", () => {
         status: "FAILED",
       });
 
-      const resultado = await service.handleMercadoPagoWebhook(
-        {
-          type: "payment",
-          action: "payment.updated",
-          data: { id: "12345" },
-        },
-        eventId,
+      const resultado = await service.handleGatewayWebhook(
+        gateway,
+        headers,
+        dto,
       );
 
       expect(prisma.payment.update).toHaveBeenCalledWith({
@@ -967,7 +999,7 @@ describe("PaymentsService", () => {
     });
 
     it("deve lançar NotFoundException quando o pagamento local não existe", async () => {
-      mercadoPago.getPayment.mockResolvedValue({
+      (gateway.getPayment as jest.Mock).mockResolvedValue({
         id: "12345",
         status: "approved",
         transactionAmount: 150,
@@ -976,19 +1008,12 @@ describe("PaymentsService", () => {
       prisma.payment.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.handleMercadoPagoWebhook(
-          {
-            type: "payment",
-            action: "payment.updated",
-            data: { id: "12345" },
-          },
-          eventId,
-        ),
+        service.handleGatewayWebhook(gateway, headers, dto),
       ).rejects.toThrow(NotFoundException);
     });
 
     it("deve lançar BadRequestException na transição inválida (cancelado -> paid)", async () => {
-      mercadoPago.getPayment.mockResolvedValue({
+      (gateway.getPayment as jest.Mock).mockResolvedValue({
         id: "12345",
         status: "approved",
         transactionAmount: 150,
@@ -1001,20 +1026,13 @@ describe("PaymentsService", () => {
       });
 
       await expect(
-        service.handleMercadoPagoWebhook(
-          {
-            type: "payment",
-            action: "payment.updated",
-            data: { id: "12345" },
-          },
-          eventId,
-        ),
+        service.handleGatewayWebhook(gateway, headers, dto),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
     it("deve rejeitar PAID (fail-closed) quando o pedido não tem agendamento", async () => {
-      mercadoPago.getPayment.mockResolvedValue({
+      (gateway.getPayment as jest.Mock).mockResolvedValue({
         id: "12345",
         status: "approved",
         transactionAmount: 150,
@@ -1028,14 +1046,7 @@ describe("PaymentsService", () => {
       });
 
       await expect(
-        service.handleMercadoPagoWebhook(
-          {
-            type: "payment",
-            action: "payment.updated",
-            data: { id: "12345" },
-          },
-          eventId,
-        ),
+        service.handleGatewayWebhook(gateway, headers, dto),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.payment.update).not.toHaveBeenCalled();
       expect(prisma.paymentWebhookEvent.create).not.toHaveBeenCalled();
