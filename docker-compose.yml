@@ -84,6 +84,22 @@ services:
       auth:
         condition: service_started
 
+  # -- Reviews Service --
+  reviews:
+    build:
+      context: ./backend
+      target: reviews-build
+    env_file: ./.env.staging
+    environment:
+      TZ: America/Sao_Paulo
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth:
+        condition: service_started
+
   # -- Frontend (Next.js) --
   frontend:
     build:
@@ -207,6 +223,7 @@ services:
       - users
       - service-orders
       - payments
+      - reviews
       - frontend
 
 volumes:

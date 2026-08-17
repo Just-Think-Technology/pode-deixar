@@ -21,6 +21,12 @@
         reverse_proxy payments:3004
     }
 
+    # ─── Reviews Health ────────────────────────────────────────
+    handle /api/reviews/health* {
+        uri strip_prefix /api/reviews
+        reverse_proxy reviews:3005
+    }
+
     # ─── Auth Service ────────────────────────────────────────
     handle /api/auth/* {
         uri strip_prefix /api
@@ -59,6 +65,12 @@
     handle /api/payments/* {
         uri strip_prefix /api
         reverse_proxy payments:3004
+    }
+
+    # ─── Reviews Service ────────────────────────────────────
+    handle /api/reviews/* {
+        uri strip_prefix /api
+        reverse_proxy reviews:3005
     }
 
     # ─── Storage (MinIO) ────────────────────────────────────

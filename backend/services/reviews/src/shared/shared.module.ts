@@ -1,0 +1,33 @@
+import { Module, Global } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { JwtModule } from "@nestjs/jwt";
+import { PassportModule } from "@nestjs/passport";
+import { JwtStrategy } from "../auth/jwt.strategy";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { RolesGuard } from "../auth/roles.guard";
+import { ReviewsLoggerService } from "./reviews-logger.service";
+
+@Global()
+@Module({
+  imports: [
+    ConfigModule,
+    PassportModule.register({ defaultStrategy: "jwt" }),
+    JwtModule.registerAsync({
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>("JWT_ACCESS_SECRET"),
+        signOptions: { expiresIn: "1h" },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  providers: [JwtStrategy, JwtAuthGuard, RolesGuard, ReviewsLoggerService],
+  exports: [
+    JwtModule,
+    PassportModule,
+    JwtStrategy,
+    JwtAuthGuard,
+    RolesGuard,
+    ReviewsLoggerService,
+  ],
+})
+export class SharedModule {}

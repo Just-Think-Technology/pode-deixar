@@ -13,6 +13,7 @@ COPY services/auth/package.json ./services/auth/
 COPY services/users/package.json ./services/users/
 COPY services/service-orders/package.json ./services/service-orders/
 COPY services/payments/package.json ./services/payments/
+COPY services/reviews/package.json ./services/reviews/
 RUN pnpm install --frozen-lockfile
 
 # -- Prisma Generate --
@@ -61,3 +62,12 @@ COPY services/payments ./services/payments
 RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/payments build
 EXPOSE 3004
 CMD ["node", "services/payments/dist/main.js"]
+
+# -- Reviews Service --
+FROM prisma AS reviews-build
+COPY shared/logger ./shared/logger
+COPY shared/security ./shared/security
+COPY services/reviews ./services/reviews
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/reviews build
+EXPOSE 3005
+CMD ["node", "services/reviews/dist/main.js"]
