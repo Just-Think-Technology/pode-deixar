@@ -28,4 +28,36 @@ export class ReviewsLoggerService {
   logSecurityEvent(event: string, meta: Record<string, unknown>) {
     this.logger.warn(event, `Security event: ${event}`, meta);
   }
+
+  logReviewCreated(
+    reviewerId: string,
+    reviewId: string,
+    orderId: string,
+    revieweeId: string,
+    ip?: string,
+  ) {
+    this.logger.info("review_created", `Review ${reviewId} created`, {
+      reviewerId,
+      reviewId,
+      orderId,
+      revieweeId,
+      ip,
+    });
+  }
+
+  logReviewUpdated(reviewerId: string, reviewId: string, ip?: string) {
+    this.logger.info("review_updated", `Review ${reviewId} updated`, {
+      reviewerId,
+      reviewId,
+      ip,
+    });
+  }
+
+  logReviewDeleted(reviewerId: string, reviewId: string, ip?: string) {
+    this.logger.info("review_deleted", `Review ${reviewId} deleted`, {
+      reviewerId,
+      reviewId,
+      ip,
+    });
+  }
 }

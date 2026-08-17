@@ -7,6 +7,7 @@ import { ValidationError } from "class-validator";
 import { PrismaModule } from "./prisma/prisma.module";
 import { HealthModule } from "./health/health.module";
 import { SharedModule } from "./shared/shared.module";
+import { ReviewsModule } from "./reviews/reviews.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
 import { AppController } from "./app.controller";
@@ -79,6 +80,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string {
     PrismaModule,
     HealthModule,
     SharedModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [
