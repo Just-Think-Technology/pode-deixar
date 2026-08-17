@@ -333,6 +333,42 @@ export class ServiceOrdersService {
     return this.formatOrder(order);
   }
 
+  async complete(providerId: string, orderId: string, ip?: string) {
+    const existing = await this.prisma.serviceOrder.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Pedido de serviço não encontrado");
+    }
+
+    if (existing.providerId !== providerId) {
+      throw new ForbiddenException("Pedido não pertence a este prestador");
+    }
+
+    if (existing.status === "COMPLETED") {
+      throw new BadRequestException("Pedido já está concluído");
+    }
+
+    if (existing.status !== "IN_PROGRESS") {
+      throw new BadRequestException(
+        "Só é possível concluir pedidos em andamento",
+      );
+    }
+
+    const order = await this.prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: { status: "COMPLETED" },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    this.logger.logServiceOrderCompleted(providerId, orderId, ip);
+
+    return this.formatOrder(order);
+  }
+
   async hireFromProvider(
     clientId: string,
     dto: HireProviderServiceDto,
