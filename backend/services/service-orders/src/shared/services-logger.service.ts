@@ -61,6 +61,18 @@ export class ServicesLoggerService {
     );
   }
 
+  logServiceOrderCompleted(providerId: string, orderId: string, ip?: string) {
+    this.logger.info(
+      "service_order_completed",
+      `Service order ${orderId} completed`,
+      {
+        providerId,
+        orderId,
+        ip,
+      },
+    );
+  }
+
   logProposalCreated(providerId: string, proposalId: string, ip?: string) {
     this.logger.info(
       "proposal_created",

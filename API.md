@@ -1239,6 +1239,20 @@ Listar pedidos direcionados ao prestador logado (solicitações recebidas).
 
 ---
 
+### Concluir Pedido (Prestador)
+
+**Rota:** `POST /services/me/:orderId/complete` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+
+Transiciona o pedido de `IN_PROGRESS` para `COMPLETED`. Pré-requisito para a avaliação do serviço. Apenas o **prestador designado ao pedido** (`provider_id`) pode concluir.
+
+| Erro | Código |
+|------|--------|
+| Pedido não encontrado | `404` |
+| Pedido não pertence ao prestador | `403` |
+| Pedido não está em andamento ou já está concluído | `400` |
+
+---
+
 ### Agenda do Prestador (JTT-94)
 
 **Prefixo:** `services/me/agenda` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
@@ -2270,7 +2284,7 @@ propostas aceitas e no status do pagamento do cliente.
 | `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
 | `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
 
-### Service Orders Service (24 endpoints)
+### Service Orders Service (25 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -2284,6 +2298,7 @@ propostas aceitas e no status do pagamento do cliente.
 | `GET` | `/services/me/:orderId` | Bearer | CLIENT | Detalhe do pedido (dono) |
 | `PATCH` | `/services/me/:orderId` | Bearer | CLIENT | Atualizar pedido |
 | `DELETE` | `/services/me/:orderId` | Bearer | CLIENT | Cancelar pedido |
+| `POST` | `/services/me/:orderId/complete` | Bearer | PROVIDER | Concluir pedido (IN_PROGRESS → COMPLETED) |
 | `GET` | `/services` | — | — | Pedidos abertos |
 | `GET` | `/services/:orderId` | Bearer | CLIENT, PROVIDER | Detalhe do pedido (autenticado, com fotos) |
 | `GET` | `/services/requests/received` | Bearer | PROVIDER | Solicitações recebidas |
@@ -2322,10 +2337,10 @@ propostas aceitas e no status do pagamento do cliente.
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **72** |
+| **Endpoints** | **73** |
 | **Serviços** | **4** |
-| **Controllers** | **31** |
+| **Controllers** | **32** |
 | **DTOs** | **30** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **43 endpoints** |
+| **Bearer + Roles** | **44 endpoints** |
 | **Públicos (sem auth)** | **26 endpoints** |

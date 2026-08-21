@@ -230,3 +230,32 @@ export class ProviderReceivedOrdersController {
     return this.serviceOrdersService.findReceivedByProvider(userId);
   }
 }
+
+@ApiTags("Pedidos de Serviço (Prestador)")
+@Controller("services/me/:orderId")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth()
+export class ProviderOrderActionsController {
+  constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
+
+  @Post("complete")
+  @Roles("PROVIDER")
+  @ApiOperation({
+    summary: "Concluir pedido (apenas prestador designado ao pedido)",
+    description:
+      "Transiciona o pedido de IN_PROGRESS para COMPLETED. Pré-requisito para a avaliação do serviço.",
+  })
+  @ApiParam({ name: "orderId", description: "ID do pedido" })
+  @ApiResponse({ status: 200, description: "Pedido concluído com sucesso" })
+  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
+  @ApiResponse({ status: 403, description: "Pedido não pertence ao prestador" })
+  @ApiResponse({
+    status: 400,
+    description: "Pedido não está em andamento ou já está concluído",
+  })
+  async complete(@Request() req: any, @Param("orderId") orderId: string) {
+    const userId = req.user.sub;
+    const ip = req.ip;
+    return this.serviceOrdersService.complete(userId, orderId, ip);
+  }
+}
