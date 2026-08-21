@@ -6,6 +6,7 @@
 - [Users Service](#users-service) (`:3002`)
 - [Service Orders Service](#service-orders-service) (`:3003`)
 - [Payments Service](#payments-service) (`:3004`)
+- [Reviews Service](#reviews-service) (`:3005`)
 - [Enums](#enums)
 - [Modelos (Prisma)](#modelos-prisma)
 - [Tabela Resumo](#tabela-resumo)
@@ -2028,6 +2029,25 @@ propostas aceitas e no status do pagamento do cliente.
 
 ---
 
+## Reviews Service
+
+**Porta:** `3005` | **Proxy Caddy:** `/api/reviews/*`
+
+### Health
+
+#### `GET /health`
+
+#### `GET /health/ready`
+
+#### `GET /health/live`
+
+Idênticos ao [Auth Service Health](#health).
+
+> Microsserviço de avaliações (clientes ↔ prestadores) em construção — estrutura base
+> disponível. Os endpoints de avaliação serão adicionados nas próximas etapas.
+
+---
+
 ## Enums
 
 ### `Role`
@@ -2235,6 +2255,7 @@ propostas aceitas e no status do pagamento do cliente.
 | `/api/services/*` | `:3003` | Service Orders |
 | `/api/proposals/*` | `:3003` | Service Orders |
 | `/api/payments/*` | `:3004` | Payments |
+| `/api/reviews/*` | `:3005` | Reviews |
 | `/api/storage/*` | `:9000` | MinIO (via proxy reverso) |
 | `/*` (demais) | `:3000` | Frontend |
 
@@ -2333,14 +2354,25 @@ propostas aceitas e no status do pagamento do cliente.
 
 > Sem `PAYMENT_GATEWAY_ACCESS_TOKEN` (TEST-), os endpoints de pagamento operam com valores mockados. Ver [modo de operação](#payments-service).
 
+### Reviews Service (3 endpoints)
+
+| Método | Rota | Autenticação | Roles | Descrição |
+|--------|------|--------------|-------|-----------|
+| `GET` | `/health` | — | — | Saúde do serviço |
+| `GET` | `/health/ready` | — | — | Prontidão |
+| `GET` | `/health/live` | — | — | Atividade |
+
+> Estrutura base do microsserviço de avaliações. Endpoints de avaliação (criar/listar)
+> serão adicionados nas próximas etapas.
+
 ### Totais
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **73** |
-| **Serviços** | **4** |
-| **Controllers** | **32** |
+| **Endpoints** | **75** |
+| **Serviços** | **5** |
+| **Controllers** | **33** |
 | **DTOs** | **30** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **44 endpoints** |
-| **Públicos (sem auth)** | **26 endpoints** |
+| **Bearer + Roles** | **43 endpoints** |
+| **Públicos (sem auth)** | **29 endpoints** |
