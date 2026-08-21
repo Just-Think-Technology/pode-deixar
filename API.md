@@ -2043,8 +2043,74 @@ propostas aceitas e no status do pagamento do cliente.
 
 Idênticos ao [Auth Service Health](#health).
 
-> Microsserviço de avaliações (clientes ↔ prestadores) em construção — estrutura base
-> disponível. Os endpoints de avaliação serão adicionados nas próximas etapas.
+> Avaliações **bidirecionais** (cliente ↔ prestador) após a conclusão e pagamento do pedido.
+> Regras: pedido deve estar `COMPLETED` com ao menos um pagamento `PAID`; nota de `1` a `5`
+> com comentário opcional (máx 500 caracteres); edição permitida apenas nos primeiros
+> **5 minutos** após a criação; exclusão a qualquer momento. O autor é identificado pelo
+> token JWT (`reviewerId`) e o alvo (`revieweeId`) é derivado do pedido: cliente avalia o
+> prestador e vice-versa. As notas agregadas do alvo (`rating`/`total_reviews`) são
+> recalculadas a cada criação/edição/exclusão.
+
+#### `POST /reviews`
+
+Criar avaliação de um pedido concluído e pago. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`.
+
+- **Requisitos:** o usuário deve ser parte do pedido (`403` caso contrário); pedido `COMPLETED` e com pagamento `PAID` (`400`); pedido sem prestador definido (`400`); avaliação duplicada do mesmo autor no mesmo pedido (`400`).
+
+**Body:**
+
+```json
+{
+  "serviceOrderId": "uuid",
+  "rating": 5,
+  "comment": "Excelente serviço!"
+}
+```
+
+**Resposta (201):**
+
+```json
+{
+  "id": "uuid",
+  "service_order_id": "uuid",
+  "reviewer_id": "uuid",
+  "reviewee_id": "uuid",
+  "rating": 5,
+  "comment": "Excelente serviço!",
+  "created_at": "2026-08-16T12:00:00.000Z",
+  "updated_at": "2026-08-16T12:00:00.000Z"
+}
+```
+
+#### `GET /reviews/me`
+
+Listar avaliações escritas pelo usuário autenticado. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`.
+
+#### `GET /reviews/service-order/:orderId`
+
+Listar avaliações de um pedido. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`. Apenas o cliente dono do pedido ou o prestador do pedido têm acesso (`403` caso contrário).
+
+#### `GET /reviews/provider/:providerId`
+
+Listar avaliações recebidas por um prestador. **Endpoint público** (sem autenticação) — para exibição do perfil público do prestador.
+
+#### `PATCH /reviews/:reviewId`
+
+Editar avaliação própria. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`.
+
+- **Requisitos:** apenas o autor pode editar (`403`); permitido apenas nos primeiros 5 minutos após a criação (`400`); ao menos um campo (`rating` e/ou `comment`) deve ser informado (`400`).
+
+**Body:**
+
+```json
+{
+  "rating": 4
+}
+```
+
+#### `DELETE /reviews/:reviewId`
+
+Excluir avaliação própria. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`. Apenas o autor pode excluir (`403`). A exclusão é permitida a qualquer momento.
 
 ---
 
@@ -2354,25 +2420,31 @@ Idênticos ao [Auth Service Health](#health).
 
 > Sem `PAYMENT_GATEWAY_ACCESS_TOKEN` (TEST-), os endpoints de pagamento operam com valores mockados. Ver [modo de operação](#payments-service).
 
-### Reviews Service (3 endpoints)
+### Reviews Service (9 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|--------------|-------|-----------|
 | `GET` | `/health` | — | — | Saúde do serviço |
 | `GET` | `/health/ready` | — | — | Prontidão |
 | `GET` | `/health/live` | — | — | Atividade |
+| `POST` | `/reviews` | JWT + Roles | CLIENT, PROVIDER | Criar avaliação de pedido concluído e pago |
+| `GET` | `/reviews/me` | JWT + Roles | CLIENT, PROVIDER | Minhas avaliações (escritas por mim) |
+| `GET` | `/reviews/service-order/:orderId` | JWT + Roles | CLIENT, PROVIDER | Avaliações de um pedido (partes do pedido) |
+| `GET` | `/reviews/provider/:providerId` | — | — | Avaliações recebidas pelo prestador (público) |
+| `PATCH` | `/reviews/:reviewId` | JWT + Roles | CLIENT, PROVIDER | Editar avaliação própria (janela de 5 min) |
+| `DELETE` | `/reviews/:reviewId` | JWT + Roles | CLIENT, PROVIDER | Excluir avaliação própria |
 
-> Estrutura base do microsserviço de avaliações. Endpoints de avaliação (criar/listar)
-> serão adicionados nas próximas etapas.
+> Avaliações **bidirecionais** (cliente ↔ prestador) após pedido `COMPLETED` e pago. Nota
+> `1–5`, comentário opcional (máx 500), edição em até 5 minutos, exclusão a qualquer momento.
 
 ### Totais
 
 | Métrica | Quantidade |
 |---------|-----------|
-| **Endpoints** | **75** |
+| **Endpoints** | **81** |
 | **Serviços** | **5** |
-| **Controllers** | **33** |
-| **DTOs** | **30** |
+| **Controllers** | **35** |
+| **DTOs** | **32** |
 | **Autenticação (Bearer)** | **2 endpoints** |
-| **Bearer + Roles** | **43 endpoints** |
-| **Públicos (sem auth)** | **29 endpoints** |
+| **Bearer + Roles** | **48 endpoints** |
+| **Públicos (sem auth)** | **30 endpoints** |
