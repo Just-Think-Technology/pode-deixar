@@ -1240,6 +1240,20 @@ Listar pedidos direcionados ao prestador logado (solicitações recebidas).
 
 ---
 
+### Concluir Pedido (Prestador)
+
+**Rota:** `POST /services/me/:orderId/complete` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+
+Transiciona o pedido de `IN_PROGRESS` para `COMPLETED`. Pré-requisito para a avaliação do serviço. Apenas o **prestador designado ao pedido** (`provider_id`) pode concluir.
+
+| Erro | Código |
+|------|--------|
+| Pedido não encontrado | `404` |
+| Pedido não pertence ao prestador | `403` |
+| Pedido não está em andamento ou já está concluído | `400` |
+
+---
+
 ### Agenda do Prestador (JTT-94)
 
 **Prefixo:** `services/me/agenda` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
@@ -2291,7 +2305,7 @@ Idênticos ao [Auth Service Health](#health).
 | `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
 | `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
 
-### Service Orders Service (24 endpoints)
+### Service Orders Service (25 endpoints)
 
 | Método | Rota | Autenticação | Roles | Descrição |
 |--------|------|-------------|-------|-----------|
@@ -2305,6 +2319,7 @@ Idênticos ao [Auth Service Health](#health).
 | `GET` | `/services/me/:orderId` | Bearer | CLIENT | Detalhe do pedido (dono) |
 | `PATCH` | `/services/me/:orderId` | Bearer | CLIENT | Atualizar pedido |
 | `DELETE` | `/services/me/:orderId` | Bearer | CLIENT | Cancelar pedido |
+| `POST` | `/services/me/:orderId/complete` | Bearer | PROVIDER | Concluir pedido (IN_PROGRESS → COMPLETED) |
 | `GET` | `/services` | — | — | Pedidos abertos |
 | `GET` | `/services/:orderId` | Bearer | CLIENT, PROVIDER | Detalhe do pedido (autenticado, com fotos) |
 | `GET` | `/services/requests/received` | Bearer | PROVIDER | Solicitações recebidas |

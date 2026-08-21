@@ -47,6 +47,8 @@ model ClientProfile {
   userId      String   @unique @map("user_id")
   avatarUrl   String?  @map("avatar_url")
   preferences Json?    @default("{}")
+  rating      Float    @default(0)
+  totalReviews Int     @default(0) @map("total_reviews")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -169,6 +171,7 @@ model ServiceOrder {
   proposals   Proposal[]
   photos      OrderPhoto[]
   payments    Payment[]
+  reviews     Review[]
 
   @@map("service_orders")
 }
@@ -212,6 +215,22 @@ model OrderPhoto {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("order_photos")
+}
+
+model Review {
+  id            String   @id @default(uuid())
+  serviceOrder  ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrderId String  @map("service_order_id")
+  reviewerId    String   @map("reviewer_id")
+  revieweeId    String   @map("reviewee_id")
+  rating        Int
+  comment       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([serviceOrderId, reviewerId])
+  @@index([revieweeId])
+  @@map("reviews")
 }
 
 model Payment {

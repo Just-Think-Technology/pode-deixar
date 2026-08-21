@@ -46,6 +46,7 @@ describe("ServiceOrdersService", () => {
     logServiceOrderCreated: jest.fn(),
     logServiceOrderUpdated: jest.fn(),
     logServiceOrderCancelled: jest.fn(),
+    logServiceOrderCompleted: jest.fn(),
     logInfo: jest.fn(),
   };
 
@@ -666,6 +667,69 @@ describe("ServiceOrdersService", () => {
       await expect(
         service.cancel("other-client", "order-1"),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe("complete", () => {
+    const inProgressOrder = {
+      ...mockOrder,
+      providerId: "provider-1",
+      status: "IN_PROGRESS",
+    };
+
+    it("should complete an order in progress", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue(inProgressOrder);
+      mockPrisma.serviceOrder.update.mockResolvedValue({
+        ...inProgressOrder,
+        status: "COMPLETED",
+      });
+
+      const result = await service.complete("provider-1", "order-1");
+
+      expect(result.status).toBe("COMPLETED");
+      expect(mockLogger.logServiceOrderCompleted).toHaveBeenCalledWith(
+        "provider-1",
+        "order-1",
+        undefined,
+      );
+    });
+
+    it("should throw NotFoundException when order not found", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.complete("provider-1", "nonexistent"),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw ForbiddenException when provider is not the assigned provider", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue(inProgressOrder);
+
+      await expect(
+        service.complete("other-provider", "order-1"),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("should throw BadRequestException when order is already completed", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...inProgressOrder,
+        status: "COMPLETED",
+      });
+
+      await expect(
+        service.complete("provider-1", "order-1"),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException when order is not in progress", async () => {
+      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+        ...inProgressOrder,
+        status: "OPEN",
+      });
+
+      await expect(
+        service.complete("provider-1", "order-1"),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
