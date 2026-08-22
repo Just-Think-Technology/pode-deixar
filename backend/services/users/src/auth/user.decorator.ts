@@ -1,6 +1,16 @@
-import { SetMetadata, createParamDecorator, ExecutionContext } from "@nestjs/common";
+import { createParamDecorator, ExecutionContext } from "@nestjs/common";
 
-export const User = createParamDecorator((data: string | undefined, ctx: ExecutionContext) => {
-  const request = ctx.switchToHttp().getRequest();
-  return request.user?._id || request.user?.id || request.user;
-});
+export interface IUser {
+  sub: string;
+  email: string;
+  role: string;
+  jti?: string;
+}
+
+export const User = createParamDecorator(
+  (_data: string | undefined, ctx: ExecutionContext): string => {
+    const request = ctx.switchToHttp().getRequest();
+    const user = request.user as IUser;
+    return user?.sub || user?.email || user?.role || "";
+  },
+);
