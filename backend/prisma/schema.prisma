@@ -289,3 +289,19 @@ model TokenBlacklist {
 
   @@map("token_blacklist")
 }
+
+model Notification {
+  id            String   @id @default(uuid())
+  recipient     String   @map("recipient")
+  type          String   @map("type")
+  title         String   @map("title")
+  message       String   @map("message")
+  relatedId     String?  @map("related_id")
+  relatedType   String?  @map("related_type")
+  read          Boolean  @default(false) @map("read")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([recipient, read, createdAt])
+  @@map("notifications")
+}

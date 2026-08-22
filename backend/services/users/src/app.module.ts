@@ -6,6 +6,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProfilesModule } from "./profiles/profiles.module";
+import { NotificationsModule } from "./notifications/notifications.module";
 import { ProviderServicesModule } from "./provider-services/provider-services.module";
 import { ServiceImagesModule } from "./service-images/service-images.module";
 import { CategoriesModule } from "./categories/categories.module";
@@ -90,6 +91,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string {
     }),
     PrismaModule,
     ProfilesModule,
+    NotificationsModule,
     ProviderServicesModule,
     ServiceImagesModule,
     CategoriesModule,
