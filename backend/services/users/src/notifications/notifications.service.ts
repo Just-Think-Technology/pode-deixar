@@ -1,6 +1,6 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateNotificationDto } from './dto/create-notification.dto';
+import { Injectable, Logger, BadRequestException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateNotificationDto } from "./dto/create-notification.dto";
 
 @Injectable()
 export class NotificationsService {
@@ -19,7 +19,9 @@ export class NotificationsService {
         relatedType: dto.relatedType,
       },
     });
-    this.logger.log(`Notificação criada: ${notification.id} para ${dto.recipient}`);
+    this.logger.log(
+      `Notificação criada: ${notification.id} para ${dto.recipient}`,
+    );
     return notification;
   }
 
@@ -36,7 +38,7 @@ export class NotificationsService {
     const [items, total] = await Promise.all([
       this.prisma.notification.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -52,7 +54,9 @@ export class NotificationsService {
     });
 
     if (!notification) {
-      throw new BadRequestException('Notificação não encontrada ou não pertence ao usuário');
+      throw new BadRequestException(
+        "Notificação não encontrada ou não pertence ao usuário",
+      );
     }
 
     return this.prisma.notification.update({
