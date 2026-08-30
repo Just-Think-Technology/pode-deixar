@@ -3,82 +3,119 @@ name: ci-backend
 on:
   push:
     branches: [develop]
-    paths:
-      - "backend/**"
-      - ".github/workflows/ci-backend.yml"
   pull_request:
     branches: [main, develop]
-    paths:
-      - "backend/**"
-      - ".github/workflows/ci-backend.yml"
 
 env:
   NODE_VERSION: 22
 
 jobs:
-  ci:
+  quick:
     strategy:
       fail-fast: false
       matrix:
-        service: [auth, users, service-orders, payments]
-
+        service: [auth, users, service-orders, payments, reviews]
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: pode-deixar
-          POSTGRES_PASSWORD: pode-deixar
-          POSTGRES_DB: pode-deixar-test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 3s
-          --health-timeout 3s
-          --health-retries 3
-
     steps:
       - uses: actions/checkout@v5
-      - run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
-
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
-      - run: pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/email build
-
-      - name: Create .env.staging for CI
-        shell: bash
-        run: |
-          cat > .env.staging << 'EOF'
-          NODE_ENV=test
-          JWT_ACCESS_SECRET=ci-test-access-secret
-          JWT_REFRESH_SECRET=ci-test-refresh-secret
-          SMTP_HOST=localhost
-          SMTP_PORT=1025
-          SMTP_USER=
-          SMTP_PASS=
-          SMTP_FROM=noreply@pode-deixar.com
-          MAX_LOGIN_ATTEMPTS=5
-          LOCKOUT_DURATION_MINUTES=15
-          DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          DIRECT_DATABASE_URL=postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          EOF
-
-      - name: Run Prisma migrations
-        shell: bash
-        run: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
-        env:
-          DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-          DIRECT_DATABASE_URL: postgresql://pode-deixar:pode-deixar@localhost:5432/pode-deixar-test
-
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
+
+  security:
+    needs: quick
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level=high
+      - name: TruffleHog Secret Scanning
+        uses: trufflehog/hunter-action@main
+        with:
+          args: --only-verified --fail
+      - name: ESLint Security Plugin
+        uses: returned0t/trufflehog-eslint@main
+        with:
+          eslint-dir: backend
+          config: '{"plugins":["security"]}'
+
+  build:
+    needs: security
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, users, service-orders, payments, reviews]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
+      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
+
+  codeql:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - init: codeql
+      - codeql/analyze
+
+  dependency-review:
+    needs: codeql
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Dependency Review
+        uses: actions/download-artifact@v4
+        with:
+          name: dependabot-details
+          path: /tmp
+      - uses: github.com/dependencies/action@main
+        with:
+          fail-on-severity: critical
