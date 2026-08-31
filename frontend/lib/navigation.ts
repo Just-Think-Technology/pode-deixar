@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Inbox,
+  Wallet,
 } from "lucide-react";
 
 export type NavItem = {
@@ -32,7 +33,8 @@ export const workerNavItems: NavItem[] = [
   { title: "Dashboard", href: "/worker/dashboard", icon: LayoutDashboard, enabled: true },
   { title: "Serviços", href: "/worker/services", icon: Briefcase, enabled: true },
   { title: "Propostas", href: "/worker/proposal", icon: FileText, enabled: true },
-  { title: "Solicitações", href: "/worker/requests", icon: Inbox, enabled: true},
-  { title: "Chat", href: "/worker/chat", icon: MessageSquare, enabled: true},
+  { title: "Solicitações", href: "/worker/requests", icon: Inbox, enabled: true },
+  { title: "Financeiro", href: "/worker/finance", icon: Wallet, enabled: true },
+  { title: "Chat", href: "/worker/chat", icon: MessageSquare, enabled: true },
   { title: "Perfil", href: "/worker/profile", icon: User, enabled: true },
 ];
