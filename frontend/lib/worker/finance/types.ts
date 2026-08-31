@@ -1,7 +1,7 @@
 import type { WorkerPaymentMethod } from "@/lib/worker/payments/types";
 import type { WorkerPaymentStatus } from "@/lib/worker/payments/types";
 
-/** Taxa mock da plataforma (placeholder até a API existir). */
+/** Taxa usada apenas no mock. Em produção a fonte da verdade é o backend. */
 export const PLATFORM_FEE_RATE = 0.1;
 
 export type WorkerFinancePayoutStatus = "AVAILABLE" | "CREDITED" | "NONE";
@@ -11,7 +11,7 @@ export type WorkerFinanceItem = {
   proposalId: string;
   serviceOrderId: string;
   paymentStatus: WorkerPaymentStatus;
-  payoutStatus: WorkerFinancePayoutStatus;
+  payoutStatus?: WorkerFinancePayoutStatus;
   method: WorkerPaymentMethod;
   grossAmount: number;
   feeAmount: number;

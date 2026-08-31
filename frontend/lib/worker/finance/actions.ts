@@ -1,10 +1,14 @@
 "use server";
 
+import { ApiError } from "@/api/client";
 import {
   getWorkerFinanceDashboard,
   listWorkerFinanceItems,
 } from "@/api/worker/finance";
-import { getAccessToken } from "@/lib/auth/session.server";
+import {
+  getAccessToken,
+  refreshAuthSession,
+} from "@/lib/auth/session.server";
 import type {
   WorkerFinanceDashboard,
   WorkerFinanceItem,
@@ -17,17 +21,34 @@ import {
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
-export async function getWorkerFinanceDashboardAction(): Promise<WorkerFinanceDashboard> {
-  if (USE_MOCK) {
-    return mockGetFinanceDashboard();
-  }
-
+async function withTokenRefresh<T>(
+  fn: (token: string) => Promise<T>,
+): Promise<T> {
   const token = await getAccessToken();
   if (!token) {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
 
-  return getWorkerFinanceDashboard(token);
+  try {
+    return await fn(token);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      const refreshed = await refreshAuthSession();
+      if (!refreshed?.access_token) {
+        throw new Error("Sessão expirada. Faça login novamente.");
+      }
+      return await fn(refreshed.access_token);
+    }
+    throw err;
+  }
+}
+
+export async function getWorkerFinanceDashboardAction(): Promise<WorkerFinanceDashboard> {
+  if (USE_MOCK) {
+    return mockGetFinanceDashboard();
+  }
+
+  return withTokenRefresh((token) => getWorkerFinanceDashboard(token));
 }
 
 export async function listWorkerFinanceItemsAction(
@@ -37,10 +58,5 @@ export async function listWorkerFinanceItemsAction(
     return mockListFinanceItems(status);
   }
 
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-
-  return listWorkerFinanceItems(token, status);
+  return withTokenRefresh((token) => listWorkerFinanceItems(token, status));
 }

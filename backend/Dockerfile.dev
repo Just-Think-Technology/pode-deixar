@@ -11,6 +11,7 @@ COPY services/auth/package.json ./services/auth/
 COPY services/users/package.json ./services/users/
 COPY services/service-orders/package.json ./services/service-orders/
 COPY services/payments/package.json ./services/payments/
+COPY services/reviews/package.json ./services/reviews/
 COPY prisma ./prisma
 
 RUN pnpm install --frozen-lockfile
@@ -20,3 +21,4 @@ FROM base AS auth-build
 FROM base AS users-build
 FROM base AS service-orders-build
 FROM base AS payments-build
+FROM base AS reviews-build

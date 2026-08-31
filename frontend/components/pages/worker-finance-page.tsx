@@ -49,6 +49,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getApiErrorMessage } from "@/lib/auth/errors";
 import { getWorkerFinanceDashboardAction } from "@/lib/worker/finance/actions";
 import {
+  formatChartMonth,
   formatFeeRate,
   formatFinanceAmount,
   formatFinanceDate,
@@ -159,9 +160,11 @@ export default function WorkerFinancePage() {
           size="sm"
           className="gap-2"
           onClick={() => void load()}
-          disabled={loading}
+          disabled={loading && dashboard != null}
         >
-          <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+          <RefreshCw
+            className={cn("size-4", loading && dashboard && "animate-spin")}
+          />
           Atualizar
         </Button>
       </div>
@@ -237,7 +240,7 @@ export default function WorkerFinancePage() {
                 {formatFinanceAmount(summary.receivedThisMonthNet)}
               </p>
               <p className="text-xs text-muted-foreground">
-                Valor líquido creditado neste mês
+                Valor líquido de pagamentos confirmados neste mês
               </p>
             </CardContent>
           </Card>
@@ -290,6 +293,7 @@ export default function WorkerFinancePage() {
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
+                    tickFormatter={formatChartMonth}
                   />
                   <YAxis
                     tickLine={false}
@@ -478,14 +482,16 @@ function FinanceItemCard({ item }: { item: WorkerFinanceItem }) {
             </span>
           </div>
         </CardContent>
-        <CardFooter>
-          <Link
-            href={`/worker/proposal/${item.proposalId}`}
-            className={cn(buttonVariants({ variant: "outline" }), "w-full")}
-          >
-            Ver proposta
-          </Link>
-        </CardFooter>
+        {item.proposalId ? (
+          <CardFooter>
+            <Link
+              href={`/worker/proposal/${item.proposalId}`}
+              className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+            >
+              Ver proposta
+            </Link>
+          </CardFooter>
+        ) : null}
       </Card>
     </li>
   );
