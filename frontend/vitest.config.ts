@@ -15,5 +15,6 @@ export default defineConfig({
     },
     include: ['test/**/*.spec.*', 'test/**/*.test.*'],
     exclude: ['e2e/**', 'node_modules/**'],
+    transformMode: { consolidate: false },
   },
 })

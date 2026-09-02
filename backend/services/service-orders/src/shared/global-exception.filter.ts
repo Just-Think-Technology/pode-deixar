@@ -7,6 +7,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
+import { sanitizarDadosSensiveis } from "./sanitizar-dados-sensiveis";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -42,8 +43,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     this.logger.error(
-      `${request.method} ${request.url} - ${status} - ${message}`,
-      exception instanceof Error ? exception.stack : "",
+      sanitizarDadosSensiveis(
+        `${request.method} ${request.url} - ${status} - ${message}`,
+      ),
+      sanitizarDadosSensiveis(
+        exception instanceof Error ? exception.stack || "" : "",
+      ),
     );
 
     response.status(status).json({

@@ -42,7 +42,7 @@ export class EmailService {
       return true;
     } catch (error) {
       logger.error('email.send', `Failed to send email to ${options.to} - ${error.message}`);
-      throw error;
+      return false;
     }
   }
 

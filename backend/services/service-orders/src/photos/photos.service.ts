@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   ForbiddenException,
+  InternalServerErrorException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { MinioService } from "../storage/minio.service";
@@ -34,6 +35,16 @@ export class PhotosService {
 
     if (!files || files.length === 0) {
       throw new BadRequestException("Nenhuma foto enviada");
+    }
+
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+    for (const file of files) {
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        throw new BadRequestException(
+          `Tipo de arquivo inválido: ${file.mimetype}. Apenas imagens são permitidas (jpeg, png, webp, gif)`,
+        );
+      }
     }
 
     if (files.length > 10) {

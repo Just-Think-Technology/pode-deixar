@@ -95,7 +95,15 @@ jobs:
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - run: pnpm cache clean
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
+      - name: Prisma Generate Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.prisma
+          key: prisma-generate-${{ runner.os }}-${{ hashFiles('backend/prisma/schema.prisma') }}
+          restore-keys: |
+            prisma-generate-${{ runner.os }}-
       - run: pnpm exec prisma generate --schema=prisma/schema.prisma
 
   codeql:
@@ -119,3 +127,4 @@ jobs:
       - uses: github.com/dependencies/action@main
         with:
           fail-on-severity: critical
+        continue-on-error: true

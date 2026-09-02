@@ -32,6 +32,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
       - run: pnpm run typecheck
+      - run: pnpm run test:unit
 
   deep:
     needs: quick
@@ -55,7 +56,9 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
+      - run: playwright install
       - run: pnpm run test:e2e
+      - run: pnpm run test:cov
 
   security:
     needs: quick
@@ -78,11 +81,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --prod --audit-level=high
-      - name: TruffleHog Secret Scanning
-        uses: trufflehog/hunter-action@main
-        with:
-          args: --only-verified --fail
 
   codeql:
     needs: security

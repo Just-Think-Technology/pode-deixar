@@ -2,9 +2,14 @@ import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { getHelmetConfig } from "@pode-deixar/security";
+import createLogger from "@pode-deixar/logger";
+
+const logger = createLogger("reviews-service");
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: false,
+  });
 
   app.use(getHelmetConfig());
   app.enableCors({
@@ -30,8 +35,8 @@ async function bootstrap() {
 
   const port = process.env.REVIEWS_PORT || 3005;
   await app.listen(port);
-  console.log(`Reviews service running on port ${port}`);
-  console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  logger.info("bootstrap", `Reviews service running on port ${port}`);
+  logger.info("bootstrap", `Swagger docs available at http://localhost:${port}/api/docs`);
 }
 
 bootstrap();

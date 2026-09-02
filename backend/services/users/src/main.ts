@@ -2,12 +2,19 @@ import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { getHelmetConfig } from "@pode-deixar/security";
+import createLogger from "@pode-deixar/logger";
+
+const logger = createLogger("users-service");
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: false,
+  });
 
+  // Security headers with CSP
   app.use(getHelmetConfig());
-  app.getHttpAdapter().getInstance().set("trust proxy", 1);
+
+  // CORS configuration
   app.enableCors({
     origin: process.env.CORS_ORIGIN || "*",
     credentials: true,
@@ -25,8 +32,8 @@ async function bootstrap() {
 
   const port = process.env.USERS_PORT || 3002;
   await app.listen(port);
-  console.log(`Users service running on port ${port}`);
-  console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  logger.info("bootstrap", `Users service running on port ${port}`);
+  logger.info("bootstrap", `Swagger docs available at http://localhost:${port}/api/docs`);
 }
 
 bootstrap();
