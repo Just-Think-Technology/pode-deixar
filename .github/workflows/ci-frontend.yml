@@ -87,8 +87,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - init: codeql
-      - codeql/analyze
+      - uses: github/codeql-action/init@v2
+        with:
+          languages: python
+          build-mode: none
+      - run: codeql/analyze
 
   dependency-review:
     needs: codeql
