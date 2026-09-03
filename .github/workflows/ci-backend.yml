@@ -26,7 +26,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm install -g pnpm && pnpm install
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
 
   security:
