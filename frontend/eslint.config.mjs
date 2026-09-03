@@ -13,6 +13,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Ignore test files - they should be validated by Jest, not ESLint
+  ignorePatterns([
+    "test/**",
+    "tests/**",
+    "**/*.spec.*",
+    "**/*.test.*",
+  ]),
   {
     rules: {
       "react-hooks/set-state-in-effect": "off",
