@@ -1,4 +1,4 @@
-name: ci-backend
+name: ci-backend # CI for backend services
 
 on:
   push:
