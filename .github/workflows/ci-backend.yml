@@ -21,18 +21,9 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v5
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: backend/pnpm-lock.yaml
       - run: npm install -g pnpm && pnpm install
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
@@ -46,18 +37,9 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v5
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: backend/pnpm-lock.yaml
       - run: npm install -g pnpm && pnpm install
       - run: pnpm audit --prod --audit-level=high
       - name: TruffleHog Secret Scanning
@@ -82,18 +64,9 @@ jobs:
         service: [auth, users, service-orders, payments, reviews]
     steps:
       - uses: actions/checkout@v5
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: backend/pnpm-lock.yaml
       - run: npm install -g pnpm && pnpm install
       - run: pnpm cache clean
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
