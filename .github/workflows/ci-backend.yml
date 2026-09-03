@@ -26,9 +26,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm install -g pnpm && pnpm install
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
 
-  security:
+security:
     needs: quick
     runs-on: ubuntu-latest
     defaults:
@@ -40,6 +41,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm install -g pnpm && pnpm install
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
       - run: pnpm audit --prod --audit-level=high
       - name: TruffleHog Secret Scanning
         uses: trufflehog/hunter-action@main
@@ -69,6 +71,7 @@ jobs:
       - run: npm install -g pnpm && pnpm install
       - run: pnpm cache clean
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
       - name: Prisma Generate Cache
         uses: actions/cache@v4
         with:
