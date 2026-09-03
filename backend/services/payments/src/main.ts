@@ -3,10 +3,17 @@ import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { getHelmetConfig } from "@pode-deixar/security";
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+const logger = createLogger('payments-service');
 
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule, {
+    logger: false,
+  });
+
+  // Security headers with CSP
   app.use(getHelmetConfig());
+
+  // CORS configuration
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:3000",
@@ -30,8 +37,7 @@ async function bootstrap() {
 
   const port = process.env.PAYMENTS_PORT || 3004;
   await app.listen(port);
-  console.log(`Payments service running on port ${port}`);
-  console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  logger.info('bootstrap', `Payments service running on port ${port}`);
+  logger.info('bootstrap', `Swagger docs available at http://localhost:${port}/api/docs`);
 }
-
 bootstrap();

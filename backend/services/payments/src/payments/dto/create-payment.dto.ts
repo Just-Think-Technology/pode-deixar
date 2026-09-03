@@ -64,7 +64,6 @@ export class CreatePaymentDto {
   })
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(100)
   idempotencyKey?: string;
 }

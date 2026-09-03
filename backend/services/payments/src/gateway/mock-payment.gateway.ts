@@ -29,7 +29,7 @@ export class MockPaymentGateway implements PaymentGateway {
   }
 
   async getPayment(_gatewayPaymentId: string): Promise<GatewayPayment> {
-    throw new Error("Gateway mock não possui consulta de pagamento");
+    throw new Error("Mock gateway: consultas de pagamento não implementadas - use createCharge em vez de getPayment");
   }
 
   validateWebhook(
