@@ -2,7 +2,7 @@ import { defineConfig } from "eslint/config";
 
 export default defineConfig([
   {
-    ignores: ["test/**", "tests/**", "**/*.spec.*", "**/*.test.*"],
+    ignores: ["test/**", "tests/**", "**/*.spec.*", "**/*.test.*", ".next/"],
   },
   {
     languageOptions: {
