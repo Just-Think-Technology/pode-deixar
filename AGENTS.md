@@ -137,7 +137,8 @@ Sempre desenvolver utilizando:
 
 ### ESLint Security Plugin
 
-- `eslint-plugin-security` configurado em todos os 4 serviços
+- `eslint-plugin-security` configurado nos 5 serviços (`securityPlugin.configs.recommended` no `eslint.config.mjs` de cada um, flat config ESLint 9)
+- Cobrança via `lint` por serviço no job `quick` do CI (não há step separado no job `security`)
 - Regras recomendadas + específicas:
   - `detect-object-injection`, `detect-non-literal-fs-filename`, `detect-unsafe-regex`
   - `detect-buffer-noassert`, `detect-child-process`, `detect-disable-mustache-escape`

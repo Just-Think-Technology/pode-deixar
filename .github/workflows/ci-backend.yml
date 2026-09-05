@@ -179,10 +179,14 @@ jobs:
         with:
           extra_args: --only-verified
 
-      - run: pnpm add -D -w eslint-plugin-security
-        
-      - name: ESLint Security Plugin
-        run: pnpm exec eslint . --plugin security --rulesdir node_modules/eslint-plugin-security/rules
+      # NOTA: a checagem do eslint-plugin-security roda no job `quick`
+      # (lint por serviço) — cada serviço já aplica
+      # `securityPlugin.configs.recommended` no próprio eslint.config.mjs
+      # (flat config, ESLint 9). O step antigo foi removido porque:
+      # 1) `pnpm exec eslint` na raiz não encontra o binário (só existe
+      #    nos serviços);
+      # 2) `--plugin`/`--rulesdir` são flags do eslintrc removidas no ESLint 9;
+      # 3) `pnpm add -D -w` mutava package.json/lockfile durante o CI.
 
   build:
     needs: [changes, quick]
