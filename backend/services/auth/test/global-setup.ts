@@ -20,8 +20,10 @@ const testDbName = url.pathname.slice(1).split('?')[0]; // e.g., "pode_deixar_te
 const user = url.username;
 const password = url.password;
 
-// Admin URL to connect to default postgres database to create test database
-const adminUrl = `postgresql://${user}:${password}@${host}:${port}/pode_deixar?schema=public`;
+// Admin URL to connect to default postgres database to create test database.
+// Usa o banco `postgres` (sempre existe numa instalação fresca) em vez de
+// `pode_deixar`, que não existe no CI nem em ambientes recém-criados.
+const adminUrl = `postgresql://${user}:${password}@${host}:${port}/postgres?schema=public`;
 
 process.env.DATABASE_URL = databaseUrl;
 

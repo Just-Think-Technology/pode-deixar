@@ -78,6 +78,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
 
+      # O cache acima só restaura — sem este passo, um cache miss (ex.:
+      # qualquer mudança no pnpm-lock.yaml) deixa o runner sem browsers e
+      # todo o e2e falha. O install é idempotente quando o cache acerta.
+      - run: pnpm exec playwright install --with-deps chromium
+
       - run: pnpm run test:e2e
       - run: pnpm run test:cov
 
