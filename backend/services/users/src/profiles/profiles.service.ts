@@ -38,23 +38,7 @@ export class ProfilesService {
     return user;
   }
 
-  private formatClientProfile(
-    profile: {
-      id: string;
-      avatarUrl?: string;
-      preferences?: any;
-      createdAt?: Date;
-      updatedAt?: Date;
-    },
-    user: {
-      id: string;
-      completeName: string;
-      email: string;
-      phone: string;
-      postalCode: string;
-      role: string;
-    },
-  ) {
+  private formatClientProfile(profile: any, user: any) {
     return {
       id: profile.id,
       user: {
@@ -65,36 +49,14 @@ export class ProfilesService {
         postal_code: user.postalCode,
         role: user.role,
       },
-      avatar_url: profile.avatarUrl,
+      avatar_url: profile.avatarUrl ?? undefined,
       preferences: profile.preferences,
       created_at: profile.createdAt,
       updated_at: profile.updatedAt,
     };
   }
 
-  private formatProviderProfile(
-    profile: {
-      id: string;
-      avatarUrl?: string;
-      bio?: string;
-      hourlyRate?: number;
-      skills?: string[];
-      portfolio?: any;
-      rating?: number;
-      totalReviews?: number;
-      isAvailable?: boolean;
-      createdAt?: Date;
-      updatedAt?: Date;
-    },
-    user: {
-      id: string;
-      completeName: string;
-      email: string;
-      phone: string;
-      postalCode: string;
-      role: string;
-    },
-  ) {
+  private formatProviderProfile(profile: any, user: any) {
     return {
       id: profile.id,
       user: {
@@ -105,9 +67,9 @@ export class ProfilesService {
         postal_code: user.postalCode,
         role: user.role,
       },
-      avatar_url: profile.avatarUrl,
-      bio: profile.bio,
-      hourly_rate: profile.hourlyRate,
+      avatar_url: profile.avatarUrl ?? undefined,
+      bio: profile.bio ?? undefined,
+      hourly_rate: profile.hourlyRate ? Number(profile.hourlyRate) : undefined,
       skills: profile.skills,
       portfolio: profile.portfolio,
       rating: profile.rating,
@@ -400,17 +362,17 @@ export class ProfilesService {
       },
       avatar_url: profile.avatarUrl,
       bio: profile.bio,
-      hourly_rate: profile.hourlyRate,
+      hourly_rate: profile.hourlyRate ? Number(profile.hourlyRate) : undefined,
       skills: profile.skills,
       portfolio: profile.portfolio,
       rating: profile.rating,
       total_reviews: profile.totalReviews,
       is_available: profile.isAvailable,
-      services: profile.services.map((s) => ({
+      services: profile.services.map((s: any) => ({
         id: s.id,
         title: s.title,
         description: s.description,
-        fixed_price: s.fixedPrice,
+        fixed_price: s.fixedPrice != null ? Number(s.fixedPrice) : s.fixedPrice,
         category_id: s.categoryId,
         category: s.category
           ? { id: s.category.id, name: s.category.name, slug: s.category.slug }

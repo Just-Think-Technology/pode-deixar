@@ -2,7 +2,6 @@ import {
   Injectable,
   BadRequestException,
   ForbiddenException,
-  InternalServerErrorException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { MinioService } from "../storage/minio.service";

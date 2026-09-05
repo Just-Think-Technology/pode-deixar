@@ -46,30 +46,7 @@ export class ReviewsService {
     };
   }
 
-  private async recalcularAvaliacao(
-    revieweeId: string,
-    tx: {
-      review: {
-        aggregate: {
-          where: { revieweeId: string };
-          _avg: { rating: number };
-          _count: { _all: number };
-        };
-      };
-      providerProfile: {
-        updateMany: {
-          where: { userId: string };
-          data: { rating: number; totalReviews: number };
-        };
-      };
-      clientProfile: {
-        updateMany: {
-          where: { userId: string };
-          data: { rating: number; totalReviews: number };
-        };
-      };
-    },
-  ) {
+  private async recalcularAvaliacao(revieweeId: string, tx: any) {
     const agregado = await tx.review.aggregate({
       where: { revieweeId },
       _avg: { rating: true },
@@ -294,7 +271,7 @@ export class ReviewsService {
   }
 }
 
-interface ReviewFormat {
+export interface ReviewFormat {
   id: string;
   service_order_id: string;
   reviewer_id: string;

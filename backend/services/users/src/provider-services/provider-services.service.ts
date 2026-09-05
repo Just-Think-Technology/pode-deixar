@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
@@ -37,33 +36,29 @@ export class ProviderServicesService {
     return profile;
   }
 
-  private formatService(service: {
+  private formatService(service: any): {
     id: string;
-    providerProfileId: string;
+    provider_profile_id: string;
     title: string;
     description: string;
-    fixedPrice: number;
-    categoryId: string;
-    category?: {
-      id: string;
-      name: string;
-      slug: string;
-    };
-    images?: {
-      id: string;
-      url: string;
-      createdAt: Date;
-    }[];
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }) {
+    fixed_price: number;
+    category_id: string;
+    category?: { id: string; name: string; slug: string } | null;
+    images?: { id: string; url: string; created_at: Date }[] | null;
+    is_active: boolean;
+    created_at: Date;
+    updated_at: Date;
+  } {
+    const fixedPriceNumber =
+      service.fixedPrice != null
+        ? Number(service.fixedPrice)
+        : service.fixedPrice;
     return {
       id: service.id,
       provider_profile_id: service.providerProfileId,
       title: service.title,
       description: service.description,
-      fixed_price: service.fixedPrice,
+      fixed_price: fixedPriceNumber,
       category_id: service.categoryId,
       category: service.category
         ? {
@@ -73,7 +68,7 @@ export class ProviderServicesService {
           }
         : null,
       images: service.images
-        ? service.images.map((img) => ({
+        ? service.images.map((img: any) => ({
             id: img.id,
             url: img.url,
             created_at: img.createdAt,
@@ -232,37 +227,7 @@ export class ProviderServicesService {
       .toLowerCase();
   }
 
-  private formatProfileResult(profile: {
-    id: string;
-    avatarUrl?: string;
-    bio?: string;
-    hourlyRate?: number;
-    skills?: string[];
-    portfolio?: any;
-    rating?: number;
-    totalReviews?: number;
-    isAvailable?: boolean;
-    createdAt?: Date;
-    updatedAt?: Date;
-    user: {
-      id: string;
-      completeName: string;
-      email: string;
-      phone: string;
-      postalCode: string;
-      role: string;
-    };
-    services: {
-      id: string;
-      title: string;
-      description: string;
-      fixedPrice: number;
-      categoryId: string;
-      isActive: boolean;
-      createdAt: Date;
-      updatedAt: Date;
-    }[];
-  }): {
+  private formatProfileResult(profile: any): {
     id: string;
     user: UserResponse;
     avatar_url?: string;
@@ -271,7 +236,18 @@ export class ProviderServicesService {
     rating?: number;
     total_reviews?: number;
     is_available?: boolean;
-    services: ServiceItem[];
+    services: {
+      id: string;
+      title: string;
+      description: string;
+      fixed_price: number;
+      category_id: string;
+      category?: { id: string; name: string; slug: string } | null;
+      images?: { id: string; url: string; created_at: Date }[] | null;
+      is_active: boolean;
+      created_at: Date;
+      updated_at: Date;
+    }[];
   } {
     return {
       id: profile.id,
@@ -282,28 +258,31 @@ export class ProviderServicesService {
         phone: profile.user.phone,
         postal_code: profile.user.postalCode,
       },
-      avatar_url: profile.avatarUrl,
-      bio: profile.bio,
+      avatar_url: profile.avatarUrl ?? undefined,
+      bio: profile.bio ?? undefined,
       skills: profile.skills,
       rating: profile.rating,
       total_reviews: profile.totalReviews,
       is_available: profile.isAvailable,
-      services: profile.services.map((s) => ({
+      services: profile.services.map((s: any) => ({
         id: s.id,
         title: s.title,
         description: s.description,
-        fixed_price: s.fixedPrice,
+        fixed_price: s.fixedPrice != null ? Number(s.fixedPrice) : s.fixedPrice,
         category_id: s.categoryId,
         category: s.category
           ? { id: s.category.id, name: s.category.name, slug: s.category.slug }
           : null,
         images: s.images
-          ? s.images.map((img) => ({
+          ? s.images.map((img: any) => ({
               id: img.id,
               url: img.url,
               created_at: img.createdAt,
             }))
           : [],
+        is_active: s.isActive,
+        created_at: s.createdAt,
+        updated_at: s.updatedAt,
       })),
     };
   }
@@ -312,8 +291,8 @@ export class ProviderServicesService {
     const { page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const serviceFilter = { isActive: true };
-    const profileFilter = { services: { some: { isActive: true } } };
+    const serviceFilter: any = { isActive: true };
+    const profileFilter: any = { services: { some: { isActive: true } } };
 
     if (query.categoryId) {
       serviceFilter.categoryId = query.categoryId;
@@ -350,7 +329,7 @@ export class ProviderServicesService {
       include: includeClause,
     });
 
-    let result = allProfiles.map((p) => this.formatProfileResult(p));
+    let result = allProfiles.map((p: any) => this.formatProfileResult(p));
 
     if (query.q) {
       const termo = this.removerAcentos(query.q);
@@ -368,9 +347,11 @@ export class ProviderServicesService {
     if (query.postalCode) {
       const clientCep = parseInt(query.postalCode.replace(/\D/g, ""), 10);
       result.sort((a, b) => {
-        const ratingDiff = Math.abs(b.rating - a.rating);
+        const ratingA = a.rating ?? 0;
+        const ratingB = b.rating ?? 0;
+        const ratingDiff = Math.abs(ratingB - ratingA);
         if (ratingDiff > 0.5) {
-          return b.rating - a.rating;
+          return ratingB - ratingA;
         }
         const cepA = parseInt(
           (a.user.postal_code || "").replace(/\D/g, ""),
@@ -383,7 +364,7 @@ export class ProviderServicesService {
         return Math.abs(cepA - clientCep) - Math.abs(cepB - clientCep);
       });
     } else {
-      result.sort((a, b) => b.rating - a.rating);
+      result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
     }
 
     const paginados = result.slice(skip, skip + limit);
@@ -400,7 +381,7 @@ export class ProviderServicesService {
   }
 }
 
-interface UserResponse {
+export interface UserResponse {
   id: string;
   complete_name: string;
   email: string;

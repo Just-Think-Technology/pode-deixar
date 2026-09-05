@@ -3,8 +3,8 @@ node_modules/
 .pnpm-store/
 
 # Environment files 
-.env
 .env.*
+!.env.test
 !.env.example
 
 

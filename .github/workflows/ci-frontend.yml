@@ -103,9 +103,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # Removido o `|| true`: vulnerabilidades high/critical agora falham o job.
-      # Se preferir manter como não bloqueante por ora, use
-      # `continue-on-error: true` neste step em vez de engolir o exit code.
       - run: pnpm audit --prod --audit-level=high
 
       - name: TruffleHog Secret Scanning

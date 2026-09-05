@@ -38,8 +38,8 @@ export class CategoriesController {
       id: string;
       name: string;
       slug: string;
-      description: string;
-      icon: string;
+      description: string | null;
+      icon: string | null;
       order: number;
     }[]
   > {
@@ -69,8 +69,8 @@ export class AdminCategoriesController {
     id: string;
     name: string;
     slug: string;
-    description: string;
-    icon: string;
+    description: string | null;
+    icon: string | null;
     order: number;
   }> {
     return this.categoriesService.create(dto, req.ip);
@@ -90,8 +90,8 @@ export class AdminCategoriesController {
     id: string;
     name: string;
     slug: string;
-    description: string;
-    icon: string;
+    description: string | null;
+    icon: string | null;
     order: number;
   }> {
     return this.categoriesService.update(id, dto, req.ip);

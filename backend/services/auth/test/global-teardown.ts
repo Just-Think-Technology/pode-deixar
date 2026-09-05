@@ -2,7 +2,12 @@ import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-dotenv.config({ path: path.resolve(__dirname, '../../../.env.staging') });
+dotenv.config({
+  path: path.resolve(
+    __dirname,
+    `../../../../.env.${process.env.NODE_ENV || "development"}`,
+  ),
+});
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pode_deixar_test?schema=public';
 

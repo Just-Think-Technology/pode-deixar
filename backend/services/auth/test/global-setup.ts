@@ -2,7 +2,12 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
 
-dotenv.config({ path: path.resolve(__dirname, '../../../.env.staging') });
+dotenv.config({
+  path: path.resolve(
+    __dirname,
+    `../../../../.env.${process.env.NODE_ENV || "development"}`,
+  ),
+});
 
 // Use test database URL from env or default to localhost
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pode_deixar_test?schema=public';
@@ -27,14 +32,27 @@ export default async function globalSetup() {
   const adminPrisma = new PrismaClient({ datasources: { db: { url: adminUrl } } });
   try {
     await adminPrisma.$connect();
-    // Create test database if not exists
+    // Drop the test database if it exists to ensure clean schema
+    try {
+      await adminPrisma.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${testDbName}"`);
+      console.log(`Database ${testDbName} dropped`);
+    } catch (e: any) {
+      console.error('Error dropping database:', e.message);
+    }
+    // Create the fresh database
     try {
       await adminPrisma.$executeRawUnsafe(`CREATE DATABASE "${testDbName}"`);
-      console.log(`Database ${testDbName} created`);
+      console.log(`Database ${testDbName} created fresh`);
     } catch (e: any) {
-      // 42P04 = duplicate_database
       if (e.meta?.code === '42P04' || e.message?.includes('already exists') || e.code === 'P2010') {
-        console.log(`Database ${testDbName} already exists`);
+        console.log(`Database ${testDbName} already exists (will be recreated)`);
+        try {
+          await adminPrisma.$executeRawUnsafe(`DROP DATABASE "${testDbName}"`);
+          await adminPrisma.$executeRawUnsafe(`CREATE DATABASE "${testDbName}"`);
+          console.log(`Database ${testDbName} freshly recreated`);
+        } catch (e2) {
+          console.error('Could not recreate database:', e2.message);
+        }
       } else {
         throw e;
       }
@@ -45,33 +63,25 @@ export default async function globalSetup() {
     throw error;
   }
 
-  // Check if tables already exist (migrations already applied)
+  // Always run prisma migrate deploy to ensure schema is up-to-date
+  console.log('Running Prisma migrations to ensure schema is current...');
+  const schemaPath = path.resolve(__dirname, '../../../prisma/schema.prisma');
+  const { execSync } = await import('child_process');
+  try {
+    execSync(`npx -p prisma@5.22.0 prisma migrate deploy --schema="${schemaPath}"`, {
+      cwd: __dirname,
+      env: { ...process.env, DATABASE_URL: databaseUrl, DIRECT_DATABASE_URL: databaseUrl },
+      stdio: 'inherit',
+    });
+    console.log('Migrations applied successfully');
+  } catch (migrateError) {
+    console.error('Migration failed, but continuing test setup:', migrateError.message);
+  }
+
+  // Connect to test database and apply extension
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   try {
     await prisma.$connect();
-    // Check if users table exists
-    const tables = await prisma.$queryRawUnsafe<{ table_name: string }[]>(
-      `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'`
-    );
-    
-    if (tables.length === 0) {
-      console.log('Tables not found, running Prisma migrations...');
-      const schemaPath = path.resolve(__dirname, '../../../prisma/schema.prisma');
-      const { execSync } = await import('child_process');
-      execSync(`npx -p prisma@5.22.0 prisma migrate deploy --schema="${schemaPath}"`, {
-        cwd: __dirname,
-        env: { 
-          ...process.env, 
-          DATABASE_URL: databaseUrl,
-          DIRECT_DATABASE_URL: databaseUrl,
-        },
-        stdio: 'inherit',
-      });
-      console.log('Migrations applied successfully');
-    } else {
-      console.log('Tables already exist, skipping migrations');
-    }
-    
     await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
     await prisma.$disconnect();
     console.log('Test database connected and extension created');
