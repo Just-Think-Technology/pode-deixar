@@ -184,16 +184,6 @@ jobs:
         with:
           languages: javascript-typescript
           build-mode: none
-          paths:
-            - frontend
-          paths-ignore:
-            - frontend/**/node_modules/**
-            - frontend/**/dist/**
-            - frontend/**/build/**
-            - frontend/**/.next/**
-            - frontend/**/coverage/**
-            - frontend/**/*.spec.ts
-            - frontend/**/*.test.ts
 
       - uses: github/codeql-action/analyze@v3
 
