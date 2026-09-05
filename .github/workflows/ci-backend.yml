@@ -104,6 +104,12 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # DATABASE_URL/DIRECT_DATABASE_URL aqui sobrescrevem os valores fake do
+    # backend/.env.test (committado) para isolar o banco de teste por
+    # serviço dentro da matrix. Todo o resto das env vars vem do arquivo.
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public
+      DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public
     steps:
       - uses: actions/checkout@v4
 
@@ -130,18 +136,19 @@ jobs:
 
       - run: pnpm exec prisma generate --schema=prisma/schema.prisma
 
+      # TODO: ainda não confirmado se esse banco (sem sufixo de serviço) é
+      # consumido por algum outro step/serviço fora deste arquivo. Se não for
+      # usado em lugar nenhum, remover.
       - run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar;"
 
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
 
-      - name: Create .env.test
-        run: echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public" > .env.test
-
+      # backend/.env.test já vem do checkout (é committado no repo) e traz
+      # todos os valores fake de config necessários pros serviços subirem em
+      # teste. O `env:` no nível do job (acima) sobrescreve DATABASE_URL e
+      # DIRECT_DATABASE_URL com o banco isolado por serviço.
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
-        env:
-          # .env.test will be loaded after .env.staging by jest, overriding it
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public
 
   # `security` agora depende só de `quick`, igual `build` — os dois rodam em
   # paralelo em vez de security bloquear o início do build. Quem depende de
@@ -173,6 +180,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # Removido o `|| true`: vulnerabilidades high/critical agora falham o job.
+      # Se quiser manter isso como "não bloqueante" por enquanto, use
+      # `continue-on-error: true` neste step em vez de engolir o exit code.
       - run: pnpm audit --prod --audit-level=high
 
       - name: TruffleHog Secret Scanning
@@ -180,8 +190,13 @@ jobs:
         with:
           extra_args: --only-verified
 
+      # TODO: mover eslint-plugin-security para devDependency no package.json
+      # do workspace, em vez de instalar em runtime a cada execução.
       - run: pnpm add -D -w eslint-plugin-security
 
+      # Corrigido: o job já roda com working-directory: backend, então o alvo
+      # é "." (ou o diretório real de código, ex. "./services"), não
+      # "./backend" — isso antes resolvia para backend/backend e não existia.
       - name: ESLint Security Plugin
         run: pnpm exec eslint . --plugin security --rulesdir node_modules/eslint-plugin-security/rules
 
@@ -212,6 +227,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # Corrigido: o Prisma Client é gerado por padrão em
+      # node_modules/.prisma/client (a menos que o schema defina um `output`
+      # customizado), e o path de cache do actions/cache é relativo à raiz do
+      # repositório, não ao working-directory do job — por isso o prefixo
+      # "backend/".
       - name: Prisma Generate Cache
         uses: actions/cache@v4
         with:
