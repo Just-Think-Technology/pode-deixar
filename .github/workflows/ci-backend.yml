@@ -1,60 +1,174 @@
-name: ci-backend # CI for backend services
+name: ci-backend
 
 on:
   push:
     branches: [develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
   pull_request:
     branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
 
 env:
   NODE_VERSION: 22
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.matrix.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'backend/pnpm-lock.yaml'
+              - 'backend/package.json'
+              - 'backend/pnpm-workspace.yaml'
+              - 'backend/tsconfig*.json'
+              - 'backend/prisma/schema.prisma'
+            auth:
+              - 'backend/services/auth/**'
+            users:
+              - 'backend/services/users/**'
+            service-orders:
+              - 'backend/services/service-orders/**'
+            payments:
+              - 'backend/services/payments/**'
+            reviews:
+              - 'backend/services/reviews/**'
+
+      - name: Compute affected service matrix
+        id: matrix
+        run: |
+          set -e
+          if [ "${{ steps.filter.outputs.shared }}" = "true" ]; then
+            echo 'services=["auth","users","service-orders","payments","reviews"]' >> "$GITHUB_OUTPUT"
+          else
+            SERVICES=$(jq -nc \
+              --argjson auth '${{ steps.filter.outputs.auth }}' \
+              --argjson users '${{ steps.filter.outputs.users }}' \
+              --argjson serviceOrders '${{ steps.filter.outputs['service-orders'] }}' \
+              --argjson payments '${{ steps.filter.outputs.payments }}' \
+              --argjson reviews '${{ steps.filter.outputs.reviews }}' \
+              '[
+                (if $auth then "auth" else empty end),
+                (if $users then "users" else empty end),
+                (if $serviceOrders then "service-orders" else empty end),
+                (if $payments then "payments" else empty end),
+                (if $reviews then "reviews" else empty end)
+              ]')
+            echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Show affected services
+        run: 'echo "Serviços afetados: ${{ steps.matrix.outputs.services }}"'
+
   quick:
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     strategy:
       fail-fast: false
       matrix:
-        service: [auth, users, service-orders, payments, reviews]
-    runs-on: ubuntu-latest
+        service: ${{ fromJson(needs.changes.outputs.services) }}
     defaults:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: npm install -g pnpm && pnpm install
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Create test database for ${{ matrix.service }}
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar_test_${{ matrix.service }};"
+        env:
+          PGPASSWORD: postgres
+
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public
 
-security:
-    needs: quick
+  security:
+    needs: [changes, quick]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     defaults:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: npm install -g pnpm && pnpm install
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
       - run: pnpm audit --prod --audit-level=high
+
       - name: TruffleHog Secret Scanning
-        uses: trufflehog/hunter-action@main
+        uses: trufflesecurity/trufflehog@d411fff7b8879a62509f3fa98c07f247ac089a51
         with:
-          args: --only-verified --fail
+          extra_args: --only-verified
+
+      - run: pnpm add -D -w eslint-plugin-security
       - name: ESLint Security Plugin
-        uses: returned0t/trufflehog-eslint@main
-        with:
-          eslint-dir: backend
-          config: '{"plugins":["security"]}'
+        run: pnpm exec eslint ./backend --plugin security --rulesdir node_modules/eslint-plugin-security/rules
 
   build:
-    needs: security
+    needs: [changes, security]
+    if: needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,16 +176,22 @@ security:
     strategy:
       fail-fast: false
       matrix:
-        service: [auth, users, service-orders, payments, reviews]
+        service: ${{ fromJson(needs.changes.outputs.services) }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - run: npm install -g pnpm && pnpm install
-      - run: pnpm cache clean
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
       - name: Prisma Generate Cache
         uses: actions/cache@v4
         with:
@@ -79,30 +199,119 @@ security:
           key: prisma-generate-${{ runner.os }}-${{ hashFiles('backend/prisma/schema.prisma') }}
           restore-keys: |
             prisma-generate-${{ runner.os }}-
+
       - run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
+
+  image:
+    needs: [changes, build]
+    if: github.event_name != 'pull_request' && needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          tags: |
+            type=sha,format=long
+            type=ref,event=branch
+
+      - name: Build and push image
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          build-args: |
+            SERVICE=${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}@${{ steps.docker_build.outputs.digest }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.service }}.spdx.json
+          upload-artifact: false
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}
+          path: sbom-${{ matrix.service }}.spdx.json
+          retention-days: 90
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image (keyless, via OIDC/Sigstore)
+        run: |
+          cosign sign --yes \
+            "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}@${{ steps.docker_build.outputs.digest }}"
 
   codeql:
-    needs: build
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: github/codeql-action/init@v2
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
         with:
-          languages: python
+          languages: javascript-typescript
           build-mode: none
-      - run: codeql/analyze
+          paths:
+            - backend
+          paths-ignore:
+            - backend/**/node_modules/**
+            - backend/**/dist/**
+            - backend/**/build/**
+            - backend/**/coverage/**
+            - backend/**/*.spec.ts
+            - backend/**/*.test.ts
+            - backend/**/generated/**
+
+      - uses: github/codeql-action/analyze@v3
 
   dependency-review:
-    needs: codeql
+    needs: changes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
+
       - name: Dependency Review
-        uses: actions/download-artifact@v4
-        with:
-          name: dependabot-details
-          path: /tmp
-      - uses: github.com/dependencies/action@main
+        uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: critical
-        continue-on-error: true

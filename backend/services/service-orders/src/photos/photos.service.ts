@@ -37,7 +37,12 @@ export class PhotosService {
       throw new BadRequestException("Nenhuma foto enviada");
     }
 
-    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
 
     for (const file of files) {
       if (!allowedMimeTypes.includes(file.mimetype)) {

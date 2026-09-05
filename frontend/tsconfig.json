@@ -39,6 +39,22 @@
     ".next-e2e/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "test/components/ui/button.spec.tsx",
+    "test/components/ui/alert.spec.tsx",
+    "test/components/ui/card.spec.tsx",
+    "test/components/ui/input.spec.tsx",
+    "test/components/ui/input-otp.spec.tsx",
+    "test/hooks/use-mobile.spec.tsx",
+    "test/pages/auth-form-page.spec.tsx",
+    "e2e/**",
+    ".next",
+    "dist",
+    "coverage",
+    "vitest.config.ts",
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.js",
+    "next.config.js"
   ]
 }

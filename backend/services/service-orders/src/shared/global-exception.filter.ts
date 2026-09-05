@@ -7,7 +7,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
-import { sanitizarDadosSensiveis } from "./sanitizar-dados-sensiveis";
+import { sanitizarDadosSensiveis } from "@pode-deixar/security";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {

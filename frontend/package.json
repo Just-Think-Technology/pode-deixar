@@ -42,18 +42,20 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "vitest": "^4.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^1.0.0",
+    "@vitejs/plugin-react-swc": "^4.3.3",
+    "@vitest/coverage-v8": "4.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^20.0.0",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.1",
     "typescript": "^5",
-    "@vitejs/plugin-react": "^1.0.0",
     "vite-tsconfig-paths": "^4.2.0",
-    "jsdom": "^20.0.0"
+    "vitest": "^4.0.0"
   }
 }

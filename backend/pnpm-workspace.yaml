@@ -8,3 +8,6 @@ allowBuilds:
   argon2: true
   "@scarf/scarf": true
   unrs-resolver: true
+  cpu-features: set this to true or false
+  protobufjs: set this to true or false
+  ssh2: set this to true or false

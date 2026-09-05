@@ -33,7 +33,10 @@ async function bootstrap() {
   const port = process.env.SERVICE_ORDERS_PORT || 3003;
   await app.listen(port);
   logger.info("bootstrap", `Service-orders service running on port ${port}`);
-  logger.info("bootstrap", `Swagger docs available at http://localhost:${port}/api/docs`);
+  logger.info(
+    "bootstrap",
+    `Swagger docs available at http://localhost:${port}/api/docs`,
+  );
 }
 
 bootstrap();
