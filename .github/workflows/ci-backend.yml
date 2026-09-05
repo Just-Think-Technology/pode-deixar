@@ -129,6 +129,7 @@ jobs:
           PGPASSWORD: postgres
 
       - run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar;"
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
