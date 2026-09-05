@@ -9,7 +9,7 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@pode-deixar/logger": "workspace:*",
-    "nodemailer": "^8.0.4"
+    "nodemailer": "^9.0.1"
   },
   "scripts": {
     "build": "tsc -b"
