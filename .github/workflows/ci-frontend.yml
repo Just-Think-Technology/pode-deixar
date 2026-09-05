@@ -27,6 +27,7 @@ concurrency:
 jobs:
   quick:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
@@ -50,6 +51,7 @@ jobs:
   deep:
     needs: quick
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
@@ -82,6 +84,7 @@ jobs:
   security:
     needs: quick
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: frontend
@@ -99,7 +102,11 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm audit --prod --audit-level=high || true
+
+      # Removido o `|| true`: vulnerabilidades high/critical agora falham o job.
+      # Se preferir manter como não bloqueante por ora, use
+      # `continue-on-error: true` neste step em vez de engolir o exit code.
+      - run: pnpm audit --prod --audit-level=high
 
       - name: TruffleHog Secret Scanning
         uses: trufflesecurity/trufflehog@d411fff7b8879a62509f3fa98c07f247ac089a51
@@ -110,6 +117,7 @@ jobs:
     needs: [deep, security]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -174,6 +182,7 @@ jobs:
   codeql:
     needs: quick
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       security-events: write
@@ -190,6 +199,7 @@ jobs:
   dependency-review:
     needs: quick
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     if: github.event_name == 'pull_request'

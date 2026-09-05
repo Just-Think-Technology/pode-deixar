@@ -27,6 +27,7 @@ concurrency:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       services: ${{ steps.matrix.outputs.services }}
     steps:
@@ -83,6 +84,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16-alpine
@@ -117,6 +119,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # Cada job de matrix já roda em runner isolado com seu próprio container
+      # `services.postgres`, então um único banco por job é suficiente.
+      # Mantido com nome por serviço apenas para deixar os logs mais legíveis.
       - name: Create test database for ${{ matrix.service }}
         run: |
           PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar_test_${{ matrix.service }};"
@@ -129,9 +134,13 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public
 
+  # `security` agora depende só de `quick`, igual `build` — os dois rodam em
+  # paralelo em vez de security bloquear o início do build. Quem depende de
+  # ambos é o job `image`, que é o que realmente precisa do gate completo.
   security:
     needs: [changes, quick]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write
@@ -155,21 +164,31 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - run: pnpm audit --prod --audit-level=high || true
+      # Removido o `|| true`: vulnerabilidades high/critical agora falham o job.
+      # Se quiser manter isso como "não bloqueante" por enquanto, use
+      # `continue-on-error: true` neste step em vez de engolir o exit code.
+      - run: pnpm audit --prod --audit-level=high
 
       - name: TruffleHog Secret Scanning
         uses: trufflesecurity/trufflehog@d411fff7b8879a62509f3fa98c07f247ac089a51
         with:
           extra_args: --only-verified
 
+      # TODO: mover eslint-plugin-security para devDependency no package.json
+      # do workspace, em vez de instalar em runtime a cada execução.
       - run: pnpm add -D -w eslint-plugin-security
+
+      # Corrigido: o job já roda com working-directory: backend, então o alvo
+      # é "." (ou o diretório real de código, ex. "./services"), não
+      # "./backend" — isso antes resolvia para backend/backend e não existia.
       - name: ESLint Security Plugin
-        run: pnpm exec eslint ./backend --plugin security --rulesdir node_modules/eslint-plugin-security/rules
+        run: pnpm exec eslint . --plugin security --rulesdir node_modules/eslint-plugin-security/rules
 
   build:
-    needs: [changes, security]
+    needs: [changes, quick]
     if: needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend
@@ -192,10 +211,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # Corrigido: o Prisma Client é gerado por padrão em
+      # node_modules/.prisma/client (a menos que o schema defina um `output`
+      # customizado), e o path de cache do actions/cache é relativo à raiz do
+      # repositório, não ao working-directory do job — por isso o prefixo
+      # "backend/".
       - name: Prisma Generate Cache
         uses: actions/cache@v4
         with:
-          path: ~/.prisma
+          path: backend/node_modules/.prisma
           key: prisma-generate-${{ runner.os }}-${{ hashFiles('backend/prisma/schema.prisma') }}
           restore-keys: |
             prisma-generate-${{ runner.os }}-
@@ -205,9 +229,10 @@ jobs:
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
 
   image:
-    needs: [changes, build]
+    needs: [changes, build, security]
     if: github.event_name != 'pull_request' && needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -279,6 +304,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       security-events: write
@@ -295,6 +321,7 @@ jobs:
   dependency-review:
     needs: changes
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     if: github.event_name == 'pull_request'
