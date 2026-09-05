@@ -128,6 +128,7 @@ jobs:
         env:
           PGPASSWORD: postgres
 
+      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
