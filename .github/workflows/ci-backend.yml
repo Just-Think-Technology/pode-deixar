@@ -105,8 +105,8 @@ jobs:
       run:
         working-directory: backend
     # DATABASE_URL/DIRECT_DATABASE_URL aqui sobrescrevem os valores fake do
-    # backend/.env.test (committado) para isolar o banco de teste por
-    # serviço dentro da matrix. Todo o resto das env vars vem do arquivo.
+    # .env.test (committado na raiz do repo) para isolar o banco de teste
+    # por serviço dentro da matrix. Todo o resto das env vars vem do arquivo.
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public
       DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public
@@ -144,11 +144,15 @@ jobs:
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
 
-      # backend/.env.test já vem do checkout (é committado no repo) e traz
-      # todos os valores fake de config necessários pros serviços subirem em
-      # teste. O `env:` no nível do job (acima) sobrescreve DATABASE_URL e
+      # .env.test (raiz do repo) já vem do checkout e traz todos os valores
+      # fake de config necessários pros serviços subirem em teste. O `env:`
+      # no nível do job (acima) sobrescreve DATABASE_URL e
       # DIRECT_DATABASE_URL com o banco isolado por serviço.
+      # Antes do teste, renomeamos .env.staging para não conflitar com o DATABASE_URL
+      # injetado pelo job. Depois restauramos.
+      - run: mv .env.staging .env.staging.bak
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
+      - run: mv .env.staging.bak .env.staging
 
   # `security` agora depende só de `quick`, igual `build` — os dois rodam em
   # paralelo em vez de security bloquear o início do build. Quem depende de
