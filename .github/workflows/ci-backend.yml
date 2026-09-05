@@ -132,13 +132,8 @@ jobs:
       - run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar;"
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
-      - run: pnpm exec tee .env.test << 'EOF'
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public
-EOF
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
-        env:
-          # .env.test will be loaded after .env.staging by jest, overriding it
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public
+      - name: Create .env.test
+        run: echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pode_deixar_test_${{ matrix.service }}?schema=public" > .env.test
 
   # `security` agora depende só de `quick`, igual `build` — os dois rodam em
   # paralelo em vez de security bloquear o início do build. Quem depende de
