@@ -43,6 +43,7 @@ jobs:
               - 'backend/pnpm-workspace.yaml'
               - 'backend/tsconfig*.json'
               - 'backend/prisma/schema.prisma'
+              - 'backend/shared/**'
             auth:
               - 'backend/services/auth/**'
             users:
