@@ -38,7 +38,23 @@ export class ProfilesService {
     return user;
   }
 
-  private formatClientProfile(profile: any, user: any) {
+  private formatClientProfile(
+    profile: {
+      id: string;
+      avatarUrl?: string;
+      preferences?: any;
+      createdAt?: Date;
+      updatedAt?: Date;
+    },
+    user: {
+      id: string;
+      completeName: string;
+      email: string;
+      phone: string;
+      postalCode: string;
+      role: string;
+    },
+  ) {
     return {
       id: profile.id,
       user: {
@@ -56,7 +72,29 @@ export class ProfilesService {
     };
   }
 
-  private formatProviderProfile(profile: any, user: any) {
+  private formatProviderProfile(
+    profile: {
+      id: string;
+      avatarUrl?: string;
+      bio?: string;
+      hourlyRate?: number;
+      skills?: string[];
+      portfolio?: any;
+      rating?: number;
+      totalReviews?: number;
+      isAvailable?: boolean;
+      createdAt?: Date;
+      updatedAt?: Date;
+    },
+    user: {
+      id: string;
+      completeName: string;
+      email: string;
+      phone: string;
+      postalCode: string;
+      role: string;
+    },
+  ) {
     return {
       id: profile.id,
       user: {

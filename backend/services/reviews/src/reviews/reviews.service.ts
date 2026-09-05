@@ -24,7 +24,16 @@ export class ReviewsService {
     private logger: ReviewsLoggerService,
   ) {}
 
-  private formatReview(review: any) {
+  private formatReview(review: {
+    id: string;
+    serviceOrderId: string;
+    reviewerId: string;
+    revieweeId: string;
+    rating: number;
+    comment?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): ReviewFormat {
     return {
       id: review.id,
       service_order_id: review.serviceOrderId,
@@ -37,7 +46,30 @@ export class ReviewsService {
     };
   }
 
-  private async recalcularAvaliacao(revieweeId: string, tx: any) {
+  private async recalcularAvaliacao(
+    revieweeId: string,
+    tx: {
+      review: {
+        aggregate: {
+          where: { revieweeId: string };
+          _avg: { rating: number };
+          _count: { _all: number };
+        };
+      };
+      providerProfile: {
+        updateMany: {
+          where: { userId: string };
+          data: { rating: number; totalReviews: number };
+        };
+      };
+      clientProfile: {
+        updateMany: {
+          where: { userId: string };
+          data: { rating: number; totalReviews: number };
+        };
+      };
+    },
+  ) {
     const agregado = await tx.review.aggregate({
       where: { revieweeId },
       _avg: { rating: true },
@@ -260,4 +292,15 @@ export class ReviewsService {
 
     return { message: "Avaliação excluída com sucesso" };
   }
+}
+
+interface ReviewFormat {
+  id: string;
+  service_order_id: string;
+  reviewer_id: string;
+  reviewee_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: Date;
+  updated_at: Date;
 }

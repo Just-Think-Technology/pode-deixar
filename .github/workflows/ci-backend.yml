@@ -124,7 +124,7 @@ jobs:
       # Mantido com nome por serviço apenas para deixar os logs mais legíveis.
       - name: Create test database for ${{ matrix.service }}
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar_test_${{ matrix.service }};"
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE \"pode_deixar_test_${{ matrix.service }}\";"
         env:
           PGPASSWORD: postgres
 

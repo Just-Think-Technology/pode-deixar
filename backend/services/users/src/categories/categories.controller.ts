@@ -33,7 +33,16 @@ export class CategoriesController {
     status: 200,
     description: "Lista de categorias retornada com sucesso",
   })
-  async findAll() {
+  async findAll(): Promise<
+    {
+      id: string;
+      name: string;
+      slug: string;
+      description: string;
+      icon: string;
+      order: number;
+    }[]
+  > {
     return this.categoriesService.findAll();
   }
 }
@@ -53,7 +62,17 @@ export class AdminCategoriesController {
     status: 409,
     description: "Já existe categoria com este nome ou slug",
   })
-  async create(@Request() req: any, @Body() dto: CreateCategoryDto) {
+  async create(
+    @Request() req: any,
+    @Body() dto: CreateCategoryDto,
+  ): Promise<{
+    id: string;
+    name: string;
+    slug: string;
+    description: string;
+    icon: string;
+    order: number;
+  }> {
     return this.categoriesService.create(dto, req.ip);
   }
 
@@ -67,7 +86,14 @@ export class AdminCategoriesController {
     @Request() req: any,
     @Param("id") id: string,
     @Body() dto: UpdateCategoryDto,
-  ) {
+  ): Promise<{
+    id: string;
+    name: string;
+    slug: string;
+    description: string;
+    icon: string;
+    order: number;
+  }> {
     return this.categoriesService.update(id, dto, req.ip);
   }
 

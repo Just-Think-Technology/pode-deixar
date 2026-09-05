@@ -156,7 +156,7 @@ export class ServiceImagesService {
     return { message: "Imagem removida com sucesso" };
   }
 
-  private formatImage(image: any) {
+  private formatImage(image: { id: string; url: string; createdAt: Date }) {
     return {
       id: image.id,
       url: image.url,

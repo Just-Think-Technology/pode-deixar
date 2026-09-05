@@ -57,7 +57,18 @@ export class ReviewsController {
     status: 200,
     description: "Lista de avaliações retornada com sucesso",
   })
-  async findMine(@Request() req: any) {
+  async findMine(@Request() req: any): Promise<
+    {
+      id: string;
+      service_order_id: string;
+      reviewer_id: string;
+      reviewee_id: string;
+      rating: number;
+      comment: string | null;
+      created_at: Date;
+      updated_at: Date;
+    }[]
+  > {
     return this.reviewsService.findMine(req.user.sub);
   }
 
@@ -76,7 +87,21 @@ export class ReviewsController {
     status: 403,
     description: "Usuário não é parte do pedido",
   })
-  async findByOrder(@Request() req: any, @Param("orderId") orderId: string) {
+  async findByOrder(
+    @Request() req: any,
+    @Param("orderId") orderId: string,
+  ): Promise<
+    {
+      id: string;
+      service_order_id: string;
+      reviewer_id: string;
+      reviewee_id: string;
+      rating: number;
+      comment: string | null;
+      created_at: Date;
+      updated_at: Date;
+    }[]
+  > {
     return this.reviewsService.findByOrder(orderId, req.user.sub);
   }
 
@@ -103,7 +128,16 @@ export class ReviewsController {
     @Request() req: any,
     @Param("reviewId") reviewId: string,
     @Body() dto: UpdateReviewDto,
-  ) {
+  ): Promise<{
+    id: string;
+    service_order_id: string;
+    reviewer_id: string;
+    reviewee_id: string;
+    rating: number;
+    comment: string | null;
+    created_at: Date;
+    updated_at: Date;
+  }> {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.reviewsService.update(userId, reviewId, dto, ip);

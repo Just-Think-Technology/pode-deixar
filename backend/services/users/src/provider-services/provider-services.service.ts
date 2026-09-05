@@ -37,7 +37,27 @@ export class ProviderServicesService {
     return profile;
   }
 
-  private formatService(service: any) {
+  private formatService(service: {
+    id: string;
+    providerProfileId: string;
+    title: string;
+    description: string;
+    fixedPrice: number;
+    categoryId: string;
+    category?: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+    images?: {
+      id: string;
+      url: string;
+      createdAt: Date;
+    }[];
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
     return {
       id: service.id,
       provider_profile_id: service.providerProfileId,
@@ -53,7 +73,7 @@ export class ProviderServicesService {
           }
         : null,
       images: service.images
-        ? service.images.map((img: any) => ({
+        ? service.images.map((img) => ({
             id: img.id,
             url: img.url,
             created_at: img.createdAt,
@@ -212,7 +232,47 @@ export class ProviderServicesService {
       .toLowerCase();
   }
 
-  private formatProfileResult(profile: any) {
+  private formatProfileResult(profile: {
+    id: string;
+    avatarUrl?: string;
+    bio?: string;
+    hourlyRate?: number;
+    skills?: string[];
+    portfolio?: any;
+    rating?: number;
+    totalReviews?: number;
+    isAvailable?: boolean;
+    createdAt?: Date;
+    updatedAt?: Date;
+    user: {
+      id: string;
+      completeName: string;
+      email: string;
+      phone: string;
+      postalCode: string;
+      role: string;
+    };
+    services: {
+      id: string;
+      title: string;
+      description: string;
+      fixedPrice: number;
+      categoryId: string;
+      isActive: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    }[];
+  }): {
+    id: string;
+    user: UserResponse;
+    avatar_url?: string;
+    bio?: string;
+    skills?: string[];
+    rating?: number;
+    total_reviews?: number;
+    is_available?: boolean;
+    services: ServiceItem[];
+  } {
     return {
       id: profile.id,
       user: {
@@ -228,7 +288,7 @@ export class ProviderServicesService {
       rating: profile.rating,
       total_reviews: profile.totalReviews,
       is_available: profile.isAvailable,
-      services: profile.services.map((s: any) => ({
+      services: profile.services.map((s) => ({
         id: s.id,
         title: s.title,
         description: s.description,
@@ -238,7 +298,7 @@ export class ProviderServicesService {
           ? { id: s.category.id, name: s.category.name, slug: s.category.slug }
           : null,
         images: s.images
-          ? s.images.map((img: any) => ({
+          ? s.images.map((img) => ({
               id: img.id,
               url: img.url,
               created_at: img.createdAt,
@@ -252,8 +312,8 @@ export class ProviderServicesService {
     const { page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const serviceFilter: any = { isActive: true };
-    const profileFilter: any = { services: { some: { isActive: true } } };
+    const serviceFilter = { isActive: true };
+    const profileFilter = { services: { some: { isActive: true } } };
 
     if (query.categoryId) {
       serviceFilter.categoryId = query.categoryId;
@@ -338,4 +398,12 @@ export class ProviderServicesService {
       },
     };
   }
+}
+
+interface UserResponse {
+  id: string;
+  complete_name: string;
+  email: string;
+  phone: string;
+  postal_code: string;
 }

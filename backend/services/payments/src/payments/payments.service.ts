@@ -90,12 +90,21 @@ export class PaymentsService {
     return { feeRate, feeAmount, netAmount };
   }
 
-  private calcularLiquido(payment: {
-    amount: unknown;
-    feeRate: Prisma.Decimal | null;
-    feeAmount: Prisma.Decimal | null;
-    netAmount: Prisma.Decimal | null;
-  }) {
+  private calcularLiquido(
+    payment:
+      | {
+          amount: number;
+          feeRate: number | null;
+          feeAmount: number | null;
+          netAmount: number | null;
+        }
+      | {
+          amount: Prisma.Decimal;
+          feeRate: Prisma.Decimal | null;
+          feeAmount: Prisma.Decimal | null;
+          netAmount: Prisma.Decimal | null;
+        },
+  ) {
     const feeRate = Number(payment.feeRate ?? this.taxaPlataforma);
     const feeAmount =
       payment.feeAmount != null
@@ -258,18 +267,31 @@ export class PaymentsService {
   }
 
   private formatFinanceItem(
-    payment: {
-      id: string;
-      serviceOrderId: string;
-      amount: Prisma.Decimal;
-      status: PaymentStatus;
-      method: PaymentMethod;
-      feeRate: Prisma.Decimal | null;
-      feeAmount: Prisma.Decimal | null;
-      netAmount: Prisma.Decimal | null;
-      paidAt: Date | null;
-      createdAt: Date;
-    },
+    payment:
+      | {
+          id: string;
+          serviceOrderId: string;
+          amount: Prisma.Decimal;
+          status: PaymentStatus;
+          method: PaymentMethod;
+          feeRate: Prisma.Decimal | null;
+          feeAmount: Prisma.Decimal | null;
+          netAmount: Prisma.Decimal | null;
+          paidAt: Date | null;
+          createdAt: Date;
+        }
+      | {
+          id: string;
+          serviceOrderId: string;
+          amount: number;
+          status: PaymentStatus;
+          method: PaymentMethod;
+          feeRate: number | null;
+          feeAmount: number | null;
+          netAmount: number | null;
+          paidAt: Date | null;
+          createdAt: Date;
+        },
     proposalId: string | undefined,
   ) {
     const { feeRate, feeAmount, netAmount } = this.calcularLiquido(payment);
