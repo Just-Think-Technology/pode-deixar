@@ -1,6 +1,6 @@
 # API — Pode Deixar
 
-## Sumário
+## Table of Contents
 
 - [Auth Service](#auth-service) (`:3001`)
 - [Users Service](#users-service) (`:3002`)
@@ -8,44 +8,44 @@
 - [Payments Service](#payments-service) (`:3004`)
 - [Reviews Service](#reviews-service) (`:3005`)
 - [Enums](#enums)
-- [Modelos (Prisma)](#modelos-prisma)
-- [Tabela Resumo](#tabela-resumo)
+- [Models (Prisma)](#models-prisma)
+- [Summary Table](#summary-table)
 
 ---
 
 ## Auth Service
 
-**Porta:** `3001` | **Proxy Caddy:** `/api/auth/*`
+**Port:** `3001` | **Caddy Proxy:** `/api/auth/*`
 
 ### Health
 
 #### `GET /health`
 
-Verificação de saúde do serviço. Sem autenticação.
+Service health check. No authentication.
 
-| Resposta | Código | Descrição |
+| Response | Code | Description |
 |----------|--------|-----------|
-| `HealthCheckResult` | `200` | Serviço saudável |
-| `HealthCheckResult` | `503` | Serviço não saudável |
+| `HealthCheckResult` | `200` | Healthy service |
+| `HealthCheckResult` | `503` | Unhealthy service |
 
 ---
 
 #### `GET /health/ready`
 
-Verificação de prontidão do serviço. Sem autenticação.
+Service readiness check. No authentication.
 
-| Resposta | Código | Descrição |
+| Response | Code | Description |
 |----------|--------|-----------|
-| `HealthCheckResult` | `200` | Serviço pronto |
-| `HealthCheckResult` | `503` | Serviço não pronto |
+| `HealthCheckResult` | `200` | Service ready |
+| `HealthCheckResult` | `503` | Service not ready |
 
 ---
 
 #### `GET /health/live`
 
-Verificação de atividade do serviço. Sem autenticação.
+Service liveness check. No authentication.
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "status": "ok",
@@ -55,11 +55,11 @@ Verificação de atividade do serviço. Sem autenticação.
 
 ---
 
-### Acesso
+### Access
 
 #### `POST /auth/login`
 
-Autenticar usuário e retornar tokens JWT.
+Authenticate a user and return JWT tokens.
 
 **Rate limited** (`ThrottlerGuard`).
 
@@ -72,13 +72,13 @@ Autenticar usuário e retornar tokens JWT.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `email` | `string` | sim | Email do usuário |
-| `password` | `string` | sim | Senha do usuário |
-| `rememberMe` | `boolean` | não | Sessão estendida (default: `false`) |
+| `email` | `string` | yes | User email |
+| `password` | `string` | yes | User password |
+| `rememberMe` | `boolean` | no | Extended session (default: `false`) |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "message": "Login realizado com sucesso",
@@ -95,17 +95,17 @@ Autenticar usuário e retornar tokens JWT.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Email ou senha inválidos | `401` |
-| Conta temporariamente bloqueada | `423` |
-| Email não verificado | `403` |
+| Invalid email or password | `401` |
+| Account temporarily locked | `423` |
+| Email not verified | `403` |
 
 ---
 
 #### `POST /auth/refresh-token`
 
-Atualizar access token usando refresh token.
+Refresh the access token using a refresh token.
 
 **Rate limited** (`ThrottlerGuard`).
 
@@ -116,11 +116,11 @@ Atualizar access token usando refresh token.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `refreshToken` | `string` | sim | Refresh token obtido no login |
+| `refreshToken` | `string` | yes | Refresh token obtained at login |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "access_token": "eyJ...",
@@ -129,22 +129,22 @@ Atualizar access token usando refresh token.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Refresh token inválido ou expirado | `401` |
+| Invalid or expired refresh token | `401` |
 
 ---
 
 #### `GET /auth/verify`
 
-Validar o access token e retornar os dados atuais do usuário. Usado pelo frontend para confirmar a sessão antes de carregar áreas autenticadas.
+Validate the access token and return the current user data. Used by the frontend to confirm the session before loading authenticated areas.
 
 **Headers:**
-| Header | Obrigatório | Valor |
+| Header | Required | Value |
 |--------|-------------|-------|
-| `Authorization` | não | `Bearer eyJ...` (sem token → `authorized: false`) |
+| `Authorization` | no | `Bearer eyJ...` (without token → `authorized: false`) |
 
-**Resposta `200` (token válido):**
+**Response `200` (valid token):**
 ```json
 {
   "authorized": true,
@@ -158,7 +158,7 @@ Validar o access token e retornar os dados atuais do usuário. Usado pelo fronte
 }
 ```
 
-**Resposta `200` (token ausente, inválido, expirado, revogado ou inconsistente):**
+**Response `200` (missing, invalid, expired, revoked or inconsistent token):**
 ```json
 {
   "authorized": false,
@@ -166,24 +166,24 @@ Validar o access token e retornar os dados atuais do usuário. Usado pelo fronte
 }
 ```
 
-> Sempre retorna HTTP `200`. O frontend deve olhar o campo `authorized`, não o status HTTP.
+> Always returns HTTP `200`. The frontend must check the `authorized` field, not the HTTP status.
 >
-> Valida assinatura JWT, tipo `access`, blacklist (`jti`), existência do usuário e consistência de `email`/`role` com o banco.
+> Validates the JWT signature, `access` type, blacklist (`jti`), user existence and `email`/`role` consistency with the database.
 
 ---
 
 #### `POST /auth/logout`
 
-Invalidar tokens do usuário. Requer **Bearer token**.
+Invalidate user tokens. Requires **Bearer token**.
 
-**Rate limited** (`ThrottlerGuard`). **Protegido** (`JwtAuthGuard`).
+**Rate limited** (`ThrottlerGuard`). **Protected** (`JwtAuthGuard`).
 
 **Headers:**
-| Header | Obrigatório | Valor |
+| Header | Required | Value |
 |--------|-------------|-------|
-| `Authorization` | sim | `Bearer eyJ...` |
+| `Authorization` | yes | `Bearer eyJ...` |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "message": "Logout realizado com sucesso"
@@ -192,11 +192,11 @@ Invalidar tokens do usuário. Requer **Bearer token**.
 
 ---
 
-### Cadastro
+### Registration
 
 #### `POST /auth/register`
 
-Registrar um novo usuário.
+Register a new user.
 
 **Rate limited** (`ThrottlerGuard`).
 
@@ -213,17 +213,17 @@ Registrar um novo usuário.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `complete_name` | `string` | sim | Nome completo (3-50 caracteres) |
-| `email` | `string` | sim | Email |
-| `password` | `string` | sim | Mín. 8 chars, 1 maiúscula, 1 minúscula, 1 número, 1 especial |
-| `confirm_password` | `string` | sim | Deve coincidir com `password` |
-| `phone` | `string` | sim | Telefone |
-| `postal_code` | `string` | sim | CEP |
-| `role` | `enum` | sim | `CLIENT` ou `PROVIDER` |
+| `complete_name` | `string` | yes | Full name (3-50 characters) |
+| `email` | `string` | yes | Email |
+| `password` | `string` | yes | Min. 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char |
+| `confirm_password` | `string` | yes | Must match `password` |
+| `phone` | `string` | yes | Phone |
+| `postal_code` | `string` | yes | Postal code |
+| `role` | `enum` | yes | `CLIENT` or `PROVIDER` |
 
-**Resposta `201`:**
+**Response `201`:**
 ```json
 {
   "message": "Cadastro realizado com sucesso. Verifique seu email para ativar sua conta.",
@@ -241,19 +241,19 @@ Registrar um novo usuário.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Email já cadastrado | `409` |
-| Dados inválidos (validation) | `400` |
-| Senha não coincide com confirmação | `400` |
+| Email already registered | `409` |
+| Invalid data (validation) | `400` |
+| Password does not match confirmation | `400` |
 
-> `email_verification_token` só é retornado em ambiente de desenvolvimento.
+> `email_verification_token` is only returned in the development environment.
 
 ---
 
 #### `POST /auth/verify-email`
 
-Verificar email do usuário com token.
+Verify the user email with a token.
 
 **Rate limited** (`ThrottlerGuard`).
 
@@ -264,21 +264,21 @@ Verificar email do usuário com token.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `token` | `string` | sim | Token recebido por email |
+| `token` | `string` | yes | Token received by email |
 
-**Resposta `200`:** `{ "message": "Email verificado com sucesso" }`
+**Response `200`:** `{ "message": "Email verificado com sucesso" }`
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Token inválido ou expirado | `400` |
+| Invalid or expired token | `400` |
 
 ---
 
 #### `POST /auth/resend-email-verification`
 
-Reenviar link de verificação de email.
+Resend the email verification link.
 
 **Rate limited** (`ThrottlerGuard`).
 
@@ -289,11 +289,11 @@ Reenviar link de verificação de email.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `email` | `string` | sim | Email do usuário |
+| `email` | `string` | yes | User email |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "message": "Link de verificação reenviado com sucesso",
@@ -301,18 +301,18 @@ Reenviar link de verificação de email.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Email não encontrado | `404` |
-| Email já verificado | `400` |
+| Email not found | `404` |
+| Email already verified | `400` |
 
 ---
 
-### Senha
+### Password
 
 #### `POST /auth/forgot-password`
 
-Solicitar redefinição de senha. Envia email com token. Sem autenticação.
+Request a password reset. Sends an email with a token. No authentication.
 
 **Request body (`ForgotPasswordDto`):**
 ```json
@@ -321,7 +321,7 @@ Solicitar redefinição de senha. Envia email com token. Sem autenticação.
 }
 ```
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "message": "Se o email existir, você receberá um link de redefinição de senha",
@@ -333,7 +333,7 @@ Solicitar redefinição de senha. Envia email com token. Sem autenticação.
 
 #### `POST /auth/reset-password`
 
-Redefinir senha usando token recebido por email. Sem autenticação.
+Reset the password using the token received by email. No authentication.
 
 **Request body (`ResetPasswordDto`):**
 ```json
@@ -343,12 +343,12 @@ Redefinir senha usando token recebido por email. Sem autenticação.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `token` | `string` | sim | Token de redefinição |
-| `newPassword` | `string` | sim | Mín. 8 chars, 1 maiúscula, 1 minúscula, 1 número, 1 especial |
+| `token` | `string` | yes | Reset token |
+| `newPassword` | `string` | yes | Min. 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "message": "Senha redefinida com sucesso",
@@ -356,17 +356,17 @@ Redefinir senha usando token recebido por email. Sem autenticação.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Token inválido ou expirado | `400` |
+| Invalid or expired token | `400` |
 
 ---
 
 #### `PUT /auth/change-password`
 
-Alterar senha do usuário autenticado. Requer **Bearer token**.
+Change the authenticated user password. Requires **Bearer token**.
 
-**Protegido** (`JwtAuthGuard`).
+**Protected** (`JwtAuthGuard`).
 
 **Request body (`ChangePasswordDto`):**
 ```json
@@ -376,24 +376,24 @@ Alterar senha do usuário autenticado. Requer **Bearer token**.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `currentPassword` | `string` | sim | Senha atual |
-| `newPassword` | `string` | sim | Mín. 8 chars, 1 maiúscula, 1 minúscula, 1 número, 1 especial |
+| `currentPassword` | `string` | yes | Current password |
+| `newPassword` | `string` | yes | Min. 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char |
 
-**Resposta `200`:** `{ "message": "Senha alterada com sucesso" }`
+**Response `200`:** `{ "message": "Senha alterada com sucesso" }`
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Senha atual incorreta | `400` |
+| Incorrect current password | `400` |
 
-> Invalida o access token atual e limpa o refresh token no banco.
+> Invalidates the current access token and clears the refresh token in the database.
 
 ---
 
 ## Users Service
 
-**Porta:** `3002` | **Proxy Caddy:** `/api/profiles/*`, `/api/providers/*`, `/api/categories/*`, `/api/storage/*`
+**Port:** `3002` | **Caddy Proxy:** `/api/profiles/*`, `/api/providers/*`, `/api/categories/*`, `/api/storage/*`
 
 ### Health
 
@@ -403,19 +403,19 @@ Alterar senha do usuário autenticado. Requer **Bearer token**.
 
 #### `GET /health/live`
 
-Idênticos ao [Auth Service Health](#health).
+Identical to [Auth Service Health](#health).
 
 ---
 
-### Categorias
+### Categories
 
-**Prefixo:** `categories` | **GET público** | **POST/PATCH/DELETE:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `ADMIN`
+**Prefix:** `categories` | **Public GET** | **POST/PATCH/DELETE:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `ADMIN`
 
 #### `GET /categories`
 
-Listar todas as categorias, ordenadas por `order`. Sem autenticação.
+List all categories, ordered by `order`. No authentication.
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 [
   {
@@ -433,7 +433,7 @@ Listar todas as categorias, ordenadas por `order`. Sem autenticação.
 
 #### `POST /categories`
 
-Criar nova categoria. Requer **Bearer token** com role `ADMIN`.
+Create a new category. Requires **Bearer token** with `ADMIN` role.
 
 **Request body (`CreateCategoryDto`):**
 ```json
@@ -446,66 +446,66 @@ Criar nova categoria. Requer **Bearer token** com role `ADMIN`.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `name` | `string` | sim | Nome (máx. 100 caracteres) |
-| `slug` | `string` | sim | Slug único (máx. 100 caracteres) |
-| `description` | `string` | não | Descrição (máx. 500 caracteres) |
-| `icon` | `string` | não | Nome do ícone Lucide (máx. 50 caracteres) |
-| `order` | `number` | não | Ordem de exibição (≥ 0) |
+| `name` | `string` | yes | Name (max 100 characters) |
+| `slug` | `string` | yes | Unique slug (max 100 characters) |
+| `description` | `string` | no | Description (max 500 characters) |
+| `icon` | `string` | no | Lucide icon name (max 50 characters) |
+| `order` | `number` | no | Display order (≥ 0) |
 
-**Resposta `201`:** Categoria criada.
+**Response `201`:** Created category.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Nome ou slug já existente | `409` |
+| Name or slug already exists | `409` |
 
 ---
 
 #### `PATCH /categories/:id`
 
-Atualizar categoria. Requer **Bearer token** com role `ADMIN`.
+Update a category. Requires **Bearer token** with `ADMIN` role.
 
-**Parâmetros de URL:**
-| Parâmetro | Tipo | Descrição |
+**URL parameters:**
+| Parameter | Type | Description |
 |-----------|------|-----------|
-| `id` | `string` (UUID) | ID da categoria |
+| `id` | `string` (UUID) | Category ID |
 
-**Request body (`UpdateCategoryDto`):** Mesmos campos do `CreateCategoryDto`, todos opcionais.
+**Request body (`UpdateCategoryDto`):** Same fields as `CreateCategoryDto`, all optional.
 
-**Resposta `200`:** Categoria atualizada.
+**Response `200`:** Updated category.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Categoria não encontrada | `404` |
-| Nome ou slug já existente | `409` |
+| Category not found | `404` |
+| Name or slug already exists | `409` |
 
 ---
 
 #### `DELETE /categories/:id`
 
-Excluir categoria. Requer **Bearer token** com role `ADMIN`.
+Delete a category. Requires **Bearer token** with `ADMIN` role.
 
-**Resposta `200`:** `{ "message": "Categoria excluída com sucesso" }`
+**Response `200`:** `{ "message": "Categoria excluída com sucesso" }`
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Categoria não encontrada | `404` |
-| Categoria possui serviços vinculados | `409` |
+| Category not found | `404` |
+| Category has linked services | `409` |
 
 ---
 
-### Perfis
+### Profiles
 
-**Prefixo:** `profiles` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Bearer token**
+**Prefix:** `profiles` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Bearer token**
 
 #### `GET /profiles/me`
 
-Obter perfil do usuário autenticado.
+Get the authenticated user profile.
 
 **Roles:** `CLIENT`, `PROVIDER`
 
-**Resposta `200` (CLIENT):**
+**Response `200` (CLIENT):**
 ```json
 {
   "id": "uuid",
@@ -524,7 +524,7 @@ Obter perfil do usuário autenticado.
 }
 ```
 
-**Resposta `200` (PROVIDER):**
+**Response `200` (PROVIDER):**
 ```json
 {
   "id": "uuid",
@@ -549,15 +549,15 @@ Obter perfil do usuário autenticado.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Perfil não encontrado | `404` |
+| Profile not found | `404` |
 
 ---
 
 #### `POST /profiles/client`
 
-Criar perfil de cliente.
+Create a client profile.
 
 **Roles:** `CLIENT`
 
@@ -569,12 +569,12 @@ Criar perfil de cliente.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `avatarUrl` | `string` | não | URL do avatar |
-| `preferences` | `object` | não | Preferências em JSON |
+| `avatarUrl` | `string` | no | Avatar URL |
+| `preferences` | `object` | no | Preferences as JSON |
 
-**Resposta `201`:**
+**Response `201`:**
 ```json
 {
   "id": "uuid",
@@ -586,15 +586,15 @@ Criar perfil de cliente.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Perfil já existe | `409` |
+| Profile already exists | `409` |
 
 ---
 
 #### `PATCH /profiles/client`
 
-Atualizar perfil de cliente.
+Update the client profile.
 
 **Roles:** `CLIENT`
 
@@ -606,19 +606,19 @@ Atualizar perfil de cliente.
 }
 ```
 
-Ambos os campos opcionais.
+Both fields optional.
 
-**Resposta `200`:** Mesma estrutura do `POST /profiles/client`.
+**Response `200`:** Same structure as `POST /profiles/client`.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Perfil não encontrado | `404` |
+| Profile not found | `404` |
 
 ---
 
 #### `POST /profiles/provider`
 
-Criar perfil de prestador.
+Create a provider profile.
 
 **Roles:** `PROVIDER`
 
@@ -634,9 +634,9 @@ Criar perfil de prestador.
 }
 ```
 
-Todos os campos opcionais.
+All fields optional.
 
-**Resposta `201`:**
+**Response `201`:**
 ```json
 {
   "id": "uuid",
@@ -654,65 +654,65 @@ Todos os campos opcionais.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Perfil já existe | `409` |
+| Profile already exists | `409` |
 
 ---
 
 #### `PATCH /profiles/provider`
 
-Atualizar perfil de prestador.
+Update the provider profile.
 
 **Roles:** `PROVIDER`
 
-**Request body (`UpdateProviderProfileDto`):** Mesmos campos do `CreateProviderProfileDto`, todos opcionais.
+**Request body (`UpdateProviderProfileDto`):** Same fields as `CreateProviderProfileDto`, all optional.
 
-**Resposta `200`:** Mesma estrutura do `POST /profiles/provider`.
+**Response `200`:** Same structure as `POST /profiles/provider`.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Perfil não encontrado | `404` |
+| Profile not found | `404` |
 
 ---
 
 #### `PATCH /profiles/avatar`
 
-Fazer upload de avatar (para ambos os tipos de perfil). Multipart form-data, campo `file`.
+Upload an avatar (for both profile types). Multipart form-data, `file` field.
 
 **Roles:** `CLIENT`, `PROVIDER`
 
 **Request (multipart/form-data):**
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `file` | `binary` | sim | JPEG, PNG, WebP ou GIF, máx 2MB |
+| `file` | `binary` | yes | JPEG, PNG, WebP or GIF, max 2MB |
 
-**Resposta `200`:** Perfil atualizado (mesma estrutura de `GET /profiles/me`), com `avatar_url` apontando para o MinIO.
+**Response `200`:** Updated profile (same structure as `GET /profiles/me`), with `avatar_url` pointing to MinIO.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Arquivo não enviado | `400` |
-| Formato inválido | `400` |
-| Perfil não encontrado | `404` |
+| No file uploaded | `400` |
+| Invalid format | `400` |
+| Profile not found | `404` |
 
-> O avatar antigo é automaticamente removido do MinIO ao enviar um novo.
+> The old avatar is automatically removed from MinIO when a new one is uploaded.
 
 ---
 
-### Perfil Público do Prestador
+### Provider Public Profile
 
-**Prefixo:** `providers/:providerId/profile` | **Sem autenticação**
+**Prefix:** `providers/:providerId/profile` | **No authentication**
 
 #### `GET /providers/:providerId/profile`
 
-Visualizar perfil público de um prestador, incluindo seus serviços ativos.
+View a provider public profile, including their active services.
 
-**Parâmetros de URL:**
-| Parâmetro | Tipo | Descrição |
+**URL parameters:**
+| Parameter | Type | Description |
 |-----------|------|-----------|
-| `providerId` | `string` (UUID) | ID do perfil do prestador |
+| `providerId` | `string` (UUID) | Provider profile ID |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "id": "uuid",
@@ -735,19 +735,19 @@ Visualizar perfil público de um prestador, incluindo seus serviços ativos.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Perfil não encontrado | `404` |
+| Profile not found | `404` |
 
 ---
 
-### Serviços do Prestador (Próprio)
+### Provider Services (Own)
 
-**Prefixo:** `providers/me/services` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+**Prefix:** `providers/me/services` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
 
 #### `POST /providers/me/services`
 
-Cadastrar novo serviço.
+Register a new service.
 
 **Request body (`CreateProviderServiceDto`):**
 ```json
@@ -759,14 +759,14 @@ Cadastrar novo serviço.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `title` | `string` | sim | Máx. 200 caracteres |
-| `description` | `string` | sim | Máx. 2000 caracteres |
-| `fixedPrice` | `number` | sim | 2 casas decimais, positivo |
-| `categoryId` | `string` (UUID) | sim | ID da categoria |
+| `title` | `string` | yes | Max 200 characters |
+| `description` | `string` | yes | Max 2000 characters |
+| `fixedPrice` | `number` | yes | 2 decimal places, positive |
+| `categoryId` | `string` (UUID) | yes | Category ID |
 
-**Resposta `201`:**
+**Response `201`:**
 ```json
 {
   "id": "uuid",
@@ -782,82 +782,82 @@ Cadastrar novo serviço.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Perfil de prestador não encontrado | `404` |
+| Provider profile not found | `404` |
 
 ---
 
 #### `GET /providers/me/services`
 
-Listar todos os serviços do prestador autenticado.
+List all services of the authenticated provider.
 
-**Resposta `200`:** Array da mesma estrutura do `POST` acima.
+**Response `200`:** Array with the same structure as `POST` above.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Perfil de prestador não encontrado | `404` |
+| Provider profile not found | `404` |
 
 ---
 
-### Serviços do Prestador (Detalhe/Dono)
+### Provider Services (Detail/Owner)
 
-**Prefixo:** `providers/me/services/:serviceId` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+**Prefix:** `providers/me/services/:serviceId` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
 
 #### `PATCH /providers/me/services/:serviceId`
 
-Atualizar serviço (apenas dono).
+Update a service (owner only).
 
-**Parâmetros de URL:**
-| Parâmetro | Tipo | Descrição |
+**URL parameters:**
+| Parameter | Type | Description |
 |-----------|------|-----------|
-| `serviceId` | `string` (UUID) | ID do serviço |
+| `serviceId` | `string` (UUID) | Service ID |
 
-**Request body (`UpdateProviderServiceDto`):** Mesmos campos do `CreateProviderServiceDto`, todos opcionais.
+**Request body (`UpdateProviderServiceDto`):** Same fields as `CreateProviderServiceDto`, all optional.
 
-**Resposta `200`:** Serviço atualizado (mesma estrutura do `POST`).
+**Response `200`:** Updated service (same structure as `POST`).
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Serviço não encontrado | `404` |
-| Serviço não pertence a este prestador | `400` |
+| Service not found | `404` |
+| Service does not belong to this provider | `400` |
 
 ---
 
 #### `DELETE /providers/me/services/:serviceId`
 
-Desativar serviço (soft delete — marca `is_active = false`).
+Deactivate a service (soft delete — sets `is_active = false`).
 
-**Resposta `200`:** Serviço desativado (mesma estrutura com `is_active: false`).
+**Response `200`:** Deactivated service (same structure with `is_active: false`).
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Serviço não encontrado | `404` |
-| Serviço não pertence a este prestador | `400` |
+| Service not found | `404` |
+| Service does not belong to this provider | `400` |
 
-> O registro permanece no banco, apenas `is_active` é alterado para `false`.
+> The record remains in the database, only `is_active` is set to `false`.
 
 ---
 
-### Imagens do Serviço
+### Service Images
 
-**Prefixo:** `providers/me/services/:serviceId/images` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+**Prefix:** `providers/me/services/:serviceId/images` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
 
 #### `POST /providers/me/services/:serviceId/images`
 
-Fazer upload de imagem para um serviço. Multipart form-data, campo `file`.
+Upload an image for a service. Multipart form-data, `file` field.
 
-**Parâmetros de URL:**
-| Parâmetro | Tipo | Descrição |
+**URL parameters:**
+| Parameter | Type | Description |
 |-----------|------|-----------|
-| `serviceId` | `string` (UUID) | ID do serviço |
+| `serviceId` | `string` (UUID) | Service ID |
 
 **Request (multipart/form-data):**
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `file` | `binary` | sim | JPEG, PNG, WebP ou GIF, máx 5MB |
+| `file` | `binary` | yes | JPEG, PNG, WebP or GIF, max 5MB |
 
-**Resposta `201`:**
+**Response `201`:**
 ```json
 {
   "id": "uuid",
@@ -867,19 +867,19 @@ Fazer upload de imagem para um serviço. Multipart form-data, campo `file`.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Arquivo não enviado | `400` |
-| Formato inválido | `400` |
-| Serviço não encontrado | `404` |
+| No file uploaded | `400` |
+| Invalid format | `400` |
+| Service not found | `404` |
 
 ---
 
 #### `GET /providers/me/services/:serviceId/images`
 
-Listar imagens de um serviço.
+List images of a service.
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 [
   {
@@ -891,23 +891,23 @@ Listar imagens de um serviço.
 ]
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Serviço não encontrado | `404` |
+| Service not found | `404` |
 
 ---
 
 #### `DELETE /providers/me/services/:serviceId/images/:imageId`
 
-Remover imagem de um serviço.
+Remove an image from a service.
 
-**Parâmetros de URL:**
-| Parâmetro | Tipo | Descrição |
+**URL parameters:**
+| Parameter | Type | Description |
 |-----------|------|-----------|
-| `serviceId` | `string` (UUID) | ID do serviço |
-| `imageId` | `string` (UUID) | ID da imagem |
+| `serviceId` | `string` (UUID) | Service ID |
+| `imageId` | `string` (UUID) | Image ID |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "id": "uuid",
@@ -917,31 +917,31 @@ Remover imagem de um serviço.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Imagem ou serviço não encontrado | `404` |
+| Image or service not found | `404` |
 
-> As imagens são armazenadas no MinIO e servidas via proxy Caddy (`/api/storage/*` → `minio:9000`), sem passar pelo backend NestJS.
+> Images are stored in MinIO and served via the Caddy proxy (`/api/storage/*` → `minio:9000`), without going through the NestJS backend.
 
 ---
 
-### Busca de Prestadores
+### Provider Search
 
-**Prefixo:** `providers/search` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
+**Prefix:** `providers/search` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
 
 #### `GET /providers/search`
 
-Buscar prestadores por categoria ou texto.
+Search providers by category or text.
 
 **Query params:**
-| Parâmetro | Tipo | Obrigatório | Descrição | Default |
+| Parameter | Type | Required | Description | Default |
 |-----------|------|-------------|-----------|---------|
-| `categoryId` | `string` (UUID) | não | Filtrar por ID da categoria | — |
-| `q` | `string` | não | Texto para busca no título/descrição | — |
-| `page` | `number` | não | Número da página | `1` |
-| `limit` | `number` | não | Itens por página | `10` |
+| `categoryId` | `string` (UUID) | no | Filter by category ID | — |
+| `q` | `string` | no | Text to search in title/description | — |
+| `page` | `number` | no | Page number | `1` |
+| `limit` | `number` | no | Items per page | `10` |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "data": [
@@ -968,27 +968,27 @@ Buscar prestadores por categoria ou texto.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Token inválido ou não autorizado | `401` |
-| Role não autorizada (não é CLIENT) | `403` |
+| Invalid or unauthorized token | `401` |
+| Unauthorized role (not CLIENT) | `403` |
 
 ---
 
-### Serviços do Prestador (Público)
+### Provider Services (Public)
 
-**Prefixo:** `providers/:providerId/services` | **Sem autenticação**
+**Prefix:** `providers/:providerId/services` | **No authentication**
 
 #### `GET /providers/:providerId/services`
 
-Listar serviços ativos de um prestador específico.
+List active services of a specific provider.
 
-**Parâmetros de URL:**
-| Parâmetro | Tipo | Descrição |
+**URL parameters:**
+| Parameter | Type | Description |
 |-----------|------|-----------|
-| `providerId` | `string` (UUID) | ID do perfil do prestador |
+| `providerId` | `string` (UUID) | Provider profile ID |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 [
   {
@@ -1006,15 +1006,15 @@ Listar serviços ativos de um prestador específico.
 ]
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Perfil de prestador não encontrado | `404` |
+| Provider profile not found | `404` |
 
 ---
 
 ## Service Orders Service
 
-**Porta:** `3003` | **Proxy Caddy:** `/api/services/*`, `/api/proposals/*`
+**Port:** `3003` | **Caddy Proxy:** `/api/services/*`, `/api/proposals/*`
 
 ### Health
 
@@ -1024,17 +1024,17 @@ Listar serviços ativos de um prestador específico.
 
 #### `GET /health/live`
 
-Idênticos ao [Auth Service Health](#health).
+Identical to [Auth Service Health](#health).
 
 ---
 
-### Pedidos de Serviço (Cliente)
+### Service Orders (Client)
 
-**Prefixo:** `services/me` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
+**Prefix:** `services/me` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
 
 #### `POST /services/me`
 
-Criar novo pedido de serviço. Se `providerId` for informado, o pedido é direcionado a um prestador específico (solicitação direta de orçamento).
+Create a new service order. If `providerId` is provided, the order is directed to a specific provider (direct quote request).
 
 **Request body (`CreateServiceOrderDto`):**
 ```json
@@ -1056,19 +1056,19 @@ Criar novo pedido de serviço. Se `providerId` for informado, o pedido é direci
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `title` | `string` | sim | Máx. 200 caracteres |
-| `description` | `string` | sim | Máx. 2000 caracteres |
-| `categoryId` | `string` (UUID) | sim | ID da categoria |
-| `providerId` | `string` (UUID) | não | ID do prestador (solicitação direta) |
-| `budgetMin` | `number` | não | Orçamento mínimo (≥ 0) |
-| `budgetMax` | `number` | não | Orçamento máximo (> 0) |
-| `address` | `object` | não | Endereço onde o serviço será realizado (campos: `street`, `number`, `neighborhood`, `city`, `state`, `postalCode`) |
+| `title` | `string` | yes | Max 200 characters |
+| `description` | `string` | yes | Max 2000 characters |
+| `categoryId` | `string` (UUID) | yes | Category ID |
+| `providerId` | `string` (UUID) | no | Provider ID (direct request) |
+| `budgetMin` | `number` | no | Minimum budget (≥ 0) |
+| `budgetMax` | `number` | no | Maximum budget (> 0) |
+| `address` | `object` | no | Address where the service will be performed (fields: `street`, `number`, `neighborhood`, `city`, `state`, `postalCode`) |
 
-> O `address` é informado pelo cliente no pedido (todos os campos opcionais). Lat/lng **não** é obrigatório — o front monta o link do Google Maps com o endereço textual.
+> The `address` is provided by the client in the order (all fields optional). Lat/lng is not required — the frontend builds the Google Maps link from the textual address.
 
-**Resposta `201`:**
+**Response `201`:**
 ```json
 {
   "id": "uuid",
@@ -1094,21 +1094,21 @@ Criar novo pedido de serviço. Se `providerId` for informado, o pedido é direci
 }
 ```
 
-> Nas respostas, o endereço é retornado formatado em **snake_case** (`postal_code`), com `null` para campos ausentes.
+> In responses, the address is returned formatted in **snake_case** (`postal_code`), with `null` for missing fields.
 
 ---
 
 #### `GET /services/me`
 
-Listar todos os pedidos do cliente autenticado.
+List all orders of the authenticated client.
 
-**Resposta `200`:** Array da mesma estrutura do `POST` acima.
+**Response `200`:** Array with the same structure as `POST` above.
 
 ---
 
 #### `POST /services/me/hire`
 
-Contratar serviço com valor fixo diretamente (sem proposta). Cria pedido com status `IN_PROGRESS`.
+Hire a service with a fixed price directly (without a proposal). Creates an order with `IN_PROGRESS` status.
 
 **Request body (`HireProviderServiceDto`):**
 ```json
@@ -1125,41 +1125,41 @@ Contratar serviço com valor fixo diretamente (sem proposta). Cria pedido com st
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `providerServiceId` | `string` (UUID) | sim | ID do serviço do prestador |
-| `address` | `object` | não | Endereço onde o serviço será realizado (mesma estrutura do `POST /services/me`) |
+| `providerServiceId` | `string` (UUID) | yes | Provider service ID |
+| `address` | `object` | no | Address where the service will be performed (same structure as `POST /services/me`) |
 
-**Resposta `201`:** Mesma estrutura do `POST /services/me`, com acréscimos:
+**Response `201`:** Same structure as `POST /services/me`, with additions:
 
-| Campo | Descrição |
+| Field | Description |
 |-------|-----------|
-| `provider_service_id` | ID do serviço contratado |
-| `agreed_price` | Valor fixo acordado (copiado do serviço) |
-| `status` | `IN_PROGRESS` (já inicia em andamento) |
+| `provider_service_id` | Contracted service ID |
+| `agreed_price` | Agreed fixed price (copied from the service) |
+| `status` | `IN_PROGRESS` (already starts in progress) |
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Serviço do prestador não encontrado | `404` |
-| Serviço não está disponível | `400` |
-| Não é possível contratar próprio serviço | `400` |
+| Provider service not found | `404` |
+| Service is not available | `400` |
+| Cannot hire own service | `400` |
 
 ---
 
-### Pedidos de Serviço (Dono)
+### Service Orders (Owner)
 
-**Prefixo:** `services/me/:orderId` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
+**Prefix:** `services/me/:orderId` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
 
 #### `GET /services/me/:orderId`
 
-Obter detalhe de um pedido (apenas dono).
+Get order detail (owner only).
 
-**Parâmetros de URL:**
-| Parâmetro | Tipo | Descrição |
+**URL parameters:**
+| Parameter | Type | Description |
 |-----------|------|-----------|
-| `orderId` | `string` (UUID) | ID do pedido |
+| `orderId` | `string` (UUID) | Order ID |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
  {
   "id": "uuid",
@@ -1189,92 +1189,92 @@ Obter detalhe de um pedido (apenas dono).
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Pedido não encontrado | `404` |
-| Pedido não pertence ao cliente | `400` |
+| Order not found | `404` |
+| Order does not belong to the client | `400` |
 
 ---
 
 #### `PATCH /services/me/:orderId`
 
-Atualizar pedido (apenas dono, apenas se aberto).
+Update an order (owner only, only if open).
 
-**Request body (`UpdateServiceOrderDto`):** Mesmos campos do `CreateServiceOrderDto`, todos opcionais.
+**Request body (`UpdateServiceOrderDto`):** Same fields as `CreateServiceOrderDto`, all optional.
 
-**Resposta `200`:** Pedido atualizado (mesma estrutura sem proposals).
+**Response `200`:** Updated order (same structure without proposals).
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Pedido não encontrado | `404` |
-| Pedido não pertence ao cliente ou não está aberto | `400` |
+| Order not found | `404` |
+| Order does not belong to the client or is not open | `400` |
 
 ---
 
 #### `DELETE /services/me/:orderId`
 
-Cancelar pedido (apenas dono). Altera status para `CANCELLED`.
+Cancel an order (owner only). Changes status to `CANCELLED`.
 
-**Resposta `200`:** Pedido cancelado (mesma estrutura com `status: "CANCELLED"`).
+**Response `200`:** Cancelled order (same structure with `status: "CANCELLED"`).
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Pedido não encontrado | `404` |
-| Pedido não pertence ao cliente | `400` |
+| Order not found | `404` |
+| Order does not belong to the client | `400` |
 
 ---
 
-### Pedidos de Serviço (Prestador)
+### Service Orders (Provider)
 
-**Prefixo:** `services/requests/received` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+**Prefix:** `services/requests/received` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
 
 #### `GET /services/requests/received`
 
-Listar pedidos direcionados ao prestador logado (solicitações recebidas).
+List orders directed to the logged-in provider (received requests).
 
-**Resposta `200`:** Array da mesma estrutura do `POST /services/me`.
+**Response `200`:** Array with the same structure as `POST /services/me`.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Token inválido | `401` |
+| Invalid token | `401` |
 
 ---
 
-### Concluir Pedido (Prestador)
+### Complete Order (Provider)
 
-**Rota:** `POST /services/me/:orderId/complete` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+**Route:** `POST /services/me/:orderId/complete` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
 
-Transiciona o pedido de `IN_PROGRESS` para `COMPLETED`. Pré-requisito para a avaliação do serviço. Apenas o **prestador designado ao pedido** (`provider_id`) pode concluir.
+Transitions the order from `IN_PROGRESS` to `COMPLETED`. Prerequisite for the service review. Only the **provider assigned to the order** (`provider_id`) can complete it.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Pedido não encontrado | `404` |
-| Pedido não pertence ao prestador | `403` |
-| Pedido não está em andamento ou já está concluído | `400` |
+| Order not found | `404` |
+| Order does not belong to the provider | `403` |
+| Order is not in progress or is already completed | `400` |
 
 ---
 
-### Agenda do Prestador (JTT-94)
+### Provider Agenda (JTT-94)
 
-**Prefixo:** `services/me/agenda` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+**Prefix:** `services/me/agenda` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
 
 #### `GET /services/me/agenda?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
-Listar os **serviços pagos e agendados** do prestador autenticado no período — usado para posicionar os jobs no calendário da agenda.
+List the authenticated provider **paid and scheduled services** in the period — used to place jobs on the agenda calendar.
 
-**Critérios de inclusão (todos):**
-- Prestador do pedido: `provider_id` = usuário autenticado **OU** proposta `ACCEPTED` desse prestador no pedido (pedidos de marketplace)
-- Pagamento `PAID` (exclui `REFUNDED`, `FAILED`, `CANCELLED`)
-- Status do pedido `IN_PROGRESS` (a realizar) ou `COMPLETED` (realizado)
-- `scheduled_at` dentro do período `from`/`to`
+**Inclusion criteria (all):**
+- Order provider: `provider_id` = authenticated user **OR** `ACCEPTED` proposal from this provider on the order (marketplace orders)
+- `PAID` payment (excludes `REFUNDED`, `FAILED`, `CANCELLED`)
+- Order status `IN_PROGRESS` (upcoming) or `COMPLETED` (done)
+- `scheduled_at` within the `from`/`to` period
 
 **Query params:**
-| Parâmetro | Tipo | Obrigatório | Descrição |
+| Parameter | Type | Required | Description |
 |-----------|------|-------------|-----------|
-| `from` | `string` (YYYY-MM-DD) | sim | Data inicial do período |
-| `to` | `string` (YYYY-MM-DD) | sim | Data final do período — janela **máxima de 92 dias** |
+| `from` | `string` (YYYY-MM-DD) | yes | Period start date |
+| `to` | `string` (YYYY-MM-DD) | yes | Period end date — **maximum 92-day** window |
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 [
   {
@@ -1305,61 +1305,61 @@ Listar os **serviços pagos e agendados** do prestador autenticado no período �
 ]
 ```
 
-| Campo | Descrição |
+| Field | Description |
 |-------|-----------|
-| `scheduled_at` / `scheduled_end_at` | Data/hora do serviço (agendamento definido pelo cliente no checkout) |
-| `order_status` | `IN_PROGRESS` (futuro) ou `COMPLETED` (passado) — o front decide "realizado vs a realizar" |
-| `address` | Endereço textual completo (link Google Maps montado no front; lat/lng não é enviado) |
-| `photos` | URLs públicas MinIO das fotos do pedido |
-| `payment` | Somente `status`/`amount`/`paid_at` — **nunca** expõe dados de cartão |
+| `scheduled_at` / `scheduled_end_at` | Service date/time (scheduling set by the client at checkout) |
+| `order_status` | `IN_PROGRESS` (upcoming) or `COMPLETED` (past) — the frontend decides "done vs upcoming" |
+| `address` | Full textual address (Google Maps link built on the frontend; lat/lng is not sent) |
+| `photos` | Public MinIO URLs of the order photos |
+| `payment` | Only `status`/`amount`/`paid_at` — **never** exposes card data |
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| `from`/`to` ausentes ou inválidos | `400` |
-| Janela maior que 92 dias ou `from` > `to` | `400` |
+| Missing or invalid `from`/`to` | `400` |
+| Window larger than 92 days or `from` > `to` | `400` |
 
 ---
 
-### Pedidos de Serviço (Público)
+### Service Orders (Public)
 
-**Prefixo:** `services` | **Sem autenticação**
+**Prefix:** `services` | **No authentication**
 
 #### `GET /services`
 
-Listar pedidos abertos (para prestadores encontrarem oportunidades).
+List open orders (so providers can find opportunities).
 
-**Resposta `200`:** Array com pedidos de status `OPEN` (mesma estrutura sem proposals).
+**Response `200`:** Array with `OPEN` status orders (same structure without proposals).
 
 ---
 
 #### `GET /services/:orderId`
 
-Obter detalhe de um pedido (autenticado — `CLIENT` ou `PROVIDER`).
+Get order detail (authenticated — `CLIENT` or `PROVIDER`).
 
-**Regras de acesso:**
-- **CLIENT** dono do pedido → vê tudo (propostas + fotos)
-- **PROVIDER** com proposta no pedido (ou prestador alvo) → vê o pedido, apenas sua proposta e as fotos
-- Demais casos → `403 Forbidden`
+**Access rules:**
+- **CLIENT** owning the order → sees everything (proposals + photos)
+- **PROVIDER** with a proposal on the order (or target provider) → sees the order, only their proposal and the photos
+- All other cases → `403 Forbidden`
 
-**Resposta `200`:** Mesma estrutura com proposals do `GET /services/me/:orderId`, acrescida de:
-| Campo | Descrição |
+**Response `200`:** Same structure with proposals from `GET /services/me/:orderId`, plus:
+| Field | Description |
 |-------|-----------|
-| `photos` | Array `[{ id, url }]` com as fotos do pedido (URLs públicas MinIO) |
+| `photos` | Array `[{ id, url }]` with the order photos (public MinIO URLs) |
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Pedido não encontrado | `404` |
-| Sem acesso ao pedido | `403` |
+| Order not found | `404` |
+| No access to the order | `403` |
 
 ---
 
-### Propostas (Prestador)
+### Proposals (Provider)
 
-**Prefixo:** `proposals` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+**Prefix:** `proposals` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
 
 #### `POST /proposals`
 
-Criar proposta para um pedido de serviço.
+Create a proposal for a service order.
 
 **Request body (`CreateProposalDto`):**
 ```json
@@ -1371,14 +1371,14 @@ Criar proposta para um pedido de serviço.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `serviceOrderId` | `string` (UUID) | sim | ID do pedido de serviço |
-| `price` | `number` | sim | Preço proposto, 2 casas decimais, positivo |
-| `description` | `string` | sim | Máx. 2000 caracteres |
-| `estimatedDuration` | `string` | não | Duração estimada, máx. 100 caracteres |
+| `serviceOrderId` | `string` (UUID) | yes | Service order ID |
+| `price` | `number` | yes | Proposed price, 2 decimal places, positive |
+| `description` | `string` | yes | Max 2000 characters |
+| `estimatedDuration` | `string` | no | Estimated duration, max 100 characters |
 
-**Resposta `201`:**
+**Response `201`:**
 ```json
 {
   "id": "uuid",
@@ -1393,94 +1393,94 @@ Criar proposta para um pedido de serviço.
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Pedido não encontrado | `404` |
-| Pedido não está aberto ou já possui proposta sua | `400` |
+| Order not found | `404` |
+| Order is not open or you already have a proposal | `400` |
 
 ---
 
 #### `GET /proposals/me`
 
-Listar minhas propostas (prestador autenticado).
+List my proposals (authenticated provider).
 
-**Resposta `200`:** Array da mesma estrutura do `POST` acima.
+**Response `200`:** Array with the same structure as `POST` above.
 
 ---
 
-### Propostas (Detalhe do Prestador)
+### Proposals (Provider Detail)
 
-**Prefixo:** `proposals/:proposalId` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
+**Prefix:** `proposals/:proposalId` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER`
 
 #### `PATCH /proposals/:proposalId`
 
-Atualizar proposta (apenas dono, apenas se pendente).
+Update a proposal (owner only, only if pending).
 
-**Request body (`UpdateProposalDto`):** `price`, `description`, `estimatedDuration` — todos opcionais. `serviceOrderId` não pode ser alterado.
+**Request body (`UpdateProposalDto`):** `price`, `description`, `estimatedDuration` — all optional. `serviceOrderId` cannot be changed.
 
-**Resposta `200`:** Proposta atualizada.
+**Response `200`:** Updated proposal.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Proposta não encontrada | `404` |
-| Proposta não pertence ao prestador ou não está pendente | `400` |
+| Proposal not found | `404` |
+| Proposal does not belong to the provider or is not pending | `400` |
 
 ---
 
 #### `DELETE /proposals/:proposalId`
 
-Retirar proposta (apenas dono, apenas se pendente). Altera status para `WITHDRAWN`.
+Withdraw a proposal (owner only, only if pending). Changes status to `WITHDRAWN`.
 
-**Resposta `200`:** Proposta com status `WITHDRAWN`.
+**Response `200`:** Proposal with `WITHDRAWN` status.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Proposta não encontrada | `404` |
-| Proposta não pertence ao prestador ou não está pendente | `400` |
+| Proposal not found | `404` |
+| Proposal does not belong to the provider or is not pending | `400` |
 
 ---
 
-### Propostas (Aceitar/Rejeitar)
+### Proposals (Accept/Reject)
 
-**Prefixo:** `proposals/:proposalId` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
+**Prefix:** `proposals/:proposalId` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`
 
 #### `POST /proposals/:proposalId/accept`
 
-Aceitar proposta (apenas dono do pedido).
+Accept a proposal (order owner only).
 
-**Resposta `200`:** Proposta com status `ACCEPTED`. O pedido é alterado para `IN_PROGRESS` e passa a apontar para o prestador vencedor:
-- `provider_id` ← prestador da proposta aceita
-- `agreed_price` ← valor da proposta
+**Response `200`:** Proposal with `ACCEPTED` status. The order is changed to `IN_PROGRESS` and now points to the winning provider:
+- `provider_id` ← provider of the accepted proposal
+- `agreed_price` ← proposal value
 
-> Sem isso, pedidos de marketplace não aparecem na [agenda do prestador](#agenda-do-prestador-jtt-94).
+> Without this, marketplace orders do not show up in the [provider agenda](#provider-agenda-jtt-94).
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Proposta não encontrada | `404` |
-| Pedido não está aberto ou proposta não está pendente | `400` |
+| Proposal not found | `404` |
+| Order is not open or proposal is not pending | `400` |
 
 ---
 
 #### `POST /proposals/:proposalId/reject`
 
-Rejeitar proposta (apenas dono do pedido).
+Reject a proposal (order owner only).
 
-**Resposta `200`:** Proposta com status `REJECTED`.
+**Response `200`:** Proposal with `REJECTED` status.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Proposta não encontrada | `404` |
-| Pedido não pertence ao cliente | `400` |
+| Proposal not found | `404` |
+| Order does not belong to the client | `400` |
 
 ---
 
-### Contrapropostas
+### Counter-proposals
 
-**Prefixo:** `counter-proposals` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
+**Prefix:** `counter-proposals` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
 
 #### `POST /counter-proposals`
 
-Criar contraproposta para uma proposta pendente. Pode ser enviada pelo cliente (dono do pedido) ou pelo prestador (dono da proposta).
+Create a counter-proposal for a pending proposal. It can be sent by the client (order owner) or the provider (proposal owner).
 
 **Request body (`CreateCounterProposalDto`):**
 ```json
@@ -1492,14 +1492,14 @@ Criar contraproposta para uma proposta pendente. Pode ser enviada pelo cliente (
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `proposalId` | `string` (UUID) | sim | ID da proposta original |
-| `price` | `number` | sim | Valor contraproposto |
-| `description` | `string` | sim | Máx. 2000 caracteres |
-| `estimatedDuration` | `string` | não | Máx. 100 caracteres |
+| `proposalId` | `string` (UUID) | yes | Original proposal ID |
+| `price` | `number` | yes | Counter-proposed value |
+| `description` | `string` | yes | Max 2000 characters |
+| `estimatedDuration` | `string` | no | Max 100 characters |
 
-**Resposta `201`:**
+**Response `201`:**
 ```json
 {
   "id": "uuid",
@@ -1514,109 +1514,109 @@ Criar contraproposta para uma proposta pendente. Pode ser enviada pelo cliente (
 }
 ```
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Proposta não encontrada | `404` |
-| Proposta não está pendente | `400` |
-| Sem permissão para contrapor | `400` |
-| Já possui contraproposta pendente | `400` |
+| Proposal not found | `404` |
+| Proposal is not pending | `400` |
+| No permission to counter | `400` |
+| Already has a pending counter-proposal | `400` |
 
 ---
 
 #### `GET /counter-proposals/me`
 
-Listar minhas contrapropostas enviadas.
+List my sent counter-proposals.
 
-**Resposta `200`:** Array da mesma estrutura do `POST` acima, com campo adicional `proposal`.
+**Response `200`:** Array with the same structure as `POST` above, with an additional `proposal` field.
 
 ---
 
 #### `GET /counter-proposals/proposal/:proposalId`
 
-Listar contrapropostas de uma proposta específica.
+List counter-proposals of a specific proposal.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Proposta não encontrada | `404` |
+| Proposal not found | `404` |
 
 ---
 
-### Contrapropostas (Aceitar/Rejeitar)
+### Counter-proposals (Accept/Reject)
 
-**Prefixo:** `counter-proposals/:counterProposalId` | **Autenticação:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
+**Prefix:** `counter-proposals/:counterProposalId` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
 
 #### `POST /counter-proposals/:counterProposalId/accept`
 
-Aceitar contraproposta. Finaliza o acordo: proposta vira `ACCEPTED`, pedido vira `IN_PROGRESS` (com `provider_id` ← prestador e `agreed_price` ← valor da contraproposta), demais propostas/contrapropostas pendentes são rejeitadas.
+Accept a counter-proposal. Finalizes the agreement: the proposal becomes `ACCEPTED`, the order becomes `IN_PROGRESS` (with `provider_id` ← provider and `agreed_price` ← counter-proposal value), other pending proposals/counter-proposals are rejected.
 
-**Resposta `200`:** Contraproposta com status `ACCEPTED`.
+**Response `200`:** Counter-proposal with `ACCEPTED` status.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Contraproposta não encontrada | `404` |
-| Contraproposta não está pendente | `400` |
-| Não pode aceitar a própria contraproposta | `400` |
-| Pedido não está aberto | `400` |
+| Counter-proposal not found | `404` |
+| Counter-proposal is not pending | `400` |
+| Cannot accept own counter-proposal | `400` |
+| Order is not open | `400` |
 
 ---
 
 #### `POST /counter-proposals/:counterProposalId/reject`
 
-Rejeitar contraproposta. A proposta original permanece pendente.
+Reject a counter-proposal. The original proposal remains pending.
 
-**Resposta `200`:** Contraproposta com status `REJECTED`.
+**Response `200`:** Counter-proposal with `REJECTED` status.
 
-| Erro | Código |
+| Error | Code |
 |------|--------|
-| Contraproposta não encontrada | `404` |
-| Contraproposta não está pendente | `400` |
-| Não pode rejeitar a própria contraproposta | `400` |
+| Counter-proposal not found | `404` |
+| Counter-proposal is not pending | `400` |
+| Cannot reject own counter-proposal | `400` |
 
 ---
 
 ## Payments Service
 
-**Porta:** `3004` | **Proxy Caddy:** `/api/payments/*`
+**Port:** `3004` | **Caddy Proxy:** `/api/payments/*`
 
-> **Modo de operação — Gateway Mercado Pago (sandbox) vs Mock:**
+> **Operation mode — Mercado Pago Gateway (sandbox) vs Mock:**
 >
-> O serviço usa uma **arquitetura de gateways** (port/adapter): um contrato
-> `PaymentGateway` central e adapters por provedor — hoje `mercadopago` e o
-> `mock` (fallback). O gateway ativo é escolhido automaticamente pela presença
-> de `PAYMENT_GATEWAY_ACCESS_TOKEN`; os webhooks chegam em
-> `POST /payments/webhook/:gateway` e cada adapter valida sua própria assinatura.
-> Sem o token, todos os endpoints operam com **valores mockados**.
+> The service uses a **gateway architecture** (port/adapter): a central
+> `PaymentGateway` contract and adapters per provider — currently `mercadopago` and
+> `mock` (fallback). The active gateway is chosen automatically by the presence
+> of `PAYMENT_GATEWAY_ACCESS_TOKEN`; webhooks arrive at
+> `POST /payments/webhook/:gateway` and each adapter validates its own signature.
+> Without the token, all endpoints operate with **mocked values**.
 >
-> | Configuração | Comportamento |
+> | Configuration | Behavior |
 > |---|---|
-> | Sem `PAYMENT_GATEWAY_ACCESS_TOKEN` | **Mock** — nenhuma chamada externa |
-> | `PAYMENT_GATEWAY_ACCESS_TOKEN=TEST-...` | **Gateway sandbox** para PIX; cartão de crédito continua **mock** |
-> | `PAYMENT_GATEWAY_ACCESS_TOKEN=TEST-...` + `PAYMENT_GATEWAY_NOTIFICATION_URL` | Igual acima + Mercado Pago notifica o webhook real |
-> | `PAYMENT_GATEWAY_WEBHOOK_SECRET` definido | Webhook MP **exige** assinatura HMAC válida (`x-signature` + `x-request-id`) |
+> | Without `PAYMENT_GATEWAY_ACCESS_TOKEN` | **Mock** — no external calls |
+> | `PAYMENT_GATEWAY_ACCESS_TOKEN=TEST-...` | **Sandbox gateway** for PIX; credit card remains **mock** |
+> | `PAYMENT_GATEWAY_ACCESS_TOKEN=TEST-...` + `PAYMENT_GATEWAY_NOTIFICATION_URL` | Same as above + Mercado Pago notifies the real webhook |
+> | `PAYMENT_GATEWAY_WEBHOOK_SECRET` set | MP webhook **requires** a valid HMAC signature (`x-signature` + `x-request-id`) |
 >
-> **Segurança obrigatória:** os endpoints de transação (`GET/POST /payments`,
-> `charge`, `status`) exigem **autenticação JWT** (Bearer) com role `CLIENT` e
-> somente acessam pedidos **do próprio cliente**. O webhook oficial do Mercado
-> Pago **rejeita** requisições sem `PAYMENT_GATEWAY_WEBHOOK_SECRET` configurado
-> (fail-closed). O webhook mock exige o header `x-webhook-key` igual a
-> `MOCK_WEBHOOK_KEY`.
+> **Mandatory security:** transaction endpoints (`GET/POST /payments`,
+> `charge`, `status`) require **JWT authentication** (Bearer) with `CLIENT` role
+> and only access orders **of the client themselves**. The official Mercado
+> Pago webhook **rejects** requests without a configured
+> `PAYMENT_GATEWAY_WEBHOOK_SECRET` (fail-closed). The mock webhook requires the
+> `x-webhook-key` header equal to `MOCK_WEBHOOK_KEY`.
 >
-> Guia de configuração do sandbox: [`backend/services/payments/SANDBOX.md`](backend/services/payments/SANDBOX.md)
+> Sandbox setup guide: [`backend/services/payments/SANDBOX.md`](backend/services/payments/SANDBOX.md)
 >
-> **Variáveis de ambiente** (todas no `.env.staging` / `.env`):
-> | Variável | Necessária para | Obrigatória |
+> **Environment variables** (all in `.env.staging` / `.env`):
+> | Variable | Needed for | Required |
 > |----------|-----------------|-------------|
-> | `PAYMENT_GATEWAY_ACCESS_TOKEN` | Gateway real (modo sandbox) | não (mock sem ela) |
-> | `PAYMENT_GATEWAY_NOTIFICATION_URL` | Mercado Pago notificar o webhook | não |
-> | `PAYMENT_GATEWAY_WEBHOOK_SECRET` | Validar assinatura do webhook MP | **sim** (sem ela o webhook MP é rejeitado) |
-> | `PAYMENT_GATEWAY_PAYER_EMAIL` | Email do pagador nas cobranças sandbox | não (default `sandbox@pode-deixar.com`) |
-> | `MOCK_WEBHOOK_KEY` | Webhook mock confirmar pagamento | não (sem ela o webhook mock é rejeitado) |
-> | `PLATFORM_FEE_RATE` | Taxa retida pela plataforma (0.10 = 10%) | não (default `0.10`) |
+> | `PAYMENT_GATEWAY_ACCESS_TOKEN` | Real gateway (sandbox mode) | no (mock without it) |
+> | `PAYMENT_GATEWAY_NOTIFICATION_URL` | Mercado Pago to notify the webhook | no |
+> | `PAYMENT_GATEWAY_WEBHOOK_SECRET` | Validate the MP webhook signature | **yes** (without it the MP webhook is rejected) |
+> | `PAYMENT_GATEWAY_PAYER_EMAIL` | Payer email in sandbox charges | no (default `sandbox@pode-deixar.com`) |
+> | `MOCK_WEBHOOK_KEY` | Mock webhook to confirm payment | no (without it the mock webhook is rejected) |
+> | `PLATFORM_FEE_RATE` | Platform fee rate (0.10 = 10%) | no (default `0.10`) |
 >
-> **CORS:** restrito em `ALLOWED_ORIGINS` (lista separada por vírgulas; default `http://localhost:3000`).
+> **CORS:** restricted in `ALLOWED_ORIGINS` (comma-separated list; default `http://localhost:3000`).
 >
-> **Tabela de modo por endpoint:**
-> | Endpoint | Modo (sem token) | Modo (com token `TEST-`) |
+> **Mode table per endpoint:**
+> | Endpoint | Mode (without token) | Mode (with `TEST-` token) |
 > |----------|------------------|--------------------------|
 > | `GET /health` | — | — |
 > | `GET /health/ready` | — | — |
@@ -1624,38 +1624,38 @@ Rejeitar contraproposta. A proposta original permanece pendente.
 > | `GET /payments` | Mock | Mock |
 > | `POST /payments` | Mock | Mock |
 > | `POST /payments/:paymentId/charge` | Mock | **Gateway** (PIX) / Mock (CREDIT_CARD) |
-> | `GET /payments/:paymentId/status` | Mock | Mock (lê o banco) |
-> | `GET /payments/provider/me/finance/summary` | Mock | Mock (lê o banco) |
-> | `GET /payments/provider/me/finance/items` | Mock | Mock (lê o banco) |
-> | `GET /payments/provider/me/finance/chart` | Mock | Mock (lê o banco) |
-> | `POST /payments/webhook` | **Mock** | **Mock** (apenas simulação manual) |
-> | `POST /payments/webhook/:gateway` | Mock (gateway desconhecido → `404`) | **Real** (ex.: `/webhook/mercadopago` recebe eventos do MP) |
+> | `GET /payments/:paymentId/status` | Mock | Mock (reads the database) |
+> | `GET /payments/provider/me/finance/summary` | Mock | Mock (reads the database) |
+> | `GET /payments/provider/me/finance/items` | Mock | Mock (reads the database) |
+> | `GET /payments/provider/me/finance/chart` | Mock | Mock (reads the database) |
+> | `POST /payments/webhook` | **Mock** | **Mock** (manual simulation only) |
+> | `POST /payments/webhook/:gateway` | Mock (unknown gateway → `404`) | **Real** (e.g. `/webhook/mercadopago` receives MP events) |
 
 ### Health
 
 #### `GET /health`
 
-Verificação de saúde do serviço (banco de dados). Sem autenticação. Sem mock.
+Service health check (database). No authentication. No mock.
 
 #### `GET /health/ready`
 
-Verificação de prontidão (banco de dados). Sem autenticação. Sem mock.
+Readiness check (database). No authentication. No mock.
 
 #### `GET /health/live`
 
-Verificação de atividade. Sem autenticação. Sem mock.
+Liveness check. No authentication. No mock.
 
-Idênticos ao [Auth Service Health](#health).
+Identical to [Auth Service Health](#health).
 
 ---
 
-### Transações de Pagamento
+### Payment Transactions
 
 #### `GET /payments`
 
-- **Modo:** `Mock` (sempre — lê apenas o banco local)
-- **Requisitos:** autenticação JWT (Bearer) com role `CLIENT`
-- **Retorno:** `200` com os pagamentos **do cliente autenticado**, ordenados por criação (mais recentes primeiro)
+- **Mode:** `Mock` (always — reads only the local database)
+- **Requirements:** JWT authentication (Bearer) with `CLIENT` role
+- **Returns:** `200` with the authenticated client payments, ordered by creation (newest first)
 
 ```json
 [
@@ -1677,21 +1677,21 @@ Idênticos ao [Auth Service Health](#health).
 
 #### `POST /payments`
 
-- **Modo:** `Mock` e `Gateway` (mesmo comportamento — apenas registra no banco)
-- **Requisita:** `CreatePaymentDto` no body
-- **Requisitos:** autenticação JWT (Bearer) com role `CLIENT`; o pedido deve pertencer ao cliente autenticado
-- **Retorno:** `201` com o pagamento criado em `PENDING`
+- **Mode:** `Mock` and `Gateway` (same behavior — only records in the database)
+- **Requires:** `CreatePaymentDto` in the body
+- **Requirements:** JWT authentication (Bearer) with `CLIENT` role; the order must belong to the authenticated client
+- **Returns:** `201` with the payment created as `PENDING`
 
-Registra a transação de pagamento no banco. O **preço não é enviado pelo frontend**
-— o valor é obtido pelo backend a partir do **preço acordado** (`agreedPrice`) ou da
-**proposta aceita** do pedido. Nenhuma chamada externa é feita — a cobrança é gerada
-depois, no `charge`.
-Para operação real, deve ser chamado logo após o aceite da proposta (ver fluxo abaixo).
+Records the payment transaction in the database. The **price is not sent by the frontend**
+— the value is obtained by the backend from the **agreed price** (`agreedPrice`) or the
+order **accepted proposal**. No external call is made — the charge is generated
+later, in `charge`.
+For real operation, it must be called right after proposal acceptance (see flow below).
 
-O **agendamento do serviço também é definido aqui** (cliente no checkout): o
-`scheduledAt` (e opcionalmente `scheduledEndAt`) é gravado no pedido. O pagamento só
-pode virar `PAID` se o pedido tiver `scheduled_at` (webhooks rejeitam com `400` caso
-contrário — fail-closed).
+The **service scheduling is also set here** (client at checkout): the
+`scheduledAt` (and optionally `scheduledEndAt`) is stored on the order. The payment can
+only become `PAID` if the order has `scheduled_at` (webhooks reject with `400`
+otherwise — fail-closed).
 
 **Request body (`CreatePaymentDto`):**
 ```json
@@ -1703,42 +1703,42 @@ contrário — fail-closed).
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `serviceOrderId` | `string` (UUID) | sim | ID do pedido de serviço (deve pertencer ao cliente) |
-| `method` | `PaymentMethod` | sim | `PIX` ou `CREDIT_CARD` |
-| `scheduledAt` | `string` (ISO 8601) | sim | Data/hora agendada do serviço — gravada no pedido |
-| `scheduledEndAt` | `string` (ISO 8601) | não | Término previsto do serviço — deve ser posterior a `scheduledAt` |
+| `serviceOrderId` | `string` (UUID) | yes | Service order ID (must belong to the client) |
+| `method` | `PaymentMethod` | yes | `PIX` or `CREDIT_CARD` |
+| `scheduledAt` | `string` (ISO 8601) | yes | Scheduled service date/time — stored on the order |
+| `scheduledEndAt` | `string` (ISO 8601) | no | Expected service end — must be after `scheduledAt` |
 
-| Status | Código | Retorno |
+| Status | Code | Return |
 |--------|--------|---------|
-| Sucesso | `201` | Payment criado (`status: "PENDING"`, valor vindo do backend) |
-| Validação | `400` | `BadRequestException` — { message, errors[] } |
-| Pedido não pertence ao cliente | `403` | `ForbiddenException` |
-| Sem preço definido | `400` | `BadRequestException` (pedido sem proposta aceita) |
+| Success | `201` | Created payment (`status: "PENDING"`, value from the backend) |
+| Validation | `400` | `BadRequestException` — { message, errors[] } |
+| Order does not belong to the client | `403` | `ForbiddenException` |
+| No price defined | `400` | `BadRequestException` (order without accepted proposal) |
 
 ---
 
-### Cobrança e Status
+### Charge and Status
 
 #### `POST /payments/:paymentId/charge`
 
-> **Modo:**
-> - **PIX + gateway configurado (`TEST-...`)**: **real** — cria cobrança no Mercado Pago (responde QR code real do sandbox).
-> - **PIX sem gateway**: **mock** — gera `chg_mock_...`.
-> - **CREDIT_CARD**: **mock** sempre (fluxo de card token ainda não implementado).
+> **Mode:**
+> - **PIX + configured gateway (`TEST-...`)**: **real** — creates a charge in Mercado Pago (returns a real sandbox QR code).
+> - **PIX without gateway**: **mock** — generates `chg_mock_...`.
+> - **CREDIT_CARD**: **mock** always (card token flow not implemented yet).
 
-- **Requisita:** pagamento existente (`404` se não) com `status: PENDING` (`400` caso contrário) — a cobrança só pode ser gerada uma vez por transação pendente.
-- **Requisitos:** autenticação JWT (Bearer) com role `CLIENT`; o pagamento deve pertencer ao cliente autenticado (`403` caso contrário). Rate limit: 10 req/min.
-- **Variáveis necessárias:** `PAYMENT_GATEWAY_ACCESS_TOKEN` (modo real); `PAYMENT_GATEWAY_PAYER_EMAIL` (opcional).
-- **Retorno:** `200` com `paymentId`, `chargeRef`, `status` e `cobranca` (campos variam por método/modo).
+- **Requires:** existing payment (`404` if not) with `PENDING` status (`400` otherwise) — the charge can only be generated once per pending transaction.
+- **Requirements:** JWT authentication (Bearer) with `CLIENT` role; the payment must belong to the authenticated client (`403` otherwise). Rate limit: 10 req/min.
+- **Required variables:** `PAYMENT_GATEWAY_ACCESS_TOKEN` (real mode); `PAYMENT_GATEWAY_PAYER_EMAIL` (optional).
+- **Returns:** `200` with `paymentId`, `chargeRef`, `status` and `cobranca` (fields vary by method/mode).
 
-**Fluxo real (PIX, modo gateway):**
-1. `POST /payments/:paymentId/charge` é chamado com gateway configurado
-2. Mercado Pago retorna `external_ref` = `paymentId` local + `notification_url` configurada
-3. Resposta contém `pixCopiaECola` (texto copia-e-cola) e `qrCodeBase64` (imagem)
+**Real flow (PIX, gateway mode):**
+1. `POST /payments/:paymentId/charge` is called with a configured gateway
+2. Mercado Pago returns `external_ref` = local `paymentId` + configured `notification_url`
+3. Response contains `pixCopiaECola` (copy-and-paste text) and `qrCodeBase64` (image)
 
-**Resposta `200` (mock PIX ou gateway PIX):**
+**Response `200` (mock PIX or gateway PIX):**
 ```json
 {
   "paymentId": "uuid-do-pagamento",
@@ -1750,7 +1750,7 @@ contrário — fail-closed).
 }
 ```
 
-**Resposta `200` (gateway PIX real) — adiciona `qrCodeBase64` e `mercadoPagoId`:**
+**Response `200` (real gateway PIX) — adds `qrCodeBase64` and `mercadoPagoId`:**
 ```json
 {
   "paymentId": "uuid-do-pagamento",
@@ -1764,7 +1764,7 @@ contrário — fail-closed).
 }
 ```
 
-**Resposta `200` (CREDIT_CARD — mock):**
+**Response `200` (CREDIT_CARD — mock):**
 ```json
 {
   "paymentId": "uuid-do-pagamento",
@@ -1776,29 +1776,29 @@ contrário — fail-closed).
 }
 ```
 
-> **PCI-DSS:** dados de cartão (PAN/CVV) **nunca** são enviados ao backend.
-> Quando o CREDIT_CARD real for implementado, será usado **tokenização do
-> Mercado Pago** (card token no cliente via SDK/Bricks) ou **Checkout Pro
-> hospedado** — o backend só recebe o token/ID da transação. Logs são
-> sanitizados contra PAN/CVV.
+> **PCI-DSS:** card data (PAN/CVV) is **never** sent to the backend.
+> When real CREDIT_CARD is implemented, **Mercado Pago
+> tokenization** will be used (card token on the client via SDK/Bricks) or **hosted
+> Checkout Pro** — the backend only receives the transaction token/ID. Logs are
+> sanitized against PAN/CVV.
 
-| Status | Código | Retorno |
+| Status | Code | Return |
 |--------|--------|---------|
-| Sucesso | `200` | Cobrança gerada (ver campos acima) |
-| Pagamento não encontrado | `404` | `NotFoundException` |
-| Pagamento não pertence ao cliente | `403` | `ForbiddenException` |
-| Pagamento não pendente | `400` | `BadRequestException` |
+| Success | `200` | Generated charge (see fields above) |
+| Payment not found | `404` | `NotFoundException` |
+| Payment does not belong to the client | `403` | `ForbiddenException` |
+| Payment not pending | `400` | `BadRequestException` |
 
 ---
 
 #### `GET /payments/:paymentId/status`
 
-- **Modo:** `Mock` sempre (lê a situação do banco local, independente do gateway)
-- **Requisita:** pagamento existente (`404` se não)
-- **Requisitos:** autenticação JWT (Bearer) com role `CLIENT`; o pagamento deve pertencer a um pedido do cliente autenticado (`403` caso contrário)
-- **Retorno:** `200` com o status atual do pagamento (podendo refletir atualização feita pelo webhook)
+- **Mode:** always `Mock` (reads the local database state, regardless of the gateway)
+- **Requires:** existing payment (`404` if not)
+- **Requirements:** JWT authentication (Bearer) with `CLIENT` role; the payment must belong to an order of the authenticated client (`403` otherwise)
+- **Returns:** `200` with the current payment status (may reflect an update made by the webhook)
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "paymentId": "uuid-do-pagamento",
@@ -1811,27 +1811,27 @@ contrário — fail-closed).
 }
 ```
 
-| Status | Código | Retorno |
+| Status | Code | Return |
 |--------|--------|---------|
-| Sucesso | `200` | status/method/amount/externalRef/paidAt |
-| Pagamento não encontrado | `404` | `NotFoundException` |
-| Pagamento não pertence ao cliente | `403` | `ForbiddenException` |
+| Success | `200` | status/method/amount/externalRef/paidAt |
+| Payment not found | `404` | `NotFoundException` |
+| Payment does not belong to the client | `403` | `ForbiddenException` |
 
 ---
 
-### Webhooks de Confirmação
+### Confirmation Webhooks
 
-São dois webhooks: o **mock** (para testes manuais do fluxo) e o **genérico de gateway** `POST /payments/webhook/:gateway`, que resolve o adapter pelo nome no path (ex.: `mercadopago`) — gateway desconhecido retorna `404`.
+There are two webhooks: the **mock** (for manual flow testing) and the generic gateway `POST /payments/webhook/:gateway`, which resolves the adapter by the path name (e.g. `mercadopago`) — unknown gateway returns `404`.
 
-#### `POST /payments/webhook` (simulador mock)
+#### `POST /payments/webhook` (mock simulator)
 
-- **Modo:** `Mock` — simula manualmente a confirmação de pagamento do gateway
-- **Requisita:** `PaymentWebhookDto` (body), pagamento existente e header **`x-webhook-key`** igual a `MOCK_WEBHOOK_KEY` (sem chave válida → `403`)
-- **Retorno:** `200` com o pagamento atualizado para `PAID` (idempotente — reenvio não altera um pagamento já `PAID`)
+- **Mode:** `Mock` — manually simulates gateway payment confirmation
+- **Requires:** `PaymentWebhookDto` (body), existing payment and **`x-webhook-key`** header equal to `MOCK_WEBHOOK_KEY` (without a valid key → `403`)
+- **Returns:** `200` with the payment updated to `PAID` (idempotent — retry does not change an already `PAID` payment)
 
-> O `amount` recebido **é comparado** com o valor registrado na transação — se diferente, o webhook é rejeitado (`400`).
+> The received `amount` **is compared** with the value recorded in the transaction — if different, the webhook is rejected (`400`).
 >
-> O pedido precisa ter `scheduled_at` (definido no `POST /payments`) — sem agendamento, a confirmação de `PAID` é rejeitada (`400`).
+> The order must have `scheduled_at` (set in `POST /payments`) — without scheduling, the `PAID` confirmation is rejected (`400`).
 
 **Request body:**
 ```json
@@ -1842,35 +1842,35 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **genérico de
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `paymentId` | `string` (UUID) | sim | ID do pagamento no sistema |
-| `externalId` | `string` | sim | ID da transação no gateway (mock) |
-| `amount` | `number` | sim | Valor confirmado (deve conferir com o registrado) |
+| `paymentId` | `string` (UUID) | yes | Payment ID in the system |
+| `externalId` | `string` | yes | Transaction ID in the gateway (mock) |
+| `amount` | `number` | yes | Confirmed value (must match the recorded one) |
 
 **Header:** `x-webhook-key: <MOCK_WEBHOOK_KEY>`
 
-| Status | Código | Retorno |
+| Status | Code | Return |
 |--------|--------|---------|
-| Sucesso | `200` | Payment atualizado (`status: "PAID"`, `paidAt` preenchido) |
-| Pagamento não encontrado | `404` | `NotFoundException` |
-| Chave de webhook inválida | `403` | `ForbiddenException` |
-| Valor não confere | `400` | `BadRequestException` |
+| Success | `200` | Updated payment (`status: "PAID"`, `paidAt` filled) |
+| Payment not found | `404` | `NotFoundException` |
+| Invalid webhook key | `403` | `ForbiddenException` |
+| Amount mismatch | `400` | `BadRequestException` |
 
 ---
 
-#### `POST /payments/webhook/:gateway` (oficial, ex.: `mercadopago`)
+#### `POST /payments/webhook/:gateway` (official, e.g. `mercadopago`)
 
-- **Modo:** **Real** — endpoint público chamado pelo gateway (Mercado Pago em sandbox ou produção) com os eventos de pagamento
-- **Requisita:**
-  - Em prod: `PAYMENT_GATEWAY_NOTIFICATION_URL` apontando para a URL pública deste endpoint (ex: `https://dominio/api/payments/webhook/mercadopago`; dev: tunnel ngrok)
-  - Pagamento local cujo `externalRef` seja o ID retornado pelo charge (vínculo entre gateway e banco)
-  - **`PAYMENT_GATEWAY_WEBHOOK_SECRET` obrigatório** — sem ele, o webhook é rejeitado (`403`); assinatura HMAC validada via headers `x-signature` (`ts`+`v1`) e `x-request-id` (fail-closed)
-  - Valor do payload do gateway deve conferir com o `amount` registrado (`400` se divergir)
-- **Retorno:** `200` com o pagamento sincronizado com o status do gateway
-- **Necessita de:** nenhuma autenticação de usuário para o gateway (webhook externo)
+- **Mode:** **Real** — public endpoint called by the gateway (Mercado Pago in sandbox or production) with payment events
+- **Requires:**
+  - In prod: `PAYMENT_GATEWAY_NOTIFICATION_URL` pointing to the public URL of this endpoint (e.g. `https://dominio/api/payments/webhook/mercadopago`; dev: ngrok tunnel)
+  - Local payment whose `externalRef` is the ID returned by charge (link between gateway and database)
+  - **`PAYMENT_GATEWAY_WEBHOOK_SECRET` required** — without it, the webhook is rejected (`403`); HMAC signature validated via `x-signature` (`ts`+`v1`) and `x-request-id` headers (fail-closed)
+  - Gateway payload value must match the recorded `amount` (`400` if it differs)
+- **Returns:** `200` with the payment synced with the gateway status
+- **Requires:** no user authentication for the gateway (external webhook)
 
-**Request body — payload oficial do Mercado Pago (JSON puro, sem DTO):**
+**Request body — official Mercado Pago payload (plain JSON, no DTO):**
 ```json
 {
   "type": "payment",
@@ -1879,15 +1879,15 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **genérico de
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
+| Field | Type | Required | Description |
 |-------|------|-------------|-----------|
-| `type` | `string` | sim | Tipo do evento (`payment`) |
-| `action` | `string` | sim | `payment.created` ou `payment.updated` |
-| `data.id` | `string` | sim | ID do pagamento no Mercado Pago |
+| `type` | `string` | yes | Event type (`payment`) |
+| `action` | `string` | yes | `payment.created` or `payment.updated` |
+| `data.id` | `string` | yes | Payment ID in Mercado Pago |
 
-**Headers (com secret):** `x-signature` (`ts` e `v1`), `x-request-id`.
+**Headers (with secret):** `x-signature` (`ts` and `v1`), `x-request-id`.
 
-**Tradução de status do gateway:**
+**Gateway status mapping:**
 | Gateway | Pode Deixar |
 |---------|-------------|
 | `approved` | `PAID` |
@@ -1896,51 +1896,51 @@ São dois webhooks: o **mock** (para testes manuais do fluxo) e o **genérico de
 | `cancelled` | `CANCELLED` |
 | `refunded` | `REFUNDED` |
 
-| Status | Código | Retorno |
+| Status | Code | Return |
 |--------|--------|---------|
-| Sucesso | `200` | Pagamento local sincronizado (status + paidAt + externalRef) |
-| Pagamento local não encontrado | `404` | `NotFoundException` |
-| Assinatura inválida ou secret ausente | `403` | `ForbiddenException` |
-| Valor do gateway não confere | `400` | `BadRequestException` |
+| Success | `200` | Local payment synced (status + paidAt + externalRef) |
+| Local payment not found | `404` | `NotFoundException` |
+| Invalid signature or missing secret | `403` | `ForbiddenException` |
+| Gateway amount mismatch | `400` | `BadRequestException` |
 
 ---
 
-### Fluxo completo recomendado (proposta aceita)
+### Recommended Full Flow (Accepted Proposal)
 
 ```
-1. POST /payments                    → cria transação com status PENDING
-2. POST /payments/:paymentId/charge  → cobrança (real PIX no sandbox OU mock)
-3. Cliente paga (QR/copia-e-cola/checkout)
-4. POST /payments/webhook/mercadopago → Mercado Pago notifica (real)
-   OU POST /payments/webhook          → simula confirmação (mock)
-5. GET  /payments/:paymentId/status   → status final (PAID)
+1. POST /payments                    → creates a transaction with PENDING status
+2. POST /payments/:paymentId/charge  → charge (real PIX in sandbox OR mock)
+3. Client pays (QR/copy-and-paste/checkout)
+4. POST /payments/webhook/mercadopago → Mercado Pago notifies (real)
+   OR POST /payments/webhook          → simulates confirmation (mock)
+5. GET  /payments/:paymentId/status   → final status (PAID)
 ```
 
 ---
 
-### Financeiro do Prestador (JTT-95)
+### Provider Finance (JTT-95)
 
-Endpoints de **leitura** para o prestador consultar o que tem a receber com base nas
-propostas aceitas e no status do pagamento do cliente.
+Read endpoints for the provider to check what they are owed based on
+accepted proposals and the client payment status.
 
-> **Fonte da verdade no backend:** bruto, taxa e líquido são **calculados no backend**
-> no momento da criação do pagamento (`POST /payments`) e persistidos no `Payment`
-> (`fee_rate`, `fee_amount`, `net_amount`), usando a taxa configurada em
-> `PLATFORM_FEE_RATE` (default `0.10` = 10%). Pagamentos criados antes desse modelo
-> (campos nulos) têm os valores calculados na leitura com a taxa atual. O frontend
-> **nunca** deve calcular fee/líquido.
+> **Backend source of truth:** gross, fee and net are **calculated in the backend**
+> at payment creation time (`POST /payments`) and persisted on `Payment`
+> (`fee_rate`, `fee_amount`, `net_amount`), using the rate configured in
+> `PLATFORM_FEE_RATE` (default `0.10` = 10%). Payments created before this model
+> (null fields) have values calculated at read time with the current rate. The frontend
+> **never** calculates fee/net.
 >
-> **Acesso (ownership):** o prestador autenticado só enxerga pagamentos de pedidos
-> em que ele é o provider de uma proposta **ACCEPTED**. Nunca expõe dados de cartão
-> (PCI) — apenas totais e status.
+> **Access (ownership):** the authenticated provider only sees payments for orders
+> where they are the provider of an **ACCEPTED** proposal. Never exposes card data
+> (PCI) — only totals and status.
 
 #### `GET /payments/provider/me/finance/summary`
 
-- **Modo:** `Mock` sempre (lê o banco local)
-- **Requisitos:** autenticação JWT (Bearer) com role `PROVIDER`
-- **Retorno:** `200` com o resumo financeiro do prestador autenticado
+- **Mode:** always `Mock` (reads the local database)
+- **Requirements:** JWT authentication (Bearer) with `PROVIDER` role
+- **Returns:** `200` with the authenticated provider finance summary
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 {
   "currency": "BRL",
@@ -1954,25 +1954,25 @@ propostas aceitas e no status do pagamento do cliente.
 }
 ```
 
-| Campo | Descrição |
+| Field | Description |
 |-------|-----------|
-| `currency` | Moeda (fixa `BRL`) |
-| `feeRate` | Taxa da plataforma vigente (fração, ex.: `0.1`) |
-| `pendingNet` | Líquido a receber de pagamentos `PENDING` (cliente ainda não pagou) |
-| `grossToReceive` | Bruto de pagamentos `PAID` (disponível para repasse) |
-| `feesOnToReceive` | Taxa retida sobre os pagamentos `PAID` |
-| `toReceiveNet` | Líquido de pagamentos `PAID` (bruto − taxa) |
-| `receivedThisMonthNet` | Líquido de pagamentos `PAID` no mês atual |
-| `feesThisMonth` | Taxa retida sobre pagamentos `PAID` no mês atual |
+| `currency` | Currency (fixed `BRL`) |
+| `feeRate` | Current platform fee rate (fraction, e.g. `0.1`) |
+| `pendingNet` | Net receivable from `PENDING` payments (client has not paid yet) |
+| `grossToReceive` | Gross from `PAID` payments (available for payout) |
+| `feesOnToReceive` | Fee retained on `PAID` payments |
+| `toReceiveNet` | Net from `PAID` payments (gross − fee) |
+| `receivedThisMonthNet` | Net from `PAID` payments in the current month |
+| `feesThisMonth` | Fee retained on `PAID` payments in the current month |
 
 #### `GET /payments/provider/me/finance/items?status=PAID`
 
-- **Modo:** `Mock` sempre (lê o banco local)
-- **Requisitos:** autenticação JWT (Bearer) com role `PROVIDER`
-- **Query opcional:** `status` = `PENDING` \| `PAID` \| `FAILED` \| `REFUNDED` \| `CANCELLED`
-- **Retorno:** `200` com a lista de itens vinculados à proposta aceita do prestador (mais recentes primeiro)
+- **Mode:** always `Mock` (reads the local database)
+- **Requirements:** JWT authentication (Bearer) with `PROVIDER` role
+- **Optional query:** `status` = `PENDING` \| `PAID` \| `FAILED` \| `REFUNDED` \| `CANCELLED`
+- **Returns:** `200` with the list of items linked to the provider accepted proposal (newest first)
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 [
   {
@@ -1991,28 +1991,28 @@ propostas aceitas e no status do pagamento do cliente.
 ]
 ```
 
-| Campo | Descrição |
+| Field | Description |
 |-------|-----------|
-| `paymentId` | ID do pagamento |
-| `proposalId` | ID da proposta aceita do prestador no pedido |
-| `serviceOrderId` | ID do pedido |
-| `paymentStatus` | Status do pagamento do cliente |
-| `method` | `PIX` ou `CREDIT_CARD` |
-| `grossAmount` | Valor bruto pago pelo cliente |
-| `feeAmount` | Taxa retida pela plataforma |
-| `netAmount` | Líquido a repassar ao prestador (bruto − taxa) |
-| `feeRate` | Taxa aplicada (fração) |
-| `paidAt` | Data da confirmação do pagamento (null se não pago) |
-| `createdAt` | Data de criação do pagamento |
+| `paymentId` | Payment ID |
+| `proposalId` | Accepted provider proposal ID on the order |
+| `serviceOrderId` | Order ID |
+| `paymentStatus` | Client payment status |
+| `method` | `PIX` or `CREDIT_CARD` |
+| `grossAmount` | Gross amount paid by the client |
+| `feeAmount` | Platform fee retained |
+| `netAmount` | Net to transfer to the provider (gross − fee) |
+| `feeRate` | Applied rate (fraction) |
+| `paidAt` | Payment confirmation date (null if unpaid) |
+| `createdAt` | Payment creation date |
 
 #### `GET /payments/provider/me/finance/chart?months=6`
 
-- **Modo:** `Mock` sempre (lê o banco local)
-- **Requisitos:** autenticação JWT (Bearer) com role `PROVIDER`
-- **Query opcional:** `months` (1–24, default `6`) — quantidade de meses incluindo o atual
-- **Retorno:** `200` com dados mensais de pagamentos `PAID` (meses sem movimento aparecem com zeros), do mais antigo ao mais recente
+- **Mode:** always `Mock` (reads the local database)
+- **Requirements:** JWT authentication (Bearer) with `PROVIDER` role
+- **Optional query:** `months` (1–24, default `6`) — number of months including the current one
+- **Returns:** `200` with monthly `PAID` payment data (months without activity appear with zeros), from oldest to newest
 
-**Resposta `200`:**
+**Response `200`:**
 ```json
 [
   { "month": "2026-03", "netReceived": 0.00, "feesRetained": 0.00 },
@@ -2021,17 +2021,17 @@ propostas aceitas e no status do pagamento do cliente.
 ]
 ```
 
-| Campo | Descrição |
+| Field | Description |
 |-------|-----------|
-| `month` | Mês no formato `YYYY-MM` |
-| `netReceived` | Líquido recebido no mês (pagamentos `PAID`) |
-| `feesRetained` | Taxa retida pela plataforma no mês |
+| `month` | Month in `YYYY-MM` format |
+| `netReceived` | Net received in the month (`PAID` payments) |
+| `feesRetained` | Platform fee retained in the month |
 
 ---
 
 ## Reviews Service
 
-**Porta:** `3005` | **Proxy Caddy:** `/api/reviews/*`
+**Port:** `3005` | **Caddy Proxy:** `/api/reviews/*`
 
 ### Health
 
@@ -2041,21 +2041,21 @@ propostas aceitas e no status do pagamento do cliente.
 
 #### `GET /health/live`
 
-Idênticos ao [Auth Service Health](#health).
+Identical to [Auth Service Health](#health).
 
-> Avaliações **bidirecionais** (cliente ↔ prestador) após a conclusão e pagamento do pedido.
-> Regras: pedido deve estar `COMPLETED` com ao menos um pagamento `PAID`; nota de `1` a `5`
-> com comentário opcional (máx 500 caracteres); edição permitida apenas nos primeiros
-> **5 minutos** após a criação; exclusão a qualquer momento. O autor é identificado pelo
-> token JWT (`reviewerId`) e o alvo (`revieweeId`) é derivado do pedido: cliente avalia o
-> prestador e vice-versa. As notas agregadas do alvo (`rating`/`total_reviews`) são
-> recalculadas a cada criação/edição/exclusão.
+> Bidirectional reviews (client ↔ provider) after order completion and payment.
+> Rules: order must be `COMPLETED` with at least one `PAID` payment; rating from `1` to `5`
+> with an optional comment (max 500 characters); editing allowed only within the first
+> **5 minutes** after creation; deletion at any time. The author is identified by the
+> JWT token (`reviewerId`) and the target (`revieweeId`) is derived from the order: the client reviews the
+> provider and vice versa. The target aggregate scores (`rating`/`total_reviews`) are
+> recalculated on each create/edit/delete.
 
 #### `POST /reviews`
 
-Criar avaliação de um pedido concluído e pago. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`.
+Create a review for a completed and paid order. Requires **Bearer token** with `CLIENT` or `PROVIDER` role.
 
-- **Requisitos:** o usuário deve ser parte do pedido (`403` caso contrário); pedido `COMPLETED` e com pagamento `PAID` (`400`); pedido sem prestador definido (`400`); avaliação duplicada do mesmo autor no mesmo pedido (`400`).
+- **Requirements:** the user must be part of the order (`403` otherwise); `COMPLETED` order with `PAID` payment (`400`); order without a defined provider (`400`); duplicate review from the same author on the same order (`400`).
 
 **Body:**
 
@@ -2067,7 +2067,7 @@ Criar avaliação de um pedido concluído e pago. Requer **Bearer token** com ro
 }
 ```
 
-**Resposta (201):**
+**Response (201):**
 
 ```json
 {
@@ -2084,21 +2084,21 @@ Criar avaliação de um pedido concluído e pago. Requer **Bearer token** com ro
 
 #### `GET /reviews/me`
 
-Listar avaliações escritas pelo usuário autenticado. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`.
+List reviews written by the authenticated user. Requires **Bearer token** with `CLIENT` or `PROVIDER` role.
 
 #### `GET /reviews/service-order/:orderId`
 
-Listar avaliações de um pedido. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`. Apenas o cliente dono do pedido ou o prestador do pedido têm acesso (`403` caso contrário).
+List reviews of an order. Requires **Bearer token** with `CLIENT` or `PROVIDER` role. Only the client owning the order or the order provider have access (`403` otherwise).
 
 #### `GET /reviews/provider/:providerId`
 
-Listar avaliações recebidas por um prestador. **Endpoint público** (sem autenticação) — para exibição do perfil público do prestador.
+List reviews received by a provider. **Public endpoint** (no authentication) — for displaying the provider public profile.
 
 #### `PATCH /reviews/:reviewId`
 
-Editar avaliação própria. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`.
+Edit own review. Requires **Bearer token** with `CLIENT` or `PROVIDER` role.
 
-- **Requisitos:** apenas o autor pode editar (`403`); permitido apenas nos primeiros 5 minutos após a criação (`400`); ao menos um campo (`rating` e/ou `comment`) deve ser informado (`400`).
+- **Requirements:** only the author can edit (`403`); allowed only within the first 5 minutes after creation (`400`); at least one field (`rating` and/or `comment`) must be provided (`400`).
 
 **Body:**
 
@@ -2110,7 +2110,7 @@ Editar avaliação própria. Requer **Bearer token** com role `CLIENT` ou `PROVI
 
 #### `DELETE /reviews/:reviewId`
 
-Excluir avaliação própria. Requer **Bearer token** com role `CLIENT` ou `PROVIDER`. Apenas o autor pode excluir (`403`). A exclusão é permitida a qualquer momento.
+Delete own review. Requires **Bearer token** with `CLIENT` or `PROVIDER` role. Only the author can delete (`403`). Deletion is allowed at any time.
 
 ---
 
@@ -2118,201 +2118,201 @@ Excluir avaliação própria. Requer **Bearer token** com role `CLIENT` ou `PROV
 
 ### `Role`
 
-| Valor | Descrição |
+| Value | Description |
 |-------|-----------|
-| `CLIENT` | Cliente (contratante) |
-| `PROVIDER` | Prestador de serviço |
-| `ADMIN` | Administrador |
+| `CLIENT` | Client (customer) |
+| `PROVIDER` | Service provider |
+| `ADMIN` | Administrator |
 
 ### `ServiceOrderStatus`
 
-| Valor | Descrição |
+| Value | Description |
 |-------|-----------|
-| `OPEN` | Aberto para propostas |
-| `IN_PROGRESS` | Em andamento (proposta aceita) |
-| `COMPLETED` | Concluído |
-| `CANCELLED` | Cancelado pelo cliente |
+| `OPEN` | Open for proposals |
+| `IN_PROGRESS` | In progress (proposal accepted) |
+| `COMPLETED` | Completed |
+| `CANCELLED` | Cancelled by the client |
 
 ### `ProposalStatus`
 
-| Valor | Descrição |
+| Value | Description |
 |-------|-----------|
-| `PENDING` | Pendente (aguardando resposta) |
-| `ACCEPTED` | Aceita pelo cliente |
-| `REJECTED` | Rejeitada pelo cliente |
-| `WITHDRAWN` | Retirada pelo prestador |
+| `PENDING` | Pending (awaiting response) |
+| `ACCEPTED` | Accepted by the client |
+| `REJECTED` | Rejected by the client |
+| `WITHDRAWN` | Withdrawn by the provider |
 
 ### `PaymentStatus`
 
-| Valor | Descrição |
+| Value | Description |
 |-------|-----------|
-| `PENDING` | Transação registrada, aguardando confirmação |
-| `PAID` | Pagamento confirmado (webhook) |
-| `FAILED` | Falhou |
-| `REFUNDED` | Reembolsado |
-| `CANCELLED` | Cancelado |
+| `PENDING` | Transaction recorded, awaiting confirmation |
+| `PAID` | Payment confirmed (webhook) |
+| `FAILED` | Failed |
+| `REFUNDED` | Refunded |
+| `CANCELLED` | Cancelled |
 
 ### `PaymentMethod`
 
-| Valor | Descrição |
+| Value | Description |
 |-------|-----------|
 | `PIX` | PIX |
-| `CREDIT_CARD` | Cartão de crédito |
+| `CREDIT_CARD` | Credit card |
 
 ---
 
-## Modelos (Prisma)
+## Models (Prisma)
 
 ### `User`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `id` | UUID | Primary key |
-| `complete_name` | String | Nome completo |
-| `email` | String | Email (único) |
-| `password` | String | Hash da senha |
-| `role` | `Role` | CLIENT, PROVIDER ou ADMIN |
-| `phone` | String | Telefone |
-| `postal_code` | String | CEP |
-| `email_verified` | Boolean | Email verificado? |
+| `complete_name` | String | Full name |
+| `email` | String | Email (unique) |
+| `password` | String | Password hash |
+| `role` | `Role` | CLIENT, PROVIDER or ADMIN |
+| `phone` | String | Phone |
+| `postal_code` | String | Postal code |
+| `email_verified` | Boolean | Email verified? |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 
 ### `ClientProfile`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `user_id` | UUID | FK → User (unique) |
-| `avatar_url` | String? | URL do avatar |
-| `preferences` | JSON? | Preferências |
+| `avatar_url` | String? | Avatar URL |
+| `preferences` | JSON? | Preferences |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 
 ### `ProviderProfile`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `user_id` | UUID | FK → User (unique) |
-| `avatar_url` | String? | URL do avatar |
-| `bio` | String? | Biografia |
-| `hourly_rate` | Decimal? | Tarifa por hora |
-| `skills` | String[] | Lista de habilidades |
-| `portfolio` | JSON? | URLs do portfólio |
-| `rating` | Float | Avaliação média |
-| `total_reviews` | Int | Total de avaliações |
-| `is_available` | Boolean | Disponível? |
+| `avatar_url` | String? | Avatar URL |
+| `bio` | String? | Bio |
+| `hourly_rate` | Decimal? | Hourly rate |
+| `skills` | String[] | Skill list |
+| `portfolio` | JSON? | Portfolio URLs |
+| `rating` | Float | Average rating |
+| `total_reviews` | Int | Total reviews |
+| `is_available` | Boolean | Available? |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 
 ### `Category`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `id` | UUID | Primary key |
-| `name` | String | Nome (único) |
-| `slug` | String | Slug (único) |
-| `description` | String? | Descrição |
-| `icon` | String? | Ícone Lucide |
-| `order` | Int | Ordem de exibição |
+| `name` | String | Name (unique) |
+| `slug` | String | Slug (unique) |
+| `description` | String? | Description |
+| `icon` | String? | Lucide icon |
+| `order` | Int | Display order |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 
 ### `ProviderService`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `provider_profile_id` | UUID | FK → ProviderProfile |
-| `title` | String | Título do serviço |
-| `description` | Text | Descrição detalhada |
-| `fixed_price` | Decimal | Preço fixo |
+| `title` | String | Service title |
+| `description` | Text | Detailed description |
+| `fixed_price` | Decimal | Fixed price |
 | `category_id` | UUID | FK → Category |
-| `category` | Category | Objeto da categoria (via include) |
-| `images` | `ServiceImage[]` | Imagens do serviço (via include) |
-| `is_active` | Boolean | Ativo? (soft delete) |
+| `category` | Category | Category object (via include) |
+| `images` | `ServiceImage[]` | Service images (via include) |
+| `is_active` | Boolean | Active? (soft delete) |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 
 ### `ServiceImage`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `provider_service_id` | UUID | FK → ProviderService (cascade on delete) |
-| `url` | String | URL pública da imagem no MinIO |
+| `url` | String | Public image URL in MinIO |
 | `created_at` | DateTime | |
 
 ### `ServiceOrder`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `client_id` | UUID | FK → User |
-| `provider_id` | UUID? | FK → User (prestador alvo, solicitação direta) |
-| `provider_service_id` | UUID? | FK → ProviderService (contratação direta) |
-| `agreed_price` | Decimal? | Valor fixo acordado (contratação direta) |
-| `title` | String | Título |
-| `description` | Text | Descrição |
+| `provider_id` | UUID? | FK → User (target provider, direct request) |
+| `provider_service_id` | UUID? | FK → ProviderService (direct hire) |
+| `agreed_price` | Decimal? | Agreed fixed price (direct hire) |
+| `title` | String | Title |
+| `description` | Text | Description |
 | `category_id` | UUID | FK → Category |
-| `category` | Category | Objeto da categoria (via include) |
-| `budget_min` | Decimal? | Orçamento mínimo |
-| `budget_max` | Decimal? | Orçamento máximo |
-| `address` | JSON? | Endereço (street, number, neighborhood, city, state, postalCode) |
-| `scheduled_at` | DateTime? | Data/hora agendada do serviço (definida no checkout; obrigatória quando o pagamento vira PAID) |
-| `scheduled_end_at` | DateTime? | Término previsto do serviço |
-| `status` | `ServiceOrderStatus` | Status atual |
+| `category` | Category | Category object (via include) |
+| `budget_min` | Decimal? | Minimum budget |
+| `budget_max` | Decimal? | Maximum budget |
+| `address` | JSON? | Address (street, number, neighborhood, city, state, postalCode) |
+| `scheduled_at` | DateTime? | Scheduled service date/time (set at checkout; required when payment becomes PAID) |
+| `scheduled_end_at` | DateTime? | Expected service end |
+| `status` | `ServiceOrderStatus` | Current status |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 
 ### `Proposal`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `service_order_id` | UUID | FK → ServiceOrder |
-| `provider_id` | UUID | FK → User (prestador) |
-| `price` | Decimal | Preço proposto |
-| `description` | Text | Descrição da proposta |
-| `estimated_duration` | String? | Duração estimada |
-| `status` | `ProposalStatus` | Status atual |
+| `provider_id` | UUID | FK → User (provider) |
+| `price` | Decimal | Proposed price |
+| `description` | Text | Proposal description |
+| `estimated_duration` | String? | Estimated duration |
+| `status` | `ProposalStatus` | Current status |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 
 ### `TokenBlacklist`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `jti` | String | JWT ID (primary key) |
-| `expires_at` | DateTime | Data de expiração |
+| `expires_at` | DateTime | Expiration date |
 
 ### `Payment`
 
-| Campo | Tipo | Descrição |
+| Field | Type | Description |
 |-------|------|-----------|
 | `id` | UUID | Primary key |
 | `service_order_id` | UUID | FK → ServiceOrder (cascade on delete) |
-| `amount` | Decimal | Valor bruto da transação |
-| `currency` | String | Moeda (default: BRL) |
-| `method` | `PaymentMethod` | PIX ou CREDIT_CARD (default: PIX) |
-| `status` | `PaymentStatus` | Status atual (default: PENDING) |
-| `fee_rate` | Decimal? | Taxa da plataforma aplicada no momento da criação (ex.: `0.1`); null para pagamentos legados |
-| `fee_amount` | Decimal? | Taxa retida pela plataforma (bruto × taxa); null para pagamentos legados |
-| `net_amount` | Decimal? | Líquido a repassar ao prestador (bruto − taxa); null para pagamentos legados |
-| `external_ref` | String? | ID da transação no gateway |
-| `idempotency_key` | String? | Chave de idempotência (unique com service_order_id) |
-| `paid_at` | DateTime? | Data da confirmação do pagamento |
+| `amount` | Decimal | Gross transaction value |
+| `currency` | String | Currency (default: BRL) |
+| `method` | `PaymentMethod` | PIX or CREDIT_CARD (default: PIX) |
+| `status` | `PaymentStatus` | Current status (default: PENDING) |
+| `fee_rate` | Decimal? | Platform fee rate applied at creation time (e.g. `0.1`); null for legacy payments |
+| `fee_amount` | Decimal? | Platform fee retained (gross × rate); null for legacy payments |
+| `net_amount` | Decimal? | Net to transfer to the provider (gross − fee); null for legacy payments |
+| `external_ref` | String? | Transaction ID in the gateway |
+| `idempotency_key` | String? | Idempotency key (unique with service_order_id) |
+| `paid_at` | DateTime? | Payment confirmation date |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 
 ---
 
-## Tabela Resumo
+## Summary Table
 
 ### Caddy Proxy
 
-| Rota | Destino | Serviço |
+| Route | Target | Service |
 |------|---------|---------|
 | `/api/auth/*` | `:3001` | Auth |
 | `/api/profiles/*` | `:3002` | Users |
@@ -2322,129 +2322,129 @@ Excluir avaliação própria. Requer **Bearer token** com role `CLIENT` ou `PROV
 | `/api/proposals/*` | `:3003` | Service Orders |
 | `/api/payments/*` | `:3004` | Payments |
 | `/api/reviews/*` | `:3005` | Reviews |
-| `/api/storage/*` | `:9000` | MinIO (via proxy reverso) |
-| `/*` (demais) | `:3000` | Frontend |
+| `/api/storage/*` | `:9000` | MinIO (via reverse proxy) |
+| `/*` (others) | `:3000` | Frontend |
 
 ### Auth Service (13 endpoints)
 
-| Método | Rota | Autenticação | Roles | Descrição |
+| Method | Route | Authentication | Roles | Description |
 |--------|------|-------------|-------|-----------|
-| `GET` | `/health` | — | — | Saúde do serviço |
-| `GET` | `/health/ready` | — | — | Prontidão |
-| `GET` | `/health/live` | — | — | Atividade |
+| `GET` | `/health` | — | — | Service health |
+| `GET` | `/health/ready` | — | — | Readiness |
+| `GET` | `/health/live` | — | — | Liveness |
 | `POST` | `/auth/login` | — | — | Login |
 | `POST` | `/auth/refresh-token` | — | — | Refresh token |
-| `GET` | `/auth/verify` | Bearer (opcional) | — | Validar sessão / access token |
+| `GET` | `/auth/verify` | Bearer (optional) | — | Validate session / access token |
 | `POST` | `/auth/logout` | Bearer | — | Logout |
-| `POST` | `/auth/register` | — | — | Registro |
-| `POST` | `/auth/verify-email` | — | — | Verificar email |
-| `POST` | `/auth/resend-email-verification` | — | — | Reenviar verificação |
-| `POST` | `/auth/forgot-password` | — | — | Esqueci senha |
-| `POST` | `/auth/reset-password` | — | — | Redefinir senha |
-| `PUT` | `/auth/change-password` | Bearer | — | Alterar senha |
+| `POST` | `/auth/register` | — | — | Registration |
+| `POST` | `/auth/verify-email` | — | — | Verify email |
+| `POST` | `/auth/resend-email-verification` | — | — | Resend verification |
+| `POST` | `/auth/forgot-password` | — | — | Forgot password |
+| `POST` | `/auth/reset-password` | — | — | Reset password |
+| `PUT` | `/auth/change-password` | Bearer | — | Change password |
 
 ### Users Service (23 endpoints)
 
-| Método | Rota | Autenticação | Roles | Descrição |
+| Method | Route | Authentication | Roles | Description |
 |--------|------|-------------|-------|-----------|
-| `GET` | `/health` | — | — | Saúde do serviço |
-| `GET` | `/health/ready` | — | — | Prontidão |
-| `GET` | `/health/live` | — | — | Atividade |
-| `GET` | `/profiles/me` | Bearer | CLIENT, PROVIDER | Meu perfil |
-| `POST` | `/profiles/client` | Bearer | CLIENT | Criar perfil cliente |
-| `PATCH` | `/profiles/client` | Bearer | CLIENT | Atualizar perfil cliente |
-| `POST` | `/profiles/provider` | Bearer | PROVIDER | Criar perfil prestador |
-| `PATCH` | `/profiles/provider` | Bearer | PROVIDER | Atualizar perfil prestador |
-| `PATCH` | `/profiles/avatar` | Bearer | CLIENT, PROVIDER | Upload avatar |
-| `GET` | `/providers/:providerId/profile` | — | — | Perfil público prestador |
-| `GET` | `/providers/search` | Bearer | CLIENT | Buscar prestadores |
-| `POST` | `/providers/me/services` | Bearer | PROVIDER | Criar serviço |
-| `GET` | `/providers/me/services` | Bearer | PROVIDER | Meus serviços |
-| `PATCH` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Atualizar serviço |
-| `DELETE` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Desativar serviço |
-| `POST` | `/providers/me/services/:serviceId/images` | Bearer | PROVIDER | Upload imagem |
-| `GET` | `/providers/me/services/:serviceId/images` | Bearer | PROVIDER | Listar imagens |
-| `DELETE` | `/providers/me/services/:serviceId/images/:imageId` | Bearer | PROVIDER | Remover imagem |
-| `GET` | `/providers/:providerId/services` | — | — | Serviços públicos |
-| `GET` | `/categories` | — | — | Listar categorias |
-| `POST` | `/categories` | Bearer | ADMIN | Criar categoria |
-| `PATCH` | `/categories/:id` | Bearer | ADMIN | Atualizar categoria |
-| `DELETE` | `/categories/:id` | Bearer | ADMIN | Excluir categoria |
+| `GET` | `/health` | — | — | Service health |
+| `GET` | `/health/ready` | — | — | Readiness |
+| `GET` | `/health/live` | — | — | Liveness |
+| `GET` | `/profiles/me` | Bearer | CLIENT, PROVIDER | My profile |
+| `POST` | `/profiles/client` | Bearer | CLIENT | Create client profile |
+| `PATCH` | `/profiles/client` | Bearer | CLIENT | Update client profile |
+| `POST` | `/profiles/provider` | Bearer | PROVIDER | Create provider profile |
+| `PATCH` | `/profiles/provider` | Bearer | PROVIDER | Update provider profile |
+| `PATCH` | `/profiles/avatar` | Bearer | CLIENT, PROVIDER | Avatar upload |
+| `GET` | `/providers/:providerId/profile` | — | — | Provider public profile |
+| `GET` | `/providers/search` | Bearer | CLIENT | Search providers |
+| `POST` | `/providers/me/services` | Bearer | PROVIDER | Create service |
+| `GET` | `/providers/me/services` | Bearer | PROVIDER | My services |
+| `PATCH` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Update service |
+| `DELETE` | `/providers/me/services/:serviceId` | Bearer | PROVIDER | Deactivate service |
+| `POST` | `/providers/me/services/:serviceId/images` | Bearer | PROVIDER | Upload image |
+| `GET` | `/providers/me/services/:serviceId/images` | Bearer | PROVIDER | List images |
+| `DELETE` | `/providers/me/services/:serviceId/images/:imageId` | Bearer | PROVIDER | Remove image |
+| `GET` | `/providers/:providerId/services` | — | — | Public services |
+| `GET` | `/categories` | — | — | List categories |
+| `POST` | `/categories` | Bearer | ADMIN | Create category |
+| `PATCH` | `/categories/:id` | Bearer | ADMIN | Update category |
+| `DELETE` | `/categories/:id` | Bearer | ADMIN | Delete category |
 
 ### Service Orders Service (25 endpoints)
 
-| Método | Rota | Autenticação | Roles | Descrição |
+| Method | Route | Authentication | Roles | Description |
 |--------|------|-------------|-------|-----------|
-| `GET` | `/health` | — | — | Saúde do serviço |
-| `GET` | `/health/ready` | — | — | Prontidão |
-| `GET` | `/health/live` | — | — | Atividade |
-| `POST` | `/services/me` | Bearer | CLIENT | Criar pedido |
-| `POST` | `/services/me/hire` | Bearer | CLIENT | Contratar serviço fixo |
-| `GET` | `/services/me` | Bearer | CLIENT | Meus pedidos |
-| `GET` | `/services/me/agenda` | Bearer | PROVIDER | Agenda do prestador (serviços pagos, `from`/`to`) |
-| `GET` | `/services/me/:orderId` | Bearer | CLIENT | Detalhe do pedido (dono) |
-| `PATCH` | `/services/me/:orderId` | Bearer | CLIENT | Atualizar pedido |
-| `DELETE` | `/services/me/:orderId` | Bearer | CLIENT | Cancelar pedido |
-| `POST` | `/services/me/:orderId/complete` | Bearer | PROVIDER | Concluir pedido (IN_PROGRESS → COMPLETED) |
-| `GET` | `/services` | — | — | Pedidos abertos |
-| `GET` | `/services/:orderId` | Bearer | CLIENT, PROVIDER | Detalhe do pedido (autenticado, com fotos) |
-| `GET` | `/services/requests/received` | Bearer | PROVIDER | Solicitações recebidas |
-| `POST` | `/proposals` | Bearer | PROVIDER | Criar proposta |
-| `GET` | `/proposals/me` | Bearer | PROVIDER | Minhas propostas |
-| `PATCH` | `/proposals/:proposalId` | Bearer | PROVIDER | Atualizar proposta |
-| `DELETE` | `/proposals/:proposalId` | Bearer | PROVIDER | Retirar proposta |
-| `POST` | `/proposals/:proposalId/accept` | Bearer | CLIENT | Aceitar proposta |
-| `POST` | `/proposals/:proposalId/reject` | Bearer | CLIENT | Rejeitar proposta |
-| `POST` | `/counter-proposals` | Bearer | CLIENT, PROVIDER | Criar contraproposta |
-| `GET` | `/counter-proposals/me` | Bearer | CLIENT, PROVIDER | Minhas contrapropostas |
-| `GET` | `/counter-proposals/proposal/:proposalId` | Bearer | CLIENT, PROVIDER | Contrapropostas da proposta |
-| `POST` | `/counter-proposals/:counterProposalId/accept` | Bearer | CLIENT, PROVIDER | Aceitar contraproposta |
-| `POST` | `/counter-proposals/:counterProposalId/reject` | Bearer | CLIENT, PROVIDER | Rejeitar contraproposta |
+| `GET` | `/health` | — | — | Service health |
+| `GET` | `/health/ready` | — | — | Readiness |
+| `GET` | `/health/live` | — | — | Liveness |
+| `POST` | `/services/me` | Bearer | CLIENT | Create order |
+| `POST` | `/services/me/hire` | Bearer | CLIENT | Hire fixed service |
+| `GET` | `/services/me` | Bearer | CLIENT | My orders |
+| `GET` | `/services/me/agenda` | Bearer | PROVIDER | Provider agenda (paid services, `from`/`to`) |
+| `GET` | `/services/me/:orderId` | Bearer | CLIENT | Order detail (owner) |
+| `PATCH` | `/services/me/:orderId` | Bearer | CLIENT | Update order |
+| `DELETE` | `/services/me/:orderId` | Bearer | CLIENT | Cancel order |
+| `POST` | `/services/me/:orderId/complete` | Bearer | PROVIDER | Complete order (IN_PROGRESS → COMPLETED) |
+| `GET` | `/services` | — | — | Open orders |
+| `GET` | `/services/:orderId` | Bearer | CLIENT, PROVIDER | Order detail (authenticated, with photos) |
+| `GET` | `/services/requests/received` | Bearer | PROVIDER | Received requests |
+| `POST` | `/proposals` | Bearer | PROVIDER | Create proposal |
+| `GET` | `/proposals/me` | Bearer | PROVIDER | My proposals |
+| `PATCH` | `/proposals/:proposalId` | Bearer | PROVIDER | Update proposal |
+| `DELETE` | `/proposals/:proposalId` | Bearer | PROVIDER | Withdraw proposal |
+| `POST` | `/proposals/:proposalId/accept` | Bearer | CLIENT | Accept proposal |
+| `POST` | `/proposals/:proposalId/reject` | Bearer | CLIENT | Reject proposal |
+| `POST` | `/counter-proposals` | Bearer | CLIENT, PROVIDER | Create counter-proposal |
+| `GET` | `/counter-proposals/me` | Bearer | CLIENT, PROVIDER | My counter-proposals |
+| `GET` | `/counter-proposals/proposal/:proposalId` | Bearer | CLIENT, PROVIDER | Counter-proposals of the proposal |
+| `POST` | `/counter-proposals/:counterProposalId/accept` | Bearer | CLIENT, PROVIDER | Accept counter-proposal |
+| `POST` | `/counter-proposals/:counterProposalId/reject` | Bearer | CLIENT, PROVIDER | Reject counter-proposal |
 
 ### Payments Service (12 endpoints)
 
-| Método | Rota | Autenticação | Roles | Descrição |
+| Method | Route | Authentication | Roles | Description |
 |--------|------|--------------|-------|-----------|
-| `GET` | `/health` | — | — | Saúde do serviço |
-| `GET` | `/health/ready` | — | — | Prontidão |
-| `GET` | `/health/live` | — | — | Atividade |
-| `GET` | `/payments` | JWT + Roles | CLIENT | Listar pagamentos do cliente |
-| `POST` | `/payments` | JWT + Roles | CLIENT | Registrar transação (PENDING) |
-| `POST` | `/payments/:paymentId/charge` | JWT + Roles | CLIENT | Gerar cobrança (MP PIX se configurado, senão mock) |
-| `GET` | `/payments/:paymentId/status` | JWT + Roles | CLIENT | Consultar status do pagamento |
-| `GET` | `/payments/provider/me/finance/summary` | JWT + Roles | PROVIDER | Resumo financeiro do prestador |
-| `GET` | `/payments/provider/me/finance/items` | JWT + Roles | PROVIDER | Itens financeiros do prestador (filtro `status`) |
-| `GET` | `/payments/provider/me/finance/chart` | JWT + Roles | PROVIDER | Dados mensais para gráfico (`months`) |
-| `POST` | `/payments/webhook` | Chave `x-webhook-key` | — | Webhook (mock) — confirmar pagamento (PAID) |
-| `POST` | `/payments/webhook/mercadopago` | Assinatura HMAC | — | Webhook do Mercado Pago — sincronizar status (via `POST /payments/webhook/:gateway`) |
+| `GET` | `/health` | — | — | Service health |
+| `GET` | `/health/ready` | — | — | Readiness |
+| `GET` | `/health/live` | — | — | Liveness |
+| `GET` | `/payments` | JWT + Roles | CLIENT | List client payments |
+| `POST` | `/payments` | JWT + Roles | CLIENT | Register transaction (PENDING) |
+| `POST` | `/payments/:paymentId/charge` | JWT + Roles | CLIENT | Generate charge (MP PIX if configured, otherwise mock) |
+| `GET` | `/payments/:paymentId/status` | JWT + Roles | CLIENT | Get payment status |
+| `GET` | `/payments/provider/me/finance/summary` | JWT + Roles | PROVIDER | Provider finance summary |
+| `GET` | `/payments/provider/me/finance/items` | JWT + Roles | PROVIDER | Provider finance items (`status` filter) |
+| `GET` | `/payments/provider/me/finance/chart` | JWT + Roles | PROVIDER | Monthly chart data (`months`) |
+| `POST` | `/payments/webhook` | `x-webhook-key` key | — | Webhook (mock) — confirm payment (PAID) |
+| `POST` | `/payments/webhook/mercadopago` | HMAC signature | — | Mercado Pago webhook — sync status (via `POST /payments/webhook/:gateway`) |
 
-> Sem `PAYMENT_GATEWAY_ACCESS_TOKEN` (TEST-), os endpoints de pagamento operam com valores mockados. Ver [modo de operação](#payments-service).
+> Without `PAYMENT_GATEWAY_ACCESS_TOKEN` (`TEST-`), payment endpoints operate with mocked values. See [operation mode](#payments-service).
 
 ### Reviews Service (9 endpoints)
 
-| Método | Rota | Autenticação | Roles | Descrição |
+| Method | Route | Authentication | Roles | Description |
 |--------|------|--------------|-------|-----------|
-| `GET` | `/health` | — | — | Saúde do serviço |
-| `GET` | `/health/ready` | — | — | Prontidão |
-| `GET` | `/health/live` | — | — | Atividade |
-| `POST` | `/reviews` | JWT + Roles | CLIENT, PROVIDER | Criar avaliação de pedido concluído e pago |
-| `GET` | `/reviews/me` | JWT + Roles | CLIENT, PROVIDER | Minhas avaliações (escritas por mim) |
-| `GET` | `/reviews/service-order/:orderId` | JWT + Roles | CLIENT, PROVIDER | Avaliações de um pedido (partes do pedido) |
-| `GET` | `/reviews/provider/:providerId` | — | — | Avaliações recebidas pelo prestador (público) |
-| `PATCH` | `/reviews/:reviewId` | JWT + Roles | CLIENT, PROVIDER | Editar avaliação própria (janela de 5 min) |
-| `DELETE` | `/reviews/:reviewId` | JWT + Roles | CLIENT, PROVIDER | Excluir avaliação própria |
+| `GET` | `/health` | — | — | Service health |
+| `GET` | `/health/ready` | — | — | Readiness |
+| `GET` | `/health/live` | — | — | Liveness |
+| `POST` | `/reviews` | JWT + Roles | CLIENT, PROVIDER | Create review for completed and paid order |
+| `GET` | `/reviews/me` | JWT + Roles | CLIENT, PROVIDER | My reviews (written by me) |
+| `GET` | `/reviews/service-order/:orderId` | JWT + Roles | CLIENT, PROVIDER | Reviews of an order (order parties) |
+| `GET` | `/reviews/provider/:providerId` | — | — | Reviews received by the provider (public) |
+| `PATCH` | `/reviews/:reviewId` | JWT + Roles | CLIENT, PROVIDER | Edit own review (5-min window) |
+| `DELETE` | `/reviews/:reviewId` | JWT + Roles | CLIENT, PROVIDER | Delete own review |
 
-> Avaliações **bidirecionais** (cliente ↔ prestador) após pedido `COMPLETED` e pago. Nota
-> `1–5`, comentário opcional (máx 500), edição em até 5 minutos, exclusão a qualquer momento.
+> Bidirectional reviews (client ↔ provider) after a `COMPLETED` and paid order. Rating
+> `1–5`, optional comment (max 500), editing within 5 minutes, deletion at any time.
 
-### Totais
+### Totals
 
-| Métrica | Quantidade |
+| Metric | Count |
 |---------|-----------|
 | **Endpoints** | **81** |
-| **Serviços** | **5** |
+| **Services** | **5** |
 | **Controllers** | **35** |
 | **DTOs** | **32** |
-| **Autenticação (Bearer)** | **2 endpoints** |
+| **Authentication (Bearer)** | **2 endpoints** |
 | **Bearer + Roles** | **48 endpoints** |
-| **Públicos (sem auth)** | **30 endpoints** |
+| **Public (no auth)** | **30 endpoints** |

@@ -1,26 +1,26 @@
-# Necessidade de API — Financeiro do prestador (JTT-95)
+# API Need — Provider Finance (JTT-95)
 
-Texto pronto para colar na issue Linear.
+Ready-to-paste text for the Linear issue.
 
 ---
 
-## Necessidade de API — Financeiro do prestador (JTT-95)
+## API Need — Provider Finance (JTT-95)
 
-### Contexto
-A tela Financeiro do prestador precisa mostrar quanto ele tem a receber com base nas propostas aceitas e no status do pagamento do cliente, incluindo a taxa da plataforma e o valor líquido do repasse.
+### Context
+The provider Finance screen needs to show how much they are owed based on accepted proposals and the client's payment status, including the platform fee and the net payout amount.
 
-Hoje (API.md) todos os endpoints de /payments são CLIENT-only. Não existe leitura de pagamento para PROVIDER nem modelo de taxa/repasse.
+Today (API.md) all /payments endpoints are CLIENT-only. There is no payment reading for PROVIDER nor any fee/payout model.
 
-### Fluxo de negócio esperado
-1. Cliente paga o valor bruto do serviço (proposta aceita / agreedPrice).
-2. Plataforma retém taxa (ex.: % configurável).
-3. Prestador visualiza: bruto, taxa, líquido e status (aguardando pagamento do cliente / disponível para repasse / já creditado).
+### Expected business flow
+1. Client pays the gross service amount (accepted proposal / agreedPrice).
+2. Platform withholds a fee (e.g., configurable %).
+3. Provider sees: gross, fee, net, and status (awaiting client payment / available for payout / already credited).
 
-### Endpoints sugeridos (payments :3004)
+### Suggested endpoints (payments :3004)
 
 1) GET /payments/provider/me/finance/summary
-   - Auth: JWT + role PROVIDER
-   - Retorno sugerido:
+   - Auth: JWT + PROVIDER role
+   - Suggested response:
      {
        "currency": "BRL",
        "feeRate": 0.10,
@@ -33,9 +33,9 @@ Hoje (API.md) todos os endpoints de /payments são CLIENT-only. Não existe leit
      }
 
 2) GET /payments/provider/me/finance/items
-   - Auth: JWT + role PROVIDER
-   - Query opcional: status=PENDING|PAID|FAILED|REFUNDED|CANCELLED
-   - Retorno: lista de itens vinculados à proposta do prestador
+   - Auth: JWT + PROVIDER role
+   - Optional query: status=PENDING|PAID|FAILED|REFUNDED|CANCELLED
+   - Returns: list of items linked to the provider's proposal
      {
        "paymentId": "uuid",
        "proposalId": "uuid",
@@ -51,18 +51,18 @@ Hoje (API.md) todos os endpoints de /payments são CLIENT-only. Não existe leit
      }
 
 3) GET /payments/provider/me/finance/chart?months=6
-   - Auth: JWT + role PROVIDER
-   - Retorno mensal para gráficos:
+   - Auth: JWT + PROVIDER role
+   - Monthly response for charts:
      [{ "month": "2026-03", "netReceived": 0, "feesRetained": 0 }]
 
-### Regras de segurança
-- Ownership: só pagamentos de pedidos em que o prestador autenticado é o provider da proposta aceita (403 se não for).
-- Nunca expor dados de cartão (PCI). Só totais e status.
-- Taxa e líquido DEVEM ser calculados no backend (fonte da verdade). Frontend não deve inventar fee em produção.
+### Security rules
+- Ownership: only payments for orders where the authenticated provider owns the accepted proposal (403 otherwise).
+- Never expose card data (PCI). Totals and status only.
+- Fee and net amounts MUST be computed on the backend (source of truth). The frontend must not invent fees in production.
 
-### Modelo de dados (sugestão)
-- Persistir feeRate/feeAmount/netAmount no Payment OU calcular via config PLATFORM_FEE_RATE.
-- Opcional futuro: status de repasse ao prestador (PENDING_PAYOUT | PAID_OUT) separado do status do pagamento do cliente.
+### Data model (suggestion)
+- Persist feeRate/feeAmount/netAmount on Payment OR compute via the PLATFORM_FEE_RATE config.
+- Optional future: provider payout status (PENDING_PAYOUT | PAID_OUT) separate from the client payment status.
 
-### Prioridade
-Bloqueia a tela Financeiro em modo real (hoje roda só com NEXT_PUBLIC_USE_MOCK=true).
+### Priority
+Blocks the Finance screen in real mode (today it only runs with NEXT_PUBLIC_USE_MOCK=true).
