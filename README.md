@@ -2,6 +2,30 @@
 
 > Plataforma digital para contratação de serviços que conecta clientes e prestadores em um ambiente seguro, transparente e organizado.
 
+## Sumário
+
+- [Sobre o Projeto](#sobre-o-projeto)
+- [Objetivos](#objetivos)
+- [Funcionalidades](#funcionalidades)
+  - [Gestão de Usuários](#gestão-de-usuários)
+  - [Busca de Prestadores](#busca-de-prestadores)
+  - [Solicitação de Orçamentos](#solicitação-de-orçamentos)
+  - [Contratação de Serviços](#contratação-de-serviços)
+  - [Pagamentos](#pagamentos)
+  - [Avaliações e Reputação](#avaliações-e-reputação)
+- [Arquitetura da Solução](#arquitetura-da-solução)
+- [Tecnologias Utilizadas](#tecnologias-utilizadas)
+  - [Backend](#backend)
+  - [Frontend](#frontend)
+  - [Banco de Dados](#banco-de-dados)
+  - [Infraestrutura](#infraestrutura)
+- [Desenvolvimento Local](#desenvolvimento-local)
+  - [Com Docker (toda a stack)](#com-docker-toda-a-stack)
+  - [Sem Docker (apenas serviços Node localmente)](#sem-docker-apenas-serviços-node-localmente)
+- [Roadmap](#roadmap)
+
+---
+
 ## Sobre o Projeto
 
 O Pode Deixar é uma plataforma desenvolvida para modernizar a forma como serviços são contratados e gerenciados. A solução conecta clientes que precisam realizar tarefas com profissionais qualificados, centralizando todo o processo em um único ambiente digital.
