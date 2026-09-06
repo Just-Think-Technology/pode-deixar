@@ -10,6 +10,8 @@ import { AppModule as OrdersAppModule } from '../../services/service-orders/src/
 import { MinioService as OrdersMinioService } from '../../services/service-orders/src/storage/minio.service';
 import { AppModule as PaymentsAppModule } from '../../services/payments/src/app.module';
 import { AppModule as ReviewsAppModule } from '../../services/reviews/src/app.module';
+import { AppModule as AuthAppModule } from '../../services/auth/src/app.module';
+import { EmailService } from '@pode-deixar/email';
 
 // --- Types ---
 
@@ -22,6 +24,14 @@ export interface E2EApps {
   reviewsApp: INestApplication;
   prisma: PrismaClient;
 }
+
+// --- Email mock ---
+// O EmailService real enviaria SMTP — inviável sem servidor de email.
+
+export const mockEmail = {
+  sendEmailVerification: jest.fn(async () => true),
+  sendPasswordReset: jest.fn(async () => true),
+};
 
 // --- MinIO stub ---
 // Os MinioServices reais conectam no onModuleInit — inviável sem MinIO.
@@ -64,6 +74,15 @@ async function bootApp(
 /**
  * Sobe os 4 serviços no mesmo processo (supertest dispensa listen, sem
  * conflito de portas) contra o MESMO banco — a topologia real de produção.
+ *
+ * ATENÇÃO — singleton do passport: o `@nestjs/passport` compartilha o
+ * registro de strategies por processo. Todos os serviços registram sua
+ * JwtStrategy sob o nome padrão 'jwt' e o ÚLTIMO registro vence globalmente.
+ * Os 4 serviços abaixo retornam o mesmo formato `{ sub, email, role, ... }`,
+ * então qualquer vencedor entre eles é equivalente. O auth-service, porém,
+ * retorna `{ id, ... }` SEM `sub` — por isso ele NUNCA pode ser bootado por
+ * último (ver bootAuthApp). Em produção isso não existe, pois cada serviço
+ * roda no seu próprio processo.
  */
 export async function bootApps(): Promise<E2EApps> {
   const [usersApp, ordersApp, paymentsApp, reviewsApp] = await Promise.all([
@@ -82,6 +101,30 @@ export async function bootApps(): Promise<E2EApps> {
   await prisma.$connect();
 
   return { usersApp, ordersApp, paymentsApp, reviewsApp, prisma };
+}
+
+/**
+ * Sobe só o auth-service (com EmailService mockado — sem SMTP).
+ * Separado do bootApps para jornadas que não passam por cadastro.
+ *
+ * REGRA DE OURO: bootar o auth ANTES dos demais apps (ver comentário em
+ * bootApps sobre o singleton do passport). Os endpoints usados na jornada
+ * (register/verify/login) são públicos e não dependem da strategy ativa.
+ */
+export async function bootAuthApp(): Promise<INestApplication> {
+  const moduleFixture: TestingModule = await Test.createTestingModule({
+    imports: [
+      AuthAppModule,
+      ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10_000 }]),
+    ],
+  })
+    .overrideProvider(EmailService)
+    .useValue(mockEmail)
+    .compile();
+
+  const app = moduleFixture.createNestApplication();
+  await app.init();
+  return app;
 }
 
 export async function shutdownApps(apps: E2EApps): Promise<void> {

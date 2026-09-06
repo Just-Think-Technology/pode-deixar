@@ -63,6 +63,12 @@ importers:
       '@nestjs/throttler':
         specifier: ^6.2.1
         version: 6.5.0(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(reflect-metadata@0.2.2)
+      '@pode-deixar/email':
+        specifier: workspace:*
+        version: link:../shared/email
+      '@pode-deixar/logger':
+        specifier: workspace:*
+        version: link:../shared/logger
       '@prisma/client':
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -84,6 +90,9 @@ importers:
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
+      argon2:
+        specifier: ^0.44.0
+        version: 0.44.0
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -135,6 +144,9 @@ importers:
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
+      uuid:
+        specifier: ^8.3.2
+        version: 8.3.2
 
   services/auth:
     dependencies:
