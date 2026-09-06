@@ -49,12 +49,9 @@ O Pode Deixar organiza essa relação inteira em um só lugar, com regras claras
 
 ---
 
-<table>
-  <tr>
-    <td><img src="frontend/src/assets/jt-technology-logo.png" alt="JT Technology" width="120" /></td>
-    <td>
-      <strong>JT Technology</strong><br />
-      <em>Think Smarter. Build Better.</em>
-    </td>
-  </tr>
-</table>
+<p>
+  <img src="docs/assets/fundo-cinza-logo-circular.png" alt="JT Technology" width="120" align="left" />
+  <br />
+  <strong>JT Technology</strong><br />
+  <em>Think Smarter. Build Better.</em>
+</p>
