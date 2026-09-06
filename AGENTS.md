@@ -90,7 +90,7 @@ databases (`docker compose up -d postgres` from the repo root).
 - **Auth:** JWT (access 15min + refresh 7 days) with rotation and blacklist
 - **Roles:** CLIENT, PROVIDER, ADMIN
 - **Soft delete:** services use `is_active`; orders move to CANCELLED
-- **Commits:** messages and PR titles in English, Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`); PR body in Portuguese (what changed, how to validate, checks run)
+- **Commits:** messages and PR titles in English, Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`); PR body in Portuguese or English (what changed, how to validate, checks run)
 - **Branches:** `feat/`, `fix/`, `docs/`, `test/`, `chore/`, `refactor/` + short slug (e.g. `feat/order-photos`)
 - **Commit hygiene:** review `git status` / `git diff` before committing; never commit env files, secrets or generated artifacts
 
