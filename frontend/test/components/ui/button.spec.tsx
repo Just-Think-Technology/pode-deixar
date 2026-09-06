@@ -132,13 +132,15 @@ describe('Button Component', () => {
     expect(handleClick).toHaveBeenCalledTimes(1)
   })
 
-  it('should call onClick handler with correct argument', () => {
-    const handleClick = vitest.fn((e: MouseEvent) => {
-      expect(e).toBeInstanceOf(MouseEvent)
-    })
+  it('should call onClick handler with the click event', () => {
+    const handleClick = vitest.fn()
     render(<Button onClick={handleClick}>Enviar</Button>)
     screen.getByRole('button').click()
     expect(handleClick).toHaveBeenCalledTimes(1)
+    const eventArg = handleClick.mock.calls[0][0]
+    expect(eventArg).toBeDefined()
+    // React entrega SyntheticEvent (nunca MouseEvent nativo)
+    expect(eventArg.type).toBe('click')
   })
 
   it('should render with additional props', () => {
