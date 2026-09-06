@@ -36,6 +36,20 @@ frontend/
 docs/                # Security, product and deploy decisions
 ```
 
+## Architecture
+
+- No sync HTTP between services — integration is via the shared PostgreSQL
+  (single Prisma schema in `backend/prisma/`); the frontend reaches services
+  through the Caddy gateway (`/api/*`)
+- Auth guards live only in `@pode-deixar/security`; per-service copies are
+  tech debt — migrate them when touching a service's auth
+- New code layering: controller (HTTP + validation) → service (business
+  rules) → repository (Prisma); no Prisma in controllers, DTO on every input
+- Code used by 2+ services is extracted to `backend/shared/` (`@pode-deixar/*`)
+  by the task that creates the second usage
+
+Full rules: [docs/architecture.md](docs/architecture.md).
+
 ## Main commands
 
 Run each command from the stated directory (`backend/` or `frontend/`) —
@@ -91,6 +105,15 @@ databases (`docker compose up -d postgres` from the repo root).
 7. **Update this file / docs/ if the task changed or added a decision**
 8. Open a PR (what changed, how to validate, checklist: tests, lint, typecheck, docs) and request review before the next task
 
+## How to work
+
+- Act directly within the task scope; present a plan for approval first only
+  for large changes (new service, destructive migration, public contract)
+- Chat in Portuguese: concise, with file paths/links and short test evidence
+- Blocked (missing credential, ambiguous requirement, broken environment)?
+  Stop, describe the blocker and the options, and wait — never guess ahead
+- "Done" requires short evidence (e.g. suite counts, lint ok), not bare claims
+
 ## Code standards
 
 - Clear, descriptive names; self-explanatory code; small cohesive functions
@@ -129,6 +152,10 @@ new service): [docs/task-checklists.md](docs/task-checklists.md).
 9. **Do not** ignore errors — all handling must be explicit
 10. **Never** push directly to main/develop — every change goes through a task branch + PR
 11. **Never** push or open a PR with failing tests, lint or typecheck
+12. **Never** run destructive commands (migrate reset, drop, mass delete, `rm -rf`) without prior confirmation — even locally
+13. **Never** touch files outside the task scope ("drive-by" edits) — unrelated improvements go as text suggestions, never as code
+14. **Never** use, repeat or persist secrets pasted in chat — redirect to the safe channel (GitHub Environments/secrets) instead
+15. **Never** edit tests to make them pass — fix the source; test changes need an approved justification
 
 ## Product decisions
 
