@@ -1,166 +1,39 @@
 # Pode Deixar
 
-> Plataforma digital para contratação de serviços que conecta clientes e prestadores em um ambiente seguro, transparente e organizado.
+> A forma simples e segura de contratar serviços: clientes publicam o que precisam, prestadores enviam propostas e a plataforma cuida do resto, do orçamento ao pagamento e à avaliação.
 
-## Sobre o Projeto
+## O problema que resolvemos
 
-O Pode Deixar é uma plataforma desenvolvida para modernizar a forma como serviços são contratados e gerenciados. A solução conecta clientes que precisam realizar tarefas com profissionais qualificados, centralizando todo o processo em um único ambiente digital.
+Contratar um serviço hoje costuma ser informal e arriscado: indicação por mensagem sem garantia, orçamento combinado no boca a boca, pagamento adiantado sem proteção, nenhum histórico do que foi acordado e nenhuma forma confiável de saber se o profissional é bom antes de contratar. Para o prestador, o cenário se inverte, mas a dor é parecida: agenda desorganizada, propostas perdidas em conversas, dificuldade para comprovar reputação e para gerenciar recebimentos.
 
-A plataforma foi criada para oferecer mais praticidade, segurança e transparência durante a contratação de serviços, permitindo que clientes encontrem prestadores, solicitem orçamentos, acompanhem negociações, realizem pagamentos e avaliem os serviços prestados.
+O Pode Deixar organiza essa relação inteira em um só lugar, com regras claras, dinheiro protegido e reputação visível.
 
-Seu objetivo é facilitar a conexão entre quem precisa de um serviço e quem possui as habilidades para executá-lo, tornando essa relação mais prática, eficiente e confiável.
+## O que o sistema faz
 
----
+**Para quem contrata:**
+- Publica o pedido com fotos do local, categoria, orçamento esperado e agendamento.
+- Recebe propostas de prestadores, compara preços e negocia por contrapropostas.
+- Acompanha cada etapa: pedido aberto, proposta aceita, serviço em andamento, concluído e pago.
+- Paga com segurança pela plataforma e só libera quando o serviço é confirmado.
+- Avalia o serviço e consulta avaliações e histórico antes da próxima contratação.
 
-## Objetivos
+**Para quem executa:**
+- Monta perfil profissional público com serviços, preços fixos, portfólio e disponibilidade.
+- Recebe solicitações abertas ou direcionadas e responde com propostas em poucos cliques.
+- Gerencia a agenda de serviços e acompanha solicitações recebidas.
+- Acompanha o financeiro: bruto, taxa da plataforma, líquido, lançamentos por status e evolução por mês.
+- Constrói reputação: cada avaliação conta para o rating exibido no perfil.
 
-- Facilitar a contratação de serviços por meio de uma experiência digital centralizada.
-- Conectar clientes e prestadores em um ambiente confiável.
-- Garantir mais segurança e transparência durante todo o processo de negociação.
-- Promover uma experiência intuitiva para todos os usuários.
-- Construir um sistema baseado em reputação e confiança.
-- Possibilitar a evolução contínua da plataforma através de uma arquitetura escalável.
+## Como funciona
 
----
+**Fluxo do cliente:** cadastro com verificação de email e login, criação do perfil, publicação do pedido, recebimento de propostas, aceite da melhor, acompanhamento da execução, pagamento via PIX com confirmação, avaliação do serviço.
 
-## Funcionalidades
+**Fluxo do prestador:** cadastro, perfil profissional, cadastro de serviços com preço fixo, recebimento de solicitações, envio de propostas, execução, conclusão, recebimento do líquido e construção da reputação.
 
-### Gestão de Usuários
+## Confiança e segurança
 
-- Cadastro e autenticação de usuários.
-- Perfis distintos para clientes e prestadores.
-- Gerenciamento de informações pessoais e profissionais.
-
-### Busca de Prestadores
-
-- Pesquisa de profissionais por categoria de serviço.
-- Visualização de perfis profissionais.
-- Consulta de avaliações e histórico de reputação.
-
-### Solicitação de Orçamentos
-
-- Criação de solicitações personalizadas.
-- Envio e recebimento de propostas.
-- Processo de negociação entre cliente e prestador.
-
-### Contratação de Serviços
-
-- Contratação de serviços com preço fixo.
-- Contratação baseada em propostas personalizadas.
-- Acompanhamento do status dos serviços.
-
-### Pagamentos
-
-- Intermediação financeira realizada pela plataforma.
-- Registro e rastreabilidade das transações.
-- Maior segurança para clientes e prestadores.
-
-### Avaliações e Reputação
-
-- Sistema de avaliações após a conclusão dos serviços.
-- Construção da reputação profissional dos prestadores.
-- Auxílio na tomada de decisão para futuras contratações.
-
----
-
-## Arquitetura da Solução
-
-O projeto foi concebido utilizando uma arquitetura baseada em microsserviços, permitindo maior escalabilidade, flexibilidade e facilidade de manutenção.
-
-### Microsserviços previstos
-
-- Autenticação e gerenciamento de usuários
-- Gestão de prestadores e perfis profissionais
-- Gestão de serviços e propostas
-- Contratações e acompanhamento de tarefas
-- Pagamentos e transações financeiras
-- Avaliações e reputação
-
----
-
-## Tecnologias Utilizadas
-
-### Backend
-
-- NestJS
-- APIs REST
-- JWT
-
-### Frontend
-
-- Next.js
-- React
-
-### Banco de Dados
-
-- PostgreSQL
-
-### Infraestrutura
-
-- Railway
-
----
-
-## Desenvolvimento Local
-
-### Com Docker (toda a stack)
-
-O projeto oferece dois modos de execução com Docker:
-
-#### Produção
-
-Sobe todos os serviços com código compilado (sem hot-reload):
-
-```bash
-docker compose up -d
-```
-
-#### Desenvolvimento (hot-reload)
-
-Sobe Postgres, MinIO, Mailpit e Caddy + os 3 microserviços com **recarga automática** ao alterar arquivos:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
-```
-
-Neste modo, o código-fonte é montado como volume dentro dos containers, e cada serviço roda com `nest start --watch` — qualquer alteração nos arquivos `.ts` reinicia o servidor automaticamente.
-
-#### Reconstruir imagens (após alterações em dependências)
-
-```bash
-docker compose build --no-cache && docker compose up -d
-```
-
-#### Parar os serviços
-
-```bash
-docker compose down
-```
-
-#### Logs
-
-```bash
-docker compose logs -f <service>
-```
-
-### Sem Docker (apenas serviços Node localmente)
-
-Execute cada microsserviço diretamente na máquina host com hot-reload:
-
-```bash
-cd backend
-pnpm dev
-```
-
-Os serviços serão iniciados nas portas `3001` (auth), `3002` (users) e `3003` (service-orders). Neste modo, você precisará do Postgres e MinIO rodando separadamente (via Docker ou instalados localmente).
-
----
-
-## Roadmap
-
-- Planos de destaque para prestadores
-- Sistema avançado de recomendações
-- Aplicativo mobile
-- Integrações com gateways de pagamento
-- Dashboards e métricas para profissionais
-- Recursos de comunicação em tempo real
+- Identidade verificada por email e perfis vinculados a cada negociação.
+- O dinheiro passa pela plataforma, com confirmação e rastreabilidade total.
+- Avaliações vinculadas a serviços realmente concluídos e pagos, sem notas avulsas.
+- Dados de cartão nunca tocam nossos servidores: pagamento real só via tokenização do gateway.
+- Proteção contra abusos com limites de uso, bloqueio anti-força-bruta e registros auditáveis.
