@@ -3,11 +3,10 @@
  * You can place global mocks or setup logic here.
  */
 
-// jest-dom custom matchers for Vitest
-import '@testing-library/jest-dom'
+// jest-dom custom matchers for Vitest (entry explícito: o bare import não
+// registra os matchers no jest-dom 6.10 + vitest 4)
+import '@testing-library/jest-dom/vitest'
 import { vi } from 'vitest'
-
-// @testing-library/jest-dom extends expect automatically on import
 
 // Mock jest functions for vitest compatibility
 (globalThis as any).jest = vi
