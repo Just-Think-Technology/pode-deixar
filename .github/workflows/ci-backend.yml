@@ -142,6 +142,36 @@ jobs:
 
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
 
+  # Testes de regressão dos pacotes compartilhados (logger/email/security).
+  # Job separado (sem matriz e sem Postgres): esses testes são unitários
+  # puros e o job `quick` é por serviço. Roda `backend/test:shared`.
+  shared:
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - run: pnpm run test:shared
+
   # `security` agora depende só de `quick`, igual `build` — os dois rodam em
   # paralelo em vez de security bloquear o início do build. Quem depende de
   # ambos é o job `image`, que é o que realmente precisa do gate completo.
