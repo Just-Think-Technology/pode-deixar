@@ -2,6 +2,15 @@
 
 > A forma simples e segura de contratar serviços: clientes publicam o que precisam, prestadores enviam propostas e a plataforma cuida do resto, do orçamento ao pagamento e à avaliação.
 
+## Sumário
+
+- [O problema que resolvemos](#o-problema-que-resolvemos)
+- [O que o sistema faz](#o-que-o-sistema-faz)
+- [Como funciona](#como-funciona)
+- [Confiança e segurança](#confiança-e-segurança)
+
+---
+
 ## O problema que resolvemos
 
 Contratar um serviço hoje costuma ser informal e arriscado: indicação por mensagem sem garantia, orçamento combinado no boca a boca, pagamento adiantado sem proteção, nenhum histórico do que foi acordado e nenhuma forma confiável de saber se o profissional é bom antes de contratar. Para o prestador, o cenário se inverte, mas a dor é parecida: agenda desorganizada, propostas perdidas em conversas, dificuldade para comprovar reputação e para gerenciar recebimentos.
@@ -37,3 +46,15 @@ O Pode Deixar organiza essa relação inteira em um só lugar, com regras claras
 - Avaliações vinculadas a serviços realmente concluídos e pagos, sem notas avulsas.
 - Dados de cartão nunca tocam nossos servidores: pagamento real só via tokenização do gateway.
 - Proteção contra abusos com limites de uso, bloqueio anti-força-bruta e registros auditáveis.
+
+---
+
+<table>
+  <tr>
+    <td><img src="frontend/src/assets/jt-technology-logo.png" alt="JT Technology" width="120" /></td>
+    <td>
+      <strong>JT Technology</strong><br />
+      <em>Think Smarter. Build Better.</em>
+    </td>
+  </tr>
+</table>
