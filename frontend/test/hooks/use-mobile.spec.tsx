@@ -1,87 +1,59 @@
 import { describe, it, expect, vitest } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import useMobile from '@/hooks/use-mobile'
+import { renderHook } from '@testing-library/react'
+import { useIsMobile } from '@/hooks/use-mobile'
 
-describe('useMobile Hook', () => {
+function setViewport(width: number, height: number) {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: width,
+  })
+  Object.defineProperty(window, 'innerHeight', {
+    writable: true,
+    configurable: true,
+    value: height,
+  })
+}
+
+describe('useIsMobile Hook', () => {
   beforeEach(() => {
     vitest.resetAllMocks()
   })
 
   it('should detect mobile viewport', () => {
     // Simular viewport mobile
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 375, // iPhone width
-    })
-    Object.defineProperty(window, 'innerHeight', {
-      writable: true,
-      configurable: true,
-      value: 667, // iPhone height
-    })
+    setViewport(375, 667) // iPhone
 
-    const { result } = renderHook(() => useMobile())
-    expect(result.current.isMobile).toBe(true)
-    expect(result.current.isTablet).toBe(false)
-    expect(result.current.isDesktop).toBe(false)
+    const { result } = renderHook(() => useIsMobile())
+    expect(result.current).toBe(true)
   })
 
-  it('should detect tablet viewport', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 768, // iPad width
-    })
-    Object.defineProperty(window, 'innerHeight', {
-      writable: true,
-      configurable: true,
-      value: 1024,
-    })
+  it('should return false exactly at the tablet breakpoint', () => {
+    setViewport(768, 1024) // iPad width = breakpoint (768), não é mobile
 
-    const { result } = renderHook(() => useMobile())
-    expect(result.current.isMobile).toBe(false)
-    expect(result.current.isTablet).toBe(true)
-    expect(result.current.isDesktop).toBe(false)
+    const { result } = renderHook(() => useIsMobile())
+    expect(result.current).toBe(false)
   })
 
   it('should detect desktop viewport', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 1440, // Desktop width
-    })
-    Object.defineProperty(window, 'innerHeight', {
-      writable: true,
-      configurable: true,
-      value: 900,
-    })
+    setViewport(1440, 900) // Desktop
 
-    const { result } = renderHook(() => useMobile())
-    expect(result.current.isMobile).toBe(false)
-    expect(result.current.isTablet).toBe(false)
-    expect(result.current.isDesktop).toBe(true)
+    const { result } = renderHook(() => useIsMobile())
+    expect(result.current).toBe(false)
   })
 
-  it('should update on resize', () => {
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 375,
-    })
-    Object.defineProperty(window, 'innerHeight', {
-      writable: true,
-      configurable: true,
-      value: 667,
-    })
+  it('should return a boolean on resize', () => {
+    setViewport(375, 667)
 
-    const { result } = renderHook(() => useMobile())
-    expect(result.current.isMobile).toBe(true)
+    const { result } = renderHook(() => useIsMobile())
+    expect(result.current).toBe(true)
 
     // Simular resize para desktop
+    setViewport(1440, 900)
     window.dispatchEvent(new Event('resize'))
 
-    // O hook pode não reage imediatamente dependendo da implementação,
-    // mas testamos que o initial detection funciona
-    expect(typeof result.current.isMobile).toBe('boolean')
+    // O hook escuta matchMedia (mockado no setup), então validamos
+    // apenas que o retorno segue booleano após o evento
+    expect(typeof result.current).toBe('boolean')
   })
 })

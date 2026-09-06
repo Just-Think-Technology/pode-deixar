@@ -21,7 +21,7 @@ describe('Alert Component', () => {
     expect(alert).toBeInTheDocument()
     expect(alert).toHaveClass('bg-card')
     expect(alert).toHaveClass('text-destructive')
-    expect(screen.getByRole('alert')).toHaveTextContent('text-destructive/90')
+    expect(alert).toHaveClass('*:data-[slot=alert-description]:text-destructive/90')
   })
 
   it('should render alert title', () => {
@@ -43,12 +43,12 @@ describe('Alert Component', () => {
   })
 
   it('should render alert action (close button)', () => {
-    render(
+    const { container } = render(
       <Alert>
         <AlertAction />
       </Alert>
     )
-    const action = screen.getByRole('alert-action')
+    const action = container.querySelector('[data-slot="alert-action"]')
     expect(action).toBeInTheDocument()
   })
 

@@ -15,7 +15,7 @@ describe('Input Component', () => {
 
   it('should render input with type text', () => {
     render(<Input type="text" data-testid="text-input" />)
-    const input = screen.getByRole('textbox', { name: /text-input/ })
+    const input = screen.getByTestId('text-input')
     expect(input).toHaveAttribute('type', 'text')
   })
 
@@ -26,8 +26,9 @@ describe('Input Component', () => {
   })
 
   it('should render input with type password', () => {
-    render(<Input type="password" />)
-    const input = screen.getByRole('textbox')
+    const { container } = render(<Input type="password" />)
+    const input = container.querySelector('input[type="password"]')
+    expect(input).toBeInTheDocument()
     expect(input).toHaveAttribute('type', 'password')
   })
 
@@ -40,7 +41,7 @@ describe('Input Component', () => {
   it('should render input with placeholder', () => {
     render(<Input placeholder="Seu e-mail" />)
     const input = screen.getByRole('textbox')
-    expect(input).toHavePlaceholder('Seu e-mail')
+    expect(input).toHaveAttribute('placeholder', 'Seu e-mail')
   })
 
   it('should apply default classes', () => {

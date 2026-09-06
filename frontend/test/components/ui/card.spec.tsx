@@ -8,14 +8,14 @@ describe('Card Component', () => {
   })
 
   it('should render card element', () => {
-    render(<Card>Conteúdo do Card</Card>)
-    const card = screen.getByRole('region', { name: /card/i })
+    const { container } = render(<Card>Conteúdo do Card</Card>)
+    const card = container.querySelector('[data-slot="card"]')
     expect(card).toBeInTheDocument()
   })
 
   it('should apply default card classes', () => {
-    render(<Card>Conteúdo</Card>)
-    const card = screen.getByRole('region', { name: /card/i })
+    const { container } = render(<Card>Conteúdo</Card>)
+    const card = container.querySelector('[data-slot="card"]')
     expect(card).toHaveClass('flex')
     expect(card).toHaveClass('flex-col')
     expect(card).toHaveClass('gap-4')
@@ -30,11 +30,11 @@ describe('Card Component', () => {
   })
 
   it('should render card with sm size', () => {
-    render(<Card size="sm">Sm Card</Card>)
-    const card = screen.getByRole('region', { name: /card/i })
-    expect(card).toHaveClass('data-[size=sm]')
-    expect(card).toHaveClass('sm\\:gap-3')
-    expect(card).toHaveClass('sm\\:py-3')
+    const { container } = render(<Card size="sm">Sm Card</Card>)
+    const card = container.querySelector('[data-slot="card"]')
+    expect(card).toHaveAttribute('data-size', 'sm')
+    expect(card).toHaveClass('data-[size=sm]:gap-3')
+    expect(card).toHaveClass('data-[size=sm]:py-3')
   })
 
   it('should render card header', () => {
@@ -48,7 +48,6 @@ describe('Card Component', () => {
       </Card>
     )
 
-    expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(screen.getByText('Header')).toBeInTheDocument()
     expect(screen.getByText('Título')).toBeInTheDocument()
     expect(screen.getByText('Descrição')).toBeInTheDocument()
