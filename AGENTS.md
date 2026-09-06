@@ -1,310 +1,171 @@
-# Agentes
+# Agents
 
-Este arquivo contém instruções e contexto para agentes de IA (como opencode) trabalharem neste projeto.
+Instructions and context for AI agents (e.g. opencode) working on this project.
+Single source of truth for product decisions, development rules and architecture.
 
-Mantido sempre atualizado com decisões de produto, regras de desenvolvimento e arquitetura.
+> **Self-maintenance rule:** when a task changes any decision recorded here
+> (new service, new product rule, new security policy, new deploy step),
+> updating this file and the linked docs is part of the task — see
+> "Task flow" step 7.
 
 ## Stack
 
 - **Backend:** NestJS 11, TypeScript, Prisma 5.22, PostgreSQL
 - **Frontend:** Next.js 16, React 19, shadcn/ui, Tailwind CSS 4
-- **Infra:** Docker Compose, Caddy, pnpm 11 (workspaces), Redis 7
+- **Infra:** Docker Compose, Caddy, pnpm 11 (workspaces), Redis 7, MinIO
 
-## Estrutura do Monorepo
+## Monorepo layout
 
 ```
 backend/
-├── prisma/          # Schema e migrations compartilhados
-├── shared/          # Pacotes compartilhados (logger, email, security)
-│   ├── logger/          # Logger Pino compartilhado
-│   ├── email/           # Serviço de email compartilhado
-│   └── security/        # Configurações de segurança (helmet CSP, Redis throttler)
+├── prisma/          # Shared schema and migrations
+├── shared/          # Shared packages (logger, email, security)
 └── services/
-    ├── auth/            # :3001 — Autenticação
-    ├── users/           # :3002 — Perfis e categorias
-    ├── service-orders/  # :3003 — Ordens de serviço e propostas
-    └── payments/        # :3004 — Pagamentos (Mercado Pago, webhooks)
+    ├── auth/            # :3001 — Authentication
+    ├── users/           # :3002 — Profiles and categories
+    ├── service-orders/  # :3003 — Service orders and proposals
+    ├── payments/        # :3004 — Payments (Mercado Pago, webhooks)
+    └── reviews/         # :3005 — Reviews
+backend/e2e/        # Cross-service journey tests (@pode-deixar/e2e)
 frontend/
 ├── app/             # Next.js App Router
-├── api/             # Cliente HTTP
-├── components/      # Componentes React
-├── lib/auth/        # Server actions e sessão
-└── mock/            # Dados mockados para dev
-scripts/             # Scripts utilitários (backup, restore, init-db)
-docs/                # Documentação de decisões (security, etc.)
+├── api/             # HTTP client
+├── components/      # React components
+├── lib/auth/        # Server actions and session
+└── mock/            # Mock data for dev
+docs/                # Security, product and deploy decisions
 ```
 
-## Comandos principais
+## Architecture
+
+- No sync HTTP between services — integration is via the shared PostgreSQL
+  (single Prisma schema in `backend/prisma/`); the frontend reaches services
+  through the Caddy gateway (`/api/*`)
+- Auth guards live only in `@pode-deixar/security`; per-service copies are
+  tech debt — migrate them when touching a service's auth
+- New code layering: controller (HTTP + validation) → service (business
+  rules) → repository (Prisma); no Prisma in controllers, DTO on every input
+- Code used by 2+ services is extracted to `backend/shared/` (`@pode-deixar/*`)
+  by the task that creates the second usage
+
+Full rules: [docs/architecture.md](docs/architecture.md).
+
+## Main commands
+
+Run each command from the stated directory (`backend/` or `frontend/`) —
+never from the repo root.
 
 ```bash
-# Backend — dentro de backend/
-pnpm dev              # Gera Prisma client + sobe os 4 serviços
-pnpm build            # Build de shared + serviços
-pnpm test             # Testes dos 4 serviços
+# Backend — inside backend/
+pnpm dev              # Prisma generate + start the 5 services
+pnpm build            # Build shared + services
+pnpm test             # Unit tests of the 5 services (needs local Postgres)
+pnpm test:shared      # Tests of shared packages (logger, email, security)
+pnpm test:e2e         # Cross-service journeys (needs local Postgres)
+pnpm lint             # ESLint on the 5 services
+pnpm prisma:migrate   # Apply migrations (deploy)
 
-# Frontend — dentro de frontend/
+# Frontend — inside frontend/
 pnpm dev              # Dev server
-pnpm build            # Build de produção
-pnpm lint             # Lint + formatação
+pnpm build            # Production build
+pnpm lint             # Lint + formatting
+pnpm test             # Vitest unit tests
+pnpm test:e2e         # Playwright e2e
+pnpm typecheck        # tsc --noEmit
 ```
 
-## Convenções
+CI runs the same gates per push: backend jobs `changes, quick, e2e, shared,
+security, build, image, codeql, dependency-review`; frontend jobs
+`quick, deep, security, image, codeql, dependency-review`.
+Details: [docs/security/ci-pipeline.md](docs/security/ci-pipeline.md).
 
-- **Idioma:** Código e comentários em português (regras de negócio e validações)
-- **Validação:** class-validator + class-transformer com mensagens em português
-- **Autenticação:** JWT (access 15min + refresh 7 dias) com rotação e blacklist
+Backend `test` / `test:e2e` need a local Postgres with the per-service test
+databases (`docker compose up -d postgres` from the repo root).
+
+## Conventions
+
+- **Language:** code and comments in Portuguese (business rules, validation messages)
+- **This file and docs/ are in English**; code identifiers stay as-is
+- **Validation:** class-validator + class-transformer, messages in Portuguese
+- **Auth:** JWT (access 15min + refresh 7 days) with rotation and blacklist
 - **Roles:** CLIENT, PROVIDER, ADMIN
-- **Soft delete:** Serviços usam `is_active`, ordens mudam status para CANCELLED
-- **Commits:** Seguir conventional commits (feat, fix, chore, etc.)
+- **Soft delete:** services use `is_active`; orders move to CANCELLED
+- **Commits:** messages and PR titles in English, Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`); PR body in Portuguese or English (what changed, how to validate, checks run)
+- **Branches:** `feat/`, `fix/`, `docs/`, `test/`, `chore/`, `refactor/` + short slug (e.g. `feat/order-photos`)
+- **Commit hygiene:** review `git status` / `git diff` before committing; never commit env files, secrets or generated artifacts
 
-## Regras de desenvolvimento
+## Task flow
 
-### Boas práticas
+1. Understand the task — ask if anything is ambiguous
+2. Create a specific branch with a descriptive name BEFORE any code change (never develop on main/develop; one task = one branch = one PR)
+3. Study the existing architecture before coding; check [docs/task-checklists.md](docs/task-checklists.md) for the matching task type
+4. Implement following best practices (DRY, SOLID where applicable, SRP, KISS, YAGNI, composition over inheritance, low coupling)
+5. Update or create tests for the change; run `pnpm lint` and `pnpm typecheck`
+6. Validate nothing broke (run the affected suites) — before push/PR, the affected suites plus `pnpm lint` and `pnpm typecheck` must be green
+7. **Update this file / docs/ if the task changed or added a decision**
+8. Open a PR (what changed, how to validate, checklist: tests, lint, typecheck, docs) and request review before the next task
 
-Sempre desenvolver utilizando:
+## How to work
 
-- **DRY** — Don't Repeat Yourself
-- **SOLID** — quando aplicável
-- **Clean Code** — código limpo e legível
-- **Clean Architecture** — quando fizer sentido para o projeto
-- **Baixo acoplamento e alta coesão**
-- **SRP** — Princípio da Responsabilidade Única
-- **KISS** — Keep It Simple, Stupid
-- **YAGNI** — You Aren't Gonna Need It: não implementar funcionalidades não solicitadas
-- **Composição > Herança** — preferir composição sobre herança
+- Act directly within the task scope; present a plan for approval first only
+  for large changes (new service, destructive migration, public contract)
+- Chat in Portuguese: concise, with file paths/links and short test evidence
+- Blocked (missing credential, ambiguous requirement, broken environment)?
+  Stop, describe the blocker and the options, and wait — never guess ahead
+- "Done" requires short evidence (e.g. suite counts, lint ok), not bare claims
 
-### Segurança primeiro
+## Code standards
 
-**Sempre pensar em segurança do sistema ao desenvolver qualquer funcionalidade.** Antes de implementar, considerar:
+- Clear, descriptive names; self-explanatory code; small cohesive functions
+- No magic numbers; explicit error handling (never swallow exceptions)
+- Minimal changes: touch only what the task needs; suggest (don't implement) unrelated improvements
+- Reuse first: check for an existing equivalent before creating files, classes or services
+- No premature optimization, but no knowingly wasteful queries, loops or allocations
+- No new libraries without need and justification; check `package.json` first
+- Public API/contract/behavior changes must be announced beforehand
 
-- **Autenticação e autorização:** quem pode chamar o endpoint? Validação de ownership/roles em recursos por ID (403 para acesso indevido)
-- **Backend é a fonte de verdade** — nunca confiar em valores enviados pelo frontend (preços, IDs, status); buscar/calcular no backend quando aplicável
-- **Validação rigorosa de entrada** — usar DTOs (class-validator), UUIDs reais, limites
-- **Confirmação de eventos externos** — webhooks/gateways devem validar assinatura e conferir valores; fail-closed (rejeitar quando não validado)
-- **Consistência com as regras de segurança deste arquivo** — revisar produção/infra antes de criar exposição desnecessária
+## Security baseline
 
-### Dados de cartão (PCI-DSS)
+The backend is the source of truth — never trust values from the frontend
+(prices, IDs, status). Full policies live in [docs/security/](docs/security/):
 
-**Nunca armazenar, expor ou registrar PAN/CVV de cartões.** Regras para qualquer funcionalidade:
+- [Card data (PCI-DSS)](docs/security/pci-card-data.md) — never store, accept, log or echo PAN/CVV; gateway tokenization only
+- [Rate limiting](docs/security/rate-limiting.md) — 100 req/min global via `@nestjs/throttler`; stricter limits on sensitive endpoints; Redis in production
+- [Content Security Policy](docs/security/content-security-policy.md) — centralized `getHelmetConfig()` in `@pode-deixar/security`
+- [CI security pipeline](docs/security/ci-pipeline.md) — audit, dependency review, TruffleHog, CodeQL, eslint-plugin-security, Hadolint
+- [Backups](docs/security/backups.md) — daily `pg_dump`, 7-day retention, tested restore
+- [Encryption at rest](docs/security/encryption-at-rest-decision.md) — decision record
 
-- **Não armazenar** número completo do cartão, CVV, senha ou PIN em banco, cache ou logs
-- **Não aceitar** dados de cartão no backend — dados só transitam do cliente direto ao gateway (tokenização)
-- **Usar sempre** tokenização do gateway (ex.: card token do Mercado Pago) ou checkout hospedado/componentes oficiais
-- **Nunca enviar** dados de cartão para os nossos servidores se não for necessário — o backend só vê o token/ID da transação, nunca o PAN
-- **Lembrar de logs** — sanitizar qualquer log (interceptor/filter) contra números de cartão e CVV
-- Posições de resposta/erro do gateway **nunca** ecoam campos de cartão
+Per-task security checklists (new endpoint, Prisma migration, webhook/gateway,
+new service): [docs/task-checklists.md](docs/task-checklists.md).
 
-### Rate Limiting e Throttling
+## Never do
 
-- **Global:** 100 req/min via `@nestjs/throttler` (memória em dev, Redis em produção)
-- **Endpoints sensíveis:**
-  - `POST /payments/webhook` (mock): 20 req/min
-  - `POST /payments/webhook/mercadopago`: 60 req/min
-  - `POST /services/me/:orderId/photos`: 20 req/min
-  - `POST /payments/:paymentId/charge`: 10 req/min
-- **Implementação:** `ThrottlerModule.forRootAsync` com `RedisThrottlerStorage` em produção, memória em dev/test
+1. **Never** open `.env.prod`, `.env.staging` or any production environment file
+2. **Never** print, log or persist secrets, credentials, tokens, card data (PAN/CVV) or personal data beyond what the feature requires
+3. **Never** run destructive commands (migrate reset, drop, mass delete) against staging/production data
+4. **Do not** change secrets, infra config or CI/CD pipelines unless the task explicitly requires it
+5. **Do not** remove existing security validations
+6. **Do not** add unrequested features
+7. **Do not** remove code without checking usages, impact and justification
+8. **Do not** assume requirements — ask when ambiguous
+9. **Do not** ignore errors — all handling must be explicit
+10. **Never** push directly to main/develop — every change goes through a task branch + PR
+11. **Never** push or open a PR with failing tests, lint or typecheck
+12. **Never** run destructive commands (migrate reset, drop, mass delete, `rm -rf`) without prior confirmation — even locally
+13. **Never** touch files outside the task scope ("drive-by" edits) — unrelated improvements go as text suggestions, never as code
+14. **Never** use, repeat or persist secrets pasted in chat — redirect to the safe channel (GitHub Environments/secrets) instead
+15. **Never** edit tests to make them pass — fix the source; test changes need an approved justification
 
-### CSP (Content Security Policy)
+## Product decisions
 
-- Configuração centralizada em `@pode-deixar/security` (`getHelmetConfig()`)
-- `default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`
-- `script-src/style-src` permitem `'unsafe-inline'` apenas para Swagger UI
-- HSTS (1 ano, includeSubDomains, preload), `X-Frame-Options: DENY`
-- Aplicado em todos os 4 serviços via `app.use(getHelmetConfig())`
+- [Ownership and data access](docs/decisions/ownership-access.md) — ownership validation, 403 semantics, proposal visibility, directed orders
+- [Order photos](docs/decisions/order-photos.md) — MinIO, webp via sharp, limits, dedicated upload endpoint
+- [Payments](docs/decisions/payments.md) — PIX/credit-card status, tokenization path, webhook idempotency, structured logging
+- [Database](docs/decisions/database.md) — least-privilege role
 
-### Backups e Restauração
+## Deploy
 
-- **PostgreSQL Backup:** `pg_dump` diário às 03:00 UTC, retenção 7 dias, gzip
-- **Serviço:** `postgres-backup` no docker-compose (PostgreSQL 16 + cron)
-- **Restauração:** script `scripts/test-restore.sh` — restaura em DB temporário, valida contagem de tabelas/registros, limpa automaticamente
-- **Volume:** `backup_data` persistido
-
-### Rate Limiting Distribuído (Redis)
-
-- Redis 7-alpine no docker-compose (porta 6379, `appendonly`, `maxmemory 256MB`, LRU)
-- `RedisThrottlerStorage` implementa `ThrottlerStorage` do NestJS
-- `ThrottlerModule.forRootAsync` usa Redis em produção (`NODE_ENV=production`), memória em dev/test
-
-### Pipeline de Segurança CI
-
-- **Dependency Audit:** `pnpm audit --prod --audit-level=high` (backend + frontend)
-- **Dependency Review:** `actions/dependency-review-action@v4` em PRs
-- **Secret Scanning:** TruffleHog (`--only-verified --fail`)
-- **CodeQL:** Static Analysis com queries `security-extended` + `security-and-quality`
-- **ESLint Security:** `eslint-plugin-security` em todos os serviços
-- **Dockerfile Scan:** Hadolint
-- **Resumo consolidado** no final — falha se qualquer job falhar
-
-### ESLint Security Plugin
-
-- `eslint-plugin-security` configurado nos 5 serviços (`securityPlugin.configs.recommended` no `eslint.config.mjs` de cada um, flat config ESLint 9)
-- Cobrança via `lint` por serviço no job `quick` do CI (não há step separado no job `security`)
-- Regras recomendadas + específicas:
-  - `detect-object-injection`, `detect-non-literal-fs-filename`, `detect-unsafe-regex`
-  - `detect-buffer-noassert`, `detect-child-process`, `detect-disable-mustache-escape`
-  - `detect-eval-with-expression`, `detect-no-csrf-before-method-override`
-  - `detect-non-literal-regexp`, `detect-possible-timing-attacks`, `detect-pseudoRandomBytes`
-
-### Dados de cartão (PCI-DSS)
-
-**Nunca armazenar, expor ou registrar PAN/CVV de cartões.** Regras para qualquer funcionalidade:
-
-- **Não armazenar** número completo do cartão, CVV, senha ou PIN em banco, cache ou logs
-- **Não aceitar** dados de cartão no backend — dados só transitam do cliente direto ao gateway (tokenização)
-- **Usar sempre** tokenização do gateway (ex.: card token do Mercado Pago) ou checkout hospedado/componentes oficiais
-- **Nunca enviar** dados de cartão para os nossos servidores se não for necessário — o backend só vê o token/ID da transação, nunca o PAN
-- **Lembrar de logs** — sanitizar qualquer log (interceptor/filter) contra números de cartão e CVV
-- Posições de resposta/erro do gateway **nunca** ecoam campos de cartão
-
-### Fluxo de cada tarefa
-
-1. Entender a tarefa — perguntar se houver ambiguidade
-2. Criar uma branch específica com nome descritivo
-3. Analisar a arquitetura existente antes de codificar
-4. Implementar a solução seguindo as boas práticas
-5. Atualizar testes, quando necessário
-6. Validar que nada foi quebrado
-7. Resumir as alterações realizadas
-8. Solicitar revisão antes de prosseguir para a próxima tarefa
-
-### Código limpo
-
-- Nomes claros e descritivos
-- Código autoexplicativo (evitar comentários desnecessários)
-- Funções pequenas e coesas
-- Evitar números mágicos
-- Tratamento adequado de erros (nunca silenciar exceções)
-
-### Alterações mínimas
-
-- Modificar apenas o necessário para resolver a tarefa
-- Evitar refatorações amplas ou mudanças não solicitadas
-- Se identificar melhoria, apenas sugerir — não implementar sem aprovação
-
-### Reutilização
-
-- Antes de criar novos arquivos, classes ou serviços, verificar se já existe algo equivalente
-- Reutilizar implementações existentes sempre que possível
-- Evitar duplicação de responsabilidades
-
-### Performance
-
-- Evitar consultas desnecessárias
-- Evitar processamento duplicado
-- Evitar loops redundantes
-- Evitar alocação excessiva de memória
-- Não otimizar prematuramente, mas também não criar soluções ineficientes
-
-### Segurança
-
-- Nunca expor credenciais, hardcodar senhas/tokens/chaves ou logar informações sensíveis
-- Nunca remover validações de segurança existentes
-- Sempre usar variáveis de ambiente e mecanismos já existentes no projeto
-
-### Dependências
-
-- Não adicionar novas bibliotecas ou frameworks sem necessidade
-- Se realmente necessário, justificar antes de utilizar
-- Sempre verificar se o pacote já existe no `package.json` antes de instalar
-
-### Git
-
-- Cada tarefa em uma branch específica (nunca desenvolver em main/develop)
-- Commits pequenos e coesos, cada um representando uma única responsabilidade
-- Mensagens claras seguindo Conventional Commits:
-  - `feat:` — nova funcionalidade
-  - `fix:` — correção de bug
-  - `refactor:` — refatoração
-  - `chore:` — tarefas de manutenção
-  - `test:` — testes
-  - `docs:` — documentação
-
-### Testes
-
-- Criar ou atualizar testes relacionados à funcionalidade sempre que possível
-- Garantir que alterações não quebrem funcionalidades existentes
-- Não remover testes sem justificativa
-- Rodar `pnpm lint` e `pnpm typecheck` após alterações
-
-## O que NÃO fazer
-
-1. **Nunca** acessar `.env.prod`, `.env.staging` ou qualquer arquivo de ambiente de produção
-2. **Não** modificar segredos, credenciais, configurações de infraestrutura ou pipelines de CI/CD a menos que seja parte explícita da tarefa
-3. **Não** adicionar funcionalidades extras não solicitadas
-4. **Não** quebrar compatibilidade — mudanças em APIs públicas, contratos ou comportamento existente devem ser informadas previamente
-5. **Não** remover código sem antes verificar se ainda é utilizado, avaliar impactos e justificar
-6. **Não** assumir requisitos — quando houver ambiguidade, perguntar antes de implementar
-7. **Não** ignorar erros — todo tratamento deve ser explícito e adequado
-
-## Padrões de código
-
-- **React:** Seguir padrão shadcn/ui (composição Radix + `cn()`)
-- **Endpoints:** Criar DTO com class-validator + decorator Swagger
-- **Secrets:** Não versionar — usar variáveis de ambiente
-
-## Decisões de produto
-
-### Ownership e acesso a dados
-
-- **Ownership validation:** Endpoints protegidos que acessam recursos por ID devem sempre validar se o recurso pertence ao usuário autenticado
-- **Status code para ownership:** Usar `403 Forbidden` (não `400 Bad Request`) quando o recurso não pertence ao usuário — mais semântico para autorização
-- **Leitura de propostas (GET /services/:orderId):**
-  - CLIENT dono do pedido → vê todas as propostas
-  - PROVIDER com proposta no pedido → vê apenas sua própria proposta
-  - Demais casos → 403 Forbidden
-- **Endpoint público vs autenticado:** Dados sensíveis (propostas com valores) nunca devem ser expostos sem autenticação
-- **ProviderId em pedidos:** Pedidos podem ser direcionados a um prestador específico (`providerId` preenchido) ou abertos no marketplace (`providerId` null). Propostas só são permitidas do prestador alvo quando `providerId` está preenchido.
-- **Leitura de pedido por PROVIDER (GET /services/:orderId):**
-  - Se `order.providerId` está preenchido e é o usuário → vê dados do pedido + sua proposta (se tiver)
-  - Se `order.providerId` está preenchido e NÃO é o usuário → 403 Forbidden
-  - Se `order.providerId` é null → vê dados do pedido + sua proposta (se tiver)
-
-### Fotos de pedidos (OrderPhoto)
-
-- **Armazenamento:** MinIO, bucket `order-photos`
-- **Formato:** Todas as fotos convertidas para `.webp` via `sharp` (qualidade 80)
-- **Limite:** Máximo 10 fotos por pedido, 5MB por foto
-- **Upload:** Endpoint separado `POST /services/me/:orderId/photos` (multipart), após a criação do pedido
-- **Validação:** Apenas o CLIENT dono do pedido pode enviar fotos
-
-### Pagamentos e dados de cartão (PCI)
-
-- **Fluxo atual:** PIX via Mercado Pago (sandbox/produção) e CREDIT_CARD **mock** (sem dados reais de cartão). Cartão real ainda não implementado.
-- **Quando o CREDIT_CARD real for implementado:** usar **tokenização do Mercado Pago** (card token gerado no cliente via SDK/Bricks oficial) ou **Checkout Pro hospedado** — nunca receber PAN/CVV no backend
-- **Backend vê apenas** o token do cartão/ID da transação do gateway; nunca o número completo
-- **Logs:** interceptor/filter do payments sanitizam PAN e CVV (`sanitizar-dados-sensiveis.ts`)
-
-### Webhooks de Pagamento (Idempotência e Anti-Replay)
-
-- **Mock:** `eventId` obrigatório no DTO + `timestamp` opcional (janela ±5min)
-- **Mercado Pago:** `x-request-id` header como `eventId` (único por notificação) + assinatura HMAC com timestamp ±5min
-- **Armazenamento:** tabela `payment_webhook_events` com unique `(gateway, eventId)`
-- **Processamento idempotente:** verifica se evento já processado → retorna estado atual sem reprocessar
-- **Race condition:** P2002 (unique violation) tratado como duplicado → retorna estado atual
-- **Validação de valor:** confere `amount` local vs gateway antes de qualquer transição
-- **Confirmação via gateway:** MP webhook chama `getPayment` para confirmar status real (não confia no webhook)
-
-### Logging Estruturado de Pagamentos
-
-- **PaymentLoggerService** em `payments/src/payments/payment-logger.service.ts`
-- Eventos logados:
-  - `payment.created` — criação com `paymentId`, `orderId`, amount, method, idempotencyKey
-  - `payment.status_changed` — transição com actor (MOCK/MERCADO_PAGO/USER/SYSTEM)
-  - `payment.webhook_received` — status sucesso/duplicado/falha, gateway, eventId
-  - `payment.error` — erros com contexto
-  - `payment.auth_failure` — webhook_key, assinatura, timestamp, replay
-  - `payment.suspicious` — atividades suspeitas
-- Sanitização automática via `ResponseLoggerInterceptor` + `sanitizarDadosSensiveis`
-
-### Usuário DB com Menor Privilégio
-
-- Script `scripts/init-db-least-privilege.sql` cria role `pode_deixar_app`
-- Permissões: `SELECT, INSERT, UPDATE, DELETE` nas tabelas, `USAGE` em sequences
-- `REVOKE CREATE` em schema e database
-- Default privileges configuradas para futuras tabelas/sequences
-
-### Criptografia em Repouso
-
-- **Decisão documentada:** `docs/security/encryption-at-rest-decision.md`
-- **Não obrigatório na aplicação:** sem PAN/CVV armazenados, senhas em bcrypt, infra provê LUKS/TDE
-- Reavaliar se: armazenar dados de cartão, LGPD exigir, migração para TDE nativo
+All-free topology (Vercel + Oracle VPS + Neon + Cloudflare + Resend/Brevo),
+single `docker-compose.prod.yml` for staging/prod, Caddy vhosts, per-stack Redis:
+[docs/deploy.md](docs/deploy.md).
