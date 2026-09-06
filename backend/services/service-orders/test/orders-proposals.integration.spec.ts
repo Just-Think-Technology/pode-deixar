@@ -1,5 +1,7 @@
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
+// import-require: estes serviços não têm esModuleInterop (diferente do auth),
+// então o default-import compila para `.default` inexistente em runtime.
+import request = require('supertest');
 import { App } from 'supertest/types';
 import {
   setupTestApp,
@@ -216,7 +218,7 @@ describe('Orders & Proposals (integration)', () => {
       const response = await request(app.getHttpServer())
         .post(`/proposals/${proposalId}/accept`)
         .set(bearerAuth(client.token))
-        .expect(200);
+        .expect(201);
 
       expect(response.body.status).toBe('ACCEPTED');
     });

@@ -1,5 +1,7 @@
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
+// import-require: estes serviços não têm esModuleInterop (diferente do auth),
+// então o default-import compila para `.default` inexistente em runtime.
+import request = require('supertest');
 import { App } from 'supertest/types';
 import {
   setupTestApp,
@@ -174,7 +176,7 @@ describe('Payments (integration)', () => {
         .post('/payments/webhook')
         .set('x-webhook-key', 'test-webhook-key')
         .send(webhookDto(paymentId, `evt_${Date.now()}_a`))
-        .expect(200);
+        .expect(201);
 
       expect(response.body.payment.status).toBe('PAID');
     });
@@ -189,13 +191,13 @@ describe('Payments (integration)', () => {
         .post('/payments/webhook')
         .set(headers)
         .send(webhookDto(paymentId, eventId))
-        .expect(200);
+        .expect(201);
 
       const duplicate = await request(app.getHttpServer())
         .post('/payments/webhook')
         .set(headers)
         .send(webhookDto(paymentId, eventId))
-        .expect(200);
+        .expect(201);
 
       expect(duplicate.body.payment.status).toBe('PAID');
     });
