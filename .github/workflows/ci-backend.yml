@@ -253,6 +253,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # O metadata-action publica tags sempre em minúsculas, mas
+      # IMAGE_PREFIX preserva a caixa do nome da org (Just-Think-Technology).
+      # Normaliza a referência usada na leitura (sbom/cosign) para a forma
+      # canônica minúscula — igual ao que foi efetivamente publicado.
+      # (Mesmo fix já aplicado no ci-frontend.)
+      - name: Normalize image reference to lowercase
+        run: echo "IMAGE_REF=${{ env.REGISTRY }}/$(echo '${{ env.IMAGE_PREFIX }}-${{ matrix.service }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -279,7 +287,9 @@ jobs:
       - name: Generate SBOM (SPDX)
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}@${{ steps.docker_build.outputs.digest }}
+          image: ${{ env.IMAGE_REF }}@${{ steps.docker_build.outputs.digest }}
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
           format: spdx-json
           output-file: sbom-${{ matrix.service }}.spdx.json
           upload-artifact: false
@@ -297,7 +307,7 @@ jobs:
       - name: Sign image (keyless, via OIDC/Sigstore)
         run: |
           cosign sign --yes \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}@${{ steps.docker_build.outputs.digest }}"
+            "${{ env.IMAGE_REF }}@${{ steps.docker_build.outputs.digest }}"
 
   codeql:
     needs: changes
