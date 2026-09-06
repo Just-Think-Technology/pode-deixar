@@ -75,11 +75,11 @@ Details: [docs/security/ci-pipeline.md](docs/security/ci-pipeline.md).
 ## Task flow
 
 1. Understand the task — ask if anything is ambiguous
-2. Create a specific branch with a descriptive name (never develop on main/develop)
+2. Create a specific branch with a descriptive name BEFORE any code change (never develop on main/develop; one task = one branch = one PR)
 3. Study the existing architecture before coding; check [docs/task-checklists.md](docs/task-checklists.md) for the matching task type
 4. Implement following best practices (DRY, SOLID where applicable, SRP, KISS, YAGNI, composition over inheritance, low coupling)
 5. Update or create tests for the change; run `pnpm lint` and `pnpm typecheck`
-6. Validate nothing broke (run the affected suites)
+6. Validate nothing broke (run the affected suites) — before push/PR, the affected suites plus `pnpm lint` and `pnpm typecheck` must be green
 7. **Update this file / docs/ if the task changed or added a decision**
 8. Summarize the changes and request review before the next task
 
@@ -119,6 +119,8 @@ new service): [docs/task-checklists.md](docs/task-checklists.md).
 7. **Do not** remove code without checking usages, impact and justification
 8. **Do not** assume requirements — ask when ambiguous
 9. **Do not** ignore errors — all handling must be explicit
+10. **Never** push directly to main/develop — every change goes through a task branch + PR
+11. **Never** push or open a PR with failing tests, lint or typecheck
 
 ## Product decisions
 
