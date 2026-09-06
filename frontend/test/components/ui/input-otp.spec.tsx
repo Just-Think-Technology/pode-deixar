@@ -1,6 +1,6 @@
 import { describe, it, expect, vitest } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp'
 
 describe('InputOTP Component', () => {
   beforeEach(() => {
@@ -8,16 +8,16 @@ describe('InputOTP Component', () => {
   })
 
   it('should render InputOTPGroup', () => {
-    render(<InputOTPGroup>Group</InputOTPGroup>)
-    const group = screen.getByRole('group')
+    const { container } = render(<InputOTPGroup>Group</InputOTPGroup>)
+    const group = container.querySelector('[data-slot="input-otp-group"]')
     expect(group).toBeInTheDocument()
     expect(group).toHaveClass('flex')
     expect(group).toHaveClass('items-center')
   })
 
   it('should apply default classes to InputOTPGroup', () => {
-    render(<InputOTPGroup />)
-    const group = screen.getByRole('group')
+    const { container } = render(<InputOTPGroup />)
+    const group = container.querySelector('[data-slot="input-otp-group"]')
     expect(group).toHaveClass('rounded-lg')
     expect(group).toHaveClass('has-aria-invalid:border-destructive')
     expect(group).toHaveClass('has-aria-invalid:ring-3')
@@ -75,7 +75,7 @@ describe('InputOTP Component', () => {
     if (separator) {
       expect(separator).toHaveClass('flex')
       expect(separator).toHaveClass('items-center')
-      expect(separator).toHaveClass('[&_svg:not([class*="size-"])]:size-4')
+      expect(separator).toHaveClass("[&_svg:not([class*='size-'])]:size-4")
     }
   })
 })

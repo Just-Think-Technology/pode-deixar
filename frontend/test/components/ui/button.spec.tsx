@@ -22,8 +22,8 @@ describe('Button Component', () => {
     expect(button).toHaveClass('rounded-lg')
   })
 
-  it('should apply primary variant', () => {
-    render(<Button variant="primary">Primary</Button>)
+  it('should apply default variant', () => {
+    render(<Button variant="default">Default</Button>)
     const button = screen.getByRole('button')
     expect(button).toHaveClass('bg-primary')
     expect(button).toHaveClass('text-primary-foreground')
@@ -121,8 +121,8 @@ describe('Button Component', () => {
   it('should be disabled when disabled prop is true', () => {
     render(<Button disabled>Desabilitado</Button>)
     const button = screen.getByRole('button', { disabled: true })
-    expect(button).toHaveClass('pointer-events-none')
-    expect(button).toHaveClass('opacity-50')
+    expect(button).toHaveClass('disabled:pointer-events-none')
+    expect(button).toHaveClass('disabled:opacity-50')
   })
 
   it('should call onClick handler', () => {
@@ -132,13 +132,15 @@ describe('Button Component', () => {
     expect(handleClick).toHaveBeenCalledTimes(1)
   })
 
-  it('should call onClick handler with correct argument', () => {
-    const handleClick = vitest.fn((e: MouseEvent) => {
-      expect(e).toBeInstanceOf(MouseEvent)
-    })
+  it('should call onClick handler with the click event', () => {
+    const handleClick = vitest.fn()
     render(<Button onClick={handleClick}>Enviar</Button>)
     screen.getByRole('button').click()
     expect(handleClick).toHaveBeenCalledTimes(1)
+    const eventArg = handleClick.mock.calls[0][0]
+    expect(eventArg).toBeDefined()
+    // React entrega SyntheticEvent (nunca MouseEvent nativo)
+    expect(eventArg.type).toBe('click')
   })
 
   it('should render with additional props', () => {
@@ -160,6 +162,7 @@ describe('Button Component', () => {
   it('should render icon-only button', () => {
     render(<Button size="icon"><svg aria-hidden="true" data-slot="icon" /></Button>)
     const button = screen.getByRole('button')
-    expect(button).toHaveClass('pointer-events-none')
+    expect(button).toHaveClass('size-8')
+    expect(button.querySelector('svg[data-slot="icon"]')).toBeInTheDocument()
   })
 })

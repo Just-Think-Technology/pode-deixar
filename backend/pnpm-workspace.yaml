@@ -1,6 +1,7 @@
 packages:
   - "shared/*"
   - "services/*"
+  - "e2e"
 allowBuilds:
   "@prisma/client": true
   "@prisma/engines": true

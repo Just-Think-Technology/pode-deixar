@@ -1,5 +1,19 @@
-import { describe, it, expect, vitest } from 'vitest'
+import { describe, it, expect, vitest, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+
+// Os forms importam (via lib/auth) o pacote `server-only`, que lança erro
+// fora de Server Components — neutralizado para testes unitários em jsdom.
+vi.mock('server-only', () => ({}))
+
+// Os handlers usam useRouter do App Router, indisponível em jsdom — stub.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+  }),
+}))
 
 import { ClientLoginForm } from '@/components/pages/auth-form-page'
 import { WorkerLoginForm } from '@/components/pages/auth-form-page'
@@ -22,9 +36,7 @@ describe('Authentication Forms', () => {
       expect(emailInput).toBeInTheDocument()
 
       // Should have password field
-      const passwordInput = screen.getByRole('textbox', {
-        name: /senha/i,
-      })
+    const passwordInput = screen.getByLabelText(/senha/i)
       expect(passwordInput).toBeInTheDocument()
 
       // Should have login button
@@ -34,13 +46,15 @@ describe('Authentication Forms', () => {
       expect(loginButton).toBeInTheDocument()
 
       // Should have "Esqueceu sua senha?" link
-      const forgotLink = screen.getByLinkText(/esqueceu sua senha/i)
+      const forgotLink = screen.getByRole('link', {
+        name: /esqueceu sua senha/i,
+      })
       expect(forgotLink).toBeInTheDocument()
     })
 
     it('should have form structure', () => {
-      render(<ClientLoginForm />)
-      const form = screen.getByRole('form')
+      const { container } = render(<ClientLoginForm />)
+      const form = container.querySelector('form')
       expect(form).toBeInTheDocument()
     })
   })
@@ -54,9 +68,7 @@ describe('Authentication Forms', () => {
       })
       expect(emailInput).toBeInTheDocument()
 
-      const passwordInput = screen.getByRole('textbox', {
-        name: /senha/i,
-      })
+    const passwordInput = screen.getByLabelText(/senha/i)
       expect(passwordInput).toBeInTheDocument()
 
       const loginButton = screen.getByRole('button', {
@@ -95,15 +107,11 @@ describe('Authentication Forms', () => {
       expect(postalInput).toBeInTheDocument()
 
       // Should have password field
-      const passwordInput = screen.getByRole('textbox', {
-        name: /senha/i,
-      })
+      const passwordInput = screen.getByLabelText(/^senha$/i)
       expect(passwordInput).toBeInTheDocument()
 
       // Should have confirm password field
-      const confirmPasswordInput = screen.getByRole('textbox', {
-        name: /confirmar senha/i,
-      })
+      const confirmPasswordInput = screen.getByLabelText(/confirmar senha/i)
       expect(confirmPasswordInput).toBeInTheDocument()
 
       const registerButton = screen.getByRole('button', {
@@ -137,9 +145,7 @@ describe('Authentication Forms', () => {
       })
       expect(postalInput).toBeInTheDocument()
 
-      const passwordInput = screen.getByRole('textbox', {
-        name: /senha/i,
-      })
+      const passwordInput = screen.getByLabelText(/^senha$/i)
       expect(passwordInput).toBeInTheDocument()
 
       const registerButton = screen.getByRole('button', {
