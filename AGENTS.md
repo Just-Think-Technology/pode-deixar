@@ -38,6 +38,9 @@ docs/                # Security, product and deploy decisions
 
 ## Main commands
 
+Run each command from the stated directory (`backend/` or `frontend/`) —
+never from the repo root.
+
 ```bash
 # Backend — inside backend/
 pnpm dev              # Prisma generate + start the 5 services
@@ -62,6 +65,9 @@ security, build, image, codeql, dependency-review`; frontend jobs
 `quick, deep, security, image, codeql, dependency-review`.
 Details: [docs/security/ci-pipeline.md](docs/security/ci-pipeline.md).
 
+Backend `test` / `test:e2e` need a local Postgres with the per-service test
+databases (`docker compose up -d postgres` from the repo root).
+
 ## Conventions
 
 - **Language:** code and comments in Portuguese (business rules, validation messages)
@@ -70,7 +76,9 @@ Details: [docs/security/ci-pipeline.md](docs/security/ci-pipeline.md).
 - **Auth:** JWT (access 15min + refresh 7 days) with rotation and blacklist
 - **Roles:** CLIENT, PROVIDER, ADMIN
 - **Soft delete:** services use `is_active`; orders move to CANCELLED
-- **Commits:** Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`)
+- **Commits:** messages and PR titles in English, Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`); PR body in Portuguese (what changed, how to validate, checks run)
+- **Branches:** `feat/`, `fix/`, `docs/`, `test/`, `chore/`, `refactor/` + short slug (e.g. `feat/order-photos`)
+- **Commit hygiene:** review `git status` / `git diff` before committing; never commit env files, secrets or generated artifacts
 
 ## Task flow
 
@@ -81,7 +89,7 @@ Details: [docs/security/ci-pipeline.md](docs/security/ci-pipeline.md).
 5. Update or create tests for the change; run `pnpm lint` and `pnpm typecheck`
 6. Validate nothing broke (run the affected suites) — before push/PR, the affected suites plus `pnpm lint` and `pnpm typecheck` must be green
 7. **Update this file / docs/ if the task changed or added a decision**
-8. Summarize the changes and request review before the next task
+8. Open a PR (what changed, how to validate, checklist: tests, lint, typecheck, docs) and request review before the next task
 
 ## Code standards
 
