@@ -166,10 +166,13 @@ export class ReviewsService {
     return reviews.map((r) => this.formatReview(r));
   }
 
-  async findByProvider(providerId: string) {
+  // Listagem pública com teto anti-raspagem: no máximo 50 por chamada.
+  async findByProvider(providerId: string, limit?: number) {
+    const take = Math.min(Math.max(limit ?? 50, 1), 50);
     const reviews = await this.prisma.review.findMany({
       where: { revieweeId: providerId },
       orderBy: { createdAt: "desc" },
+      take,
     });
 
     return reviews.map((r) => this.formatReview(r));

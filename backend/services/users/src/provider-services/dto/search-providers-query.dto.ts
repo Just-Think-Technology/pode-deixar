@@ -1,5 +1,12 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, MaxLength, IsInt, Min } from "class-validator";
+import {
+  IsOptional,
+  IsString,
+  MaxLength,
+  IsInt,
+  Min,
+  Max,
+} from "class-validator";
 import { Type } from "class-transformer";
 
 export class SearchProvidersQueryDto {
@@ -41,7 +48,7 @@ export class SearchProvidersQueryDto {
   page?: number = 1;
 
   @ApiPropertyOptional({
-    description: "Itens por página",
+    description: "Itens por página (máximo 50)",
     example: 10,
     default: 10,
   })
@@ -49,5 +56,6 @@ export class SearchProvidersQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(50)
   limit?: number = 10;
 }
