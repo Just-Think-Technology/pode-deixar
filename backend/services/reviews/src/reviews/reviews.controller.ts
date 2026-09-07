@@ -6,8 +6,10 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   Request,
   UseGuards,
+  ParseIntPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -175,7 +177,10 @@ export class PublicReviewsController {
     status: 200,
     description: "Lista de avaliações do prestador retornada com sucesso",
   })
-  async findByProvider(@Param("providerId") providerId: string) {
-    return this.reviewsService.findByProvider(providerId);
+  async findByProvider(
+    @Param("providerId") providerId: string,
+    @Query("limit", new ParseIntPipe({ optional: true })) limit?: number,
+  ) {
+    return this.reviewsService.findByProvider(providerId, limit);
   }
 }

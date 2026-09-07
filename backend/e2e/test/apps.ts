@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaClient } from '@prisma/client';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 import request from 'supertest';
 import { AppModule as UsersAppModule } from '../../services/users/src/app.module';
 import { MinioService as UsersMinioService } from '../../services/users/src/storage/minio.service';
@@ -65,6 +65,19 @@ async function bootApp(
   if (minioClass) {
     builder = builder.overrideProvider(minioClass).useValue(mockMinio);
   }
+  // Justificativa AppSec: @Throttle estrito nos endpoints (5 req/min);
+  // jornadas e2e compartilham um IP e estourariam 429. Storage fake que
+  // nunca bloqueia — o guard real continua executando.
+  builder = builder
+    .overrideProvider(ThrottlerStorage)
+    .useValue({
+      increment: async () => ({
+        totalHits: 1,
+        timeToExpire: 60000,
+        timeToBlockExpire: 0,
+        isBlocked: false,
+      }),
+    });
   const moduleFixture: TestingModule = await builder.compile();
   const app = moduleFixture.createNestApplication();
   await app.init();
@@ -112,6 +125,22 @@ export async function bootApps(): Promise<E2EApps> {
  * (register/verify/login) são públicos e não dependem da strategy ativa.
  */
 export async function bootAuthApp(): Promise<INestApplication> {
+  // Justificativa AppSec: o boot do auth valida segredos JWT fail-closed
+  // (>=32 chars); garante segredos de teste sem depender do ambiente.
+  if (
+    !process.env.JWT_ACCESS_SECRET ||
+    process.env.JWT_ACCESS_SECRET.length < 32
+  ) {
+    process.env.JWT_ACCESS_SECRET =
+      'teste-access-secret-com-32-chars-minimo-0123456789abcdef';
+  }
+  if (
+    !process.env.JWT_REFRESH_SECRET ||
+    process.env.JWT_REFRESH_SECRET.length < 32
+  ) {
+    process.env.JWT_REFRESH_SECRET =
+      'teste-refresh-secret-com-32-chars-minimo-0123456789abcdef';
+  }
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [
       AuthAppModule,
@@ -120,6 +149,16 @@ export async function bootAuthApp(): Promise<INestApplication> {
   })
     .overrideProvider(EmailService)
     .useValue(mockEmail)
+    // Justificativa AppSec: ver bootApp acima — storage fake anti-429.
+    .overrideProvider(ThrottlerStorage)
+    .useValue({
+      increment: async () => ({
+        totalHits: 1,
+        timeToExpire: 60000,
+        timeToBlockExpire: 0,
+        isBlocked: false,
+      }),
+    })
     .compile();
 
   const app = moduleFixture.createNestApplication();

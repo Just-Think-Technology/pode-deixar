@@ -86,6 +86,7 @@
     # ─── Storage público (MinIO) ────────────────────────────
     # MINIO_PUBLIC_URL deve apontar para {$API_DOMAIN}/api/storage
     handle /api/storage/* {
+        uri strip_prefix /api/storage
         reverse_proxy minio:9000
     }
 }

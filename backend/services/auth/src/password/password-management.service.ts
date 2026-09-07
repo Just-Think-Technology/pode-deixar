@@ -12,6 +12,7 @@ import { AuthLoggerService } from '../shared/auth-logger.service';
 import { EmailService } from '@pode-deixar/email';
 import { PasswordService } from './password.service';
 import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PasswordManagementService {
@@ -34,12 +35,16 @@ export class PasswordManagementService {
       };
     }
 
+    // Token bruto circula apenas por email/eco não-prod; no banco fica o hash.
     const resetToken = uuidv4();
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { passwordResetToken: resetToken, passwordResetExpires: expiresAt },
+      data: {
+        passwordResetToken: this.hashToken(resetToken),
+        passwordResetExpires: expiresAt,
+      },
     });
 
     try {
@@ -68,7 +73,7 @@ export class PasswordManagementService {
   async resetPassword(dto: ResetPasswordDto) {
     const user = await this.prisma.user.findFirst({
       where: {
-        passwordResetToken: dto.token,
+        passwordResetToken: this.hashToken(dto.token),
         passwordResetExpires: { gt: new Date() },
       },
     });
@@ -159,5 +164,9 @@ export class PasswordManagementService {
     }
 
     return { message: 'Senha alterada com sucesso' };
+  }
+
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
   }
 }

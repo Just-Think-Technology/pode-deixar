@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
+import { randomUUID } from "crypto";
 import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
@@ -437,6 +438,10 @@ export class PaymentsService {
 
     const fees = this.calcularFees(valor);
 
+    // Garante chave de idempotência sempre preenchida (código gera quando o
+    // cliente não informa; a migração NOT NULL/única é de outro agente).
+    const chaveIdempotencia = dto.idempotencyKey ?? randomUUID();
+
     const [payment] = await this.prisma.$transaction([
       this.prisma.payment.create({
         data: {
@@ -448,7 +453,7 @@ export class PaymentsService {
           feeRate: fees.feeRate,
           feeAmount: fees.feeAmount,
           netAmount: fees.netAmount,
-          ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
+          idempotencyKey: chaveIdempotencia,
         },
       }),
       this.prisma.serviceOrder.update({
@@ -466,7 +471,7 @@ export class PaymentsService {
       valor,
       currency,
       dto.method,
-      dto.idempotencyKey,
+      chaveIdempotencia,
     );
 
     return payment;
@@ -505,7 +510,31 @@ export class PaymentsService {
         ? this.gateways.active
         : this.gateways.mock;
 
-    return this.gerarCobranca(payment, gateway);
+    // Reivindicação atômica antes de chamar o gateway (corrida de cobrança):
+    // só um chamador vence o claim; os demais recebem "já gerada".
+    const refReivindicada = randomUUID();
+    const reivindicacao = await this.prisma.payment.updateMany({
+      where: { id: payment.id, externalRef: null },
+      data: { externalRef: refReivindicada },
+    });
+
+    if (reivindicacao.count === 0) {
+      throw new BadRequestException(
+        "Cobrança já gerada para este pagamento (idempotente)",
+      );
+    }
+
+    try {
+      return await this.gerarCobranca(payment, gateway, refReivindicada);
+    } catch (erro) {
+      // Libera a reivindicação quando o gateway falha para permitir nova
+      // tentativa (antes o externalRef ficava nulo e permitia retry).
+      await this.prisma.payment.updateMany({
+        where: { id: payment.id, externalRef: refReivindicada },
+        data: { externalRef: null },
+      });
+      throw erro;
+    }
   }
 
   async getStatus(userId: string, paymentId: string) {
@@ -559,14 +588,31 @@ export class PaymentsService {
         "Pagamento não encontrado",
         { eventId: dto.eventId, gateway: GATEWAY_MOCK },
       );
-      throw new NotFoundException(`Pagamento ${dto.paymentId} não encontrado`);
+      throw new NotFoundException("Webhook rejeitado");
     }
 
-    this.conferirValorGateway(payment.amount, dto.amount);
+    try {
+      this.conferirValorGateway(payment.amount, dto.amount);
 
-    if (payment.status !== "PAID") {
-      this.validarTransicaoEstado(payment.status, "PAID");
-      this.validarAgendamentoParaPagamento(payment.serviceOrder.scheduledAt);
+      if (payment.status !== "PAID") {
+        this.validarTransicaoEstado(payment.status, "PAID");
+        this.validarAgendamentoParaPagamento(payment.serviceOrder.scheduledAt);
+      }
+    } catch (erro) {
+      const motivo =
+        erro instanceof Error ? erro.message : "Validação do webhook falhou";
+      this.logger.logWebhookReceived(
+        dto.paymentId,
+        null,
+        GATEWAY_MOCK,
+        dto.eventId,
+        "falha",
+        motivo,
+      );
+      if (erro instanceof BadRequestException) {
+        throw new BadRequestException("Webhook rejeitado");
+      }
+      throw erro;
     }
 
     const transacao = await this.tentarTransacao(
@@ -576,8 +622,8 @@ export class PaymentsService {
         paymentId: payment.id,
         payload: { externalId: dto.externalId },
       },
-      async () =>
-        this.prisma.payment.update({
+      async (tx) =>
+        tx.payment.update({
           where: { id: dto.paymentId },
           data: {
             status: "PAID",
@@ -636,11 +682,17 @@ export class PaymentsService {
     body: unknown,
   ): Promise<ResultadoWebhook> {
     if (!gateway.validateWebhook(headers, body)) {
+      let eventIdParaLog = "desconhecido";
+      try {
+        eventIdParaLog = gateway.extractEventId(headers, body);
+      } catch {
+        // Mantém fallback genérico no log (ID inválido já é o motivo da rejeição).
+      }
       this.logger.logAuthenticationFailure("assinatura", null, null, {
-        eventId: gateway.extractEventId(headers, body),
+        eventId: eventIdParaLog,
         gateway: gateway.name.toLowerCase(),
       });
-      throw new ForbiddenException("Assinatura de webhook inválida");
+      throw new ForbiddenException("Webhook rejeitado");
     }
 
     const eventId = gateway.extractEventId(headers, body);
@@ -662,7 +714,21 @@ export class PaymentsService {
       );
     }
 
-    const gatewayPaymentId = gateway.extractGatewayPaymentId(body);
+    let gatewayPaymentId: string;
+    try {
+      gatewayPaymentId = gateway.extractGatewayPaymentId(body);
+    } catch (erro) {
+      this.logger.logWebhookReceived(
+        null,
+        null,
+        gateway.name,
+        eventId,
+        "falha",
+        erro instanceof Error ? erro.message : "ID do gateway inválido",
+      );
+      throw new BadRequestException("Webhook rejeitado");
+    }
+
     const gatewayPayment = await gateway.getPayment(gatewayPaymentId);
 
     const payment = await this.prisma.payment.findUnique({
@@ -683,20 +749,39 @@ export class PaymentsService {
           eventId,
         },
       );
-      throw new NotFoundException(
-        `Pagamento ${gatewayPayment.externalReference} não encontrado`,
-      );
+      throw new NotFoundException("Webhook rejeitado");
     }
 
-    this.conferirValorGateway(payment.amount, gatewayPayment.transactionAmount);
+    let status: PaymentStatus;
+    try {
+      this.conferirValorGateway(
+        payment.amount,
+        gatewayPayment.transactionAmount,
+      );
 
-    const status = gateway.translateStatus(gatewayPayment.status);
+      status = gateway.translateStatus(gatewayPayment.status);
 
-    if (payment.status !== status) {
-      this.validarTransicaoEstado(payment.status, status);
-      if (status === "PAID") {
-        this.validarAgendamentoParaPagamento(payment.serviceOrder.scheduledAt);
+      if (payment.status !== status) {
+        this.validarTransicaoEstado(payment.status, status);
+        if (status === "PAID") {
+          this.validarAgendamentoParaPagamento(
+            payment.serviceOrder.scheduledAt,
+          );
+        }
       }
+    } catch (erro) {
+      if (erro instanceof BadRequestException) {
+        this.logger.logWebhookReceived(
+          payment.id,
+          null,
+          gateway.name,
+          eventId,
+          "falha",
+          erro.message,
+        );
+        throw new BadRequestException("Webhook rejeitado");
+      }
+      throw erro;
     }
 
     const transacao = await this.tentarTransacao(
@@ -710,8 +795,8 @@ export class PaymentsService {
           gatewayStatus: gatewayPayment.status,
         },
       },
-      async () =>
-        this.prisma.payment.update({
+      async (tx) =>
+        tx.payment.update({
           where: { id: payment.id },
           data: {
             status,
@@ -797,7 +882,7 @@ export class PaymentsService {
     });
 
     if (!payment) {
-      throw new NotFoundException(`Pagamento ${paymentId} não encontrado`);
+      throw new NotFoundException("Webhook rejeitado");
     }
 
     return { ...(mensagem ? { notice: mensagem } : {}), payment };
@@ -805,18 +890,25 @@ export class PaymentsService {
 
   private async tentarTransacao(
     evento: EventoWebhook,
-    atualizar: () => Promise<{ id: string; status: PaymentStatus }>,
-  ) {
-    const pagamento = await atualizar();
 
+    atualizar: (
+      tx: Prisma.TransactionClient,
+    ) => Promise<{ id: string; status: PaymentStatus }>,
+  ) {
     try {
-      await this.prisma.paymentWebhookEvent.create({
-        data: {
-          gateway: evento.gateway,
-          eventId: evento.eventId,
-          paymentId: evento.paymentId,
-          payload: evento.payload ?? undefined,
-        },
+      // Reivindicação primeiro: insere o evento dentro da transação antes de
+      // qualquer mutação; concorrentes falham com P2002 sem alterar o pagamento.
+
+      const pagamento = await this.prisma.$transaction(async (tx: any) => {
+        await tx.paymentWebhookEvent.create({
+          data: {
+            gateway: evento.gateway,
+            eventId: evento.eventId,
+            paymentId: evento.paymentId,
+            payload: evento.payload ?? undefined,
+          },
+        });
+        return atualizar(tx);
       });
       return { duplicado: false, pagamento };
     } catch (erro) {
@@ -861,6 +953,7 @@ export class PaymentsService {
   private async gerarCobranca(
     payment: { id: string; amount: unknown; method: PaymentMethod },
     gateway: PaymentGateway,
+    refReivindicada: string,
   ) {
     const charge = await gateway.createCharge({
       amount: Number(payment.amount),
@@ -869,8 +962,9 @@ export class PaymentsService {
       description: `Pedido ${payment.id}`,
     });
 
-    await this.prisma.payment.update({
-      where: { id: payment.id },
+    // Atualização consistente com a reivindicação vencedora.
+    await this.prisma.payment.updateMany({
+      where: { id: payment.id, externalRef: refReivindicada },
       data: { externalRef: String(charge.id) },
     });
 

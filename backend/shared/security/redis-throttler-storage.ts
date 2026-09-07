@@ -12,10 +12,12 @@ interface ThrottlerStorageRecord {
 @Injectable()
 export class RedisThrottlerStorage implements ThrottlerStorage {
   private client: RedisClientType;
-  private prefix = 'throttler:';
+  private prefix: string;
 
   constructor() {
     const url = process.env.REDIS_URL || 'redis://localhost:6379';
+    // Prefixo configurável para isolar ambientes (padrão: 'throttler:').
+    this.prefix = process.env.THROTTLER_PREFIX || 'throttler:';
     this.client = createClient({ url });
     this.client.connect().catch((err) => {
       console.error('Redis connection failed:', err);
@@ -30,11 +32,30 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
     throttlerName: string,
   ): Promise<ThrottlerStorageRecord> {
     const prefixedKey = `${this.prefix}${key}:${throttlerName}`;
+    const ttlSecs = Math.ceil(ttl / 1000);
 
     try {
-      const current = await this.client.incr(prefixedKey);
-      if (current === 1) {
-        await this.client.expire(prefixedKey, Math.ceil(ttl / 1000));
+      // INCR+EXPIRE atômico via SET NX EX: cria com TTL de uma vez;
+      // incrementa apenas se a chave já existia (evita corrida no primeiro hit).
+      const created = await this.client.set(prefixedKey, '1', {
+        EX: ttlSecs,
+        NX: true,
+      });
+      const current =
+        created === 'OK' ? 1 : await this.client.incr(prefixedKey);
+
+      const isBlocked = current > limit;
+      let timeToBlockExpire = 0;
+      if (isBlocked) {
+        timeToBlockExpire = blockDuration;
+        if (blockDuration > 0) {
+          // Mantém o bloqueio pelo maior entre ttl e blockDuration.
+          const blockSecs = Math.ceil(blockDuration / 1000);
+          await this.client.expire(
+            prefixedKey,
+            Math.max(ttlSecs, blockSecs),
+          );
+        }
       }
 
       const ttlMs = await this.client.ttl(prefixedKey);
@@ -43,15 +64,18 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
       return {
         totalHits: current,
         timeToExpire,
-        isBlocked: current > limit,
-        timeToBlockExpire: current > limit ? blockDuration : 0,
+        isBlocked,
+        timeToBlockExpire,
       };
-    } catch {
+    } catch (error) {
+      // Fail-closed: sem o Redis não há como contar hits, então bloqueia
+      // em vez de admitir a requisição sem limite.
+      console.error('Redis throttler storage error:', error);
       return {
-        totalHits: 1,
+        totalHits: limit + 1,
         timeToExpire: ttl,
-        isBlocked: false,
-        timeToBlockExpire: 0,
+        isBlocked: true,
+        timeToBlockExpire: blockDuration,
       };
     }
   }

@@ -165,6 +165,8 @@ describe('Payments (integration)', () => {
         eventId,
         externalId: `tx_mock_${eventId}`,
         amount,
+        // Timestamp obrigatório (anti-replay de 5 min).
+        timestamp: String(Math.floor(Date.now() / 1000)),
       };
     }
 

@@ -5,7 +5,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { MinioService } from '../src/storage/minio.service';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
 // --- Types ---
 
@@ -42,6 +42,18 @@ export async function setupTestApp(): Promise<TestAppSetup> {
   })
     .overrideProvider(MinioService)
     .useValue(mockMinio)
+    // Justificativa AppSec: endpoints sensíveis têm @Throttle estrito;
+    // fluxos de teste compartilham um IP e estourariam 429. Storage fake
+    // que nunca bloqueia — o guard real continua executando.
+    .overrideProvider(ThrottlerStorage)
+    .useValue({
+      increment: async () => ({
+        totalHits: 1,
+        timeToExpire: 60000,
+        timeToBlockExpire: 0,
+        isBlocked: false,
+      }),
+    })
     .compile();
 
   const app = moduleFixture.createNestApplication();

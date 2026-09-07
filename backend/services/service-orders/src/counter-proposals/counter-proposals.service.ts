@@ -7,6 +7,10 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { ServicesLoggerService } from "../shared/services-logger.service";
 import { CreateCounterProposalDto } from "./dto/create-counter-proposal.dto";
+import {
+  normalizarPaginacao,
+  PaginacaoConsulta,
+} from "../shared/pagination-query.dto";
 
 @Injectable()
 export class CounterProposalsService {
@@ -220,7 +224,11 @@ export class CounterProposalsService {
     return this.formatCounterProposal(updated);
   }
 
-  async findByProposal(userId: string, proposalId: string) {
+  async findByProposal(
+    userId: string,
+    proposalId: string,
+    paginacao?: PaginacaoConsulta,
+  ) {
     const proposal = await this.prisma.proposal.findUnique({
       where: { id: proposalId },
       include: { serviceOrder: true },
@@ -239,18 +247,24 @@ export class CounterProposalsService {
       );
     }
 
+    const { skip, take } = normalizarPaginacao(paginacao);
     const counterProposals = await this.prisma.counterProposal.findMany({
       where: { proposalId },
       orderBy: { createdAt: "desc" },
+      skip,
+      take,
     });
 
     return counterProposals.map((cp) => this.formatCounterProposal(cp));
   }
 
-  async findMySent(senderId: string) {
+  async findMySent(senderId: string, paginacao?: PaginacaoConsulta) {
+    const { skip, take } = normalizarPaginacao(paginacao);
     const counterProposals = await this.prisma.counterProposal.findMany({
       where: { senderId },
       orderBy: { createdAt: "desc" },
+      skip,
+      take,
       include: {
         proposal: {
           select: { id: true, serviceOrderId: true, price: true, status: true },

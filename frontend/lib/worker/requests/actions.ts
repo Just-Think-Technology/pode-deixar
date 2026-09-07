@@ -63,6 +63,7 @@ export async function getReceivedRequestsAction(): Promise<WorkerRequest[]> {
   try {
     return await withTokenRefresh((token) => getReceivedRequests(token));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       return getMockReceivedRequests();
     }
@@ -83,6 +84,7 @@ export async function getReceivedRequestByIdAction(
     if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
       return null;
     }
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       return getMockRequestById(orderId);
     }
@@ -100,6 +102,7 @@ export async function createProposalAction(
   try {
     return await withTokenRefresh((token) => createProposal(token, payload));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       return mockCreateProposal(payload);
     }

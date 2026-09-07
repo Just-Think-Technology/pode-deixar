@@ -16,10 +16,17 @@ async function bootstrap() {
   app.use(getHelmetConfig());
 
   // CORS configuration
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map((origem) =>
+    origem.trim(),
+  ) || ['http://localhost:3000'];
+  // Fail-closed: curinga com credentials expõe tokens a qualquer origem.
+  if (allowedOrigins.includes('*')) {
+    throw new Error(
+      'Configuração insegura: ALLOWED_ORIGINS contém "*" com credentials habilitado',
+    );
+  }
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
-      'http://localhost:3000',
-    ],
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -38,26 +45,28 @@ async function bootstrap() {
   // Trust proxy for proper IP detection
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // Swagger API Documentation
-  const config = new DocumentBuilder()
-    .setTitle('Pode Deixar - Auth Service')
-    .setDescription('API de autenticação e gerenciamento de usuários')
-    .setVersion('1.0')
-    .addTag('auth', 'Endpoints de autenticação')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Informe o token JWT',
-        in: 'header',
-      },
-      'JWT-auth',
-    )
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  // Swagger API Documentation — apenas fora de produção
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Pode Deixar - Auth Service')
+      .setDescription('API de autenticação e gerenciamento de usuários')
+      .setVersion('1.0')
+      .addTag('auth', 'Endpoints de autenticação')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          name: 'JWT',
+          description: 'Informe o token JWT',
+          in: 'header',
+        },
+        'JWT-auth',
+      )
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
 
   const port = process.env.AUTH_PORT || 3001;
   await app.listen(port);
@@ -66,6 +75,8 @@ async function bootstrap() {
     'bootstrap',
     `Auth service is running on: http://localhost:${port}`,
   );
-  logger.info('bootstrap', `API Documentation: http://localhost:${port}/api`);
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('bootstrap', `API Documentation: http://localhost:${port}/api`);
+  }
 }
 bootstrap();

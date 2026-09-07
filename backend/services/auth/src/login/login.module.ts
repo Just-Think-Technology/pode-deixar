@@ -9,6 +9,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { PasswordService } from '../password/password.service';
 import { JwtStrategy } from '../jwt/jwt.strategy';
+import { AUDIENCIA_JWT, EMISSOR_JWT } from '../jwt/jwt.constantes';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { JwtStrategy } from '../jwt/jwt.strategy';
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
         secret: config.get<string>('JWT_ACCESS_SECRET'),
+        signOptions: { issuer: EMISSOR_JWT, audience: AUDIENCIA_JWT },
       }),
     }),
   ],

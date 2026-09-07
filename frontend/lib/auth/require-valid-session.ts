@@ -11,7 +11,7 @@ import {
   ROLE_HOME_HREF,
   ROLE_LOGIN_HREF,
 } from "@/lib/auth/require-role";
-import { getAuthSession } from "@/lib/auth/session.server";
+import { getAuthSession, clearAuthSession } from "@/lib/auth/session.server";
 import type { AuthSession, AuthUser, PublicRole } from "@/lib/auth/types";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
@@ -58,9 +58,8 @@ export async function requireValidSession(area: AppArea): Promise<AuthSession> {
   // Em modo mock (e2e / UI sem backend), confia no cookie de sessão.
   if (USE_MOCK) {
     if (session.user.role !== requiredRole) {
-      redirect(
-        `/auth/session/clear?to=${encodeURIComponent(ROLE_LOGIN_HREF[session.user.role])}`,
-      );
+      await clearAuthSession();
+      redirect(ROLE_LOGIN_HREF[session.user.role]);
     }
     return session;
   }
@@ -69,9 +68,8 @@ export async function requireValidSession(area: AppArea): Promise<AuthSession> {
 
   if (outcome.kind === "ok") {
     if (outcome.user.role !== requiredRole) {
-      redirect(
-        `/auth/session/clear?to=${encodeURIComponent(ROLE_LOGIN_HREF[outcome.user.role])}`,
-      );
+      await clearAuthSession();
+      redirect(ROLE_LOGIN_HREF[outcome.user.role]);
     }
 
     return {
@@ -88,9 +86,8 @@ export async function requireValidSession(area: AppArea): Promise<AuthSession> {
 
   if (outcome.kind === "unavailable") {
     if (session.user.role !== requiredRole) {
-      redirect(
-        `/auth/session/clear?to=${encodeURIComponent(ROLE_LOGIN_HREF[session.user.role])}`,
-      );
+      await clearAuthSession();
+      redirect(ROLE_LOGIN_HREF[session.user.role]);
     }
     return session;
   }

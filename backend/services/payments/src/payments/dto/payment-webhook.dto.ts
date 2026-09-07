@@ -4,7 +4,6 @@ import {
   IsNotEmpty,
   IsPositive,
   IsUUID,
-  IsOptional,
 } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
@@ -42,10 +41,9 @@ export class PaymentWebhookDto {
 
   @ApiProperty({
     description: "Timestamp do evento (Unix seconds) para anti-replay",
-    required: false,
     example: "1710000000",
   })
-  @IsOptional()
   @IsString()
-  timestamp?: string;
+  @IsNotEmpty()
+  timestamp: string;
 }

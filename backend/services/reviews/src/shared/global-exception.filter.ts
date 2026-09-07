@@ -39,12 +39,31 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
+      // Erros conhecidos do Prisma viram respostas genéricas por código,
+      // sem expor detalhes internos (tabela, campo, constraint) ao cliente.
+      // Qualquer outro erro vira 500 genérico; o detalhe fica só no log.
+      const codigo = (exception as { code?: unknown }).code;
+      if (codigo === "P2002") {
+        status = HttpStatus.CONFLICT;
+        message = "Registro já existe";
+      } else if (codigo === "P2003") {
+        status = HttpStatus.BAD_REQUEST;
+        message = "Referência inválida";
+      } else if (codigo === "P2025") {
+        status = HttpStatus.NOT_FOUND;
+        message = "Registro não encontrado";
+      } else {
+        status = HttpStatus.INTERNAL_SERVER_ERROR;
+        message = "Erro interno do servidor";
+      }
     }
 
+    // Log server-side mantém o detalhe original (mensagem + stack).
+    const detalhe =
+      exception instanceof Error ? exception.message : String(exception);
     this.logger.error(
       sanitizarDadosSensiveis(
-        `${request.method} ${request.url} - ${status} - ${message}`,
+        `${request.method} ${request.url} - ${status} - ${detalhe}`,
       ),
       sanitizarDadosSensiveis(
         exception instanceof Error ? exception.stack || "" : "",

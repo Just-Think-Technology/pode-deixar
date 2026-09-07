@@ -204,6 +204,8 @@ describe('Jornada do cliente (e2e cross-service)', () => {
           eventId: `evt_e2e_client_${Date.now()}`,
           externalId: 'tx_mock_e2e_client_1',
           amount: 300,
+          // Justificativa AppSec: timestamp anti-replay agora é obrigatório.
+          timestamp: String(Math.floor(Date.now() / 1000)),
         })
         .expect(201)
     ).body;

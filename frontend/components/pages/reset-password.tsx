@@ -8,6 +8,10 @@ import { ROLE_HOME_HREF } from "@/lib/auth/require-role";
 import AuthBackground from "./auth-background";
 import { AuthFormActions, PasswordField } from "./auth-form-page";
 import { resetPasswordAction } from "@/lib/auth/actions";
+import {
+    PASSWORD_REGEX,
+    PASSWORD_STRENGTH_MESSAGE,
+} from "@/lib/auth/validation";
 
 export function ResetPasswordForm() {
     const router = useRouter();
@@ -30,6 +34,11 @@ export function ResetPasswordForm() {
 
         if (password !== confirmPassword) {
             toast.error("As senhas não coincidem");
+            return;
+        }
+
+        if (!PASSWORD_REGEX.test(password)) {
+            toast.error(PASSWORD_STRENGTH_MESSAGE);
             return;
         }
 

@@ -193,10 +193,15 @@ describe('Profiles (integration)', () => {
         .send({})
         .expect(201);
 
+      // Justificativa (AppSec): o serviço valida magic bytes — o upload usa
+      // bytes mágicos PNG reais em vez de conteúdo falso.
+      const pngReal = Buffer.from([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      ]);
       const response = await request(app.getHttpServer())
         .patch('/profiles/avatar')
         .set(headers)
-        .attach('file', Buffer.from('fake-image'), {
+        .attach('file', pngReal, {
           filename: 'avatar.png',
           contentType: 'image/png',
         })

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FileText, MapPin, MessageSquare, Star } from "lucide-react";
+import { FileText, MessageSquare, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -113,10 +113,6 @@ export default function ProfessionalCard({ professional, className }: Profession
               )}
             </span>
           )}
-          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="size-3.5 shrink-0" />
-            {professional.user.postal_code}
-          </span>
         </div>
 
         <div className="rounded-lg border border-primary/15 bg-primary/5 px-3 py-2.5">

@@ -7,8 +7,10 @@ import type {
 } from "@/lib/auth/types";
 
 const NAME_REGEX = /^[\p{L}\s'-]+$/u;
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const PASSWORD_STRENGTH_MESSAGE =
+    "Senha fraca: mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 número e 1 especial";
 
 function fail(errors: Record<string, string>): ValidationResult {
     return { ok: false, errors };
@@ -57,8 +59,7 @@ export function validateRegister(payload: RegisterPayload): ValidationResult {
     if (!payload.password) {
         errors.password = "Senha é obrigatória";
     } else if (!PASSWORD_REGEX.test(payload.password)) {
-        errors.password =
-            "Senha fraca: mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 número e 1 especial";
+        errors.password = PASSWORD_STRENGTH_MESSAGE;
     }
 
     if (!payload.confirm_password) {

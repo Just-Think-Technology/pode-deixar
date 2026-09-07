@@ -110,3 +110,19 @@ export function formatarEndereco(address: unknown) {
       typeof endereco.postalCode === "string" ? endereco.postalCode : null,
   };
 }
+
+// Visão resumida para listagens públicas/autenticadas de vitrine:
+// expõe apenas cidade/UF (o endereço completo fica restrito ao detalhe
+// autenticado do pedido).
+export function formatarEnderecoResumido(address: unknown) {
+  if (!address || typeof address !== "object") {
+    return null;
+  }
+
+  const endereco = address as Record<string, unknown>;
+
+  return {
+    city: typeof endereco.city === "string" ? endereco.city : null,
+    state: typeof endereco.state === "string" ? endereco.state : null,
+  };
+}

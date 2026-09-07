@@ -227,6 +227,16 @@ describe("MercadoPagoGateway", () => {
         BadGatewayException,
       );
     });
+
+    it("deve rejeitar ID fora do formato antes de chamar a API (injeção)", async () => {
+      const fetchMock = jest.fn();
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await expect(gateway.getPayment("../../1")).rejects.toThrow(
+        "Identificador de pagamento inválido",
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
   });
 
   describe("validateWebhook", () => {
@@ -325,10 +335,24 @@ describe("MercadoPagoGateway", () => {
       expect(eventId).toBe("mercadopago:123");
     });
 
+    it("deve incluir o tipo da notificação no fallback sem x-request-id", () => {
+      const eventId = gateway.extractEventId(
+        {},
+        { type: "payment", action: "payment.updated", data: { id: "123" } },
+      );
+      expect(eventId).toBe("mercadopago:payment:payment.updated:123");
+    });
+
     it("deve extrair o ID do pagamento do payload", () => {
       expect(
         gateway.extractGatewayPaymentId({ data: { id: "123" } }),
       ).toBe("123");
+    });
+
+    it("deve rejeitar ID do gateway fora do formato numérico", () => {
+      expect(() =>
+        gateway.extractGatewayPaymentId({ data: { id: "../x" } }),
+      ).toThrow("Identificador de pagamento inválido");
     });
 
     it("deve retornar vazio para payload inválido", () => {
@@ -347,8 +371,10 @@ describe("MercadoPagoGateway", () => {
       expect(gateway.translateStatus("refunded")).toBe("REFUNDED");
     });
 
-    it("deve cair em PENDING para status desconhecido (fail-closed)", () => {
-      expect(gateway.translateStatus("desconhecido")).toBe("PENDING");
+    it("deve lançar para status desconhecido (fail-closed, sem cair em PENDING)", () => {
+      expect(() => gateway.translateStatus("desconhecido")).toThrow(
+        "Status do gateway desconhecido",
+      );
     });
   });
 });

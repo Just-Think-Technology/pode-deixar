@@ -116,6 +116,8 @@ describe("PaymentsController", () => {
   });
 
   describe("webhook (mock)", () => {
+    const timestampValido = () => String(Math.floor(Date.now() / 1000));
+
     it("deve confirmar quando a chave de webhook é válida", async () => {
       process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
       const dto = {
@@ -123,6 +125,7 @@ describe("PaymentsController", () => {
         externalId: "tx_mock_123",
         amount: 150,
         eventId: "evt_mock_1",
+        timestamp: timestampValido(),
       };
       const pagamento = { id: "uuid-payment-1", status: "PAID" };
       service.confirmPayment.mockResolvedValue(pagamento);
@@ -134,18 +137,19 @@ describe("PaymentsController", () => {
       delete process.env.MOCK_WEBHOOK_KEY;
     });
 
-    it("deve lançar 403 quando a chave de webhook não confere", async () => {
+    it("deve lançar 403 genérico quando a chave de webhook não confere", async () => {
       process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
       const dto = {
         paymentId: "uuid-payment-1",
         externalId: "tx_mock_123",
         amount: 150,
         eventId: "evt_mock_1",
+        timestamp: timestampValido(),
       };
 
       await expect(
         controller.webhook({} as any, "chave-errada", dto),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow("Webhook rejeitado");
       expect(service.confirmPayment).not.toHaveBeenCalled();
       delete process.env.MOCK_WEBHOOK_KEY;
     });
@@ -162,12 +166,28 @@ describe("PaymentsController", () => {
 
       await expect(
         controller.webhook({} as any, "chave-secreta", dto),
+      ).rejects.toThrow("Webhook rejeitado");
+      expect(service.confirmPayment).not.toHaveBeenCalled();
+      delete process.env.MOCK_WEBHOOK_KEY;
+    });
+
+    it("deve exigir timestamp (anti-replay obrigatório)", async () => {
+      process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
+      const dto = {
+        paymentId: "uuid-payment-1",
+        externalId: "tx_mock_123",
+        amount: 150,
+        eventId: "evt_mock_1",
+      } as any;
+
+      await expect(
+        controller.webhook({} as any, "chave-secreta", dto),
       ).rejects.toThrow(ForbiddenException);
       expect(service.confirmPayment).not.toHaveBeenCalled();
       delete process.env.MOCK_WEBHOOK_KEY;
     });
 
-    it("deve rejeitar quando a req NÃO chega via HTTPS em produção", async () => {
+    it("deve desabilitar o mock em produção", async () => {
       process.env.NODE_ENV = "production";
       process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
       const dto = {
@@ -175,15 +195,36 @@ describe("PaymentsController", () => {
         externalId: "tx_mock_123",
         amount: 150,
         eventId: "evt_mock_1",
+        timestamp: timestampValido(),
       };
 
+      await expect(
+        controller.webhook({} as any, "chave-secreta", dto),
+      ).rejects.toThrow("indisponível em produção");
+      expect(service.confirmPayment).not.toHaveBeenCalled();
+      delete process.env.NODE_ENV;
+      delete process.env.MOCK_WEBHOOK_KEY;
+    });
+
+    it("deve bloquear o mock antes do HTTPS em produção (mock nunca ao vivo)", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
+      const dto = {
+        paymentId: "uuid-payment-1",
+        externalId: "tx_mock_123",
+        amount: 150,
+        eventId: "evt_mock_1",
+        timestamp: timestampValido(),
+      };
+
+      // O bloqueio de produção vem antes do HTTPS: mock nunca opera em prod.
       await expect(
         controller.webhook(
           { headers: { "x-forwarded-proto": "http" } } as any,
           "chave-secreta",
           dto,
         ),
-      ).rejects.toThrow("Webhook deve ser recebido via HTTPS");
+      ).rejects.toThrow("indisponível em produção");
       expect(service.confirmPayment).not.toHaveBeenCalled();
       delete process.env.NODE_ENV;
       delete process.env.MOCK_WEBHOOK_KEY;
