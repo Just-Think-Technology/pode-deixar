@@ -15,6 +15,7 @@ import { Roles } from "../auth/roles.decorator";
 import { User } from "../auth/user.decorator";
 import { NotificationsService } from "./notifications.service";
 import { CreateNotificationDto } from "./dto/create-notification.dto";
+import { ListNotificationsQueryDto } from "./dto/list-notifications-query.dto";
 
 @Controller("notifications")
 export class NotificationsController {
@@ -23,23 +24,24 @@ export class NotificationsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("CLIENT", "PROVIDER", "ADMIN")
-  create(@Body() dto: CreateNotificationDto, @User("id") userId: string) {
-    return this.notificationsService.create({
-      ...dto,
-      recipient: dto.recipient || userId,
-    });
+  create(@Body() dto: CreateNotificationDto, @User("sub") userId: string) {
+    // O recipient do corpo é ignorado: a notificação vai para o próprio autor.
+    return this.notificationsService.create(userId, dto);
   }
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("CLIENT", "PROVIDER", "ADMIN")
   findAll(
-    @User("id") userId: string,
-    @Query("lido") lido?: boolean,
-    @Query("page") page = 1,
-    @Query("limit") limit = 20,
+    @User("sub") userId: string,
+    @Query() query: ListNotificationsQueryDto,
   ) {
-    return this.notificationsService.findByRecipient(userId, lido, page, limit);
+    return this.notificationsService.findByRecipient(
+      userId,
+      query.lido,
+      query.page ?? 1,
+      query.limit ?? 20,
+    );
   }
 
   @Patch(":id/read")
@@ -47,7 +49,7 @@ export class NotificationsController {
   @Roles("CLIENT", "PROVIDER", "ADMIN")
   markAsRead(
     @Param("id", ParseUUIDPipe) id: string,
-    @User("id") userId: string,
+    @User("sub") userId: string,
   ) {
     return this.notificationsService.markAsRead(id, userId);
   }

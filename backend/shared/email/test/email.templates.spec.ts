@@ -32,6 +32,14 @@ describe('email.templates', () => {
       expect(html).toContain('href="https://app.example.com/x?token=abc"');
     });
 
+    it('deve neutralizar CRLF e aspas no href do botão primário', () => {
+      const html = button('Clique', 'https://app.example.com/x?token=abc"\r\ninjetado');
+      const href = html.match(/href="([^"]*)"/)?.[1] ?? '';
+
+      expect(href).not.toMatch(/[\r\n"]/);
+      expect(href).toBe('https://app.example.com/x?token=abc%22injetado');
+    });
+
     it('deve embutir label e href no botão secundário', () => {
       const html = secondaryButton('Ver', 'https://app.example.com/y');
 

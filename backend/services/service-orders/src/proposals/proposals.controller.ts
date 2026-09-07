@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from "@nestjs/common";
@@ -19,6 +20,7 @@ import {
 import { ProposalsService } from "./proposals.service";
 import { CreateProposalDto } from "./dto/create-proposal.dto";
 import { UpdateProposalDto } from "./dto/update-proposal.dto";
+import { PaginationQueryDto } from "../shared/pagination-query.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
@@ -54,9 +56,12 @@ export class ProposalsController {
     status: 200,
     description: "Lista de propostas retornada com sucesso",
   })
-  async findMyProposals(@Request() req: any) {
+  async findMyProposals(
+    @Request() req: any,
+    @Query() paginacao: PaginationQueryDto,
+  ) {
     const userId = req.user.sub;
-    return this.proposalsService.findByProvider(userId);
+    return this.proposalsService.findByProvider(userId, paginacao);
   }
 }
 

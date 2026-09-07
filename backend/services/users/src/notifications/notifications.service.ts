@@ -8,10 +8,13 @@ export class NotificationsService {
 
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateNotificationDto) {
+  // O destinatário é sempre o usuário autenticado (userId): o valor
+  // enviado pelo cliente em dto.recipient é ignorado para impedir que um
+  // usuário crie notificações forjadas para terceiros.
+  async create(userId: string, dto: CreateNotificationDto) {
     const notification = await this.prisma.notification.create({
       data: {
-        recipient: dto.recipient,
+        recipient: userId,
         type: dto.type,
         title: dto.title,
         message: dto.message,
@@ -19,9 +22,7 @@ export class NotificationsService {
         relatedType: dto.relatedType,
       },
     });
-    this.logger.log(
-      `Notificação criada: ${notification.id} para ${dto.recipient}`,
-    );
+    this.logger.log(`Notificação criada: ${notification.id} para ${userId}`);
     return notification;
   }
 

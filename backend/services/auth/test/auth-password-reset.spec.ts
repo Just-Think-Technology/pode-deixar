@@ -27,24 +27,30 @@ describe('Password Reset Flow', () => {
 
   /**
    * Registers + verifies a user, then triggers the forgot-password flow.
-   * Returns the user object and the passwordResetToken stored in the DB.
+   * Justificativa AppSec: o banco guarda apenas o sha256 do token de reset,
+   * então o token bruto vem do eco não-prod do forgot-password (equivale ao
+   * link recebido por email) em vez de leitura direta do banco.
    */
   async function setupResetFlow() {
     const user = createTestUser();
-    await registerUser(app, user);
-    await verifyEmailViaApi(app, user.email, prisma);
+    const registro = await registerUser(app, user);
+    await verifyEmailViaApi(
+      app,
+      user.email,
+      prisma,
+      registro.body.email_verification_token as string,
+    );
 
-    await request(app.getHttpServer())
+    const forgotResponse = await request(app.getHttpServer())
       .post('/auth/forgot-password')
       .send({ email: user.email })
       .expect(200);
 
-    const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+    const resetToken = forgotResponse.body.reset_password_token as string;
+    if (!resetToken)
+      throw new Error('reset_password_token missing after forgot-password request');
 
-    if (!dbUser?.passwordResetToken)
-      throw new Error('passwordResetToken missing after forgot-password request');
-
-    return { user, resetToken: dbUser.passwordResetToken };
+    return { user, resetToken };
   }
 
   // ─── POST /auth/forgot-password ────────────────────────────────────────────
@@ -52,8 +58,13 @@ describe('Password Reset Flow', () => {
   describe('POST /auth/forgot-password', () => {
     it('should respond with a generic success message (no email enumeration)', async () => {
       const user = createTestUser();
-      await registerUser(app, user);
-      await verifyEmailViaApi(app, user.email, prisma);
+      const registro = await registerUser(app, user);
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registro.body.email_verification_token as string,
+      );
 
       const response = await request(app.getHttpServer())
         .post('/auth/forgot-password')

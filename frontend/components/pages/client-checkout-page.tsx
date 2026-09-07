@@ -73,6 +73,22 @@ function resolveDisplayAmount(order: ClientOrder): number | null {
   return accepted?.price ?? null;
 }
 
+function isAllowedCheckoutUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host === "mercadopago.com" ||
+      host.endsWith(".mercadopago.com") ||
+      host === "mercadolivre.com" ||
+      host.endsWith(".mercadolivre.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
   const router = useRouter();
   const defaultScheduleDate = useMemo(() => addDays(new Date(), 1), []);
@@ -500,15 +516,22 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
                     Você será direcionado a um ambiente seguro para informar os
                     dados do cartão.
                   </p>
-                  <a
-                    href={charge.cobranca.linkCheckout}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(buttonVariants(), "gap-2")}
-                  >
-                    <CreditCard className="size-4" />
-                    Abrir checkout do cartão
-                  </a>
+                  {isAllowedCheckoutUrl(charge.cobranca.linkCheckout) ? (
+                    <a
+                      href={charge.cobranca.linkCheckout}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(buttonVariants(), "gap-2")}
+                    >
+                      <CreditCard className="size-4" />
+                      Abrir checkout do cartão
+                    </a>
+                  ) : (
+                    <p className="text-sm text-destructive" role="alert">
+                      Link de pagamento inválido. Tente gerar a cobrança
+                      novamente.
+                    </p>
+                  )}
                 </div>
               ) : null}
 

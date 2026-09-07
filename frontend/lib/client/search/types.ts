@@ -3,9 +3,9 @@ export type ProviderSearchResult = {
   user: {
     id: string;
     complete_name: string;
-    email: string;
-    phone: string;
-    postal_code: string;
+    email?: string;
+    phone?: string;
+    postal_code?: string;
   };
   avatar_url: string | null;
   cover_image_url?: string | null;

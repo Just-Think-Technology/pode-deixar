@@ -5,7 +5,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { EmailService } from '@pode-deixar/email';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
 // --- Types ---
 export interface TestUser {
@@ -60,6 +60,23 @@ export const createAdminUser = (overrides: Partial<TestUser> = {}): TestUser =>
  * - Applies the same ValidationPipe configuration used in production.
  */
 export async function setupTestApp(): Promise<TestAppSetup> {
+  // Justificativa AppSec: o boot valida segredos JWT fail-closed (>=32 chars);
+  // garante segredos de teste adequados sem depender do conteúdo do .env.
+  if (
+    !process.env.JWT_ACCESS_SECRET ||
+    process.env.JWT_ACCESS_SECRET.length < 32
+  ) {
+    process.env.JWT_ACCESS_SECRET =
+      'teste-access-secret-com-32-chars-minimo-0123456789abcdef';
+  }
+  if (
+    !process.env.JWT_REFRESH_SECRET ||
+    process.env.JWT_REFRESH_SECRET.length < 32
+  ) {
+    process.env.JWT_REFRESH_SECRET =
+      'teste-refresh-secret-com-32-chars-minimo-0123456789abcdef';
+  }
+
   const moduleFixture = await Test.createTestingModule({
     imports: [
       AppModule,
@@ -70,6 +87,22 @@ export async function setupTestApp(): Promise<TestAppSetup> {
     .useValue({
       sendEmailVerification: jest.fn().mockResolvedValue(true),
       sendPasswordReset: jest.fn().mockResolvedValue(true),
+    })
+    // Justificativa AppSec: os endpoints sensíveis têm throttle estrito
+    // (5 req/min anti-brute-force/enumeração) por IP; os fluxos funcionais
+    // compartilham um único IP e estourariam 429. Rate limiting é
+    // preocupação de infra (validada fora destes testes funcionais).
+    // Implementação: storage fake que nunca bloqueia — o guard REAL continua
+    // executando (overrideGuard não cobre o @Throttle por-rota nesta versão
+    // do @nestjs/throttler: verificado empiricamente com 8x POST /auth/login).
+    .overrideProvider(ThrottlerStorage)
+    .useValue({
+      increment: async () => ({
+        totalHits: 1,
+        timeToExpire: 60000,
+        timeToBlockExpire: 0,
+        isBlocked: false,
+      }),
     })
     .compile();
 
@@ -106,29 +139,32 @@ export async function registerUser(
 }
 
 /**
- * Fetches the email verification token directly from the DB and calls the
- * verify-email endpoint. Throws descriptive errors if the user or token is
- * missing so test failures are easy to diagnose.
+ * Lê o token bruto de verificação e chama o endpoint verify-email.
+ * Justificativa AppSec: o banco guarda apenas o sha256 do token, então o
+ * teste usa o token bruto do eco não-prod do cadastro (mesmo valor que o
+ * usuário receberia por email) em vez de ler o hash do banco.
  */
 export async function verifyEmailViaApi(
   app: INestApplication,
   email: string,
   prisma?: PrismaService,
+  tokenBruto?: string,
 ): Promise<void> {
-  const db: PrismaService = prisma ?? app.get(PrismaService);
-
-  const user = await db.user.findUnique({ where: { email } });
-
-  if (!user) throw new Error(`[verifyEmailViaApi] User not found: ${email}`);
-  if (!user.emailVerificationToken)
+  if (!tokenBruto) {
+    const db: PrismaService = prisma ?? app.get(PrismaService);
+    const existente = await db.user.findUnique({ where: { email } });
+    if (!existente)
+      throw new Error(`[verifyEmailViaApi] User not found: ${email}`);
     throw new Error(
-      `[verifyEmailViaApi] emailVerificationToken is missing for ${email}. ` +
-        'Check the registration flow.',
+      '[verifyEmailViaApi] token bruto ausente: informe o ' +
+        'email_verification_token retornado pelo cadastro (o banco guarda ' +
+        'apenas o hash do token).',
     );
+  }
 
   await request(app.getHttpServer())
     .post('/auth/verify-email')
-    .send({ token: user.emailVerificationToken })
+    .send({ token: tokenBruto })
     .expect(200);
 }
 
@@ -155,8 +191,15 @@ export async function registerAndLogin(
   user: TestUser,
   prisma?: PrismaService,
 ): Promise<AuthTokens> {
-  await registerUser(app, user);
-  await verifyEmailViaApi(app, user.email, prisma);
+  const registro = await registerUser(app, user);
+  // Justificativa AppSec: banco guarda só o hash; verifica com o token bruto
+  // do eco não-prod (equivale ao link recebido por email).
+  await verifyEmailViaApi(
+    app,
+    user.email,
+    prisma,
+    registro.body.email_verification_token as string,
+  );
 
   const loginResponse = await loginUser(app, user.email, user.password);
 

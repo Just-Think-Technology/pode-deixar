@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
 // --- Types ---
 
@@ -23,7 +23,20 @@ export async function setupTestApp(): Promise<TestAppSetup> {
       AppModule,
       ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10_000 }]),
     ],
-  }).compile();
+  })
+    // Justificativa AppSec: endpoints sensíveis têm @Throttle estrito;
+    // fluxos de teste compartilham um IP e estourariam 429. Storage fake
+    // que nunca bloqueia — o guard real continua executando.
+    .overrideProvider(ThrottlerStorage)
+    .useValue({
+      increment: async () => ({
+        totalHits: 1,
+        timeToExpire: 60000,
+        timeToBlockExpire: 0,
+        isBlocked: false,
+      }),
+    })
+    .compile();
 
   const app = moduleFixture.createNestApplication();
   await app.init();

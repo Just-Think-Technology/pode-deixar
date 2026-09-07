@@ -82,6 +82,7 @@ export async function createPaymentAction(
   try {
     return await withTokenRefresh((token) => createPayment(token, payload));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       return mockCreatePayment(payload);
     }
@@ -99,6 +100,7 @@ export async function chargePaymentAction(
   try {
     return await withTokenRefresh((token) => chargePayment(token, paymentId));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       return mockChargePayment(paymentId);
     }
@@ -118,6 +120,7 @@ export async function getPaymentStatusAction(
       getPaymentStatus(token, paymentId),
     );
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       return mockGetPaymentStatus(paymentId);
     }
@@ -170,6 +173,7 @@ export async function startCheckoutAction(
     );
     return { payment, charge };
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       const payment = mockCreatePayment({
         serviceOrderId,

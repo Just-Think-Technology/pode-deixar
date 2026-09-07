@@ -31,6 +31,10 @@ services:
     build:
       context: ./backend
       target: auth-build
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
     environment:
       NODE_ENV: production
@@ -45,6 +49,10 @@ services:
     build:
       context: ./backend
       target: users-build
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
     environment:
       NODE_ENV: production
@@ -58,6 +66,10 @@ services:
     build:
       context: ./backend
       target: service-orders-build
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
     environment:
       NODE_ENV: production
@@ -71,6 +83,10 @@ services:
     build:
       context: ./backend
       target: payments-build
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
     environment:
       NODE_ENV: production
@@ -81,6 +97,10 @@ services:
     build:
       context: ./backend
       target: reviews-build
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
     environment:
       NODE_ENV: production
@@ -88,7 +108,7 @@ services:
 
   # -- MinIO (Object Storage: fotos, avatares, imagens) --
   minio:
-    image: minio/minio:latest
+    image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: server /data --console-address ":9001"
     env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
     environment:
@@ -104,7 +124,7 @@ services:
 
   # -- MinIO Client (criação dos buckets) --
   minio-setup:
-    image: minio/mc:latest
+    image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
     depends_on:
       minio:
@@ -117,7 +137,6 @@ services:
       mc mb local/$${MINIO_AVATARS_BUCKET:-avatars} --ignore-existing &&
       mc anonymous set public local/$${MINIO_AVATARS_BUCKET:-avatars} &&
       mc mb local/$${MINIO_ORDER_PHOTOS_BUCKET:-order-photos} --ignore-existing &&
-      mc anonymous set public local/$${MINIO_ORDER_PHOTOS_BUCKET:-order-photos} &&
       echo 'Buckets created successfully'
       "
 

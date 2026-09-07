@@ -11,6 +11,7 @@ import { AuthLoggerService } from '../shared/auth-logger.service';
 import { EmailService } from '@pode-deixar/email';
 import { PasswordService } from '../password/password.service';
 import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class RegisterService {
@@ -29,12 +30,16 @@ export class RegisterService {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
+    // Decisão UX vs enumeração (residual aceito): manter 409 explícito no
+    // cadastro orienta o usuário; demais fluxos usam resposta genérica.
     if (existingUser) {
       throw new ConflictException('Email já cadastrado');
     }
 
     const passwordHash = await this.passwordService.hash(dto.password);
+    // Token bruto circula apenas por email/eco não-prod; no banco fica o hash.
     const emailVerificationToken = uuidv4();
+    const emailVerificationTokenHash = this.hashToken(emailVerificationToken);
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const [user] = await this.prisma.$transaction(async (tx) => {
@@ -46,7 +51,7 @@ export class RegisterService {
           role: dto.role,
           phone: dto.phone,
           postalCode: dto.postal_code,
-          emailVerificationToken,
+          emailVerificationToken: emailVerificationTokenHash,
           emailVerificationExpires,
         },
         select: {
@@ -110,14 +115,14 @@ export class RegisterService {
         created_at: user.createdAt,
       },
       ...(process.env.NODE_ENV !== 'production' && {
-        email_verification_token: user.emailVerificationToken,
+        email_verification_token: emailVerificationToken,
       }),
     };
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
     const user = await this.prisma.user.findFirst({
-      where: { emailVerificationToken: dto.token },
+      where: { emailVerificationToken: this.hashToken(dto.token) },
     });
     if (!user) {
       this.authLogger.logEmailVerificationTokenFailure(
@@ -168,14 +173,20 @@ export class RegisterService {
     }
     if (user.emailVerified) {
       this.authLogger.logResendVerification(dto.email, false);
-      throw new BadRequestException('Email já está verificado');
+      // Resposta genérica anti-enumeração também para email já verificado.
+      return {
+        message: 'Se o email existir, um novo link de verificação foi enviado',
+      };
     }
 
     const emailVerificationToken = uuidv4();
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { emailVerificationToken, emailVerificationExpires },
+      data: {
+        emailVerificationToken: this.hashToken(emailVerificationToken),
+        emailVerificationExpires,
+      },
     });
 
     try {
@@ -199,5 +210,9 @@ export class RegisterService {
         email_verification_token: emailVerificationToken,
       }),
     };
+  }
+
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
   }
 }

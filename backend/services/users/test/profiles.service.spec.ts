@@ -20,7 +20,11 @@ function mockFile(): Express.Multer.File {
     originalname: "avatar.png",
     encoding: "7bit",
     mimetype: "image/png",
-    buffer: Buffer.from("fake-content"),
+    // Justificativa (AppSec): bytes mágicos PNG reais — o serviço agora
+    // valida magic bytes e rejeita conteúdo falso ("fake-content").
+    buffer: Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+    ]),
     size: 1024,
     stream: null as any,
     destination: "",
@@ -361,7 +365,7 @@ describe("ProfilesService", () => {
 
       expect(mockMinio.uploadFile).toHaveBeenCalledWith(
         "mocked-uuid.png",
-        Buffer.from("fake-content"),
+        mockFile().buffer,
         "image/png",
         mockMinio.avatarBucket,
       );
@@ -477,6 +481,27 @@ describe("ProfilesService", () => {
       expect(mockMinio.deleteFile).not.toHaveBeenCalled();
     });
 
+    // Justificativa (AppSec): cobre a nova validação de magic bytes — cliente
+    // pode falsificar mimetype/extensão, então o conteúdo real é verificado.
+    it("should throw BadRequestException when file content is not an image", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.clientProfile.findUnique.mockResolvedValue({
+        id: "client-1",
+        userId: "user-1",
+        avatarUrl: null,
+        preferences: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const falso = mockFile();
+      falso.buffer = Buffer.from("isto-nao-e-uma-imagem");
+
+      await expect(
+        service.uploadAvatar("user-1", "CLIENT", falso, "127.0.0.1"),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockMinio.uploadFile).not.toHaveBeenCalled();
+    });
+
     it("should throw NotFoundException when profile does not exist", async () => {
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
@@ -540,6 +565,10 @@ describe("ProfilesService", () => {
       expect(result).toBeDefined();
       expect(result.id).toBe("provider-1");
       expect(result.user.complete_name).toBe("João Eletricista");
+      // Justificativa (AppSec): perfil público não pode expor PII.
+      expect(result.user).not.toHaveProperty("email");
+      expect(result.user).not.toHaveProperty("phone");
+      expect(result.user).not.toHaveProperty("postal_code");
       expect(result.services).toHaveLength(1);
       expect(result.services[0].title).toBe("Instalação de chuveiro");
       expect(result.services[0].fixed_price).toBe(150);
@@ -550,9 +579,6 @@ describe("ProfilesService", () => {
             select: {
               id: true,
               completeName: true,
-              email: true,
-              phone: true,
-              postalCode: true,
             },
           },
           services: {

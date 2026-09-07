@@ -39,6 +39,8 @@ import {
   updateAuthSessionUser,
 } from "@/lib/auth/session.server";
 
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+
 function mapProfileResponseToUserProfile(profile: ProfileResponse): UserProfile {
   return {
     id: profile.user.id,
@@ -137,6 +139,7 @@ export async function getWorkerProfileAction(): Promise<{ user: UserProfile }> {
     const profile = await withTokenRefresh((token) => getWorkerProfile(token));
     return { user: mapProfileResponseToUserProfile(profile) };
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       const session = await getAuthSession();
       return {
@@ -186,6 +189,7 @@ export async function updateWorkerProfileAction(
       message = "Perfil profissional criado com sucesso!";
     }
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 501 || err.status === 503)) {
       const stubPayload: UpdateWorkerProfilePayload = {
         complete_name: currentProfile.complete_name,
@@ -213,6 +217,7 @@ export async function deleteWorkerAccountAction(): Promise<void> {
   try {
     await withTokenRefresh((token) => deleteWorkerAccount(token));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (!(err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503))) {
       throw err;
     }
@@ -227,6 +232,7 @@ export async function createServiceAction(
   try {
     return await withTokenRefresh((token) => createWorkerService(token, payload));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       return {
         message: "Serviço cadastrado com sucesso!",
@@ -252,6 +258,7 @@ export async function getWorkerServicesAction(): Promise<ServicesListResponse> {
   try {
     return await withTokenRefresh((token) => getWorkerServices(token));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       const { MOCK_SERVICES } = await import("@/mock/worker/services");
       return MOCK_SERVICES;
@@ -267,6 +274,7 @@ export async function updateServiceAction(
   try {
     await withTokenRefresh((token) => updateWorkerService(token, serviceId, payload));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       return;
     }
@@ -280,6 +288,7 @@ export async function deleteServiceAction(
   try {
     await withTokenRefresh((token) => deleteWorkerService(token, serviceId));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
       return;
     }

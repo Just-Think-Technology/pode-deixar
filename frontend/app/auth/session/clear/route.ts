@@ -17,7 +17,7 @@ function safeRedirectPath(path: string | null, fallback: string): string {
   return path;
 }
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const area = resolveArea(request.nextUrl.searchParams.get("area"));
   const fallback = getLoginHrefForArea(area);
   const to = safeRedirectPath(

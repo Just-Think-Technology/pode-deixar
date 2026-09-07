@@ -68,6 +68,7 @@ export async function getMyOrdersAction(): Promise<ClientOrder[]> {
   try {
     return await withTokenRefresh((token) => getMyServiceOrders(token));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       return getMockClientOrders();
     }
@@ -94,6 +95,7 @@ export async function getMyOrderByIdAction(
     ) {
       return null;
     }
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       return getMockClientOrderById(orderId);
     }
@@ -120,6 +122,7 @@ export async function acceptProposalAction(
     revalidatePath(`/client/orders/${orderId}`);
     return result;
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       const result = mockAcceptProposal(proposalId);
       revalidatePath("/client/orders");
@@ -149,6 +152,7 @@ export async function rejectProposalAction(
     revalidatePath(`/client/orders/${orderId}`);
     return result;
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
       const result = mockRejectProposal(proposalId);
       revalidatePath("/client/orders");

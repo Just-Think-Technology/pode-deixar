@@ -106,6 +106,8 @@ describe('GET /auth/verify', () => {
     });
 
     it('should return authorized false and not user data for an expired token', async () => {
+      // Justificativa AppSec: estratégia exige iss/aud fixos; incluídos aqui
+      // para que o teste rejeite por expiração (não por emissor/audiência).
       const expiredToken = jwtService.sign(
         {
           sub: '00000000-0000-0000-0000-000000000000',
@@ -115,7 +117,11 @@ describe('GET /auth/verify', () => {
           iat: Math.floor(Date.now() / 1000) - 3600,
           exp: Math.floor(Date.now() / 1000) - 1800,
         },
-        { secret: process.env.JWT_ACCESS_SECRET || 'ci-test-access-secret' },
+        {
+          secret: process.env.JWT_ACCESS_SECRET || 'ci-test-access-secret',
+          issuer: 'pode-deixar-auth',
+          audience: 'pode-deixar',
+        },
       );
 
       const response = await request(app.getHttpServer())
@@ -131,14 +137,20 @@ describe('GET /auth/verify', () => {
     });
 
     it('should return authorized false for a token signed with a different secret', async () => {
+      // Justificativa AppSec: iss/aud incluídos para que a rejeição ocorra
+      // pela assinatura (objeto do teste), não pelo endurecimento JWT.
       const fakeToken = jwtService.sign(
         {
-          sub: '00000000-0000-0000-0000-0000-000000000000',
+          sub: '00000000-0000-0000-0000-000000000000',
           email: 'fake@example.com',
           role: 'CLIENT',
           type: 'access',
         },
-        { secret: 'wrong-secret' },
+        {
+          secret: 'wrong-secret',
+          issuer: 'pode-deixar-auth',
+          audience: 'pode-deixar',
+        },
       );
 
       const response = await request(app.getHttpServer())

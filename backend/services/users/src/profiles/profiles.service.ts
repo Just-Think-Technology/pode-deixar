@@ -14,6 +14,7 @@ import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { extname } from "path";
+import { validarArquivoImagem } from "../shared/validar-imagem.util";
 
 @Injectable()
 export class ProfilesService {
@@ -260,15 +261,6 @@ export class ProfilesService {
       throw new NotFoundException("Usuário não encontrado");
     }
 
-    const ext = extname(file.originalname);
-    const fileName = `${randomUUID()}${ext}`;
-    const url = await this.minio.uploadFile(
-      fileName,
-      file.buffer,
-      file.mimetype,
-      this.minio.avatarBucket,
-    );
-
     if (role === "PROVIDER") {
       const existingProfile = await this.prisma.providerProfile.findUnique({
         where: { userId },
@@ -276,6 +268,17 @@ export class ProfilesService {
       if (!existingProfile) {
         throw new NotFoundException("Perfil de prestador não encontrado");
       }
+
+      // Valida extensão e magic bytes antes de enviar ao armazenamento.
+      validarArquivoImagem(file.originalname, file.buffer);
+      const ext = extname(file.originalname).toLowerCase();
+      const fileName = `${randomUUID()}${ext}`;
+      const url = await this.minio.uploadFile(
+        fileName,
+        file.buffer,
+        file.mimetype,
+        this.minio.avatarBucket,
+      );
 
       if (existingProfile.avatarUrl) {
         const oldFileName = this.minio.extractFileName(
@@ -303,6 +306,17 @@ export class ProfilesService {
         throw new NotFoundException("Perfil de cliente não encontrado");
       }
 
+      // Valida extensão e magic bytes antes de enviar ao armazenamento.
+      validarArquivoImagem(file.originalname, file.buffer);
+      const ext = extname(file.originalname).toLowerCase();
+      const fileName = `${randomUUID()}${ext}`;
+      const url = await this.minio.uploadFile(
+        fileName,
+        file.buffer,
+        file.mimetype,
+        this.minio.avatarBucket,
+      );
+
       if (existingProfile.avatarUrl) {
         const oldFileName = this.minio.extractFileName(
           existingProfile.avatarUrl,
@@ -325,6 +339,8 @@ export class ProfilesService {
   }
 
   async getPublicProviderProfile(providerProfileId: string) {
+    // Perfil público: nunca expõe PII (email, telefone, CEP) — por isso o
+    // select busca apenas id e nome, sem trazer dados sensíveis do banco.
     const profile = await this.prisma.providerProfile.findUnique({
       where: { id: providerProfileId },
       include: {
@@ -332,9 +348,6 @@ export class ProfilesService {
           select: {
             id: true,
             completeName: true,
-            email: true,
-            phone: true,
-            postalCode: true,
           },
         },
         services: {
@@ -356,9 +369,6 @@ export class ProfilesService {
       user: {
         id: profile.user.id,
         complete_name: profile.user.completeName,
-        email: profile.user.email,
-        phone: profile.user.phone,
-        postal_code: profile.user.postalCode,
       },
       avatar_url: profile.avatarUrl,
       bio: profile.bio,

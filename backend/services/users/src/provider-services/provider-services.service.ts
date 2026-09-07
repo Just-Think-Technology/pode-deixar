@@ -220,13 +220,6 @@ export class ProviderServicesService {
     return this.formatService(service);
   }
 
-  private removerAcentos(texto: string): string {
-    return texto
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
-  }
-
   private formatProfileResult(profile: any): {
     id: string;
     user: UserResponse;
@@ -254,9 +247,6 @@ export class ProviderServicesService {
       user: {
         id: profile.user.id,
         complete_name: profile.user.completeName,
-        email: profile.user.email,
-        phone: profile.user.phone,
-        postal_code: profile.user.postalCode,
       },
       avatar_url: profile.avatarUrl ?? undefined,
       bio: profile.bio ?? undefined,
@@ -288,31 +278,55 @@ export class ProviderServicesService {
   }
 
   async searchProviders(query: SearchProvidersQueryDto) {
-    const { page = 1, limit = 10 } = query;
-    const skip = (page - 1) * limit;
+    // Limite com teto anti-abuso (o DTO também valida @Max(50)).
+    const page = query.page ?? 1;
+    const limite = Math.min(query.limit ?? 10, 50);
+    const skip = (page - 1) * limite;
 
-    const serviceFilter: any = { isActive: true };
-    const profileFilter: any = { services: { some: { isActive: true } } };
-
+    const filtroServico: any = { isActive: true };
     if (query.categoryId) {
-      serviceFilter.categoryId = query.categoryId;
-      profileFilter.services = {
-        some: { isActive: true, categoryId: query.categoryId },
-      };
+      filtroServico.categoryId = query.categoryId;
     }
 
+    const condicoes: any[] = [{ services: { some: filtroServico } }];
+
+    // Filtro de texto executado no banco (contains case-insensitive sobre
+    // nome do prestador, título e descrição), com paginação via skip/take —
+    // evita carregar todos os perfis em memória.
+    if (query.q) {
+      condicoes.push({
+        OR: [
+          {
+            user: { completeName: { contains: query.q, mode: "insensitive" } },
+          },
+          {
+            services: {
+              some: {
+                ...filtroServico,
+                OR: [
+                  { title: { contains: query.q, mode: "insensitive" } },
+                  { description: { contains: query.q, mode: "insensitive" } },
+                ],
+              },
+            },
+          },
+        ],
+      });
+    }
+
+    const where = { AND: condicoes };
+
+    // Select público: sem PII (email, telefone, CEP não são buscados).
+    // A ordenação por proximidade de CEP foi removida junto com o CEP.
     const includeClause = {
       user: {
         select: {
           id: true,
           completeName: true,
-          email: true,
-          phone: true,
-          postalCode: true,
         },
       },
       services: {
-        where: serviceFilter,
+        where: filtroServico,
         orderBy: { createdAt: "desc" },
         include: {
           category: { select: { id: true, name: true, slug: true } },
@@ -324,58 +338,26 @@ export class ProviderServicesService {
       },
     } as const;
 
-    const allProfiles = await this.prisma.providerProfile.findMany({
-      where: profileFilter,
-      include: includeClause,
-    });
+    const [total, perfis] = await Promise.all([
+      this.prisma.providerProfile.count({ where }),
+      this.prisma.providerProfile.findMany({
+        where,
+        include: includeClause,
+        orderBy: { rating: "desc" },
+        skip,
+        take: limite,
+      }),
+    ]);
 
-    let result = allProfiles.map((p: any) => this.formatProfileResult(p));
-
-    if (query.q) {
-      const termo = this.removerAcentos(query.q);
-      result = result.filter((p) => {
-        const nome = this.removerAcentos(p.user.complete_name);
-        if (nome.includes(termo)) return true;
-        return p.services.some(
-          (s: any) =>
-            this.removerAcentos(s.title).includes(termo) ||
-            this.removerAcentos(s.description).includes(termo),
-        );
-      });
-    }
-
-    if (query.postalCode) {
-      const clientCep = parseInt(query.postalCode.replace(/\D/g, ""), 10);
-      result.sort((a, b) => {
-        const ratingA = a.rating ?? 0;
-        const ratingB = b.rating ?? 0;
-        const ratingDiff = Math.abs(ratingB - ratingA);
-        if (ratingDiff > 0.5) {
-          return ratingB - ratingA;
-        }
-        const cepA = parseInt(
-          (a.user.postal_code || "").replace(/\D/g, ""),
-          10,
-        );
-        const cepB = parseInt(
-          (b.user.postal_code || "").replace(/\D/g, ""),
-          10,
-        );
-        return Math.abs(cepA - clientCep) - Math.abs(cepB - clientCep);
-      });
-    } else {
-      result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-    }
-
-    const paginados = result.slice(skip, skip + limit);
+    const dados = perfis.map((p: any) => this.formatProfileResult(p));
 
     return {
-      data: paginados,
+      data: dados,
       meta: {
-        total: result.length,
+        total,
         page,
-        limit,
-        totalPages: Math.ceil(result.length / limit),
+        limit: limite,
+        totalPages: Math.ceil(total / limite),
       },
     };
   }
@@ -384,7 +366,4 @@ export class ProviderServicesService {
 export interface UserResponse {
   id: string;
   complete_name: string;
-  email: string;
-  phone: string;
-  postal_code: string;
 }

@@ -265,10 +265,14 @@ describe('Orders & Proposals (integration)', () => {
         .expect(201);
 
       expect(mockMinio.uploadFile).toHaveBeenCalled();
-      expect(response.body[0].url).toContain('http://minio.test/');
+      // Bucket privado: a resposta expõe o endpoint de visualização
+      // autenticado, não a URL direta do MinIO.
+      expect(response.body[0].url).toMatch(
+        /^\/api\/services\/photos\/.+\/view$/,
+      );
     });
 
-    it('deve retornar 400 para pedido inexistente', async () => {
+    it('deve retornar 404 para pedido inexistente', async () => {
       const { token } = await clientAuth();
 
       await request(app.getHttpServer())
@@ -278,7 +282,7 @@ describe('Orders & Proposals (integration)', () => {
           filename: 'local.png',
           contentType: 'image/png',
         })
-        .expect(400);
+        .expect(404);
     });
   });
 });

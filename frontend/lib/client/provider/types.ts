@@ -16,9 +16,9 @@ export type ProviderPublicProfile = {
   user: {
     id: string;
     complete_name: string;
-    email: string;
-    phone: string;
-    postal_code: string;
+    email?: string;
+    phone?: string;
+    postal_code?: string;
   };
   avatar_url: string | null;
   bio: string | null;

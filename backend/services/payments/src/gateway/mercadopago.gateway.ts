@@ -1,4 +1,8 @@
-import { Injectable, BadGatewayException } from "@nestjs/common";
+import {
+  Injectable,
+  BadGatewayException,
+  BadRequestException,
+} from "@nestjs/common";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { PaymentStatus } from "@prisma/client";
 import {
@@ -91,12 +95,20 @@ export class MercadoPagoGateway implements PaymentGateway {
   }
 
   async getPayment(paymentId: string): Promise<GatewayPayment> {
-    const response = await fetch(`${this.apiBase}/v1/payments/${paymentId}`, {
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        "Content-Type": "application/json",
+    if (!/^\d+$/.test(paymentId)) {
+      throw new BadRequestException(
+        "Identificador de pagamento inválido no gateway",
+      );
+    }
+    const response = await fetch(
+      `${this.apiBase}/v1/payments/${encodeURIComponent(paymentId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const data = await response.json();
     if (!response.ok) {
@@ -142,7 +154,12 @@ export class MercadoPagoGateway implements PaymentGateway {
       return false;
     }
 
-    const paymentId = this.extractGatewayPaymentId(body);
+    let paymentId: string;
+    try {
+      paymentId = this.extractGatewayPaymentId(body);
+    } catch {
+      return false;
+    }
     const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts};`;
     const esperado = Buffer.from(
       createHmac("sha256", this.webhookSecret).update(manifest).digest("hex"),
@@ -160,9 +177,29 @@ export class MercadoPagoGateway implements PaymentGateway {
     headers: Record<string, string | undefined>,
     body: unknown,
   ): string {
+    if (headers["x-request-id"]) {
+      return headers["x-request-id"];
+    }
     const gatewayPaymentId = this.extractGatewayPaymentId(body);
     const slug = this.name.toLowerCase().replace(/_/g, "");
-    return headers["x-request-id"] || `${slug}:${gatewayPaymentId}`;
+    const corpo = body as
+      { type?: unknown; topic?: unknown; action?: unknown } | null | undefined;
+    const tipo =
+      typeof corpo?.type === "string" && corpo.type
+        ? corpo.type
+        : typeof corpo?.topic === "string" && corpo.topic
+          ? corpo.topic
+          : undefined;
+    const acao =
+      typeof corpo?.action === "string" && corpo.action
+        ? corpo.action
+        : undefined;
+    if (!tipo && !acao) {
+      return `${slug}:${gatewayPaymentId}`;
+    }
+    const prefixoTipo = tipo ?? "notificacao";
+    const sufixoAcao = acao ? `:${acao}` : "";
+    return `${slug}:${prefixoTipo}${sufixoAcao}:${gatewayPaymentId}`;
   }
 
   extractGatewayPaymentId(body: unknown): string {
@@ -174,7 +211,13 @@ export class MercadoPagoGateway implements PaymentGateway {
       (body as { data: { id?: unknown } }).data !== null &&
       "id" in (body as { data: { id?: unknown } }).data
     ) {
-      return String((body as { data: { id: unknown } }).data.id);
+      const bruto = String((body as { data: { id: unknown } }).data.id);
+      if (!/^\d+$/.test(bruto)) {
+        throw new BadRequestException(
+          "Identificador de pagamento inválido no gateway",
+        );
+      }
+      return bruto;
     }
     return "";
   }
@@ -190,7 +233,15 @@ export class MercadoPagoGateway implements PaymentGateway {
     };
 
     // eslint-disable-next-line security/detect-object-injection
-    return mapa[gatewayStatus] || "PENDING";
+    const traduzido = mapa[gatewayStatus];
+
+    if (!traduzido) {
+      throw new BadRequestException(
+        `Status do gateway desconhecido: ${gatewayStatus}`,
+      );
+    }
+
+    return traduzido;
   }
 
   private extrairErro(data: unknown): string {

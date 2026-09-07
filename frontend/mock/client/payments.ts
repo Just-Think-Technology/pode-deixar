@@ -130,8 +130,10 @@ export function mockChargePayment(paymentId: string): ChargeResponse {
       qrCodeBase64: MOCK_QR_BASE64,
     };
   } else {
+    // Mock representa o sandbox do Mercado Pago: URL realista no domínio do
+    // gateway para que a allowlist de checkout (https + mercadopago.*) aceite.
     cobranca = {
-      linkCheckout: `https://checkout.mock.pode-deixar.com/${chargeRef}`,
+      linkCheckout: `https://www.mercadopago.com/mock-checkout/${chargeRef}`,
     };
   }
 

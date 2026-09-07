@@ -57,10 +57,13 @@ describe('EmailService', () => {
 
   describe('Transporter setup', () => {
     it('should call nodemailer.createTransport with values from ConfigService', () => {
+      // Justificativa AppSec: transporte agora exige TLS (requireTLS + TLSv1.2).
       expect(nodemailer.createTransport).toHaveBeenCalledWith({
         host: CONFIG.SMTP_HOST,
         port: CONFIG.SMTP_PORT,
         secure: false,
+        requireTLS: true,
+        tls: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
         auth: {
           user: CONFIG.SMTP_USER,
           pass: CONFIG.SMTP_PASS,

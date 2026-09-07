@@ -27,8 +27,14 @@ describe('POST /auth/login', () => {
   describe('Success cases', () => {
     it('should return tokens and safe user data on valid credentials', async () => {
       const user = createTestUser();
-      await registerUser(app, user);
-      await verifyEmailViaApi(app, user.email, prisma);
+      const registro = await registerUser(app, user);
+      // Justificativa AppSec: banco guarda só o hash do token de verificação.
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registro.body.email_verification_token as string,
+      );
 
       const response = await request(app.getHttpServer())
         .post('/auth/login')
@@ -48,8 +54,14 @@ describe('POST /auth/login', () => {
 
     it('should return tokens when rememberMe is true', async () => {
       const user = createTestUser();
-      await registerUser(app, user);
-      await verifyEmailViaApi(app, user.email, prisma);
+      const registro = await registerUser(app, user);
+      // Justificativa AppSec: banco guarda só o hash do token de verificação.
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registro.body.email_verification_token as string,
+      );
 
       const response = await request(app.getHttpServer())
         .post('/auth/login')
@@ -64,8 +76,14 @@ describe('POST /auth/login', () => {
   describe('Authentication failure cases', () => {
     it('should reject incorrect password with 401', async () => {
       const user = createTestUser();
-      await registerUser(app, user);
-      await verifyEmailViaApi(app, user.email, prisma);
+      const registro = await registerUser(app, user);
+      // Justificativa AppSec: banco guarda só o hash do token de verificação.
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registro.body.email_verification_token as string,
+      );
 
       const response = await request(app.getHttpServer())
         .post('/auth/login')

@@ -23,17 +23,20 @@ describe('POST /auth/verify-email', () => {
     await teardownTestApp(app, prisma);
   });
 
-  /** Registers a user and returns the emailVerificationToken stored in the DB. */
+  /**
+   * Registra um usuário e retorna o token bruto de verificação.
+   * Justificativa AppSec: o banco guarda apenas o sha256 do token, então o
+   * token bruto vem do eco não-prod do cadastro (equivale ao link do email).
+   */
   async function registerAndGetToken(): Promise<{ email: string; token: string }> {
     const user = createTestUser();
-    await registerUser(app, user);
+    const registro = await registerUser(app, user);
 
-    const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+    const token = registro.body.email_verification_token as string;
+    if (!token)
+      throw new Error('email_verification_token missing after registration');
 
-    if (!dbUser?.emailVerificationToken)
-      throw new Error('emailVerificationToken missing after registration');
-
-    return { email: user.email, token: dbUser.emailVerificationToken };
+    return { email: user.email, token };
   }
 
   describe('Success cases', () => {

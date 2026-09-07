@@ -389,6 +389,9 @@ describe("ProviderServicesService", () => {
 
     beforeEach(() => {
       mockPrisma.providerProfile.findMany.mockReset();
+      // Justificativa (AppSec): a busca agora pagina no banco (skip/take) e
+      // usa count para o total do envelope, em vez de carregar tudo em memória.
+      mockPrisma.providerProfile.count.mockResolvedValue(1);
     });
 
     it("should return all active providers when no filters", async () => {
@@ -402,6 +405,10 @@ describe("ProviderServicesService", () => {
       expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
       expect(result.data).toHaveLength(1);
       expect(result.data[0].user.complete_name).toBe("João Eletricista");
+      // Justificativa (AppSec): resultado público da busca sem PII.
+      expect(result.data[0].user).not.toHaveProperty("email");
+      expect(result.data[0].user).not.toHaveProperty("phone");
+      expect(result.data[0].user).not.toHaveProperty("postal_code");
       expect(result.data[0].services).toHaveLength(1);
       expect(result.meta.total).toBe(1);
     });
@@ -475,6 +482,7 @@ describe("ProviderServicesService", () => {
 
     it("should return empty array when no matches", async () => {
       mockPrisma.providerProfile.findMany.mockResolvedValue([]);
+      mockPrisma.providerProfile.count.mockResolvedValue(0);
 
       const query: SearchProvidersQueryDto = { categoryId: "cat-hidraulica" };
       const result = await service.searchProviders(query);
@@ -484,54 +492,49 @@ describe("ProviderServicesService", () => {
       expect(result.meta.total).toBe(0);
     });
 
-    it("should sort by postalCode proximity when provided", async () => {
-      const farProfile = {
-        ...mockProfileWithServices,
-        id: "far-profile",
-        user: { ...mockProfileWithServices.user, id: "user-far", postalCode: "99999-999" },
-        rating: 3.0,
-      };
-      const nearProfile = {
-        ...mockProfileWithServices,
-        id: "near-profile",
-        user: { ...mockProfileWithServices.user, id: "user-near", postalCode: "01001-000" },
-        rating: 4.0,
-      };
-
+    // Justificativa (AppSec): a ordenação por proximidade de CEP foi removida
+    // junto com o CEP (PII) do resultado público; a ordenação é por avaliação
+    // no banco. Estes testes agora cobrem o filtro de texto no banco e o
+    // teto de paginação.
+    it("should filter text in database with case-insensitive contains", async () => {
       mockPrisma.providerProfile.findMany.mockResolvedValue([
-        farProfile,
-        nearProfile,
+        mockProfileWithServices,
       ]);
 
-      const query: SearchProvidersQueryDto = { postalCode: "01000-000" };
+      const query: SearchProvidersQueryDto = { q: "chuveiro" };
       const result = await service.searchProviders(query);
 
-      expect(result.data[0].id).toBe("near-profile");
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                OR: expect.arrayContaining([
+                  expect.objectContaining({
+                    services: expect.objectContaining({ some: expect.anything() }),
+                  }),
+                ]),
+              }),
+            ]),
+          }),
+          take: 10,
+          skip: 0,
+        }),
+      );
+      expect(result.data).toHaveLength(1);
     });
 
-    it("should sort by rating when rating diff > 0.5 even with postalCode", async () => {
-      const nearLowRating = {
-        ...mockProfileWithServices,
-        id: "near-low",
-        user: { ...mockProfileWithServices.user, id: "user-near", postalCode: "01001-000" },
-        rating: 2.0,
-      };
-      const farHighRating = {
-        ...mockProfileWithServices,
-        id: "far-high",
-        user: { ...mockProfileWithServices.user, id: "user-far", postalCode: "99999-999" },
-        rating: 4.5,
-      };
+    it("should cap limit at 50 and paginate with skip/take", async () => {
+      mockPrisma.providerProfile.findMany.mockResolvedValue([]);
 
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
-        nearLowRating,
-        farHighRating,
-      ]);
-
-      const query: SearchProvidersQueryDto = { postalCode: "01000-000" };
+      const query: SearchProvidersQueryDto = { page: 2, limit: 100 };
       const result = await service.searchProviders(query);
 
-      expect(result.data[0].id).toBe("far-high");
+      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 50, take: 50 }),
+      );
+      expect(result.meta.limit).toBe(50);
+      expect(result.meta.page).toBe(2);
     });
   });
 });

@@ -17,6 +17,12 @@ export class EmailService {
     const pass = this.configService.get<string>('SMTP_PASS');
 
     if (!host || !user || !pass) {
+      const mensagem = 'SMTP não configurado (SMTP_HOST/SMTP_USER/SMTP_PASS ausentes)';
+      // Em produção, falhar no boot em vez de operar sem envio de email.
+      if (process.env.NODE_ENV === 'production') {
+        logger.error('email.setup', mensagem);
+        throw new Error(mensagem);
+      }
       logger.warn('email.setup', 'SMTP not fully configured');
     }
 
@@ -24,6 +30,8 @@ export class EmailService {
       host,
       port,
       secure: port === 465,
+      requireTLS: port !== 465,
+      tls: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
       auth: { user, pass },
     });
   }
@@ -35,9 +43,13 @@ export class EmailService {
     from?: string;
   }) {
     const from = options.from || this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com';
+    // Valida destinatário único (rejeita injeção de cabeçalho via CRLF).
+    this.validarDestinatario(options.to);
+    // Neutraliza CRLF no assunto e limita a 200 caracteres (header injection).
+    const subject = options.subject.replace(/[\r\n]+/g, ' ').slice(0, 200);
 
     try {
-      await this.transporter.sendMail({ from, to: options.to, subject: options.subject, html: options.html });
+      await this.transporter.sendMail({ from, to: options.to, subject, html: options.html });
       logger.info('email.send', `Email sent to ${options.to}`);
       return true;
     } catch (error) {
@@ -47,7 +59,7 @@ export class EmailService {
   }
 
   async sendEmailVerification(email: string, token: string): Promise<boolean> {
-    const verificationUrl = `${this.configService.get<string>('FRONTEND_URL')}/verify-email?token=${token}`;
+    const verificationUrl = `${this.configService.get<string>('FRONTEND_URL')}/verify-email?token=${encodeURIComponent(token)}`;
 
     return this.sendMail({
       to: email,
@@ -57,12 +69,35 @@ export class EmailService {
   }
 
   async sendPasswordReset(email: string, token: string): Promise<boolean> {
-    const resetUrl = `${this.configService.get<string>('FRONTEND_URL')}/reset-password?token=${token}`;
+    const resetUrl = `${this.configService.get<string>('FRONTEND_URL')}/reset-password?token=${encodeURIComponent(token)}`;
 
     return this.sendMail({
       to: email,
       subject: 'Redefina sua senha',
       html: passwordResetTemplate(resetUrl),
     });
+  }
+
+  private validarDestinatario(to: string): void {
+    // Aceita um único endereço RFC-5322 aproximado; rejeita CRLF/endereços
+    // múltiplos. Implementação com operações lineares (indexOf/includes):
+    // regexes aninhadas como /^[^\s@]+@[^\s@]+\.[^\s@]+$/ têm backtracking
+    // polinomial sobre entrada hostil (CodeQL: polynomial ReDoS).
+    if (typeof to !== 'string' || /[\r\n]/.test(to)) {
+      throw new Error('Endereço de email destinatário inválido');
+    }
+    const arroba = to.indexOf('@');
+    if (arroba <= 0 || arroba !== to.lastIndexOf('@') || arroba === to.length - 1) {
+      throw new Error('Endereço de email destinatário inválido');
+    }
+    const dominio = to.slice(arroba + 1);
+    if (
+      /\s/.test(to) ||
+      !dominio.includes('.') ||
+      dominio.startsWith('.') ||
+      dominio.endsWith('.')
+    ) {
+      throw new Error('Endereço de email destinatário inválido');
+    }
   }
 }

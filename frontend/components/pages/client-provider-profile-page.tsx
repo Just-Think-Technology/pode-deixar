@@ -4,10 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   DollarSign,
-  Mail,
-  MapPin,
   MessageSquare,
-  Phone,
   Star,
 } from "lucide-react";
 
@@ -139,11 +136,6 @@ export default function ClientProviderProfilePage({
                     Indisponível
                   </Badge>
                 )}
-
-                <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="size-3.5 shrink-0" />
-                  {profile.user.postal_code}
-                </span>
               </div>
 
               {profile.hourly_rate != null && (
@@ -233,27 +225,6 @@ export default function ClientProviderProfilePage({
               description="Este profissional ainda não possui serviços cadastrados."
             />
           )}
-        </section>
-
-        <section>
-          <h2 className="mb-3 text-lg font-semibold text-foreground">Contato</h2>
-          <Card className="border-border/80 shadow-sm">
-            <CardContent className="space-y-3 p-5">
-              <div className="flex items-center gap-3 text-sm">
-                <Mail className="size-4 shrink-0 text-muted-foreground" />
-                <a
-                  href={`mailto:${profile.user.email}`}
-                  className="text-primary hover:underline"
-                >
-                  {profile.user.email}
-                </a>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Phone className="size-4 shrink-0 text-muted-foreground" />
-                <span className="text-foreground">{profile.user.phone}</span>
-              </div>
-            </CardContent>
-          </Card>
         </section>
       </div>
 

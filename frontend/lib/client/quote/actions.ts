@@ -37,6 +37,7 @@ export async function createServiceOrderAction(
     revalidatePath("/client/orders");
     return order;
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (
       err instanceof ApiError &&
       (err.status === 404 || err.status === 501 || err.status === 503)
