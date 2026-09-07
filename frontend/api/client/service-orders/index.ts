@@ -34,6 +34,7 @@ export function createServiceOrder(
       title: payload.title,
       description: payload.description,
       categoryId: payload.categoryId,
+      ...(payload.providerId ? { providerId: payload.providerId } : {}),
       ...(payload.budgetMin != null && { budgetMin: payload.budgetMin }),
       ...(payload.budgetMax != null && { budgetMax: payload.budgetMax }),
       ...(payload.address && { address: payload.address }),

@@ -65,13 +65,13 @@ function isInfraError(err: unknown): boolean {
 export async function createPaymentAction(
   serviceOrderId: string,
   method: PaymentMethod,
-  scheduledAt?: string,
+  scheduledAt: string,
   scheduledEndAt?: string,
 ): Promise<Payment> {
   const payload: CreatePaymentPayload = {
     serviceOrderId,
     method,
-    ...(scheduledAt ? { scheduledAt } : {}),
+    scheduledAt,
     ...(scheduledEndAt ? { scheduledEndAt } : {}),
   };
 
@@ -143,7 +143,7 @@ export async function confirmPaymentMockAction(
 export async function startCheckoutAction(
   serviceOrderId: string,
   method: PaymentMethod,
-  scheduledAt?: string,
+  scheduledAt: string,
   scheduledEndAt?: string,
 ): Promise<{ payment: Payment; charge: ChargeResponse }> {
   if (USE_MOCK) {
@@ -151,7 +151,7 @@ export async function startCheckoutAction(
     const payment =
       existing && existing.method === method
         ? existing
-        : mockCreatePayment({ serviceOrderId, method });
+        : mockCreatePayment({ serviceOrderId, method, scheduledAt, scheduledEndAt });
     const charge = mockChargePayment(payment.id);
     return { payment, charge };
   }
@@ -161,7 +161,7 @@ export async function startCheckoutAction(
       createPayment(token, {
         serviceOrderId,
         method,
-        ...(scheduledAt ? { scheduledAt } : {}),
+        scheduledAt,
         ...(scheduledEndAt ? { scheduledEndAt } : {}),
       }),
     );
@@ -171,7 +171,12 @@ export async function startCheckoutAction(
     return { payment, charge };
   } catch (err) {
     if (isInfraError(err)) {
-      const payment = mockCreatePayment({ serviceOrderId, method });
+      const payment = mockCreatePayment({
+        serviceOrderId,
+        method,
+        scheduledAt,
+        scheduledEndAt,
+      });
       const charge = mockChargePayment(payment.id);
       return { payment, charge };
     }

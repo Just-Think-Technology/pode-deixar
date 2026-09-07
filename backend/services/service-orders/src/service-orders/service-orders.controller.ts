@@ -34,6 +34,43 @@ import { Roles } from "../auth/roles.decorator";
 export class ServiceOrdersController {
   constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
 
+  @Get("agenda")
+  @Roles("PROVIDER")
+  @ApiOperation({
+    summary:
+      "Listar serviços pagos do prestador no período (agenda do calendário)",
+    description:
+      "Retorna apenas pedidos com pagamento PAID e status IN_PROGRESS/COMPLETED, onde o prestador autenticado é o prestador do pedido ou tem proposta ACCEPTED. Janela máxima de 92 dias.",
+  })
+  @ApiQuery({
+    name: "from",
+    required: true,
+    description: "Data inicial (YYYY-MM-DD)",
+    example: "2026-08-01",
+  })
+  @ApiQuery({
+    name: "to",
+    required: true,
+    description: "Data final (YYYY-MM-DD)",
+    example: "2026-08-31",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Lista de serviços agendados retornada com sucesso",
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Período inválido ou janela maior que 92 dias",
+  })
+  async agenda(@Request() req: any, @Query() query: AgendaQueryDto) {
+    const userId = req.user.sub;
+    return this.serviceOrdersService.findProviderAgenda(
+      userId,
+      query.from,
+      query.to,
+    );
+  }
+
   @Post()
   @Roles("CLIENT")
   @ApiOperation({ summary: "Criar novo pedido de serviço (apenas clientes)" })
@@ -71,51 +108,6 @@ export class ServiceOrdersController {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.serviceOrdersService.hireFromProvider(userId, dto, ip);
-  }
-}
-
-@ApiTags("Pedidos de Serviço (Agenda do Prestador)")
-@Controller("services/me/agenda")
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth()
-export class ProviderAgendaController {
-  constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
-
-  @Get()
-  @Roles("PROVIDER")
-  @ApiOperation({
-    summary:
-      "Listar serviços pagos do prestador no período (agenda do calendário)",
-    description:
-      "Retorna apenas pedidos com pagamento PAID e status IN_PROGRESS/COMPLETED, onde o prestador autenticado é o prestador do pedido ou tem proposta ACCEPTED. Janela máxima de 92 dias.",
-  })
-  @ApiQuery({
-    name: "from",
-    required: true,
-    description: "Data inicial (YYYY-MM-DD)",
-    example: "2026-08-01",
-  })
-  @ApiQuery({
-    name: "to",
-    required: true,
-    description: "Data final (YYYY-MM-DD)",
-    example: "2026-08-31",
-  })
-  @ApiResponse({
-    status: 200,
-    description: "Lista de serviços agendados retornada com sucesso",
-  })
-  @ApiResponse({
-    status: 400,
-    description: "Período inválido ou janela maior que 92 dias",
-  })
-  async agenda(@Request() req: any, @Query() query: AgendaQueryDto) {
-    const userId = req.user.sub;
-    return this.serviceOrdersService.findProviderAgenda(
-      userId,
-      query.from,
-      query.to,
-    );
   }
 }
 

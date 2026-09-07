@@ -19,7 +19,7 @@ export function mockCreateServiceOrder(
   const clientOrder: ClientOrder = {
     id,
     client_id: "mock-client-id",
-    provider_id: null,
+    provider_id: payload.providerId ?? null,
     title: payload.title,
     description: payload.description,
     category_id: category.id,
@@ -30,7 +30,7 @@ export function mockCreateServiceOrder(
     },
     budget_min: payload.budgetMin ?? null,
     budget_max: payload.budgetMax ?? null,
-    address: {},
+    address: payload.address ?? {},
     status: "OPEN",
     created_at: now,
     updated_at: now,

@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   DollarSign,
   FileText,
+  MapPin,
   Send,
   Star,
 } from "lucide-react";
@@ -137,7 +138,10 @@ export default function ClientRequestQuotePage({
     setLoading(true);
 
     try {
-      const payload = parseCreateServiceOrderForm(event.currentTarget);
+      const payload = parseCreateServiceOrderForm(
+        event.currentTarget,
+        profile.user.id,
+      );
       const validation = validateCreateServiceOrder(payload);
 
       if (!validation.ok) {
@@ -371,6 +375,91 @@ export default function ClientRequestQuotePage({
                   ))}
                 </NativeSelect>
                 <FieldError message={fieldErrors.categoryId} />
+              </Field>
+
+              <Field className="md:col-span-2">
+                <p className="text-sm font-medium text-foreground">
+                  Endereço do serviço
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  O prestador usará este endereço na agenda após o pagamento.
+                </p>
+              </Field>
+
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="street">Logradouro</FieldLabel>
+                <div className="relative">
+                  <MapPin className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="street"
+                    name="street"
+                    placeholder="Rua, avenida..."
+                    aria-invalid={!!fieldErrors.street}
+                    className="pl-9"
+                  />
+                </div>
+                <FieldError message={fieldErrors.street} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="number">Número</FieldLabel>
+                <Input
+                  id="number"
+                  name="number"
+                  placeholder="123"
+                  aria-invalid={!!fieldErrors.number}
+                />
+                <FieldError message={fieldErrors.number} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="neighborhood">Bairro</FieldLabel>
+                <Input
+                  id="neighborhood"
+                  name="neighborhood"
+                  placeholder="Centro"
+                  aria-invalid={!!fieldErrors.neighborhood}
+                />
+                <FieldError message={fieldErrors.neighborhood} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="city">Cidade</FieldLabel>
+                <Input
+                  id="city"
+                  name="city"
+                  placeholder="São Paulo"
+                  aria-invalid={!!fieldErrors.city}
+                />
+                <FieldError message={fieldErrors.city} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="state">UF</FieldLabel>
+                <Input
+                  id="state"
+                  name="state"
+                  placeholder="SP"
+                  maxLength={2}
+                  aria-invalid={!!fieldErrors.state}
+                />
+                <FieldError message={fieldErrors.state} />
+              </Field>
+
+              <Field className="md:col-span-2">
+                <FieldLabel htmlFor="postalCode">
+                  CEP{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (opcional)
+                  </span>
+                </FieldLabel>
+                <Input
+                  id="postalCode"
+                  name="postalCode"
+                  placeholder="01305-000"
+                  aria-invalid={!!fieldErrors.postalCode}
+                />
+                <FieldError message={fieldErrors.postalCode} />
               </Field>
 
               <Field>
