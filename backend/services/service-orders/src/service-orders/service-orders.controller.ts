@@ -23,6 +23,7 @@ import { CreateServiceOrderDto } from "./dto/create-service-order.dto";
 import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
 import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import { AgendaQueryDto } from "./dto/agenda-query.dto";
+import { PaginationQueryDto } from "../shared/pagination-query.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
@@ -51,9 +52,12 @@ export class ServiceOrdersController {
     status: 200,
     description: "Lista de pedidos retornada com sucesso",
   })
-  async findMyOrders(@Request() req: any) {
+  async findMyOrders(
+    @Request() req: any,
+    @Query() paginacao: PaginationQueryDto,
+  ) {
     const userId = req.user.sub;
-    return this.serviceOrdersService.findByClient(userId);
+    return this.serviceOrdersService.findByClient(userId, paginacao);
   }
 
   @Post("hire")
@@ -175,19 +179,31 @@ export class MyServiceOrdersController {
   }
 }
 
-@ApiTags("Pedidos de Serviço (Público)")
+@ApiTags("Pedidos de Serviço (Vitrine do Prestador)")
 @Controller("services")
 export class PublicServiceOrdersController {
   constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
 
   @Get()
-  @ApiOperation({ summary: "Listar pedidos abertos (para prestadores)" })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("PROVIDER")
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Listar pedidos abertos (apenas prestadores autenticados)",
+    description:
+      "Exclui pedidos direcionados a outro prestador. O endereço vem resumido (apenas cidade/UF).",
+  })
   @ApiResponse({
     status: 200,
     description: "Lista de pedidos abertos retornada com sucesso",
   })
-  async findOpenOrders() {
-    return this.serviceOrdersService.findOpenOrders();
+  @ApiResponse({ status: 401, description: "Token ausente ou inválido" })
+  @ApiResponse({ status: 403, description: "Acesso restrito a prestadores" })
+  async findOpenOrders(
+    @Request() req: any,
+    @Query() paginacao: PaginationQueryDto,
+  ) {
+    return this.serviceOrdersService.findOpenOrders(req.user.sub, paginacao);
   }
 
   @Get(":orderId")
@@ -225,9 +241,12 @@ export class ProviderReceivedOrdersController {
     status: 200,
     description: "Lista de pedidos recebidos retornada com sucesso",
   })
-  async findReceived(@Request() req: any) {
+  async findReceived(
+    @Request() req: any,
+    @Query() paginacao: PaginationQueryDto,
+  ) {
     const userId = req.user.sub;
-    return this.serviceOrdersService.findReceivedByProvider(userId);
+    return this.serviceOrdersService.findReceivedByProvider(userId, paginacao);
   }
 }
 

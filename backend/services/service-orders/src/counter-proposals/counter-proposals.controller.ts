@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from "@nestjs/common";
@@ -16,6 +17,7 @@ import {
 } from "@nestjs/swagger";
 import { CounterProposalsService } from "./counter-proposals.service";
 import { CreateCounterProposalDto } from "./dto/create-counter-proposal.dto";
+import { PaginationQueryDto } from "../shared/pagination-query.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
@@ -54,9 +56,12 @@ export class CounterProposalsController {
     status: 200,
     description: "Lista de contrapropostas retornada com sucesso",
   })
-  async findMySent(@Request() req: any) {
+  async findMySent(
+    @Request() req: any,
+    @Query() paginacao: PaginationQueryDto,
+  ) {
     const userId = req.user.sub;
-    return this.counterProposalsService.findMySent(userId);
+    return this.counterProposalsService.findMySent(userId, paginacao);
   }
 
   @Get("proposal/:proposalId")
@@ -70,9 +75,14 @@ export class CounterProposalsController {
   async findByProposal(
     @Request() req: any,
     @Param("proposalId") proposalId: string,
+    @Query() paginacao: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
-    return this.counterProposalsService.findByProposal(userId, proposalId);
+    return this.counterProposalsService.findByProposal(
+      userId,
+      proposalId,
+      paginacao,
+    );
   }
 }
 

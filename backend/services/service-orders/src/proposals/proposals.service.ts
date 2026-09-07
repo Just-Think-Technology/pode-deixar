@@ -8,6 +8,10 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ServicesLoggerService } from "../shared/services-logger.service";
 import { CreateProposalDto } from "./dto/create-proposal.dto";
 import { UpdateProposalDto } from "./dto/update-proposal.dto";
+import {
+  normalizarPaginacao,
+  PaginacaoConsulta,
+} from "../shared/pagination-query.dto";
 
 @Injectable()
 export class ProposalsService {
@@ -126,10 +130,13 @@ export class ProposalsService {
     return this.formatProposalWithOrder(proposal);
   }
 
-  async findByProvider(providerId: string) {
+  async findByProvider(providerId: string, paginacao?: PaginacaoConsulta) {
+    const { skip, take } = normalizarPaginacao(paginacao);
     const proposals = await this.prisma.proposal.findMany({
       where: { providerId },
       orderBy: { createdAt: "desc" },
+      skip,
+      take,
       include: {
         serviceOrder: {
           include: {

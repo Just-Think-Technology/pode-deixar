@@ -201,6 +201,8 @@ describe("ServiceOrdersService", () => {
       expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith({
         where: { clientId: "client-1" },
         orderBy: { createdAt: "desc" },
+        skip: 0,
+        take: 20,
         include: { category: { select: { id: true, name: true, slug: true } } },
       });
     });
@@ -218,6 +220,8 @@ describe("ServiceOrdersService", () => {
       expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith({
         where: { providerId: "provider-1" },
         orderBy: { createdAt: "desc" },
+        skip: 0,
+        take: 20,
         include: { category: { select: { id: true, name: true, slug: true } } },
       });
     });
@@ -398,7 +402,7 @@ describe("ServiceOrdersService", () => {
       expect(result.id).toBe("order-1");
       expect(result.proposals).toBeUndefined();
       expect(result.photos).toEqual([
-        { id: "photo-1", url: "https://minio/order-photos/photo-1.webp" },
+        { id: "photo-1", url: "/api/services/photos/photo-1/view" },
       ]);
     });
 
@@ -419,7 +423,7 @@ describe("ServiceOrdersService", () => {
       );
 
       expect(result.photos).toEqual([
-        { id: "photo-1", url: "https://minio/order-photos/photo-1.webp" },
+        { id: "photo-1", url: "/api/services/photos/photo-1/view" },
       ]);
     });
 
@@ -457,17 +461,42 @@ describe("ServiceOrdersService", () => {
   });
 
   describe("findOpenOrders", () => {
-    it("should return only open orders", async () => {
+    it("should return only open orders excluding directed ones of other providers", async () => {
       mockPrisma.serviceOrder.findMany.mockResolvedValue([mockOrder]);
 
-      const result = await service.findOpenOrders();
+      const result = await service.findOpenOrders("provider-1");
 
       expect(result).toHaveLength(1);
       expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith({
-        where: { status: "OPEN" },
+        where: {
+          status: "OPEN",
+          OR: [{ providerId: null }, { providerId: "provider-1" }],
+        },
         orderBy: { createdAt: "desc" },
+        skip: 0,
+        take: 20,
         include: { category: { select: { id: true, name: true, slug: true } } },
       });
+    });
+
+    it("should return list items with summarized address (city/state only)", async () => {
+      mockPrisma.serviceOrder.findMany.mockResolvedValue([
+        {
+          ...mockOrder,
+          address: {
+            street: "Rua Augusta",
+            number: "500",
+            neighborhood: "Consolação",
+            city: "São Paulo",
+            state: "SP",
+            postalCode: "01305-000",
+          },
+        },
+      ]);
+
+      const result = await service.findOpenOrders("provider-1");
+
+      expect(result[0].address).toEqual({ city: "São Paulo", state: "SP" });
     });
   });
 
@@ -554,7 +583,7 @@ describe("ServiceOrdersService", () => {
           state: "SP",
           postal_code: "01305-000",
         },
-        photos: [{ id: "photo-1", url: "https://minio/order-photos/p1.webp" }],
+        photos: [{ id: "photo-1", url: "/api/services/photos/photo-1/view" }],
         payment: {
           status: "PAID",
           amount: 150,

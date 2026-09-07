@@ -14,11 +14,18 @@ async function bootstrap() {
   // Security headers with CSP
   app.use(getHelmetConfig());
 
-  // CORS configuration
+  // CORS configuration (allowlist via env — nunca "*")
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: process.env.ALLOWED_ORIGINS?.split(",") || [
+      "http://localhost:3000",
+    ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   });
+
+  // Trust proxy para detecção correta de IP (rate-limit/logs)
+  app.getHttpAdapter().getInstance().set("trust proxy", 1);
 
   const config = new DocumentBuilder()
     .setTitle("Pode Deixar - Services Service")

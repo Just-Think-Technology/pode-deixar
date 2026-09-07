@@ -12,7 +12,12 @@ import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import {
   sanitizarEndereco,
   formatarEndereco,
+  formatarEnderecoResumido,
 } from "./dto/service-order-address.dto";
+import {
+  normalizarPaginacao,
+  PaginacaoConsulta,
+} from "../shared/pagination-query.dto";
 
 const JANELA_AGENDA_MAXIMA_DIAS = 92;
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
@@ -50,11 +55,22 @@ export class ServiceOrdersService {
     };
   }
 
+  // A `url` exposta é o endpoint de visualização autenticado (o bucket não
+  // é público): o frontend busca com Bearer e recebe a presigned temporária.
   private formatPhotos(photos: any[] | undefined) {
     return (photos ?? []).map((p: any) => ({
       id: p.id,
-      url: p.url,
+      url: `/api/services/photos/${p.id}/view`,
     }));
+  }
+
+  // Item da vitrine de pedidos abertos: mesmo formato do pedido, porém com
+  // endereço resumido (apenas cidade/UF) para não expor rua/número/CEP.
+  private formatOpenOrderListItem(order: any) {
+    return {
+      ...this.formatOrder(order),
+      address: formatarEnderecoResumido(order.address),
+    };
   }
 
   private formatOrderWithProposals(order: any) {
@@ -121,10 +137,16 @@ export class ServiceOrdersService {
     return this.formatOrder(order);
   }
 
-  async findReceivedByProvider(providerId: string) {
+  async findReceivedByProvider(
+    providerId: string,
+    paginacao?: PaginacaoConsulta,
+  ) {
+    const { skip, take } = normalizarPaginacao(paginacao);
     const orders = await this.prisma.serviceOrder.findMany({
       where: { providerId },
       orderBy: { createdAt: "desc" },
+      skip,
+      take,
       include: {
         category: { select: { id: true, name: true, slug: true } },
       },
@@ -133,10 +155,13 @@ export class ServiceOrdersService {
     return orders.map((o) => this.formatOrder(o));
   }
 
-  async findByClient(clientId: string) {
+  async findByClient(clientId: string, paginacao?: PaginacaoConsulta) {
+    const { skip, take } = normalizarPaginacao(paginacao);
     const orders = await this.prisma.serviceOrder.findMany({
       where: { clientId },
       orderBy: { createdAt: "desc" },
+      skip,
+      take,
       include: {
         category: { select: { id: true, name: true, slug: true } },
       },
@@ -240,16 +265,24 @@ export class ServiceOrdersService {
     throw new ForbiddenException("Acesso negado a este pedido");
   }
 
-  async findOpenOrders() {
+  // Vitrine de pedidos abertos (uso exclusivo de prestadores autenticados):
+  // exclui pedidos direcionados a outro prestador e retorna endereço resumido.
+  async findOpenOrders(callerUserId: string, paginacao?: PaginacaoConsulta) {
+    const { skip, take } = normalizarPaginacao(paginacao);
     const orders = await this.prisma.serviceOrder.findMany({
-      where: { status: "OPEN" },
+      where: {
+        status: "OPEN",
+        OR: [{ providerId: null }, { providerId: callerUserId }],
+      },
       orderBy: { createdAt: "desc" },
+      skip,
+      take,
       include: {
         category: { select: { id: true, name: true, slug: true } },
       },
     });
 
-    return orders.map((o) => this.formatOrder(o));
+    return orders.map((o) => this.formatOpenOrderListItem(o));
   }
 
   async update(
@@ -310,13 +343,9 @@ export class ServiceOrdersService {
       throw new ForbiddenException("Pedido não pertence a este cliente");
     }
 
-    if (existing.status === "CANCELLED") {
-      throw new BadRequestException("Pedido já está cancelado");
-    }
-
-    if (existing.status === "COMPLETED") {
+    if (existing.status !== "OPEN") {
       throw new BadRequestException(
-        "Não é possível cancelar um pedido concluído",
+        "Só é possível cancelar pedidos com status aberto",
       );
     }
 
