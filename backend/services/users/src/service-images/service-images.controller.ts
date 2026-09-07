@@ -83,7 +83,7 @@ export class ServiceImagesController {
     @Request() req: any,
     @Param("serviceId", ParseUUIDPipe) serviceId: string,
     @UploadedFile() file: Express.Multer.File,
-  ) {
+  ): Promise<{ id: string; url: string; created_at: Date }> {
     if (!file) {
       throw new BadRequestException("Arquivo não enviado");
     }
@@ -105,7 +105,7 @@ export class ServiceImagesController {
   async list(
     @Request() req: any,
     @Param("serviceId", ParseUUIDPipe) serviceId: string,
-  ) {
+  ): Promise<{ id: string; url: string; created_at: Date }[]> {
     const userId = req.user.sub;
     return this.serviceImagesService.listByUserId(userId, serviceId);
   }
@@ -118,7 +118,7 @@ export class ServiceImagesController {
     @Request() req: any,
     @Param("serviceId", ParseUUIDPipe) serviceId: string,
     @Param("imageId", ParseUUIDPipe) imageId: string,
-  ) {
+  ): Promise<{ message: string }> {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.serviceImagesService.deleteByUserId(

@@ -3,8 +3,13 @@
  * You can place global mocks or setup logic here.
  */
 
-// jest-dom custom matchers podem ser adicionados aqui se desejar
-import '@testing-library/jest-dom'
+// jest-dom custom matchers for Vitest (entry explícito: o bare import não
+// registra os matchers no jest-dom 6.10 + vitest 4)
+import '@testing-library/jest-dom/vitest'
+import { vi } from 'vitest'
+
+// Mock jest functions for vitest compatibility
+(globalThis as any).jest = vi
 
 // Mock global This structure if needed
 global.ResizeObserver = global.ResizeObserver || function () {
@@ -23,11 +28,11 @@ global.matchMedia = global.matchMedia || function (query: string) {
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   }
 }
 

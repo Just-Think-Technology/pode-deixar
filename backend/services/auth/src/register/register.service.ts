@@ -91,6 +91,7 @@ export class RegisterService {
         type: 'verification',
         error: error.message,
       });
+      // Email failure não bloqueia cadastro — avisa para conferir spam
     }
 
     this.authLogger.logRegistration(dto.email, dto.role, ip);

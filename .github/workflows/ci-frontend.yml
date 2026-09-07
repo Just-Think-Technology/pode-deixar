@@ -3,101 +3,221 @@ name: ci-frontend
 on:
   push:
     branches: [develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci-frontend.yml'
   pull_request:
     branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci-frontend.yml'
 
 env:
   NODE_VERSION: 22
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-frontend
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-frontend-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quick:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v5
-      - name: Cache pnpm store
-        uses: actions/cache@v4
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
         with:
-          path: ~/.pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
-      - uses: actions/setup-node@v5
+          version: 11
+
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm run lint
-      - run: pnpm run typecheck
+      - run: pnpm run test:unit
 
   deep:
     needs: quick
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v5
-      - name: Cache pnpm store
-        uses: actions/cache@v4
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
         with:
-          path: ~/.pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
-      - uses: actions/setup-node@v5
+          version: 11
+
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm run build
+      - run: pnpm run typecheck
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+
+      # O cache acima só restaura — sem este passo, um cache miss (ex.:
+      # qualquer mudança no pnpm-lock.yaml) deixa o runner sem browsers e
+      # todo o e2e falha. O install é idempotente quando o cache acerta.
+      - run: pnpm exec playwright install --with-deps chromium
+
       - run: pnpm run test:e2e
+      - run: pnpm run test:cov
 
   security:
     needs: quick
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v5
-      - name: Cache pnpm store
-        uses: actions/cache@v4
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
         with:
-          path: ~/.pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
-      - uses: actions/setup-node@v5
+          version: 11
+
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
       - run: pnpm audit --prod --audit-level=high
+
       - name: TruffleHog Secret Scanning
-        uses: trufflehog/hunter-action@main
+        uses: trufflesecurity/trufflehog@d411fff7b8879a62509f3fa98c07f247ac089a51
         with:
-          args: --only-verified --fail
+          extra_args: --only-verified
+
+  image:
+    needs: [deep, security]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # O metadata-action publica tags sempre em minúsculas, mas
+      # IMAGE_NAME preserva a caixa do nome da org (Just-Think-Technology).
+      # Normaliza a referência usada na leitura (sbom/cosign) para a forma
+      # canônica minúscula — igual ao que foi efetivamente publicado.
+      - name: Normalize image reference to lowercase
+        run: echo "IMAGE_REF=${{ env.REGISTRY }}/$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=long
+            type=ref,event=branch
+
+      - name: Build and push image
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_REF }}@${{ steps.docker_build.outputs.digest }}
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
+          format: spdx-json
+          output-file: sbom-frontend.spdx.json
+          upload-artifact: false
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-frontend
+          path: sbom-frontend.spdx.json
+          retention-days: 90
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image (keyless, via OIDC/Sigstore)
+        run: |
+          cosign sign --yes \
+            "${{ env.IMAGE_REF }}@${{ steps.docker_build.outputs.digest }}"
 
   codeql:
-    needs: security
+    needs: quick
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
     steps:
-      - uses: actions/checkout@v5
-      - init: codeql
-      - codeql/analyze
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@v3
 
   dependency-review:
-    needs: codeql
+    needs: quick
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
+
       - name: Dependency Review
-        uses: github.com/dependencies/action@main
+        uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: critical

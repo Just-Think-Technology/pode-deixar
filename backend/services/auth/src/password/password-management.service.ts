@@ -46,9 +46,14 @@ export class PasswordManagementService {
       await this.emailService.sendPasswordReset(dto.email, resetToken);
       this.authLogger.logPasswordResetRequested(dto.email, true);
       this.authLogger.logPasswordReset(dto.email, true);
-    } catch {
+    } catch (error) {
       this.authLogger.logPasswordResetRequested(dto.email, false);
       this.authLogger.logPasswordReset(dto.email, false);
+      this.authLogger.logSecurityEvent('email_send_failed', {
+        email: dto.email,
+        type: 'password_reset',
+        error: error.message,
+      });
     }
 
     return {

@@ -24,7 +24,16 @@ export class ReviewsService {
     private logger: ReviewsLoggerService,
   ) {}
 
-  private formatReview(review: any) {
+  private formatReview(review: {
+    id: string;
+    serviceOrderId: string;
+    reviewerId: string;
+    revieweeId: string;
+    rating: number;
+    comment?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): ReviewFormat {
     return {
       id: review.id,
       service_order_id: review.serviceOrderId,
@@ -260,4 +269,15 @@ export class ReviewsService {
 
     return { message: "Avaliação excluída com sucesso" };
   }
+}
+
+export interface ReviewFormat {
+  id: string;
+  service_order_id: string;
+  reviewer_id: string;
+  reviewee_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: Date;
+  updated_at: Date;
 }

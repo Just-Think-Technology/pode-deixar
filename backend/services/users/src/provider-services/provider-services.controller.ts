@@ -46,7 +46,7 @@ export class ProviderServicesController {
   async createService(
     @Request() req: any,
     @Body() dto: CreateProviderServiceDto,
-  ) {
+  ): Promise<any> {
     const userId = req.user.sub;
     const ip = req.ip;
     const profile =
@@ -65,7 +65,7 @@ export class ProviderServicesController {
     status: 404,
     description: "Perfil de prestador não encontrado",
   })
-  async getMyServices(@Request() req: any) {
+  async getMyServices(@Request() req: any): Promise<any> {
     const userId = req.user.sub;
     const profile =
       await this.providerServicesService.getProviderProfileByUserId(userId);
@@ -125,7 +125,9 @@ export class PublicProviderServicesController {
     status: 404,
     description: "Perfil de prestador não encontrado",
   })
-  async getProviderServices(@Param("providerId") providerProfileId: string) {
+  async getProviderServices(
+    @Param("providerId") providerProfileId: string,
+  ): Promise<any> {
     return this.providerServicesService.getProviderServices(providerProfileId);
   }
 }

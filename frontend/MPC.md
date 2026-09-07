@@ -1,121 +1,122 @@
-**Objetivos**
+**Goals**
 
-O desenvolvimento do sistema “Pode Deixar” visa facilitar e modernizar o processo de contratação de serviços, conectando clientes que precisam realizar tarefas com prestadores que desejam oferecer suas habilidades de forma profissional e organizada. A plataforma atuará como intermediadora de todo o processo, permitindo que clientes encontrem prestadores, solicitem orçamentos, avaliem propostas e realizem pagamentos com segurança, tudo em um único ambiente digital.
+Developing the "Pode Deixar" system aims to facilitate and modernize the service hiring process, connecting clients who need tasks done with providers who want to offer their skills professionally and in an organized way. The platform will intermediate the entire process, letting clients find providers, request quotes, evaluate proposals, and pay securely, all in a single digital environment.
 
-Além de proporcionar praticidade, segurança e transparência na contratação de serviços, o projeto também possui como objetivo criar uma fonte de renda sustentável por meio da cobrança de taxas sobre serviços intermediados pela plataforma e, futuramente, por meio de planos de destaque para prestadores. Dessa forma, o sistema se torna financeiramente viável e capaz de evoluir continuamente, agregando valor tanto para clientes quanto para prestadores de serviços.
+Beyond providing practicality, security, and transparency when hiring services, the project also aims to create a sustainable revenue source by charging fees on platform-intermediated services and, in the future, through featured plans for providers. This keeps the system financially viable and able to evolve continuously, adding value for both clients and service providers.
 
-**Funcionamento**
+**How it works**
 
-O funcionamento do sistema “Pode Deixar” será dividido em duas partes, sendo a primeira os processos internos da plataforma e a segunda as funcionalidades disponíveis para clientes e prestadores.
+The "Pode Deixar" system operation is split into two parts: the platform's internal processes and the features available to clients and providers.
 
-**Funcionalidades Internas**
+**Internal features**
 
-**Gerenciamento de usuários**
+**User management**
 
-O sistema será responsável por gerenciar o cadastro, autenticação e armazenamento das informações de clientes e prestadores de serviço. Cada prestador possuirá um perfil profissional contendo descrição, serviços oferecidos, experiência, avaliações e outras informações relevantes.
+The system manages registration, authentication, and storage of client and service provider information. Each provider has a professional profile with a description, offered services, experience, ratings, and other relevant information.
 
-**Gerenciamento de serviços e propostas**
+**Service and proposal management**
 
-A plataforma armazenará e organizará os serviços cadastrados pelos prestadores, incluindo serviços com valor fixo e propostas enviadas sob medida. O sistema também será responsável por registrar solicitações de orçamento, propostas enviadas, negociações e status de cada contratação.
+The platform stores and organizes services registered by providers, including fixed-price services and custom proposals. The system also records quote requests, submitted proposals, negotiations, and the status of each hire.
 
-**Intermediação de pagamento**
+**Payment intermediation**
 
-O sistema atuará como intermediador financeiro, registrando os pagamentos realizados pelos clientes e vinculando-os aos serviços contratados. Isso garante maior segurança para ambas as partes, permitindo rastreabilidade e controle das transações realizadas dentro da plataforma.
+The system acts as a financial intermediary, recording client payments and linking them to hired services. This ensures greater security for both parties, enabling traceability and control of transactions made within the platform.
 
-**Monitoramento e controle da plataforma**
+**Platform monitoring and control**
 
-A plataforma contará com mecanismos internos de controle para gerenciar usuários, serviços, propostas e pagamentos, garantindo integridade dos dados, segurança das informações e funcionamento adequado do sistema.
+The platform has internal control mechanisms to manage users, services, proposals, and payments, ensuring data integrity, information security, and proper system operation.
 
-**Funcionalidades públicas**
+**Public features**
 
-**Cadastro e acesso à plataforma**
+**Registration and platform access**
 
-O usuário poderá se cadastrar como cliente ou prestador de serviço. Após realizar o login, terá acesso às funcionalidades específicas do seu perfil. Usuários não autenticados terão acesso limitado à plataforma.
+Users can register as clients or service providers. After logging in, they get access to the features specific to their profile. Unauthenticated users have limited access to the platform.
 
-**Busca de prestadores de serviço**
+**Service provider search**
 
-O cliente poderá buscar prestadores com base no tipo de serviço desejado, visualizando seus perfis, descrições, serviços oferecidos e outras informações relevantes. Isso permite que o cliente escolha o profissional mais adequado para sua necessidade.
+Clients can search providers by desired service type, viewing their profiles, descriptions, offered services, and other relevant information. This lets clients choose the most suitable professional for their needs.
 
-**Solicitação de orçamento (proposta sob medida)**
+**Quote request (custom proposal)**
 
-Após selecionar um prestador, o cliente poderá solicitar um orçamento descrevendo o serviço desejado. O prestador analisará a solicitação e enviará uma proposta contendo valor, prazo e descrição da execução. O cliente poderá aceitar, recusar ou negociar a proposta antes de realizar a contratação.
+After selecting a provider, the client can request a quote describing the desired service. The provider reviews the request and sends a proposal with price, deadline, and execution details. The client can accept, reject, or negotiate the proposal before hiring.
 
-**Contratação de serviços com valor fixo**
+**Fixed-price service hiring**
 
-Além das propostas personalizadas, os prestadores poderão cadastrar serviços com preço fixo e descrição definida. Nesses casos, o cliente poderá contratar diretamente o serviço sem necessidade de solicitar orçamento.
+Besides custom proposals, providers can register services with a fixed price and defined description. In these cases, clients can hire the service directly without requesting a quote.
 
-**Pagamento e intermediação**
+**Payment and intermediation**
 
-Após aceitar uma proposta ou contratar um serviço fixo, o cliente realizará o pagamento por meio da plataforma. O sistema atuará como intermediador, garantindo maior segurança durante todo o processo.  
+After accepting a proposal or hiring a fixed service, the client pays through the platform. The system acts as intermediary, ensuring greater security throughout the process.
 
 
-**Comunicação e acompanhamento**
+**Communication and tracking**
 
-O sistema permitirá o acompanhamento do status do serviço contratado, desde a solicitação até sua conclusão, proporcionando transparência e organização para ambas as partes.
+The system tracks the hired service status from request to completion, providing transparency and organization for both parties.
 
-**Avaliações e reputação**
+**Ratings and reputation**
 
-Após a conclusão do serviço, o cliente poderá avaliar o prestador, contribuindo para a construção de sua reputação dentro da plataforma. Isso ajuda outros clientes a tomarem decisões mais seguras ao contratar serviços.
+After service completion, the client can rate the provider, helping build their reputation within the platform. This helps other clients make safer hiring decisions.
 
-**Arquitetura**
+**Architecture**
 
 **Backend**
 
-O backend será desenvolvido utilizando o NestJS, um framework que permite a criação de serviços independentes, facilitando a separação de responsabilidades. Cada microsserviço será responsável por uma funcionalidade específica do sistema, comunicando-se por meio de APIs REST. Essa estrutura permite maior controle sobre cada módulo do sistema, melhora a manutenibilidade e possibilita escalar apenas os serviços necessários conforme a demanda.
+The backend is built with NestJS, a framework for creating independent services, making separation of responsibilities easier. Each microservice handles a specific system feature, communicating via REST APIs. This structure gives greater control over each system module, improves maintainability, and allows scaling only the services needed as demand grows.
 
-Os principais microsserviços previstos incluem:
+The main planned microservices include:
 
-- Autenticação e gerenciamento de usuários;
-- Gerenciamento de prestadores e perfis profissionais;
-- Serviço de gerenciamento de serviços e propostas;
-- Serviço de contratação e gerenciamento de tarefas;
-- Serviço de pagamentos e transações financeiras;
-- Serviço de avaliações e reputação.
+- Authentication and user management;
+- Provider and professional profile management;
+- Service and proposal management;
+- Hiring and task management;
+- Payments and financial transactions;
+- Ratings and reputation.
 
 **Frontend**
 
-O frontend será desenvolvido utilizando o Next.js, um framework que permite a construção de uma interface moderna, rápida e otimizada, proporcionando uma experiência fluida e responsiva para os usuários. O frontend será responsável por toda a interface de interação com o usuário, incluindo:
+The frontend is built with Next.js, a framework for building a modern, fast, and optimized interface, providing a smooth and responsive user experience. The frontend handles all user interaction, including:
 
-- Cadastro e autenticação de usuários;
-- Busca de prestadores de serviço;
-- Visualização de perfis profissionais;
-- Solicitação e gerenciamento de propostas;
-- Contratação de serviços;
-- Acompanhamento de serviços ativos;
-- Sistema de pagamentos;
-- Avaliações e histórico.
+- User registration and authentication;
+- Service provider search;
+- Professional profile views;
+- Proposal requests and management;
+- Service hiring;
+- Active service tracking;
+- Payment system;
+- Ratings and history.
 
-A comunicação com o backend será realizada por meio de APIs REST, garantindo separação total entre a interface e a lógica do sistema.
+Backend communication happens via REST APIs, ensuring full separation between interface and system logic.
 
 
 
-O sistema utilizará o PostgreSQL, escolhido por sua confiabilidade, desempenho e capacidade de lidar com grandes volumes de dados. O banco será responsável por armazenar informações de usuários, prestadores, serviços, propostas, contratos, pagamentos e avaliações.
+The system uses PostgreSQL, chosen for its reliability, performance, and ability to handle large data volumes. The database stores user, provider, service, proposal, contract, payment, and rating information.
 
-**3.4. Autenticação**
+**3.4. Authentication**
 
-A autenticação do sistema será baseada em JWT, que permite que o sistema opere de forma stateless, ou seja, sem necessidade de armazenamento de sessão no servidor, tornando a comunicação entre frontend e backend mais leve e eficiente.
+System authentication is JWT-based, letting the system operate statelessly — no server-side session storage needed — keeping frontend-backend communication light and efficient.
 
-O processo de autenticação funcionará da seguinte forma: após realizar o login com suas credenciais, o usuário receberá um token JWT assinado digitalmente pelo servidor. Esse token conterá informações essenciais, como o identificador do usuário e seu tipo de perfil (cliente ou prestador), além do tempo de expiração. A cada requisição realizada às APIs protegidas, o token deverá ser enviado no cabeçalho da requisição para validação.
+Authentication works as follows: after logging in with their credentials, the user receives a server-signed JWT token. The token carries essential information such as the user identifier and profile type (client or provider), plus the expiration time. On every request to protected APIs, the token must be sent in the request header for validation.
 
-No backend, desenvolvido com NestJS, será implementado um módulo específico de autenticação responsável por:
+On the NestJS backend, a dedicated authentication module handles:
 
-- Validação de credenciais;
-- Geração e assinatura de tokens JWT;
-- Controle de expiração de tokens;
-- Proteção de rotas por meio de Guards;
-- Autorização baseada em perfil de usuário.
+- Credential validation;
+- JWT token generation and signing;
+- Token expiration control;
+- Route protection via Guards;
+- Profile-based authorization.
 
-**Hospedagem e Infraestrutura**
+**Hosting and Infrastructure**
 
-A hospedagem e a infraestrutura do sistema serão realizadas na plataforma Vercel, que permite o deploy e a execução tanto do backend quanto do frontend em um ambiente de nuvem seguro e escalável. O backend, desenvolvido com o framework NestJS, será responsável pelo processamento das regras de negócio e pela disponibilização das APIs. O frontend, desenvolvido com o framework Next.js, será responsável pela interface do usuário e pelo consumo dessas APIs.
+The system is hosted on the Vercel platform, which supports deploying and running both the backend and the frontend in a secure, scalable cloud environment. The NestJS backend processes business rules and exposes the APIs. The Next.js frontend provides the user interface and consumes those APIs.
 
-A infraestrutura no Railway permite a execução dos serviços de forma independente, garantindo maior estabilidade, facilidade de manutenção e possibilidade de escalabilidade conforme o crescimento do sistema. Além disso, a plataforma oferece recursos como gerenciamento de variáveis de ambiente, provisionamento simplificado e alta disponibilidade, assegurando um ambiente confiável e eficiente para a operação da aplicação.  
-  
+The Railway infrastructure runs services independently, ensuring greater stability, easier maintenance, and scalability as the system grows. The platform also offers environment variable management, simplified provisioning, and high availability, ensuring a reliable and efficient operating environment.
+
+
 ____________________________________________________________________________________________________________________
 
 
 
-**Dependencias de primeiro nivel no frontend:**  
+**First-level frontend dependencies:**  
   
 ├── @base-ui/react@1.4.0
 
@@ -180,50 +181,50 @@ ________________________________________________________________________________
 └── vaul@1.1.2   
 ______________________________________________________________________________________________________________________________
 
-**Arquitetura de projeto frontend**
+**Frontend project architecture**
 
-app -> pages da aplicacao, cada page tem um pasta sua e um page.tsx.
-components -> toda UI das pages, ficam todas as interface grafica das pages, elas herdam apenas seus componentes. 
-api -> responsavel por fazer as chamadas de api no backend. toda chamada acontece por um handler da page em espeficifica de app, faz validacoes e chama o backend em api.
-lib -> todos os utilitarios para ajudar o frontend a funcionar corretamente. 
-mock -> dados staticos para utilizar na construcao quando nao ha endpoint do backend apropriado.
+app -> application pages; each page has its own folder and a page.tsx.
+components -> all page UI lives here — every page's graphical interface; they only inherit their own components.
+api -> responsible for backend API calls. Every call goes through the specific app page handler, which validates and calls the backend in api.
+lib -> all utilities that keep the frontend working correctly.
+mock -> static data used during development when there is no suitable backend endpoint.
 
-RESUMO: Cada tela e um page e cada tela tem seus recursos para aquela tela em espefico e deve ser sigo a todo custo.
+SUMMARY: Each screen is a page, each screen keeps its own resources for that specific screen, and this must be followed at all costs.
 
-**Obrigatoriedades do Frontend**
+**Frontend requirements**
 
-Toda tela precisa ser composta por UI do shacdcn e estilizacao tailwind apenas. CSS puro esta de fora do projeto.
+Every screen must be built with shadcn UI and Tailwind styling only. Plain CSS is out of the project.
 
-O Frontend precisa serguir todas as 10 Heuristicas de Nilsen sendo ela:
-1: Visibilidade do estado do sistema.
-2: Correspondência entre o sistema e o mundo real.
-3: Controle e Liberdade do Usuário.
-4: Consistência e Padrões.
-5: Prevenção de erros.
-6: Reconhecimento em vez de recordação.
-7: Flexibilidade e Eficiência de Uso.
-8: Design Estético e Minimalista.
-9: Ajudar os usuários a reconhecer, diagnosticar e recuperar-se de erros.
-10: Ajuda e Documentação.
+The frontend must follow all 10 of Nielsen's Heuristics:
+1: Visibility of system status.
+2: Match between system and the real world.
+3: User control and freedom.
+4: Consistency and standards.
+5: Error prevention.
+6: Recognition rather than recall.
+7: Flexibility and efficiency of use.
+8: Aesthetic and minimalist design.
+9: Help users recognize, diagnose, and recover from errors.
+10: Help and documentation.
 
-Seguir os 10 principais conceitos de um frontend:
-Pipeline de Renderização: O processo que o navegador segue para transformar código em pixels na tela.
-Event Loop e Scheduling: Como gerenciar tarefas para não travar a thread principal.
-Gestão de Estado: Diferenciar o estado local, o estado do servidor e o que deve residir na URL.
-Cache e Otimização: Estratégias de invalidação de cache e a importância de atualizações otimistas.
-SSR e Hidratação: O uso de Server Side Rendering e streaming para melhorar a performance de carregamento.
-Arquitetura de Bundle: A importância de estratégias como code splitting e tree shaking.
-Performance da Thread Principal (INP): Como métricas como Interaction to Next Paint afetam a percepção de responsividade do usuário.
-Design System como Contrato: Utilizar o Design System para padronizar comportamentos e reduzir inconsistências.
-Arquitetura de Acessibilidade: A importância de integrar acessibilidade desde a criação dos componentes.
-Observabilidade: A capacidade de monitorar erros e métricas de desempenho em ambientes de produção real.
+Follow the 10 core frontend concepts:
+Rendering Pipeline: The process the browser follows to turn code into pixels on screen.
+Event Loop and Scheduling: How to manage tasks without blocking the main thread.
+State Management: Telling apart local state, server state, and what belongs in the URL.
+Cache and Optimization: Cache invalidation strategies and the importance of optimistic updates.
+SSR and Hydration: Using Server Side Rendering and streaming to improve load performance.
+Bundle Architecture: The importance of strategies like code splitting and tree shaking.
+Main Thread Performance (INP): How metrics like Interaction to Next Paint affect perceived responsiveness.
+Design System as Contract: Using the Design System to standardize behavior and reduce inconsistencies.
+Accessibility Architecture: The importance of integrating accessibility from component creation onward.
+Observability: The ability to monitor errors and performance metrics in real production environments.
 
 
 Colors:
 Primary: #2F80ED Secondary: #27AE60 Accent: #F2C94C Background: #F5F6FA Text: #333333
 
 Typography:
-Headings e Body: Poppins
+Headings and Body: Poppins
 
 Components:
 Buttons
@@ -232,7 +233,3 @@ Cards
 Modals
 Chat bubbles
 Request cards
-
-
-
-

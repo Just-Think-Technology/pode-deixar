@@ -56,7 +56,7 @@ describe("MockPaymentGateway", () => {
   });
 
   it("não deve suportar consulta de pagamento nem webhooks", () => {
-    expect(() => gateway.getPayment("x")).rejects.toThrow("não possui consulta");
+    expect(() => gateway.getPayment("x")).rejects.toThrow("consultas de pagamento não implementadas");
     expect(gateway.validateWebhook({}, {})).toBe(false);
     expect(gateway.extractEventId({}, {})).toBe("");
     expect(gateway.extractGatewayPaymentId({})).toBe("");

@@ -1,0 +1,191 @@
+# ============================================================
+# Pode Deixar - Stack de deploy (staging e produção)
+# ============================================================
+# UM arquivo para os dois ambientes. Cada stack é isolada pelo
+# nome do projeto (-p) e pelo seu arquivo de env. Volumes, redes e o
+# Redis são separados automaticamente por stack. O --env-file é
+# obrigatório: além de alimentar os containers, ele fornece as variáveis
+# usadas na interpolação deste arquivo (ex.: credenciais do MinIO).
+#
+#   Staging:
+#     docker compose -f docker-compose.prod.yml --env-file .env.staging \
+#       -p pode-deixar-staging up -d --build
+#
+#   Produção:
+#     docker compose -f docker-compose.prod.yml --env-file .env.production \
+#       -p pode-deixar-prod up -d --build
+#
+# Diferenças para o docker-compose.yml de desenvolvimento:
+# - Sem Postgres local (banco é o Neon, via DATABASE_URL)
+# - Sem frontend (hospedado no Vercel)
+# - Sem Mailpit (SMTP real via env)
+# - Sem portas publicadas, exceto o Caddy (80/443) — tráfego interno
+#   usa a rede do compose (auth:3001, users:3002, ...)
+# - Backup via pg_dump direto no Neon
+# ============================================================
+
+services:
+
+  # -- Auth Service --
+  auth:
+    build:
+      context: ./backend
+      target: auth-build
+    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    environment:
+      NODE_ENV: production
+      FRONTEND_URL: ${FRONTEND_URL:-https://app.pode-deixar.com}
+      TZ: America/Sao_Paulo
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  # -- Users Service --
+  users:
+    build:
+      context: ./backend
+      target: users-build
+    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    environment:
+      NODE_ENV: production
+      TZ: America/Sao_Paulo
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  # -- Service Orders Service --
+  service-orders:
+    build:
+      context: ./backend
+      target: service-orders-build
+    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    environment:
+      NODE_ENV: production
+      TZ: America/Sao_Paulo
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  # -- Payments Service --
+  payments:
+    build:
+      context: ./backend
+      target: payments-build
+    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    environment:
+      NODE_ENV: production
+      TZ: America/Sao_Paulo
+
+  # -- Reviews Service --
+  reviews:
+    build:
+      context: ./backend
+      target: reviews-build
+    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    environment:
+      NODE_ENV: production
+      TZ: America/Sao_Paulo
+
+  # -- MinIO (Object Storage: fotos, avatares, imagens) --
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -- MinIO Client (criação dos buckets) --
+  minio-setup:
+    image: minio/mc:latest
+    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:$${MINIO_PORT:-9000} $${MINIO_ACCESS_KEY:-minioadmin} $${MINIO_SECRET_KEY:-minioadmin} &&
+      mc mb local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} --ignore-existing &&
+      mc anonymous set public local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} &&
+      mc mb local/$${MINIO_AVATARS_BUCKET:-avatars} --ignore-existing &&
+      mc anonymous set public local/$${MINIO_AVATARS_BUCKET:-avatars} &&
+      mc mb local/$${MINIO_ORDER_PHOTOS_BUCKET:-order-photos} --ignore-existing &&
+      mc anonymous set public local/$${MINIO_ORDER_PHOTOS_BUCKET:-order-photos} &&
+      echo 'Buckets created successfully'
+      "
+
+  # -- Redis (Rate Limiting Distribuído, um por stack) --
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -- Backup do banco (pg_dump contra o Neon) --
+  db-backup:
+    image: postgres:16-alpine
+    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    environment:
+      BACKUP_SCHEDULE: "0 3 * * *"  # Diário às 03:00 UTC
+      BACKUP_RETENTION_DAYS: "7"
+      BACKUP_DIR: /backups
+    volumes:
+      - backup_data:/backups
+    entrypoint: >
+      /bin/sh -c "
+      apk add --no-cache cron &&
+      echo \"$${BACKUP_SCHEDULE} /usr/local/bin/backup.sh >> /var/log/cron.log 2>&1\" > /etc/crontabs/root &&
+      cat > /usr/local/bin/backup.sh << 'EOF'
+      #!/bin/sh
+      set -e
+      TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
+      FILE=\"$${BACKUP_DIR}/pode_deixar_$${TIMESTAMP}.sql.gz\"
+      echo \"[$$(date)] Iniciando backup para $${FILE}\"
+      pg_dump \"$${DATABASE_URL}\" | gzip > $${FILE}
+      echo \"[$$(date)] Backup concluído: $${FILE}\"
+      # Limpeza de backups antigos
+      find $${BACKUP_DIR} -name 'pode_deixar_*.sql.gz' -mtime +$${BACKUP_RETENTION_DAYS} -delete
+      echo \"[$$(date)] Limpeza de backups antigos (> $${BACKUP_RETENTION_DAYS} dias) concluída\"
+      EOF
+      chmod +x /usr/local/bin/backup.sh &&
+      # Executa backup inicial imediatamente
+      /usr/local/bin/backup.sh &&
+      # Inicia cron em foreground
+      crond -f -l 2
+      "
+
+  # -- Proxy Reverso (Caddy, HTTPS automático) --
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - auth
+      - users
+      - service-orders
+      - payments
+      - reviews
+
+volumes:
+  minio_data:
+  backup_data:
+  redis_data:
+  caddy_data:
+  caddy_config:

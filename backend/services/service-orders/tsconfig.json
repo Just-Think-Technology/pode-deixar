@@ -26,5 +26,6 @@
       "rxjs/*": ["../../node_modules/rxjs/*"],
       "@pode-deixar/security": ["../../shared/security/dist"]
     }
-  }
+  },
+  "exclude": ["node_modules", "dist", "test"]
 }

@@ -31,7 +31,16 @@ export class ProviderFinanceController {
     status: 200,
     description: "Resumo financeiro retornado com sucesso",
   })
-  async summary(@Request() req: any) {
+  async summary(@Request() req: any): Promise<{
+    currency: string;
+    feeRate: number;
+    pendingNet: number;
+    grossToReceive: number;
+    feesOnToReceive: number;
+    toReceiveNet: number;
+    receivedThisMonthNet: number;
+    feesThisMonth: number;
+  }> {
     return this.paymentsService.getProviderFinanceSummary(req.user.sub);
   }
 
@@ -52,7 +61,24 @@ export class ProviderFinanceController {
     status: 200,
     description: "Lista de itens financeiros retornada com sucesso",
   })
-  async items(@Request() req: any, @Query() query: FinanceItemsQueryDto) {
+  async items(
+    @Request() req: any,
+    @Query() query: FinanceItemsQueryDto,
+  ): Promise<
+    {
+      paymentId: string;
+      proposalId: string | undefined;
+      serviceOrderId: string;
+      paymentStatus: string;
+      method: string;
+      grossAmount: number;
+      feeAmount: number | null;
+      netAmount: number | null;
+      feeRate: number | null;
+      paidAt: Date | null;
+      createdAt: Date;
+    }[]
+  > {
     return this.paymentsService.getProviderFinanceItems(
       req.user.sub,
       query.status,
@@ -76,7 +102,16 @@ export class ProviderFinanceController {
     status: 200,
     description: "Dados mensais retornados com sucesso",
   })
-  async chart(@Request() req: any, @Query() query: FinanceChartQueryDto) {
+  async chart(
+    @Request() req: any,
+    @Query() query: FinanceChartQueryDto,
+  ): Promise<
+    {
+      month: string;
+      netReceived: number;
+      feesRetained: number;
+    }[]
+  > {
     return this.paymentsService.getProviderFinanceChart(
       req.user.sub,
       query.months ?? 6,

@@ -36,6 +36,21 @@ export class PhotosService {
       throw new BadRequestException("Nenhuma foto enviada");
     }
 
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
+
+    for (const file of files) {
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        throw new BadRequestException(
+          `Tipo de arquivo inválido: ${file.mimetype}. Apenas imagens são permitidas (jpeg, png, webp, gif)`,
+        );
+      }
+    }
+
     if (files.length > 10) {
       throw new BadRequestException("Máximo de 10 fotos por upload");
     }

@@ -3,119 +3,419 @@ name: ci-backend
 on:
   push:
     branches: [develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
   pull_request:
     branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
 
 env:
   NODE_VERSION: 22
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      services: ${{ steps.matrix.outputs.services }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'backend/pnpm-lock.yaml'
+              - 'backend/package.json'
+              - 'backend/pnpm-workspace.yaml'
+              - 'backend/tsconfig*.json'
+              - 'backend/prisma/schema.prisma'
+              - 'backend/shared/**'
+            auth:
+              - 'backend/services/auth/**'
+            users:
+              - 'backend/services/users/**'
+            service-orders:
+              - 'backend/services/service-orders/**'
+            payments:
+              - 'backend/services/payments/**'
+            reviews:
+              - 'backend/services/reviews/**'
+            e2e:
+              - 'backend/e2e/**'
+
+      - name: Compute affected service matrix
+        id: matrix
+        run: |
+          set -e
+          if [ "${{ steps.filter.outputs.shared }}" = "true" ]; then
+            echo 'services=["auth","users","service-orders","payments","reviews"]' >> "$GITHUB_OUTPUT"
+          else
+            SERVICES=$(jq -nc \
+              --argjson auth '${{ steps.filter.outputs.auth }}' \
+              --argjson users '${{ steps.filter.outputs.users }}' \
+              --argjson serviceOrders '${{ steps.filter.outputs['service-orders'] }}' \
+              --argjson payments '${{ steps.filter.outputs.payments }}' \
+              --argjson reviews '${{ steps.filter.outputs.reviews }}' \
+              '[
+                (if $auth then "auth" else empty end),
+                (if $users then "users" else empty end),
+                (if $serviceOrders then "service-orders" else empty end),
+                (if $payments then "payments" else empty end),
+                (if $reviews then "reviews" else empty end)
+              ]')
+            echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Show affected services
+        run: 'echo "Serviços afetados: ${{ steps.matrix.outputs.services }}"'
+
   quick:
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     strategy:
       fail-fast: false
       matrix:
-        service: [auth, users, service-orders, payments, reviews]
-    runs-on: ubuntu-latest
+        service: ${{ fromJson(needs.changes.outputs.services) }}
     defaults:
       run:
         working-directory: backend
-    steps:
-      - uses: actions/checkout@v5
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: backend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
 
-  security:
-    needs: quick
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
+    env:
+      NODE_ENV: test
     steps:
-      - uses: actions/checkout@v5
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: backend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --prod --audit-level=high
-      - name: TruffleHog Secret Scanning
-        uses: trufflehog/hunter-action@main
-        with:
-          args: --only-verified --fail
-      - name: ESLint Security Plugin
-        uses: returned0t/trufflehog-eslint@main
-        with:
-          eslint-dir: backend
-          config: '{"plugins":["security"]}'
+      - uses: actions/checkout@v4
 
-  build:
-    needs: security
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    strategy:
-      fail-fast: false
-      matrix:
-        service: [auth, users, service-orders, payments, reviews]
-    steps:
-      - uses: actions/checkout@v5
-      - name: Cache pnpm store
-        uses: actions/cache@v4
+      - uses: pnpm/action-setup@v4
         with:
-          path: ~/.pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
-      - uses: actions/setup-node@v5
+          version: 11
+
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Cada job de matrix já roda em runner isolado com seu próprio container
+      # `services.postgres`, então um único banco por job é suficiente.
+      # Mantido com nome por serviço apenas para deixar os logs mais legíveis.
+      - name: Create test database for ${{ matrix.service }}
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE \"pode_deixar_test_${{ matrix.service }}\";"
+        env:
+          PGPASSWORD: postgres
+
       - run: pnpm exec prisma generate --schema=prisma/schema.prisma
 
-  codeql:
-    needs: build
+      - run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar_test;"
+
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
+
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
+
+  # Jornada e2e cross-service (users → orders → payments → reviews no mesmo
+  # banco, como em produção). Job próprio com Postgres, sem matriz.
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.services != '[]' || needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
     steps:
-      - uses: actions/checkout@v5
-      - init: codeql
-      - codeql/analyze
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
+
+      - run: pnpm run --filter @pode-deixar/e2e typecheck
+
+      - run: pnpm run test:e2e
+
+  # Testes de regressão dos pacotes compartilhados (logger/email/security).
+  # Job separado (sem matriz e sem Postgres): esses testes são unitários
+  # puros e o job `quick` é por serviço. Roda `backend/test:shared`.
+  shared:
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - run: pnpm run test:shared
+
+  # `security` agora depende só de `quick`, igual `build` — os dois rodam em
+  # paralelo em vez de security bloquear o início do build. Quem depende de
+  # ambos é o job `image`, que é o que realmente precisa do gate completo.
+  security:
+    needs: [changes, quick]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - run: pnpm audit --prod --audit-level=high
+
+      - name: TruffleHog Secret Scanning
+        uses: trufflesecurity/trufflehog@d411fff7b8879a62509f3fa98c07f247ac089a51
+        with:
+          extra_args: --only-verified
+
+      # NOTA: a checagem do eslint-plugin-security roda no job `quick`
+      # (lint por serviço) — cada serviço já aplica
+      # `securityPlugin.configs.recommended` no próprio eslint.config.mjs
+      # (flat config, ESLint 9). O step antigo foi removido porque:
+      # 1) `pnpm exec eslint` na raiz não encontra o binário (só existe
+      #    nos serviços);
+      # 2) `--plugin`/`--rulesdir` são flags do eslintrc removidas no ESLint 9;
+      # 3) `pnpm add -D -w` mutava package.json/lockfile durante o CI.
+
+  build:
+    needs: [changes, quick]
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Prisma Generate Cache
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules/.prisma
+          key: prisma-generate-${{ runner.os }}-${{ hashFiles('backend/prisma/schema.prisma') }}
+          restore-keys: |
+            prisma-generate-${{ runner.os }}-
+
+      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} build
+      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
+
+  image:
+    needs: [changes, build, security]
+    if: github.event_name != 'pull_request' && needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # O metadata-action publica tags sempre em minúsculas, mas
+      # IMAGE_PREFIX preserva a caixa do nome da org (Just-Think-Technology).
+      # Normaliza a referência usada na leitura (sbom/cosign) para a forma
+      # canônica minúscula — igual ao que foi efetivamente publicado.
+      # (Mesmo fix já aplicado no ci-frontend.)
+      - name: Normalize image reference to lowercase
+        run: echo "IMAGE_REF=${{ env.REGISTRY }}/$(echo '${{ env.IMAGE_PREFIX }}-${{ matrix.service }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          tags: |
+            type=sha,format=long
+            type=ref,event=branch
+
+      - name: Build and push image
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          build-args: |
+            SERVICE=${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_REF }}@${{ steps.docker_build.outputs.digest }}
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.service }}.spdx.json
+          upload-artifact: false
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}
+          path: sbom-${{ matrix.service }}.spdx.json
+          retention-days: 90
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image (keyless, via OIDC/Sigstore)
+        run: |
+          cosign sign --yes \
+            "${{ env.IMAGE_REF }}@${{ steps.docker_build.outputs.digest }}"
+
+  codeql:
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@v3
 
   dependency-review:
-    needs: codeql
+    needs: changes
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
+
       - name: Dependency Review
-        uses: actions/download-artifact@v4
-        with:
-          name: dependabot-details
-          path: /tmp
-      - uses: github.com/dependencies/action@main
+        uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: critical
