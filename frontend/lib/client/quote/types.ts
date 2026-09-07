@@ -20,6 +20,7 @@ export type CreateServiceOrderPayload = {
   title: string;
   description: string;
   categoryId: string;
+  providerId?: string;
   budgetMin?: number;
   budgetMax?: number;
   address?: ServiceOrderAddress;

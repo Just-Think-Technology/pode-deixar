@@ -1,5 +1,8 @@
 import type { ValidationResult } from "@/lib/auth/types";
-import type { CreateServiceOrderPayload } from "@/lib/client/quote/types";
+import type {
+  CreateServiceOrderPayload,
+  ServiceOrderAddress,
+} from "@/lib/client/quote/types";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -15,19 +18,34 @@ function parseOptionalBudget(value: string): number | undefined {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
+function parseAddress(form: FormData): ServiceOrderAddress {
+  return {
+    street: String(form.get("street") ?? "").trim(),
+    number: String(form.get("number") ?? "").trim(),
+    neighborhood: String(form.get("neighborhood") ?? "").trim(),
+    city: String(form.get("city") ?? "").trim(),
+    state: String(form.get("state") ?? "").trim().toUpperCase(),
+    postalCode: String(form.get("postalCode") ?? "").trim(),
+  };
+}
+
 export function parseCreateServiceOrderForm(
   form: HTMLFormElement,
+  providerId?: string,
 ): CreateServiceOrderPayload {
   const data = new FormData(form);
   const budgetMin = parseOptionalBudget(String(data.get("budgetMin") ?? ""));
   const budgetMax = parseOptionalBudget(String(data.get("budgetMax") ?? ""));
+  const address = parseAddress(data);
 
   return {
     title: String(data.get("title") ?? "").trim(),
     description: String(data.get("description") ?? "").trim(),
     categoryId: String(data.get("categoryId") ?? "").trim(),
+    ...(providerId ? { providerId } : {}),
     ...(budgetMin != null && { budgetMin }),
     ...(budgetMax != null && { budgetMax }),
+    address,
   };
 }
 
@@ -51,6 +69,22 @@ export function validateCreateServiceOrder(
     errors.categoryId = "Selecione uma categoria";
   } else if (!UUID_REGEX.test(categoryId)) {
     errors.categoryId = "Categoria inválida";
+  }
+
+  const address = payload.address;
+  if (!address?.street?.trim()) {
+    errors.street = "Informe o logradouro";
+  }
+  if (!address?.number?.trim()) {
+    errors.number = "Informe o número";
+  }
+  if (!address?.city?.trim()) {
+    errors.city = "Informe a cidade";
+  }
+  if (!address?.state?.trim()) {
+    errors.state = "Informe a UF";
+  } else if (address.state.trim().length !== 2) {
+    errors.state = "UF deve ter 2 letras";
   }
 
   if (payload.budgetMin != null) {

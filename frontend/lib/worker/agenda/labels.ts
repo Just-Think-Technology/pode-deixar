@@ -1,6 +1,7 @@
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+import { ApiError } from "@/api/client";
 import type {
   WorkerAgendaAddress,
   WorkerAgendaEvent,
@@ -15,6 +16,23 @@ export const AGENDA_STATUS_LABELS: Record<WorkerAgendaOrderStatus, string> = {
   COMPLETED: "Realizado",
 };
 
+export function getAgendaEventsErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 403) {
+      return "Você não tem permissão para acessar a agenda.";
+    }
+    if (err.status === 400) {
+      return typeof err.message === "string"
+        ? err.message
+        : "Período de consulta inválido.";
+    }
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return "Não foi possível carregar a agenda.";
+}
+
 export function getAgendaStatusLabel(status: WorkerAgendaOrderStatus): string {
   return AGENDA_STATUS_LABELS[status];
 }
@@ -28,11 +46,49 @@ export function getAgendaRangeForMonth(month: Date): WorkerAgendaRange {
   };
 }
 
-export function formatAgendaAddress(address: WorkerAgendaAddress): string {
-  return `${address.street}, ${address.number} — ${address.neighborhood}, ${address.city} - ${address.state}, ${address.postal_code}`;
+function addressPart(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
-export function getGoogleMapsUrl(address: WorkerAgendaAddress): string {
+export function hasAgendaAddress(address: WorkerAgendaAddress | null): boolean {
+  if (!address) {
+    return false;
+  }
+  return (
+    addressPart(address.street) != null &&
+    addressPart(address.number) != null &&
+    addressPart(address.city) != null &&
+    addressPart(address.state) != null
+  );
+}
+
+export function formatAgendaAddress(address: WorkerAgendaAddress): string {
+  const street = addressPart(address.street);
+  const number = addressPart(address.number);
+  const neighborhood = addressPart(address.neighborhood);
+  const city = addressPart(address.city);
+  const state = addressPart(address.state);
+  const postalCode = addressPart(address.postal_code);
+
+  const line1 =
+    street && number ? `${street}, ${number}` : street ?? number ?? null;
+  const line2Parts = [neighborhood, city, state].filter(Boolean);
+  const line2 =
+    line2Parts.length > 0
+      ? `${line2Parts.join(", ")}${postalCode ? `, ${postalCode}` : ""}`
+      : postalCode;
+
+  return [line1, line2].filter(Boolean).join(" — ") || "Endereço não informado";
+}
+
+export function getGoogleMapsUrl(address: WorkerAgendaAddress): string | null {
+  if (!hasAgendaAddress(address)) {
+    return null;
+  }
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     formatAgendaAddress(address),
   )}`;

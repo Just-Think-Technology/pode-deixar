@@ -4,17 +4,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  CalendarIcon,
   CheckCircle2,
   Copy,
   CreditCard,
   QrCode,
   Wallet,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { addDays, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -22,7 +26,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
@@ -37,6 +47,10 @@ import {
   getPaymentMethodLabel,
   getPaymentStatusLabel,
 } from "@/lib/client/payments/labels";
+import {
+  buildScheduledAtIso,
+  validateServiceSchedule,
+} from "@/lib/client/payments/scheduling";
 import type {
   ChargeResponse,
   Payment,
@@ -61,7 +75,16 @@ function resolveDisplayAmount(order: ClientOrder): number | null {
 
 export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
   const router = useRouter();
+  const defaultScheduleDate = useMemo(() => addDays(new Date(), 1), []);
   const [method, setMethod] = useState<PaymentMethod>("PIX");
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
+    defaultScheduleDate,
+  );
+  const [scheduleStartTime, setScheduleStartTime] = useState("09:00");
+  const [scheduleEndTime, setScheduleEndTime] = useState("");
+  const [scheduleErrors, setScheduleErrors] = useState<Record<string, string>>(
+    {},
+  );
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [payment, setPayment] = useState<Payment | null>(null);
@@ -76,9 +99,42 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
       return;
     }
 
+    const validationErrors = validateServiceSchedule({
+      date: scheduleDate,
+      startTime: scheduleStartTime,
+      endTime: scheduleEndTime || undefined,
+    });
+
+    if (Object.keys(validationErrors).length > 0) {
+      setScheduleErrors(validationErrors);
+      toast.error("Revise a data e o horário do serviço.");
+      return;
+    }
+
+    setScheduleErrors({});
+
+    let scheduledAt: string;
+    let scheduledEndAt: string | undefined;
+
+    try {
+      ({ scheduledAt, scheduledEndAt } = buildScheduledAtIso({
+        date: scheduleDate,
+        startTime: scheduleStartTime,
+        endTime: scheduleEndTime || undefined,
+      }));
+    } catch {
+      toast.error("Data ou horário do serviço inválidos.");
+      return;
+    }
+
     setBusy(true);
     try {
-      const result = await startCheckoutAction(order.id, method);
+      const result = await startCheckoutAction(
+        order.id,
+        method,
+        scheduledAt,
+        scheduledEndAt,
+      );
       setPayment(result.payment);
       setCharge(result.charge);
       toast.success("Cobrança gerada. Conclua o pagamento abaixo.");
@@ -193,6 +249,121 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
         </Card>
 
         {!charge ? (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Agendamento do serviço</CardTitle>
+                <CardDescription>
+                  Informe quando o prestador deve realizar o serviço. Essa data
+                  aparecerá na agenda após a confirmação do pagamento.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-date">Data</Label>
+                    <Popover>
+                      <PopoverTrigger
+                        render={
+                          <Button
+                            id="schedule-date"
+                            type="button"
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start gap-2 font-normal",
+                              !scheduleDate && "text-muted-foreground",
+                            )}
+                            aria-invalid={!!scheduleErrors.scheduleDate}
+                          />
+                        }
+                      >
+                        <CalendarIcon className="size-4" />
+                        {scheduleDate
+                          ? format(scheduleDate, "PPP", { locale: ptBR })
+                          : "Selecione a data"}
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={scheduleDate}
+                          onSelect={(day) => {
+                            setScheduleDate(day);
+                            setScheduleErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.scheduleDate;
+                              return next;
+                            });
+                          }}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    {scheduleErrors.scheduleDate ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {scheduleErrors.scheduleDate}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-start-time">
+                      Horário de início
+                    </Label>
+                    <Input
+                      id="schedule-start-time"
+                      type="time"
+                      value={scheduleStartTime}
+                      onChange={(event) => {
+                        setScheduleStartTime(event.target.value);
+                        setScheduleErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.scheduleStartTime;
+                          return next;
+                        });
+                      }}
+                      aria-invalid={!!scheduleErrors.scheduleStartTime}
+                    />
+                    {scheduleErrors.scheduleStartTime ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {scheduleErrors.scheduleStartTime}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="schedule-end-time">
+                      Horário de término{" "}
+                      <span className="font-normal text-muted-foreground">
+                        (opcional)
+                      </span>
+                    </Label>
+                    <Input
+                      id="schedule-end-time"
+                      type="time"
+                      value={scheduleEndTime}
+                      onChange={(event) => {
+                        setScheduleEndTime(event.target.value);
+                        setScheduleErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.scheduleEndTime;
+                          return next;
+                        });
+                      }}
+                      aria-invalid={!!scheduleErrors.scheduleEndTime}
+                    />
+                    {scheduleErrors.scheduleEndTime ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {scheduleErrors.scheduleEndTime}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Forma de pagamento</CardTitle>
@@ -274,6 +445,7 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
               </Button>
             </CardContent>
           </Card>
+          </>
         ) : (
           <Card>
             <CardHeader>

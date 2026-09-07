@@ -36,9 +36,7 @@ export const workerNavItems: NavItem[] = [
   { title: "Propostas", href: "/worker/proposal", icon: FileText, enabled: true },
   { title: "Solicitações", href: "/worker/requests", icon: Inbox, enabled: true },
   { title: "Financeiro", href: "/worker/finance", icon: Wallet, enabled: true },
-  { title: "Chat", href: "/worker/chat", icon: MessageSquare, enabled: true },
-  { title: "Solicitações", href: "/worker/requests", icon: Inbox, enabled: true},
   { title: "Agenda", href: "/worker/agenda", icon: CalendarDays, enabled: true },
-  { title: "Chat", href: "/worker/chat", icon: MessageSquare, enabled: true},
+  { title: "Chat", href: "/worker/chat", icon: MessageSquare, enabled: true },
   { title: "Perfil", href: "/worker/profile", icon: User, enabled: true },
 ];

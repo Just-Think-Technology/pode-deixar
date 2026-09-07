@@ -10,8 +10,8 @@ export type PaymentMethod = "PIX" | "CREDIT_CARD";
 export type CreatePaymentPayload = {
   serviceOrderId: string;
   method: PaymentMethod;
-  /** Obrigatório no backend (400 se ausente) — o fluxo de agendamento no checkout preenche. */
-  scheduledAt?: string;
+  /** Obrigatório no backend (400 se ausente) — definido no checkout. */
+  scheduledAt: string;
   scheduledEndAt?: string;
 };
 

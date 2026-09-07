@@ -13,6 +13,9 @@ test.describe("Checkout / confirmação de pagamento (JTT-92)", () => {
     await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
     await expect(page.getByText("Pintura de quarto infantil")).toBeVisible();
     await expect(page.getByText("R$ 380,00")).toBeVisible();
+    await expect(page.getByText("Agendamento do serviço")).toBeVisible();
+    await expect(page.getByLabel("Data")).toBeVisible();
+    await expect(page.getByLabel("Horário de início")).toBeVisible();
     await expect(page.getByText("Pix", { exact: true }).first()).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Continuar para pagamento" }),
@@ -24,6 +27,8 @@ test.describe("Checkout / confirmação de pagamento (JTT-92)", () => {
   }) => {
     await page.goto("/client/orders/mock-client-order-003/checkout");
 
+    await page.getByLabel("Horário de início").fill("09:00");
+    await page.getByLabel("Horário de término (opcional)").fill("10:00");
     await page.getByRole("button", { name: "Continuar para pagamento" }).click();
 
     await expect(page.getByText("Cobrança gerada")).toBeVisible();
@@ -53,6 +58,7 @@ test.describe("Checkout / confirmação de pagamento (JTT-92)", () => {
   test("gera cobrança de cartão com link externo mock", async ({ page }) => {
     await page.goto("/client/orders/mock-client-order-003/checkout");
 
+    await page.getByLabel("Horário de início").fill("09:00");
     await page.getByText("Cartão de crédito").click();
     await page.getByRole("button", { name: "Continuar para pagamento" }).click();
 

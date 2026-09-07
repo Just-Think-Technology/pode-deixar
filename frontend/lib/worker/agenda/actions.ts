@@ -33,16 +33,6 @@ async function withTokenRefresh<T>(
   }
 }
 
-function isInfraError(err: unknown): boolean {
-  return (
-    err instanceof ApiError &&
-    (err.status === 404 ||
-      err.status === 501 ||
-      err.status === 502 ||
-      err.status === 503)
-  );
-}
-
 export async function getAgendaEventsAction(
   range: WorkerAgendaRange,
 ): Promise<WorkerAgendaEvent[]> {
@@ -50,12 +40,5 @@ export async function getAgendaEventsAction(
     return getMockAgendaEvents(range);
   }
 
-  try {
-    return await withTokenRefresh((token) => getAgendaEvents(token, range));
-  } catch (err) {
-    if (isInfraError(err)) {
-      return getMockAgendaEvents(range);
-    }
-    throw err;
-  }
+  return withTokenRefresh((token) => getAgendaEvents(token, range));
 }

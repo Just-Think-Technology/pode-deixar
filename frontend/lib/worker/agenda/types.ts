@@ -1,12 +1,12 @@
 export type WorkerAgendaOrderStatus = "IN_PROGRESS" | "COMPLETED";
 
 export type WorkerAgendaAddress = {
-  street: string;
-  number: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  postal_code: string;
+  street: string | null;
+  number: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
 };
 
 export type WorkerAgendaPhoto = {

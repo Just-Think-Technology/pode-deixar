@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { format, isSameDay } from "date-fns";
 import { CalendarDays } from "lucide-react";
+import { toast } from "sonner";
 
 import { AgendaDayList } from "@/components/pages/worker-agenda/day-list";
 import { AgendaEventDetailDialog } from "@/components/pages/worker-agenda/event-detail-dialog";
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/empty";
 import { getAgendaEventsAction } from "@/lib/worker/agenda/actions";
 import {
+  getAgendaEventsErrorMessage,
   getAgendaRangeForMonth,
   parseAgendaDayParam,
 } from "@/lib/worker/agenda/labels";
@@ -27,11 +29,13 @@ import type { WorkerAgendaEvent } from "@/lib/worker/agenda/types";
 type WorkerAgendaPageProps = {
   events: WorkerAgendaEvent[];
   initialDay?: string;
+  initialLoadError?: string;
 };
 
 export default function WorkerAgendaPage({
   events: initialEvents,
   initialDay,
+  initialLoadError,
 }: WorkerAgendaPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -48,6 +52,23 @@ export default function WorkerAgendaPage({
   );
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [loadError, setLoadError] = useState<string | undefined>(
+    initialLoadError,
+  );
+
+  async function reloadAgenda(month: Date) {
+    try {
+      const nextEvents = await getAgendaEventsAction(
+        getAgendaRangeForMonth(month),
+      );
+      setEvents(nextEvents);
+      setLoadError(undefined);
+    } catch (err) {
+      const message = getAgendaEventsErrorMessage(err);
+      setLoadError(message);
+      toast.error(message);
+    }
+  }
 
   const daysWithEvents = useMemo(
     () => events.map((event) => new Date(event.scheduled_at)),
@@ -85,10 +106,7 @@ export default function WorkerAgendaPage({
   function handleMonthChange(month: Date) {
     setVisibleMonth(month);
     startTransition(async () => {
-      const nextEvents = await getAgendaEventsAction(
-        getAgendaRangeForMonth(month),
-      );
-      setEvents(nextEvents);
+      await reloadAgenda(month);
     });
   }
 
@@ -99,10 +117,7 @@ export default function WorkerAgendaPage({
     setSelectedDay(undefined);
     syncDayInUrl(undefined);
     startTransition(async () => {
-      const nextEvents = await getAgendaEventsAction(
-        getAgendaRangeForMonth(today),
-      );
-      setEvents(nextEvents);
+      await reloadAgenda(today);
     });
   }
 
@@ -112,7 +127,13 @@ export default function WorkerAgendaPage({
         Agenda
       </h1>
 
-      {events.length === 0 && selectedDay == null ? (
+      {loadError ? (
+        <p className="text-sm text-destructive" role="alert">
+          {loadError}
+        </p>
+      ) : null}
+
+      {events.length === 0 && selectedDay == null && !loadError ? (
         <Empty className="min-h-0 flex-1 border border-dashed">
           <EmptyHeader>
             <EmptyMedia variant="icon">
