@@ -79,9 +79,24 @@ export class EmailService {
   }
 
   private validarDestinatario(to: string): void {
-    // Aceita um único endereço RFC-5322 aproximado; rejeita CRLF/endereços múltiplos.
-    const formato = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (typeof to !== 'string' || /[\r\n]/.test(to) || !formato.test(to)) {
+    // Aceita um único endereço RFC-5322 aproximado; rejeita CRLF/endereços
+    // múltiplos. Implementação com operações lineares (indexOf/includes):
+    // regexes aninhadas como /^[^\s@]+@[^\s@]+\.[^\s@]+$/ têm backtracking
+    // polinomial sobre entrada hostil (CodeQL: polynomial ReDoS).
+    if (typeof to !== 'string' || /[\r\n]/.test(to)) {
+      throw new Error('Endereço de email destinatário inválido');
+    }
+    const arroba = to.indexOf('@');
+    if (arroba <= 0 || arroba !== to.lastIndexOf('@') || arroba === to.length - 1) {
+      throw new Error('Endereço de email destinatário inválido');
+    }
+    const dominio = to.slice(arroba + 1);
+    if (
+      /\s/.test(to) ||
+      !dominio.includes('.') ||
+      dominio.startsWith('.') ||
+      dominio.endsWith('.')
+    ) {
       throw new Error('Endereço de email destinatário inválido');
     }
   }

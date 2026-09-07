@@ -92,7 +92,10 @@ export class PhotosService {
       );
     }
 
-    if (!files || files.length === 0) {
+    // Array.isArray primeiro: sem ele, um `photos` não-array (ex. objeto
+    // com `length` forjado) confundiria as checagens de cota abaixo (CodeQL:
+    // type confusion through parameter tampering).
+    if (!Array.isArray(files) || files.length === 0) {
       throw new BadRequestException("Nenhuma foto enviada");
     }
 
