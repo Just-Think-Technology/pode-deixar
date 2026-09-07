@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { createHash } from 'crypto';
 import {
   setupTestApp,
   createTestUser,
@@ -8,6 +9,7 @@ import {
   teardownTestApp
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { EmailService } from '@pode-deixar/email';
 
 describe('POST /auth/register', () => {
   let app: INestApplication<App>;
@@ -112,11 +114,23 @@ describe('POST /auth/register', () => {
 
       await request(app.getHttpServer()).post('/auth/register').send(user).expect(201);
 
+      // O banco guarda hash (nunca o token bruto); o token bruto vai só no email.
+      const emailMock = app.get(EmailService) as unknown as {
+        sendEmailVerification: jest.Mock;
+      };
+      const rawToken = emailMock.sendEmailVerification.mock.calls.at(-1)[1] as string;
+      const expectedHash = createHash('sha256').update(rawToken).digest('hex');
       const dbUser = await prisma.user.findUnique({
         where: { email: user.email },
       });
-      expect(dbUser!.emailVerificationToken).toBeDefined();
+      expect(dbUser!.emailVerificationToken).toBe(expectedHash);
       expect(dbUser!.emailVerificationToken).not.toBe(oldToken);
+
+      // E o token rotacionado verifica de ponta a ponta.
+      await request(app.getHttpServer())
+        .post('/auth/verify-email')
+        .send({ token: rawToken })
+        .expect(200);
     });
   });
 

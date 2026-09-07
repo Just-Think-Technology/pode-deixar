@@ -31,12 +31,10 @@ export class RegisterService {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    // Decisão UX vs enumeração (residual aceito): manter 409 explícito no
-    // cadastro orienta o usuário; demais fluxos usam resposta genérica.
+    // Email já cadastrado: responde igual ao cadastro novo (sem oráculo).
+    // Se ainda não verificado, renova o token (hash, como no cadastro) e
+    // reenvia o email best-effort (silencioso) — sem revelar nada ao chamador.
     if (existingUser) {
-      // Email já cadastrado: responde igual ao cadastro novo. Se ainda não
-      // verificado, renova o token e reenvia o email best-effort (silencioso,
-      // como no forgot-password) — sem revelar nada ao chamador.
       if (!existingUser.emailVerified) {
         const emailVerificationToken = uuidv4();
         const emailVerificationExpires = new Date(
@@ -44,7 +42,10 @@ export class RegisterService {
         );
         await this.prisma.user.update({
           where: { id: existingUser.id },
-          data: { emailVerificationToken, emailVerificationExpires },
+          data: {
+            emailVerificationToken: this.hashToken(emailVerificationToken),
+            emailVerificationExpires,
+          },
         });
         try {
           await this.emailService.sendEmailVerification(

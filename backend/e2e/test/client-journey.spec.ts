@@ -81,17 +81,16 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     expect(duplicate.message).toBe(registered.message);
     expect(duplicate.user).toBeUndefined();
 
-    // O re-cadastro de email não verificado rotaciona o token: o primeiro
-    // token foi invalidado, então lê o vigente direto do banco.
-    const dbUser = await apps.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-    const token = dbUser!.emailVerificationToken as string;
-    expect(token).toBeDefined();
+    // O re-cadastro de email não verificado rotaciona o token (hash no
+    // banco): o token bruto vigente é o do último email enviado (mock).
+    const rawToken = (
+      mockEmail.sendEmailVerification.mock.calls.at(-1) as unknown[]
+    )[1] as string;
+    expect(rawToken).toBeDefined();
 
     await request(authApp.getHttpServer())
       .post('/auth/verify-email')
-      .send({ token })
+      .send({ token: rawToken })
       .expect(200);
 
     const logged = (
