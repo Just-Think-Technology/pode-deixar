@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
@@ -12,6 +8,11 @@ import { EmailService } from '@pode-deixar/email';
 import { PasswordService } from '../password/password.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
+
+// Resposta única do cadastro (conta nova ou email já existente): impede
+// oráculo de enumeração de contas (CWE-204). O chamador não distingue os casos.
+const MENSAGEM_CADASTRO =
+  'Usuário cadastrado com sucesso. Verifique seu email para ativar sua conta.';
 
 @Injectable()
 export class RegisterService {
@@ -30,10 +31,39 @@ export class RegisterService {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    // Decisão UX vs enumeração (residual aceito): manter 409 explícito no
-    // cadastro orienta o usuário; demais fluxos usam resposta genérica.
+    // Email já cadastrado: responde igual ao cadastro novo (sem oráculo).
+    // Se ainda não verificado, renova o token (hash, como no cadastro) e
+    // reenvia o email best-effort (silencioso) — sem revelar nada ao chamador.
     if (existingUser) {
-      throw new ConflictException('Email já cadastrado');
+      if (!existingUser.emailVerified) {
+        const emailVerificationToken = uuidv4();
+        const emailVerificationExpires = new Date(
+          Date.now() + 24 * 60 * 60 * 1000,
+        );
+        await this.prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            emailVerificationToken: this.hashToken(emailVerificationToken),
+            emailVerificationExpires,
+          },
+        });
+        try {
+          await this.emailService.sendEmailVerification(
+            dto.email,
+            emailVerificationToken,
+          );
+        } catch (error) {
+          this.authLogger.logSecurityEvent('email_send_failed', {
+            email: dto.email,
+            type: 'verification',
+            error: error.message,
+          });
+        }
+      }
+      this.authLogger.logSecurityEvent('register_existing_email', {
+        email: dto.email,
+      });
+      return { message: MENSAGEM_CADASTRO };
     }
 
     const passwordHash = await this.passwordService.hash(dto.password);
@@ -102,8 +132,7 @@ export class RegisterService {
     this.authLogger.logRegistration(dto.email, dto.role, ip);
 
     return {
-      message:
-        'Usuário cadastrado com sucesso. Verifique seu email para ativar sua conta.',
+      message: MENSAGEM_CADASTRO,
       user: {
         id: user.id,
         complete_name: user.completeName,

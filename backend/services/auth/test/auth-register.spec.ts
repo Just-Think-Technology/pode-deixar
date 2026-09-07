@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { createHash } from 'crypto';
 import {
   setupTestApp,
   createTestUser,
@@ -8,6 +9,7 @@ import {
   teardownTestApp
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { EmailService } from '@pode-deixar/email';
 
 describe('POST /auth/register', () => {
   let app: INestApplication<App>;
@@ -82,17 +84,53 @@ describe('POST /auth/register', () => {
   });
 
   describe('Conflict cases', () => {
-    it('should reject duplicate email with 409', async () => {
+    // Justificativa AppSec (CWE-204): email duplicado responde 201 genérico
+    // idêntico ao cadastro novo — sem oráculo de enumeração de contas.
+    it('should return generic 201 for duplicate email (no enumeration oracle)', async () => {
       const user = createTestUser();
 
-      await request(app.getHttpServer()).post('/auth/register').send(user).expect(201);
+      const first = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(user)
+        .expect(201);
 
       const response = await request(app.getHttpServer())
         .post('/auth/register')
         .send(user)
-        .expect(409);
+        .expect(201);
 
-      expect(response.body.message).toContain('Email já cadastrado');
+      expect(response.body.message).toBe(first.body.message);
+      expect(response.body.user).toBeUndefined();
+    });
+
+    it('should rotate verification token when re-registering unverified email', async () => {
+      const user = createTestUser();
+
+      const first = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(user)
+        .expect(201);
+      const oldToken = first.body.email_verification_token as string;
+
+      await request(app.getHttpServer()).post('/auth/register').send(user).expect(201);
+
+      // O banco guarda hash (nunca o token bruto); o token bruto vai só no email.
+      const emailMock = app.get(EmailService) as unknown as {
+        sendEmailVerification: jest.Mock;
+      };
+      const rawToken = emailMock.sendEmailVerification.mock.calls.at(-1)[1] as string;
+      const expectedHash = createHash('sha256').update(rawToken).digest('hex');
+      const dbUser = await prisma.user.findUnique({
+        where: { email: user.email },
+      });
+      expect(dbUser!.emailVerificationToken).toBe(expectedHash);
+      expect(dbUser!.emailVerificationToken).not.toBe(oldToken);
+
+      // E o token rotacionado verifica de ponta a ponta.
+      await request(app.getHttpServer())
+        .post('/auth/verify-email')
+        .send({ token: rawToken })
+        .expect(200);
     });
   });
 

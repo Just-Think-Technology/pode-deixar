@@ -71,18 +71,26 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     expect(registered.user.email_verified).toBe(false);
     expect(mockEmail.sendEmailVerification).toHaveBeenCalled();
 
-    // Email duplicado deve ser rejeitado
-    await request(authApp.getHttpServer())
-      .post('/auth/register')
-      .send(dto)
-      .expect(409);
+    // Email duplicado recebe a mesma resposta genérica (anti-enumeração)
+    const duplicate = (
+      await request(authApp.getHttpServer())
+        .post('/auth/register')
+        .send(dto)
+        .expect(201)
+    ).body;
+    expect(duplicate.message).toBe(registered.message);
+    expect(duplicate.user).toBeUndefined();
 
-    const token = registered.email_verification_token as string;
-    expect(token).toBeDefined();
+    // O re-cadastro de email não verificado rotaciona o token (hash no
+    // banco): o token bruto vigente é o do último email enviado (mock).
+    const rawToken = (
+      mockEmail.sendEmailVerification.mock.calls.at(-1) as unknown[]
+    )[1] as string;
+    expect(rawToken).toBeDefined();
 
     await request(authApp.getHttpServer())
       .post('/auth/verify-email')
-      .send({ token })
+      .send({ token: rawToken })
       .expect(200);
 
     const logged = (

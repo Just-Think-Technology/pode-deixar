@@ -55,7 +55,8 @@ export type RegisterPayload = {
 
 export type RegisterResponse = {
   message: string;
-  user: {
+  // Ausente quando o email já estava cadastrado (anti-enumeração: 200 genérico).
+  user?: {
     id: string;
     complete_name: string;
     email: string;
