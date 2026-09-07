@@ -33,6 +33,31 @@ function cleanupOldLogs(dir, retainDays = 14) {
     }
     catch (e) { }
 }
+function limparQuebraLinha(valor) {
+    if (typeof valor === 'string') {
+        // Neutraliza injeção de log (CRLF) achatando quebras de linha.
+        return valor.replace(/[\r\n]+/g, ' ');
+    }
+    if (Array.isArray(valor)) {
+        return valor.map((item) => limparQuebraLinha(item));
+    }
+    if (valor &&
+        typeof valor === 'object' &&
+        !(valor instanceof Error) &&
+        !(valor instanceof Date)) {
+        const proto = Object.getPrototypeOf(valor);
+        if (proto !== Object.prototype && proto !== null)
+            return valor;
+        const objeto = valor;
+        const resultado = {};
+        for (const [chave, item] of Object.entries(objeto)) {
+            // eslint-disable-next-line security/detect-object-injection
+            resultado[chave] = limparQuebraLinha(item);
+        }
+        return resultado;
+    }
+    return valor;
+}
 const loggerCache = new Map();
 function createLogger(serviceName, featureName, options = {}) {
     const key = `${serviceName}:${featureName ?? ''}`;
@@ -81,15 +106,52 @@ function createLogger(serviceName, featureName, options = {}) {
         formatters: {
             level(label) { return { level: label }; },
         },
+        // Redação automática de segredos antes da serialização (PCI-DSS).
+        // Nota: fast-redact (pino v8) não aceita curinga parcial ('*token*'
+        // lança na criação do logger); por isso os nomes são enumerados de
+        // forma explícita, com variantes '*.' para um nível de aninhamento.
+        redact: {
+            paths: [
+                'password',
+                'senha',
+                'token',
+                'access_token',
+                'refresh_token',
+                'accessToken',
+                'refreshToken',
+                'secret',
+                'client_secret',
+                'authorization',
+                'headers.authorization',
+                'pan',
+                'card_number',
+                'cvv',
+                'cvc',
+                'cpf',
+                'pix',
+                '*.password',
+                '*.token',
+                '*.access_token',
+                '*.refresh_token',
+                '*.secret',
+                '*.card_number',
+                '*.cvv',
+                '*.cpf',
+            ],
+            censor: '[REDACTED]',
+        },
+        serializers: { err: pino_1.default.stdSerializers.err },
     }, pino_1.default.multistream(streams));
     const proxyLogger = Object.create(baseLogger);
     const levelNames = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'];
     for (const lvl of levelNames) {
         proxyLogger[lvl] = function (event, msg, ...args) {
+            // Neutraliza CRLF em evento/mensagem e em valores de objetos logados.
+            const argsLimpos = args.map((arg) => limparQuebraLinha(arg));
             if (typeof event === 'string' && typeof msg === 'string') {
-                return baseLogger[lvl]({ event }, msg, ...args);
+                return baseLogger[lvl]({ event: limparQuebraLinha(event) }, limparQuebraLinha(msg), ...argsLimpos);
             }
-            return baseLogger[lvl](event, msg, ...args);
+            return baseLogger[lvl](limparQuebraLinha(event), (typeof msg === 'string' ? limparQuebraLinha(msg) : msg), ...argsLimpos);
         };
     }
     const logger = proxyLogger;
