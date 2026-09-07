@@ -220,7 +220,7 @@ model OrderPhoto {
 
 model Review {
   id            String   @id @default(uuid())
-  serviceOrder  ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrder  ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Restrict)
   serviceOrderId String  @map("service_order_id")
   reviewerId    String   @map("reviewer_id")
   revieweeId    String   @map("reviewee_id")
@@ -236,7 +236,7 @@ model Review {
 
 model Payment {
   id             String              @id @default(uuid())
-  serviceOrder   ServiceOrder        @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  serviceOrder   ServiceOrder        @relation(fields: [serviceOrderId], references: [id], onDelete: Restrict)
   serviceOrderId String              @map("service_order_id")
   amount         Decimal             @db.Decimal(10, 2)
   currency       String              @default("BRL")
@@ -246,7 +246,7 @@ model Payment {
   feeAmount      Decimal?            @map("fee_amount") @db.Decimal(10, 2)
   netAmount      Decimal?            @map("net_amount") @db.Decimal(10, 2)
   externalRef    String?             @map("external_ref")
-  idempotencyKey String?             @map("idempotency_key")
+  idempotencyKey String              @default(uuid()) @map("idempotency_key")
   paidAt         DateTime?           @map("paid_at")
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
@@ -261,7 +261,7 @@ model PaymentWebhookEvent {
   id        String   @id @default(uuid())
   gateway   String   @map("gateway")
   eventId   String   @map("event_id")
-  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   paymentId String?  @map("payment_id")
   payload   Json?
   createdAt DateTime @default(now()) @map("created_at")
@@ -272,7 +272,7 @@ model PaymentWebhookEvent {
 
 model PaymentStatusHistory {
   id           String         @id @default(uuid())
-  payment      Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment      Payment        @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   paymentId    String         @map("payment_id")
   statusAnterior PaymentStatus? @map("status_anterior")
   statusNovo    PaymentStatus   @map("status_novo")

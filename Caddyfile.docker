@@ -75,6 +75,7 @@
 
     # ─── Storage (MinIO) ────────────────────────────────────
     handle /api/storage/* {
+        uri strip_prefix /api/storage
         reverse_proxy minio:9000
     }
 
