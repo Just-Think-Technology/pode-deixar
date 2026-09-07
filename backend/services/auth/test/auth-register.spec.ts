@@ -82,17 +82,41 @@ describe('POST /auth/register', () => {
   });
 
   describe('Conflict cases', () => {
-    it('should reject duplicate email with 409', async () => {
+    // Justificativa AppSec (CWE-204): email duplicado responde 201 genérico
+    // idêntico ao cadastro novo — sem oráculo de enumeração de contas.
+    it('should return generic 201 for duplicate email (no enumeration oracle)', async () => {
       const user = createTestUser();
 
-      await request(app.getHttpServer()).post('/auth/register').send(user).expect(201);
+      const first = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(user)
+        .expect(201);
 
       const response = await request(app.getHttpServer())
         .post('/auth/register')
         .send(user)
-        .expect(409);
+        .expect(201);
 
-      expect(response.body.message).toContain('Email já cadastrado');
+      expect(response.body.message).toBe(first.body.message);
+      expect(response.body.user).toBeUndefined();
+    });
+
+    it('should rotate verification token when re-registering unverified email', async () => {
+      const user = createTestUser();
+
+      const first = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(user)
+        .expect(201);
+      const oldToken = first.body.email_verification_token as string;
+
+      await request(app.getHttpServer()).post('/auth/register').send(user).expect(201);
+
+      const dbUser = await prisma.user.findUnique({
+        where: { email: user.email },
+      });
+      expect(dbUser!.emailVerificationToken).toBeDefined();
+      expect(dbUser!.emailVerificationToken).not.toBe(oldToken);
     });
   });
 

@@ -71,13 +71,22 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     expect(registered.user.email_verified).toBe(false);
     expect(mockEmail.sendEmailVerification).toHaveBeenCalled();
 
-    // Email duplicado deve ser rejeitado
-    await request(authApp.getHttpServer())
-      .post('/auth/register')
-      .send(dto)
-      .expect(409);
+    // Email duplicado recebe a mesma resposta genérica (anti-enumeração)
+    const duplicate = (
+      await request(authApp.getHttpServer())
+        .post('/auth/register')
+        .send(dto)
+        .expect(201)
+    ).body;
+    expect(duplicate.message).toBe(registered.message);
+    expect(duplicate.user).toBeUndefined();
 
-    const token = registered.email_verification_token as string;
+    // O re-cadastro de email não verificado rotaciona o token: o primeiro
+    // token foi invalidado, então lê o vigente direto do banco.
+    const dbUser = await apps.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    const token = dbUser!.emailVerificationToken as string;
     expect(token).toBeDefined();
 
     await request(authApp.getHttpServer())
