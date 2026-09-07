@@ -16,13 +16,41 @@ const nextConfig: NextConfig = {
         ],
     },
     async headers() {
+        // CSP compatível com Next.js: hidratação e estilos exigem
+        // 'unsafe-inline' sem nonces configurados (ver docs do Next sobre
+        // content-security-policy); o restante segue estrito. Em dev há
+        // exceções p/ localhost (MinIO/backend/websocket do HMR) — nunca em prod.
+        const dev = process.env.NODE_ENV !== "production";
+        const imgSrc = ["'self'", "https:", "data:", "blob:"];
+        const connectSrc = ["'self'", "https:"];
+        if (dev) {
+            imgSrc.push("http://localhost:*", "http://127.0.0.1:*");
+            connectSrc.push(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "ws://localhost:*",
+                "ws://127.0.0.1:*",
+            );
+        }
+        const csp = [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline'",
+            "style-src 'self' 'unsafe-inline'",
+            `img-src ${imgSrc.join(" ")}`,
+            "font-src 'self' data:",
+            `connect-src ${connectSrc.join(" ")}`,
+            "frame-ancestors 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+        ].join("; ");
         return [
             {
                 source: "/:path*",
                 headers: [
                     {
                         key: "Content-Security-Policy",
-                        value: "default-src 'self'; frame-ancestors 'self'; object-src 'none'",
+                        value: csp,
                     },
                     {
                         key: "Strict-Transport-Security",

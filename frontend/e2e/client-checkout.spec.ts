@@ -61,6 +61,7 @@ test.describe("Checkout / confirmação de pagamento (JTT-92)", () => {
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Abrir checkout do cartão" }),
-    ).toHaveAttribute("href", /checkout\.mock\.pode-deixar\.com/);
+      // Justificativa AppSec: mock usa URL realista do gateway (allowlist exige https + mercadopago.*).
+    ).toHaveAttribute("href", /mercadopago\.com\/mock-checkout\//);
   });
 });
