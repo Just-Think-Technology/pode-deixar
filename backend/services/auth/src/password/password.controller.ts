@@ -8,10 +8,12 @@ import {
   Request,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PasswordManagementService } from './password-management.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { anonimizarEmailParaLog } from '../shared/auth-logger.service';
 import getLogger from '../shared/shared-logger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
@@ -25,11 +27,12 @@ export class PasswordController {
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async forgot(@Body() dto: ForgotPasswordDto) {
     try {
       logger.info(
         'auth.endpoint',
-        `Forgot password requested for ${dto.email}`,
+        `Forgot password requested for ${anonimizarEmailParaLog(dto.email)}`,
       );
     } catch {}
     return this.passwordService.forgotPassword(dto);
@@ -37,6 +40,7 @@ export class PasswordController {
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async reset(@Body() dto: ResetPasswordDto) {
     try {
       logger.info('auth.endpoint', `Reset password token used`);

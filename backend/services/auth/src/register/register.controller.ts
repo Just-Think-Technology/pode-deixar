@@ -7,12 +7,14 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { UseGuards } from '@nestjs/common';
 import { RegisterService } from './register.service';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { extrairIpSeguro } from '../shared/extrair-ip-seguro';
+import { anonimizarEmailParaLog } from '../shared/auth-logger.service';
 import getLogger from '../shared/shared-logger';
 
 const logger = getLogger('register');
@@ -32,13 +34,17 @@ export class RegisterController {
     @Headers('x-forwarded-for') ip?: string,
   ) {
     try {
-      logger.info('auth.endpoint', `Register called for ${dto.email}`);
+      logger.info(
+        'auth.endpoint',
+        `Register called for ${anonimizarEmailParaLog(dto.email)}`,
+      );
     } catch {}
-    return this.registerService.register(dto, ip);
+    return this.registerService.register(dto, extrairIpSeguro(ip));
   }
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Verificar email do usuário com token' })
   @ApiBody({ type: VerifyEmailDto })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
@@ -50,13 +56,14 @@ export class RegisterController {
 
   @Post('resend-email-verification')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Reenviar link de verificação de email' })
   @ApiBody({ type: ResendVerificationDto })
   async resendVerificationEmail(@Body() dto: ResendVerificationDto) {
     try {
       logger.info(
         'auth.endpoint',
-        `Resend verification requested for ${dto.email}`,
+        `Resend verification requested for ${anonimizarEmailParaLog(dto.email)}`,
       );
     } catch {}
     return this.registerService.resendVerificationEmail(dto);
