@@ -117,6 +117,10 @@ export class PaymentsController {
     @Headers("x-webhook-key") webhookKey: string | undefined,
     @Body() dto: PaymentWebhookDto,
   ) {
+    if (process.env.NODE_ENV === "production") {
+      throw new ForbiddenException("Webhook mock indisponível em produção");
+    }
+
     this.garantirRequestHttps(httpRequest);
 
     if (!this.validarChaveWebhook(webhookKey)) {
@@ -124,20 +128,18 @@ export class PaymentsController {
         eventId: dto.eventId,
         providedKey: webhookKey ? "[REDACTED]" : "missing",
       });
-      throw new ForbiddenException("Chave de webhook inválida");
+      throw new ForbiddenException("Webhook rejeitado");
     }
 
-    if (dto.timestamp) {
-      try {
-        this.validarTimestampWebhook(dto.timestamp, "Webhook mock");
-      } catch (e) {
-        this.logger.logAuthenticationFailure("timestamp", dto.paymentId, null, {
-          eventId: dto.eventId,
-          timestamp: dto.timestamp,
-          error: (e as Error).message,
-        });
-        throw e;
-      }
+    try {
+      this.validarTimestampWebhook(dto.timestamp, "Webhook mock");
+    } catch (e) {
+      this.logger.logAuthenticationFailure("timestamp", dto.paymentId, null, {
+        eventId: dto.eventId,
+        timestamp: dto.timestamp,
+        error: (e as Error).message,
+      });
+      throw new ForbiddenException("Webhook rejeitado");
     }
 
     return this.paymentsService.confirmPayment(dto);
@@ -148,11 +150,9 @@ export class PaymentsController {
     if (!webhookKey || !esperada) {
       return false;
     }
-    const a = Buffer.from(webhookKey);
-    const b = Buffer.from(esperada);
-    if (a.length !== b.length) {
-      return false;
-    }
+    // Compara hashes para não vazar o tamanho da chave (oráculo de comprimento).
+    const a = crypto.createHash("sha256").update(webhookKey).digest();
+    const b = crypto.createHash("sha256").update(esperada).digest();
     return crypto.timingSafeEqual(a, b);
   }
   @Throttle({ default: { limit: 60, ttl: 60000 } })
@@ -210,11 +210,7 @@ export class PaymentsController {
     }
   }
 
-  private validarTimestampWebhook(timestamp?: string, rotulo?: string) {
-    if (!timestamp) {
-      return;
-    }
-
+  private validarTimestampWebhook(timestamp: string, rotulo?: string) {
     const tsNumero = Number(timestamp);
     if (!Number.isFinite(tsNumero)) {
       throw new ForbiddenException(

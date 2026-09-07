@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import createLogger from "@pode-deixar/logger";
+import { sanitizarDadosSensiveis } from "@pode-deixar/security";
 
 @Injectable()
 export class PaymentLoggerService {
@@ -14,7 +15,7 @@ export class PaymentLoggerService {
     idempotencyKey?: string,
   ) {
     this.logger.info(
-      {
+      sanitizarDadosSensiveis({
         event: "payment.created",
         paymentId,
         orderId,
@@ -22,8 +23,10 @@ export class PaymentLoggerService {
         currency,
         method,
         idempotencyKey: idempotencyKey ?? undefined,
-      },
-      `Pagamento criado: ${paymentId} (order: ${orderId})`,
+      }) as Record<string, unknown>,
+      sanitizarDadosSensiveis(
+        `Pagamento criado: ${paymentId} (order: ${orderId})`,
+      ) as string,
     );
   }
 
@@ -36,7 +39,7 @@ export class PaymentLoggerService {
     motivo?: string,
   ) {
     this.logger.info(
-      {
+      sanitizarDadosSensiveis({
         event: "payment.status_changed",
         paymentId,
         orderId,
@@ -44,8 +47,10 @@ export class PaymentLoggerService {
         statusNovo,
         actor,
         motivo: motivo ?? undefined,
-      },
-      `Status alterado: ${paymentId} ${statusAnterior} -> ${statusNovo} (${actor})`,
+      }) as Record<string, unknown>,
+      sanitizarDadosSensiveis(
+        `Status alterado: ${paymentId} ${statusAnterior} -> ${statusNovo} (${actor})`,
+      ) as string,
     );
   }
 
@@ -58,7 +63,7 @@ export class PaymentLoggerService {
     motivo?: string,
   ) {
     this.logger.info(
-      {
+      sanitizarDadosSensiveis({
         event: "payment.webhook_received",
         paymentId,
         orderId,
@@ -66,8 +71,10 @@ export class PaymentLoggerService {
         eventId,
         status,
         motivo: motivo ?? undefined,
-      },
-      `Webhook ${gateway}: ${eventId} (${status})`,
+      }) as Record<string, unknown>,
+      sanitizarDadosSensiveis(
+        `Webhook ${gateway}: ${eventId} (${status})`,
+      ) as string,
     );
   }
 
@@ -78,14 +85,14 @@ export class PaymentLoggerService {
     contexto?: Record<string, unknown>,
   ) {
     this.logger.error(
-      {
+      sanitizarDadosSensiveis({
         event: "payment.error",
         paymentId,
         orderId,
         error,
         ...contexto,
-      },
-      `Erro no pagamento: ${error}`,
+      }) as Record<string, unknown>,
+      sanitizarDadosSensiveis(`Erro no pagamento: ${error}`) as string,
     );
   }
 
@@ -96,14 +103,14 @@ export class PaymentLoggerService {
     detalhes: Record<string, unknown>,
   ) {
     this.logger.warn(
-      {
+      sanitizarDadosSensiveis({
         event: "payment.suspicious",
         paymentId,
         orderId,
         tipo,
         ...detalhes,
-      },
-      `Atividade suspeita: ${tipo}`,
+      }) as Record<string, unknown>,
+      sanitizarDadosSensiveis(`Atividade suspeita: ${tipo}`) as string,
     );
   }
 
@@ -114,14 +121,14 @@ export class PaymentLoggerService {
     detalhes: Record<string, unknown>,
   ) {
     this.logger.warn(
-      {
+      sanitizarDadosSensiveis({
         event: "payment.auth_failure",
         tipo,
         paymentId,
         orderId,
         ...detalhes,
-      },
-      `Falha de autenticação: ${tipo}`,
+      }) as Record<string, unknown>,
+      sanitizarDadosSensiveis(`Falha de autenticação: ${tipo}`) as string,
     );
   }
 }
