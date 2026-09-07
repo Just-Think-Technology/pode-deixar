@@ -44,6 +44,7 @@ export async function getMyProposalsAction(): Promise<WorkerProposal[]> {
   try {
     return await withTokenRefresh((token) => getMyProposals(token));
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (
       err instanceof ApiError &&
       (err.status === 404 ||
@@ -72,6 +73,7 @@ export async function getMyProposalByIdAction(
     const proposals = await withTokenRefresh((token) => getMyProposals(token));
     return proposals.find((proposal) => proposal.id === proposalId) ?? null;
   } catch (err) {
+    if (!USE_MOCK) throw err;
     if (
       err instanceof ApiError &&
       (err.status === 404 ||
