@@ -14,43 +14,43 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 
-function traduzirErrosValidacao(errors: ValidationError[]): string {
-  const rotulos: Record<string, string> = {
+function translateValidationErrors(errors: ValidationError[]): string {
+  const labels: Record<string, string> = {
     rating: "Nota",
     comment: "Comentário",
     serviceOrderId: "Pedido de serviço",
     providerId: "Prestador",
   };
 
-  const traducoes: Record<string, (r: string) => string> = {
-    isString: (r) => `${r} deve ser uma string`,
-    isNotEmpty: (r) => `${r} não pode estar vazio`,
-    isNumber: (r) => `${r} deve ser um número`,
-    isBoolean: (r) => `${r} deve ser verdadeiro ou falso`,
-    isInt: (r) => `${r} deve ser um número inteiro`,
-    isPositive: (r) => `${r} deve ser um número positivo`,
-    isUrl: (r) => `${r} deve ser uma URL válida`,
-    isEnum: (r) => `${r} deve ser um valor válido`,
-    isArray: (r) => `${r} deve ser uma lista`,
-    min: (r) => `${r} não pode ser menor que 0`,
-    max: (r) => `${r} não pode ser maior que o limite`,
-    minLength: (r) => `${r} deve ter no mínimo 3 caracteres`,
-    maxLength: (r) => `${r} está muito longo`,
-    matches: (r) => `${r} contém caracteres inválidos`,
-    isUuid: (r) => `${r} deve ser um UUID válido`,
+  const translations: Record<string, (label: string) => string> = {
+    isString: (label) => `${label} deve ser uma string`,
+    isNotEmpty: (label) => `${label} não pode estar vazio`,
+    isNumber: (label) => `${label} deve ser um número`,
+    isBoolean: (label) => `${label} deve ser verdadeiro ou falso`,
+    isInt: (label) => `${label} deve ser um número inteiro`,
+    isPositive: (label) => `${label} deve ser um número positivo`,
+    isUrl: (label) => `${label} deve ser uma URL válida`,
+    isEnum: (label) => `${label} deve ser um valor válido`,
+    isArray: (label) => `${label} deve ser uma lista`,
+    min: (label) => `${label} não pode ser menor que 0`,
+    max: (label) => `${label} não pode ser maior que o limite`,
+    minLength: (label) => `${label} deve ter no mínimo 3 caracteres`,
+    maxLength: (label) => `${label} está muito longo`,
+    matches: (label) => `${label} contém caracteres inválidos`,
+    isUuid: (label) => `${label} deve ser um UUID válido`,
   };
 
   return errors
     .map((error) => {
       if (!error.constraints)
-        return `${rotulos[error.property] || error.property} inválido`;
+        return `${labels[error.property] || error.property} inválido`;
       return Object.entries(error.constraints)
-        .map(([chave, msg]) => {
-          // eslint-disable-next-line security/detect-object-injection
-          const tradutor = traducoes[chave];
+        .map(([key, msg]) => {
+          // eslint-disable-next-line security/detect-object-injection -- key is a class-validator constraint name, not user input
+          const translator = translations[key];
 
-          return tradutor
-            ? tradutor(rotulos[error.property] || error.property)
+          return translator
+            ? translator(labels[error.property] || error.property)
             : msg;
         })
         .join("; ");
@@ -95,7 +95,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string {
         forbidNonWhitelisted: true,
         transform: true,
         exceptionFactory: (errors) =>
-          new BadRequestException(traduzirErrosValidacao(errors)),
+          new BadRequestException(translateValidationErrors(errors)),
       }),
     },
     {

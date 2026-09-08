@@ -25,7 +25,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
-@ApiTags("Avaliações")
+@ApiTags("Reviews")
 @Controller("reviews")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -34,17 +34,17 @@ export class ReviewsController {
 
   @Post()
   @Roles("CLIENT", "PROVIDER")
-  @ApiOperation({ summary: "Criar avaliação de pedido concluído e pago" })
-  @ApiResponse({ status: 201, description: "Avaliação criada com sucesso" })
-  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
+  @ApiOperation({ summary: "Create a review for a completed and paid order" })
+  @ApiResponse({ status: 201, description: "Review created successfully" })
+  @ApiResponse({ status: 404, description: "Order not found" })
   @ApiResponse({
     status: 400,
     description:
-      "Pedido não concluído/pago, sem prestador definido ou já avaliado",
+      "Order not completed/paid, no provider assigned, or already reviewed",
   })
   @ApiResponse({
     status: 403,
-    description: "Usuário não é parte do pedido",
+    description: "User is not a party to the order",
   })
   async create(@Request() req: any, @Body() dto: CreateReviewDto) {
     const userId = req.user.sub;
@@ -54,10 +54,10 @@ export class ReviewsController {
 
   @Get("me")
   @Roles("CLIENT", "PROVIDER")
-  @ApiOperation({ summary: "Listar avaliações que eu escrevi" })
+  @ApiOperation({ summary: "List reviews I wrote" })
   @ApiResponse({
     status: 200,
-    description: "Lista de avaliações retornada com sucesso",
+    description: "Review list returned successfully",
   })
   async findMine(@Request() req: any): Promise<
     {
@@ -77,17 +77,17 @@ export class ReviewsController {
   @Get("service-order/:orderId")
   @Roles("CLIENT", "PROVIDER")
   @ApiOperation({
-    summary: "Listar avaliações de um pedido (apenas partes do pedido)",
+    summary: "List reviews of an order (order parties only)",
   })
-  @ApiParam({ name: "orderId", description: "ID do pedido" })
+  @ApiParam({ name: "orderId", description: "Order ID" })
   @ApiResponse({
     status: 200,
-    description: "Lista de avaliações do pedido retornada com sucesso",
+    description: "Order review list returned successfully",
   })
-  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
+  @ApiResponse({ status: 404, description: "Order not found" })
   @ApiResponse({
     status: 403,
-    description: "Usuário não é parte do pedido",
+    description: "User is not a party to the order",
   })
   async findByOrder(
     @Request() req: any,
@@ -110,21 +110,21 @@ export class ReviewsController {
   @Patch(":reviewId")
   @Roles("CLIENT", "PROVIDER")
   @ApiOperation({
-    summary: "Editar avaliação própria (apenas nos primeiros 5 minutos)",
+    summary: "Edit own review (only within the first 5 minutes)",
   })
-  @ApiParam({ name: "reviewId", description: "ID da avaliação" })
+  @ApiParam({ name: "reviewId", description: "Review ID" })
   @ApiResponse({
     status: 200,
-    description: "Avaliação atualizada com sucesso",
+    description: "Review updated successfully",
   })
-  @ApiResponse({ status: 404, description: "Avaliação não encontrada" })
+  @ApiResponse({ status: 404, description: "Review not found" })
   @ApiResponse({
     status: 403,
-    description: "Usuário não é o autor da avaliação",
+    description: "User is not the review author",
   })
   @ApiResponse({
     status: 400,
-    description: "Janela de edição expirada ou nenhum campo informado",
+    description: "Edit window expired or no field provided",
   })
   async update(
     @Request() req: any,
@@ -147,16 +147,16 @@ export class ReviewsController {
 
   @Delete(":reviewId")
   @Roles("CLIENT", "PROVIDER")
-  @ApiOperation({ summary: "Excluir avaliação própria" })
-  @ApiParam({ name: "reviewId", description: "ID da avaliação" })
+  @ApiOperation({ summary: "Delete own review" })
+  @ApiParam({ name: "reviewId", description: "Review ID" })
   @ApiResponse({
     status: 200,
-    description: "Avaliação excluída com sucesso",
+    description: "Review deleted successfully",
   })
-  @ApiResponse({ status: 404, description: "Avaliação não encontrada" })
+  @ApiResponse({ status: 404, description: "Review not found" })
   @ApiResponse({
     status: 403,
-    description: "Usuário não é o autor da avaliação",
+    description: "User is not the review author",
   })
   async remove(@Request() req: any, @Param("reviewId") reviewId: string) {
     const userId = req.user.sub;
@@ -165,17 +165,17 @@ export class ReviewsController {
   }
 }
 
-@ApiTags("Avaliações")
+@ApiTags("Reviews")
 @Controller("reviews/provider/:providerId")
 export class PublicReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Get()
-  @ApiOperation({ summary: "Listar avaliações de um prestador (público)" })
-  @ApiParam({ name: "providerId", description: "ID do prestador" })
+  @ApiOperation({ summary: "List provider reviews (public)" })
+  @ApiParam({ name: "providerId", description: "Provider ID" })
   @ApiResponse({
     status: 200,
-    description: "Lista de avaliações do prestador retornada com sucesso",
+    description: "Provider review list returned successfully",
   })
   async findByProvider(
     @Param("providerId") providerId: string,
