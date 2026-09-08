@@ -21,9 +21,7 @@ import {
 } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ServiceImagesService } from "./service-images.service";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import { RolesGuard } from "../auth/roles.guard";
-import { Roles } from "../auth/roles.decorator";
+import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 import { memoryStorage } from "multer";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;

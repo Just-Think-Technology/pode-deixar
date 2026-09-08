@@ -24,9 +24,7 @@ import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
 import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import { AgendaQueryDto } from "./dto/agenda-query.dto";
 import { PaginationQueryDto } from "../shared/pagination-query.dto";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import { RolesGuard } from "../auth/roles.guard";
-import { Roles } from "../auth/roles.decorator";
+import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 
 @ApiTags("Pedidos de Serviço (Cliente)")
 @Controller("services/me")
