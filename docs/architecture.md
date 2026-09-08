@@ -32,8 +32,10 @@ outside the task scope (see "Never do" 13 in AGENTS.md).
 ## Shared code
 
 - `backend/shared/` packages (`@pode-deixar/logger`, `@pode-deixar/email`,
-  `@pode-deixar/security`) hold cross-service concerns: logging, email,
-  Helmet CSP (`getHelmetConfig()`), Redis throttler storage
+  `@pode-deixar/security`, `@pode-deixar/validation`) hold cross-service
+  concerns: logging, email, Helmet CSP (`getHelmetConfig()`), Redis throttler
+  storage, validation messages (`traduzirErrosValidacao`), image validation
+  (`validarArquivoImagem`), Prisma error mapping (`resolverErroPrisma`)
 - **Auth guards (JWT + roles) live only in `@pode-deixar/security`.**
   Per-service `jwt-auth.guard` / `roles.guard` copies are tech debt:
   migrate a service to the shared guards when touching its auth

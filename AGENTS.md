@@ -19,7 +19,7 @@ Single source of truth for product decisions, development rules and architecture
 ```
 backend/
 ├── prisma/          # Shared schema and migrations
-├── shared/          # Shared packages (logger, email, security)
+├── shared/          # Shared packages (logger, email, security, validation)
 └── services/
     ├── auth/            # :3001 — Authentication
     ├── users/           # :3002 — Profiles and categories
@@ -60,7 +60,7 @@ never from the repo root.
 pnpm dev              # Prisma generate + start the 5 services
 pnpm build            # Build shared + services
 pnpm test             # Unit tests of the 5 services (needs local Postgres)
-pnpm test:shared      # Tests of shared packages (logger, email, security)
+pnpm test:shared      # Tests of shared packages (logger, email, security, validation)
 pnpm test:e2e         # Cross-service journeys (needs local Postgres)
 pnpm lint             # ESLint on the 5 services
 pnpm prisma:migrate   # Apply migrations (deploy)
