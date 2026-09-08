@@ -62,44 +62,43 @@ export class MinioService implements OnModuleInit {
     await this.client.removeObject(targetBucket, fileName);
   }
 
-  // URL temporária de leitura (o bucket não é público): expira em 15 minutos
-  // por padrão para que links vazados percam a validade rapidamente.
-  async gerarUrlTemporaria(
+  // Temporary read URL (bucket is not public): 15-minute default so leaked
+  // links expire quickly.
+  async generateTemporaryUrl(
     fileName: string,
     bucket?: string,
-    expiracaoSegundos = 15 * 60,
+    expiresInSeconds = 15 * 60,
   ): Promise<string> {
     const targetBucket = bucket || this.bucket;
-    const assinada = await this.clientePresign().presignedGetObject(
+    const signed = await this.getPresignClient().presignedGetObject(
       targetBucket,
       fileName,
-      expiracaoSegundos,
+      expiresInSeconds,
     );
-    // Reanexa o prefixo do gateway (/api/storage): o Caddy o remove antes de
-    // repassar ao MinIO, então o caminho assinado chega intacto e a URL é
-    // alcançável pelo navegador (a assinada crua apontaria p/ o host interno).
+    // Re-attach the gateway prefix (/api/storage): Caddy strips it before
+    // proxying to MinIO, keeping the signed path intact and reachable from
+    // browsers (the raw signed URL would point at the internal host).
     try {
-      const u = new URL(assinada);
+      const u = new URL(signed);
       const base = this.publicUrl.replace(/\/$/, "");
       return `${base}${u.pathname}${u.search}`;
     } catch {
-      return assinada;
+      return signed;
     }
   }
 
-  // Cliente dedicado à pré-assinatura, endereçado pelo host público: o host
-  // faz parte da assinatura SigV4, então assinar com o host interno
-  // (minio:9000) invalidaria a URL quando buscada via gateway. O Caddy
-  // preserva o Host original, logo a assinatura confere no MinIO.
-  private clientePresign(): Minio.Client {
+  // Dedicated presigning client addressed by the public host: the host is part
+  // of the SigV4 signature, so signing with the internal host would invalidate
+  // the URL when fetched via the gateway.
+  private getPresignClient(): Minio.Client {
     if (!this.presignClient) {
       try {
         const base = new URL(this.publicUrl);
         const ssl = base.protocol === "https:";
-        const porta = base.port ? Number(base.port) : ssl ? 443 : 80;
+        const port = base.port ? Number(base.port) : ssl ? 443 : 80;
         this.presignClient = new Minio.Client({
           endPoint: base.hostname,
-          port: porta,
+          port,
           useSSL: ssl,
           accessKey: this.accessKey,
           secretKey: this.secretKey,

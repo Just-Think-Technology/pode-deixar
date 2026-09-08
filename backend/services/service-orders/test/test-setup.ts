@@ -17,7 +17,7 @@ export interface TestAppSetup {
 }
 
 // --- MinIO stub ---
-// O MinioService real conecta no onModuleInit — inviável sem MinIO.
+// The real MinioService connects on onModuleInit — unfeasible without MinIO.
 
 export const mockMinio = {
   uploadFile: jest.fn(
@@ -42,9 +42,8 @@ export async function setupTestApp(): Promise<TestAppSetup> {
   })
     .overrideProvider(MinioService)
     .useValue(mockMinio)
-    // Justificativa AppSec: endpoints sensíveis têm @Throttle estrito;
-    // fluxos de teste compartilham um IP e estourariam 429. Storage fake
-    // que nunca bloqueia — o guard real continua executando.
+    // Sensitive endpoints carry strict @Throttle; test flows share one IP and
+    // would hit 429. Fake storage that never blocks — the real guard still runs.
     .overrideProvider(ThrottlerStorage)
     .useValue({
       increment: async () => ({
