@@ -2,18 +2,18 @@ import { IsString, IsOptional, IsInt, Min, MaxLength } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateCategoryDto {
-  @ApiProperty({ description: "Nome da categoria", example: "Elétrica" })
+  @ApiProperty({ description: "Category name", example: "Elétrica" })
   @IsString()
   @MaxLength(100)
   name: string;
 
-  @ApiProperty({ description: "Slug para URL/filtro", example: "eletrica" })
+  @ApiProperty({ description: "Slug for URL/filter", example: "eletrica" })
   @IsString()
   @MaxLength(100)
   slug: string;
 
   @ApiPropertyOptional({
-    description: "Descrição da categoria",
+    description: "Category description",
     example: "Serviços de elétrica residencial e comercial",
   })
   @IsOptional()
@@ -22,7 +22,7 @@ export class CreateCategoryDto {
   description?: string;
 
   @ApiPropertyOptional({
-    description: "Nome do ícone (Lucide)",
+    description: "Icon name (Lucide)",
     example: "zap",
   })
   @IsOptional()
@@ -30,7 +30,7 @@ export class CreateCategoryDto {
   @MaxLength(50)
   icon?: string;
 
-  @ApiPropertyOptional({ description: "Ordem de exibição", example: 1 })
+  @ApiPropertyOptional({ description: "Display order", example: 1 })
   @IsOptional()
   @IsInt()
   @Min(0)

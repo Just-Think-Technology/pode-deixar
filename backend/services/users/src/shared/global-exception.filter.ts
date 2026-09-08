@@ -7,7 +7,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
-import { sanitizarDadosSensiveis } from "@pode-deixar/security";
+import { sanitizeSensitiveData } from "@pode-deixar/security";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -39,17 +39,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
-      // Erros conhecidos do Prisma viram respostas genéricas por código,
-      // sem expor detalhes internos (tabela, campo, constraint) ao cliente.
-      // Qualquer outro erro vira 500 genérico; o detalhe fica só no log.
-      const codigo = (exception as { code?: unknown }).code;
-      if (codigo === "P2002") {
+      // Map known Prisma errors to generic responses to avoid leaking internals.
+      // Any other error becomes a generic 500; details stay in the log only.
+      const code = (exception as { code?: unknown }).code;
+      if (code === "P2002") {
         status = HttpStatus.CONFLICT;
         message = "Registro já existe";
-      } else if (codigo === "P2003") {
+      } else if (code === "P2003") {
         status = HttpStatus.BAD_REQUEST;
         message = "Referência inválida";
-      } else if (codigo === "P2025") {
+      } else if (code === "P2025") {
         status = HttpStatus.NOT_FOUND;
         message = "Registro não encontrado";
       } else {
@@ -58,14 +57,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // Log server-side mantém o detalhe original (mensagem + stack).
-    const detalhe =
+    const detail =
       exception instanceof Error ? exception.message : String(exception);
     this.logger.error(
-      sanitizarDadosSensiveis(
-        `${request.method} ${request.url} - ${status} - ${detalhe}`,
+      sanitizeSensitiveData(
+        `${request.method} ${request.url} - ${status} - ${detail}`,
       ),
-      sanitizarDadosSensiveis(
+      sanitizeSensitiveData(
         exception instanceof Error ? exception.stack || "" : "",
       ),
     );
