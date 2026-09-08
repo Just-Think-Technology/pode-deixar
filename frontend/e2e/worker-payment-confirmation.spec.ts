@@ -2,12 +2,12 @@ import { expect, test } from "@playwright/test";
 
 import { loginAsWorkerMock } from "./helpers/auth";
 
-test.describe("Confirmação de pagamento do prestador (JTT-93)", () => {
+test.describe("Provider payment confirmation (JTT-93)", () => {
   test.beforeEach(async ({ page }) => {
     await loginAsWorkerMock(page);
   });
 
-  test("expande status do pagamento na proposta aceita e mostra PAID", async ({
+  test("expands payment status on the accepted proposal and shows PAID", async ({
     page,
   }) => {
     await page.goto("/worker/proposal/mock-proposal-002");
@@ -28,7 +28,7 @@ test.describe("Confirmação de pagamento do prestador (JTT-93)", () => {
     await expect(page.getByText(/via Pix/)).toBeVisible();
   });
 
-  test("proposta pendente não mostra seção de pagamento", async ({ page }) => {
+  test("pending proposal shows no payment section", async ({ page }) => {
     await page.goto("/worker/proposal/mock-proposal-001");
 
     await expect(

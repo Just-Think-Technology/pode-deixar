@@ -59,8 +59,8 @@ export async function getMyProposalsAction(): Promise<WorkerProposal[]> {
 }
 
 /**
- * Detalhe seguro sem GET /proposals/:id:
- * só devolve a proposta se ela estiver em GET /proposals/me do usuário logado.
+ * Secure detail without GET /proposals/:id:
+ * only returns the proposal if it is in the logged-in user's GET /proposals/me.
  */
 export async function getMyProposalByIdAction(
   proposalId: string,

@@ -14,7 +14,7 @@ export const WORKER_PAYMENT_STATUS_LABELS: Record<
   CANCELLED: "Cancelado",
 };
 
-/** Labels orientados a recebimento (painel do prestador — JTT-95). */
+/** Receipt-oriented labels (provider panel — JTT-95). */
 export const WORKER_RECEIPT_STATUS_LABELS: Record<
   WorkerPaymentStatus,
   string
