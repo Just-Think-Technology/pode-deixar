@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
-// import-require: estes serviços não têm esModuleInterop (diferente do auth),
-// então o default-import compila para `.default` inexistente em runtime.
+// import-require: these services lack esModuleInterop (unlike auth),
+// so the default import compiles to a nonexistent `.default` at runtime.
 import request = require('supertest');
 import { App } from 'supertest/types';
 import {
@@ -58,7 +58,7 @@ describe('Payments (integration)', () => {
   }
 
   describe('POST /payments', () => {
-    it('deve registrar pagamento PENDING para pedido do cliente', async () => {
+    it('should register a PENDING payment for the client order', async () => {
       const { token, order } = await clientWithOrder();
 
       const response = await createPayment(token, order.id);
@@ -117,7 +117,7 @@ describe('Payments (integration)', () => {
   });
 
   describe('GET /payments e GET /payments/:paymentId/status', () => {
-    it('deve listar pagamentos do cliente', async () => {
+    it('should list the client payments', async () => {
       const { token, order } = await clientWithOrder();
       await createPayment(token, order.id);
 
@@ -130,7 +130,7 @@ describe('Payments (integration)', () => {
       expect(response.body[0].status).toBe('PENDING');
     });
 
-    it('deve consultar status e negar acesso a outro cliente', async () => {
+    it('should check status and deny access to another client', async () => {
       const owner = await clientWithOrder();
       const intruder = await createTestUser(prisma, { role: 'CLIENT' });
       const paymentId = (await createPayment(owner.token, owner.order.id))
@@ -165,12 +165,12 @@ describe('Payments (integration)', () => {
         eventId,
         externalId: `tx_mock_${eventId}`,
         amount,
-        // Timestamp obrigatório (anti-replay de 5 min).
+        // Mandatory timestamp (5-min anti-replay).
         timestamp: String(Math.floor(Date.now() / 1000)),
       };
     }
 
-    it('deve confirmar pagamento e marcar PAID', async () => {
+    it('should confirm payment and mark PAID', async () => {
       const { token, order } = await clientWithOrder();
       const paymentId = (await createPayment(token, order.id)).body.id as string;
 
@@ -183,7 +183,7 @@ describe('Payments (integration)', () => {
       expect(response.body.payment.status).toBe('PAID');
     });
 
-    it('deve ser idempotente para evento duplicado', async () => {
+    it('should be idempotent for a duplicate event', async () => {
       const { token, order } = await clientWithOrder();
       const paymentId = (await createPayment(token, order.id)).body.id as string;
       const eventId = `evt_${Date.now()}_b`;

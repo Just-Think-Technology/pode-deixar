@@ -16,8 +16,8 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 
-function traduzirErrosValidacao(errors: ValidationError[]): string[] {
-  const rotulos: Record<string, string> = {
+function translateValidationErrors(errors: ValidationError[]): string[] {
+  const fieldLabels: Record<string, string> = {
     serviceOrderId: "ID do pedido",
     amount: "Valor",
     method: "Método de pagamento",
@@ -25,29 +25,30 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
     externalId: "ID externo da transação",
   };
 
-  const traducoes: Record<string, (r: string) => string> = {
-    isString: (r) => `${r} deve ser uma string`,
-    isNotEmpty: (r) => `${r} não pode estar vazio`,
-    isNumber: (r) => `${r} deve ser um número`,
-    isInt: (r) => `${r} deve ser um número inteiro`,
-    isPositive: (r) => `${r} deve ser um número positivo`,
-    isEnum: (r) => `${r} deve ser um valor válido`,
-    isUuid: (r) => `${r} deve ser um UUID válido`,
-    min: (r) => `${r} não pode ser menor que 0`,
-    maxLength: (r) => `${r} está muito longo`,
+  const constraintTranslators: Record<string, (label: string) => string> = {
+    isString: (label) => `${label} deve ser uma string`,
+    isNotEmpty: (label) => `${label} não pode estar vazio`,
+    isNumber: (label) => `${label} deve ser um número`,
+    isInt: (label) => `${label} deve ser um número inteiro`,
+    isPositive: (label) => `${label} deve ser um número positivo`,
+    isEnum: (label) => `${label} deve ser um valor válido`,
+    isUuid: (label) => `${label} deve ser um UUID válido`,
+    min: (label) => `${label} não pode ser menor que 0`,
+    maxLength: (label) => `${label} está muito longo`,
   };
 
   return errors.map((error) => {
     if (!error.constraints)
-      return `${rotulos[error.property] || error.property} inválido`;
+      return `${fieldLabels[error.property] || error.property} inválido`;
     return Object.entries(error.constraints)
-      .map(([chave, msg]) => {
+      .map(([key, defaultMessage]) => {
+        // Safe: the key comes from the constraint entry being processed.
         // eslint-disable-next-line security/detect-object-injection
-        const tradutor = traducoes[chave];
+        const translator = constraintTranslators[key];
 
-        return tradutor
-          ? tradutor(rotulos[error.property] || error.property)
-          : msg;
+        return translator
+          ? translator(fieldLabels[error.property] || error.property)
+          : defaultMessage;
       })
       .join("; ");
   });
@@ -92,7 +93,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
         forbidNonWhitelisted: true,
         transform: true,
         exceptionFactory: (errors) =>
-          new BadRequestException(traduzirErrosValidacao(errors)),
+          new BadRequestException(translateValidationErrors(errors)),
       }),
     },
     {

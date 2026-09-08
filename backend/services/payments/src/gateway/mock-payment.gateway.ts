@@ -7,10 +7,6 @@ import {
   PaymentGateway,
 } from "./payment-gateway.interface";
 
-/**
- * Gateway fake (desenvolvimento/testes): gera cobranças simuladas e não faz
- * nenhuma chamada externa. Usado quando nenhum gateway real está configurado.
- */
 @Injectable()
 export class MockPaymentGateway implements PaymentGateway {
   readonly name = "MOCK";
@@ -24,7 +20,7 @@ export class MockPaymentGateway implements PaymentGateway {
     return {
       id: chargeRef,
       status: "PENDING",
-      cobranca: this.detalhesMock(params.method, chargeRef),
+      cobranca: this.buildMockDetails(params.method, chargeRef),
     };
   }
 
@@ -56,7 +52,7 @@ export class MockPaymentGateway implements PaymentGateway {
     return "PENDING";
   }
 
-  private detalhesMock(
+  private buildMockDetails(
     method: PaymentMethod,
     chargeRef: string,
   ): Record<string, unknown> {

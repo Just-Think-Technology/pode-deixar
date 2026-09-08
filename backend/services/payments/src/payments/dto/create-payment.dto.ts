@@ -10,19 +10,19 @@ import {
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { PaymentMethod } from "@prisma/client";
 
-export const MOEDAS_SUPORTADAS = ["BRL"] as const;
-export type MoedaSuportada = (typeof MOEDAS_SUPORTADAS)[number];
+export const SUPPORTED_CURRENCIES = ["BRL"] as const;
+export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 
 export class CreatePaymentDto {
   @ApiProperty({
-    description: "ID do pedido de serviço",
+    description: "Service order ID",
     example: "uuid-do-pedido",
   })
   @IsUUID()
   serviceOrderId: string;
 
   @ApiProperty({
-    description: "Método de pagamento",
+    description: "Payment method",
     enum: PaymentMethod,
     example: PaymentMethod.PIX,
   })
@@ -31,7 +31,7 @@ export class CreatePaymentDto {
 
   @ApiProperty({
     description:
-      "Data/hora agendada para a realização do serviço (ISO 8601). Obrigatória: o agendamento é definido pelo cliente no checkout e passa a valer quando o pagamento é confirmado.",
+      "Scheduled date/time for the service (ISO 8601). Required: scheduling is set by the client at checkout and takes effect when the payment is confirmed.",
     example: "2026-08-20T14:00:00.000Z",
   })
   @IsDateString()
@@ -39,7 +39,7 @@ export class CreatePaymentDto {
 
   @ApiPropertyOptional({
     description:
-      "Data/hora prevista de término do serviço (ISO 8601). Deve ser posterior a scheduledAt.",
+      "Expected service end date/time (ISO 8601). Must be after scheduledAt.",
     example: "2026-08-20T17:00:00.000Z",
   })
   @IsOptional()
@@ -47,18 +47,18 @@ export class CreatePaymentDto {
   scheduledEndAt?: string;
 
   @ApiPropertyOptional({
-    description: "Moeda do pagamento (padrão: BRL)",
-    enum: MOEDAS_SUPORTADAS,
+    description: "Payment currency (default: BRL)",
+    enum: SUPPORTED_CURRENCIES,
     default: "BRL",
     example: "BRL",
   })
   @IsOptional()
-  @IsIn(MOEDAS_SUPORTADAS)
-  currency?: MoedaSuportada;
+  @IsIn(SUPPORTED_CURRENCIES)
+  currency?: SupportedCurrency;
 
   @ApiPropertyOptional({
     description:
-      "Chave de idempotência — mesma chave para o mesmo pedido retorna o pagamento existente (evita duplicação)",
+      "Idempotency key — same key for the same order returns the existing payment (prevents duplication)",
     example: "uuid-unico-do-cliente",
   })
   @IsOptional()
