@@ -15,42 +15,23 @@ import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor"
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
+import {
+  traduzirErrosValidacao as traduzirErrosNucleo,
+  RotulosCampos,
+} from "@pode-deixar/validation";
+
+// Rótulos dos campos do payments (user-facing, em português); as mensagens
+// de restrição vivem no núcleo compartilhado.
+const ROTULOS_PAYMENTS: RotulosCampos = {
+  serviceOrderId: "ID do pedido",
+  amount: "Valor",
+  method: "Método de pagamento",
+  paymentId: "ID do pagamento",
+  externalId: "ID externo da transação",
+};
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
-  const rotulos: Record<string, string> = {
-    serviceOrderId: "ID do pedido",
-    amount: "Valor",
-    method: "Método de pagamento",
-    paymentId: "ID do pagamento",
-    externalId: "ID externo da transação",
-  };
-
-  const traducoes: Record<string, (r: string) => string> = {
-    isString: (r) => `${r} deve ser uma string`,
-    isNotEmpty: (r) => `${r} não pode estar vazio`,
-    isNumber: (r) => `${r} deve ser um número`,
-    isInt: (r) => `${r} deve ser um número inteiro`,
-    isPositive: (r) => `${r} deve ser um número positivo`,
-    isEnum: (r) => `${r} deve ser um valor válido`,
-    isUuid: (r) => `${r} deve ser um UUID válido`,
-    min: (r) => `${r} não pode ser menor que 0`,
-    maxLength: (r) => `${r} está muito longo`,
-  };
-
-  return errors.map((error) => {
-    if (!error.constraints)
-      return `${rotulos[error.property] || error.property} inválido`;
-    return Object.entries(error.constraints)
-      .map(([chave, msg]) => {
-        // eslint-disable-next-line security/detect-object-injection
-        const tradutor = traducoes[chave];
-
-        return tradutor
-          ? tradutor(rotulos[error.property] || error.property)
-          : msg;
-      })
-      .join("; ");
-  });
+  return traduzirErrosNucleo(errors, ROTULOS_PAYMENTS);
 }
 
 @Module({

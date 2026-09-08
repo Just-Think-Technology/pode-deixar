@@ -16,49 +16,29 @@ import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor"
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
+import {
+  traduzirErrosValidacao as traduzirErrosNucleo,
+  RotulosCampos,
+} from "@pode-deixar/validation";
+
+// Rótulos dos campos do service-orders (user-facing, em português); as
+// mensagens de restrição vivem no núcleo compartilhado.
+const ROTULOS_ORDERS: RotulosCampos = {
+  title: "Título",
+  description: "Descrição",
+  categoryId: "Categoria",
+  price: "Preço",
+  providerServiceId: "Serviço do prestador",
+  budgetMin: "Orçamento mínimo",
+  budgetMax: "Orçamento máximo",
+  providerId: "Prestador",
+  estimatedDuration: "Duração estimada",
+  serviceOrderId: "ID do pedido",
+  proposalId: "ID da proposta",
+};
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
-  const rotulos: Record<string, string> = {
-    title: "Título",
-    description: "Descrição",
-    categoryId: "Categoria",
-    price: "Preço",
-    providerServiceId: "Serviço do prestador",
-    budgetMin: "Orçamento mínimo",
-    budgetMax: "Orçamento máximo",
-    providerId: "Prestador",
-    estimatedDuration: "Duração estimada",
-    serviceOrderId: "ID do pedido",
-    proposalId: "ID da proposta",
-  };
-
-  const traducoes: Record<string, (r: string) => string> = {
-    isString: (r) => `${r} deve ser uma string`,
-    isNotEmpty: (r) => `${r} não pode estar vazio`,
-    isNumber: (r) => `${r} deve ser um número`,
-    isBoolean: (r) => `${r} deve ser verdadeiro ou falso`,
-    isInt: (r) => `${r} deve ser um número inteiro`,
-    isPositive: (r) => `${r} deve ser um número positivo`,
-    min: (r) => `${r} não pode ser menor que 0`,
-    minLength: (r) => `${r} deve ter no mínimo 3 caracteres`,
-    maxLength: (r) => `${r} está muito longo`,
-    matches: (r) => `${r} contém caracteres inválidos`,
-  };
-
-  return errors.map((error) => {
-    if (!error.constraints)
-      return `${rotulos[error.property] || error.property} inválido`;
-    return Object.entries(error.constraints)
-      .map(([chave, msg]) => {
-        // eslint-disable-next-line security/detect-object-injection
-        const tradutor = traducoes[chave];
-
-        return tradutor
-          ? tradutor(rotulos[error.property] || error.property)
-          : msg;
-      })
-      .join("; ");
-  });
+  return traduzirErrosNucleo(errors, ROTULOS_ORDERS);
 }
 
 @Module({

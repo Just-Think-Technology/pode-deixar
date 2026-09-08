@@ -8,56 +8,11 @@ import { PrismaService } from "../prisma/prisma.service";
 import { MinioService } from "../storage/minio.service";
 import sharp from "sharp";
 import * as crypto from "crypto";
+import { validarArquivoImagem } from "@pode-deixar/validation";
 
 // Teto de pixels aceito pelo sharp (anti bomba de descompressão):
 // ~25MP cobre fotos de celular sem estourar memória no worker.
 const LIMITE_PIXELS_SHARP = 25_000_000;
-
-const TIPOS_IMAGEM_PERMITIDOS = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-];
-
-// Confere os magic bytes do conteúdo contra o mimetype declarado
-// (o mimetype do multipart é informado pelo cliente e não é confiável).
-function conteudoImagemValido(buffer: Buffer, mimetype: string): boolean {
-  if (!buffer || buffer.length < 12) {
-    return false;
-  }
-
-  if (mimetype === "image/jpeg") {
-    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-  }
-
-  if (mimetype === "image/png") {
-    return (
-      buffer[0] === 0x89 &&
-      buffer[1] === 0x50 &&
-      buffer[2] === 0x4e &&
-      buffer[3] === 0x47 &&
-      buffer[4] === 0x0d &&
-      buffer[5] === 0x0a &&
-      buffer[6] === 0x1a &&
-      buffer[7] === 0x0a
-    );
-  }
-
-  if (mimetype === "image/gif") {
-    const cabecalho = buffer.subarray(0, 6).toString("ascii");
-    return cabecalho === "GIF87a" || cabecalho === "GIF89a";
-  }
-
-  if (mimetype === "image/webp") {
-    return (
-      buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
-      buffer.subarray(8, 12).toString("ascii") === "WEBP"
-    );
-  }
-
-  return false;
-}
 
 @Injectable()
 export class PhotosService {
@@ -103,18 +58,10 @@ export class PhotosService {
       throw new BadRequestException("Máximo de 10 fotos por upload");
     }
 
+    // Validação canônica de imagem (extensão + magic bytes) no pacote
+    // compartilhado — mesma regra do upload de avatar/serviço do users.
     for (const file of files) {
-      if (!TIPOS_IMAGEM_PERMITIDOS.includes(file.mimetype)) {
-        throw new BadRequestException(
-          `Tipo de arquivo inválido: ${file.mimetype}. Apenas imagens são permitidas (jpeg, png, webp, gif)`,
-        );
-      }
-
-      if (!conteudoImagemValido(file.buffer, file.mimetype)) {
-        throw new BadRequestException(
-          `O conteúdo do arquivo "${file.originalname}" não corresponde a uma imagem válida (jpeg, png, webp ou gif)`,
-        );
-      }
+      validarArquivoImagem(file.originalname, file.buffer);
     }
 
     const webpBuffers: Buffer[] = [];

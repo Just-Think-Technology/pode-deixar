@@ -14,7 +14,7 @@ import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { extname } from "path";
-import { validarArquivoImagem } from "../shared/validar-imagem.util";
+import { validarArquivoImagem } from "@pode-deixar/validation";
 
 @Injectable()
 export class ProfilesService {

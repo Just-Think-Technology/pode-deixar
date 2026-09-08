@@ -9,7 +9,7 @@ import { MinioService } from "../storage/minio.service";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { randomUUID } from "crypto";
 import { extname } from "path";
-import { validarArquivoImagem } from "../shared/validar-imagem.util";
+import { validarArquivoImagem } from "@pode-deixar/validation";
 
 @Injectable()
 export class ServiceImagesService {

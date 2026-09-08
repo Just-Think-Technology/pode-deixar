@@ -7,7 +7,10 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
-import { sanitizarDadosSensiveis } from "@pode-deixar/security";
+import {
+  sanitizarDadosSensiveis,
+  resolverErroPrisma,
+} from "@pode-deixar/security";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -42,16 +45,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       // Erros conhecidos do Prisma viram respostas genéricas por código,
       // sem expor detalhes internos (tabela, campo, constraint) ao cliente.
       // Qualquer outro erro vira 500 genérico; o detalhe fica só no log.
-      const codigo = (exception as { code?: unknown }).code;
-      if (codigo === "P2002") {
-        status = HttpStatus.CONFLICT;
-        message = "Registro já existe";
-      } else if (codigo === "P2003") {
-        status = HttpStatus.BAD_REQUEST;
-        message = "Referência inválida";
-      } else if (codigo === "P2025") {
-        status = HttpStatus.NOT_FOUND;
-        message = "Registro não encontrado";
+      const resolvido = resolverErroPrisma(
+        (exception as { code?: unknown }).code,
+      );
+      if (resolvido) {
+        status = resolvido.status;
+        message = resolvido.message;
       } else {
         status = HttpStatus.INTERNAL_SERVER_ERROR;
         message = "Erro interno do servidor";

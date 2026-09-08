@@ -14,52 +14,34 @@ import { GlobalExceptionFilter } from './shared/global-exception.filter';
 import { ResponseLoggerInterceptor } from './shared/response-logger.interceptor';
 import { EmailModule } from '@pode-deixar/email';
 import { RedisThrottlerStorage } from '@pode-deixar/security';
+import {
+  traduzirErrosValidacao as traduzirErrosNucleo,
+  RotulosCampos,
+  MensagensRestricao,
+} from '@pode-deixar/validation';
+
+// Rótulos dos campos do auth (user-facing, em português); as mensagens de
+// restrição vivem no núcleo compartilhado, com as divergências do auth abaixo.
+const ROTULOS_AUTH: RotulosCampos = {
+  email: 'Email',
+  password: 'Senha',
+  complete_name: 'Nome completo',
+  confirm_password: 'Confirmação de senha',
+  phone: 'Telefone',
+  postal_code: 'CEP',
+  role: 'Função',
+  newPassword: 'Nova senha',
+  currentPassword: 'Senha atual',
+  token: 'Token',
+};
+
+const SOBRESCRITAS_AUTH: MensagensRestricao = {
+  minLength: (r) => `${r} deve ter no mínimo 8 caracteres`,
+  maxLength: (r) => `${r} deve ter no máximo 200 caracteres`,
+};
 
 function traduzirErrosValidacao(errors: ValidationError[]): string[] {
-  const rotulos: Record<string, string> = {
-    email: 'Email',
-    password: 'Senha',
-    complete_name: 'Nome completo',
-    confirm_password: 'Confirmação de senha',
-    phone: 'Telefone',
-    postal_code: 'CEP',
-    role: 'Função',
-    newPassword: 'Nova senha',
-    currentPassword: 'Senha atual',
-    token: 'Token',
-  };
-
-  const traducoes: Record<string, (r: string) => string> = {
-    isString: (r) => `${r} deve ser uma string`,
-    isNotEmpty: (r) => `${r} não pode estar vazio`,
-    isEmail: (r) => `${r} deve ser um email válido`,
-    isNumber: (r) => `${r} deve ser um número`,
-    isBoolean: (r) => `${r} deve ser verdadeiro ou falso`,
-    isInt: (r) => `${r} deve ser um número inteiro`,
-    isPositive: (r) => `${r} deve ser um número positivo`,
-    isUrl: (r) => `${r} deve ser uma URL válida`,
-    isEnum: (r) => `${r} deve ser um valor válido`,
-    isArray: (r) => `${r} deve ser uma lista`,
-    minLength: (r) => `${r} deve ter no mínimo 8 caracteres`,
-    maxLength: (r) => `${r} deve ter no máximo 200 caracteres`,
-    min: (r) => `${r} não pode ser menor que 0`,
-    matches: (r) => `${r} contém caracteres inválidos`,
-  };
-
-  return errors.map((error) => {
-    if (!error.constraints)
-      return `${rotulos[error.property] || error.property} inválido`;
-    return Object.entries(error.constraints)
-      .map(([chave, msg]) => {
-        // eslint-disable-next-line security/detect-object-injection
-        const tradutor = traducoes[chave];
-
-        return tradutor
-          ? tradutor(rotulos[error.property] || error.property)
-          : msg;
-      })
-      .join('; ');
-  });
+  return traduzirErrosNucleo(errors, ROTULOS_AUTH, SOBRESCRITAS_AUTH);
 }
 
 @Module({
