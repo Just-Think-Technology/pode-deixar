@@ -17,11 +17,11 @@ export class EmailService {
     const pass = this.configService.get<string>('SMTP_PASS');
 
     if (!host || !user || !pass) {
-      const mensagem = 'SMTP não configurado (SMTP_HOST/SMTP_USER/SMTP_PASS ausentes)';
-      // Em produção, falhar no boot em vez de operar sem envio de email.
+      const message = 'SMTP não configurado (SMTP_HOST/SMTP_USER/SMTP_PASS ausentes)';
+      // Fail the boot in production instead of running without email delivery.
       if (process.env.NODE_ENV === 'production') {
-        logger.error('email.setup', mensagem);
-        throw new Error(mensagem);
+        logger.error('email.setup', message);
+        throw new Error(message);
       }
       logger.warn('email.setup', 'SMTP not fully configured');
     }
@@ -43,9 +43,7 @@ export class EmailService {
     from?: string;
   }) {
     const from = options.from || this.configService.get<string>('SMTP_FROM') || 'noreply@yourapp.com';
-    // Valida destinatário único (rejeita injeção de cabeçalho via CRLF).
-    this.validarDestinatario(options.to);
-    // Neutraliza CRLF no assunto e limita a 200 caracteres (header injection).
+    this.validateRecipient(options.to);
     const subject = options.subject.replace(/[\r\n]+/g, ' ').slice(0, 200);
 
     try {
@@ -78,24 +76,21 @@ export class EmailService {
     });
   }
 
-  private validarDestinatario(to: string): void {
-    // Aceita um único endereço RFC-5322 aproximado; rejeita CRLF/endereços
-    // múltiplos. Implementação com operações lineares (indexOf/includes):
-    // regexes aninhadas como /^[^\s@]+@[^\s@]+\.[^\s@]+$/ têm backtracking
-    // polinomial sobre entrada hostil (CodeQL: polynomial ReDoS).
+  private validateRecipient(to: string): void {
+    // Linear-time checks instead of a nested pattern, which backtracks polynomially on hostile input (CodeQL: polynomial ReDoS).
     if (typeof to !== 'string' || /[\r\n]/.test(to)) {
       throw new Error('Endereço de email destinatário inválido');
     }
-    const arroba = to.indexOf('@');
-    if (arroba <= 0 || arroba !== to.lastIndexOf('@') || arroba === to.length - 1) {
+    const atIndex = to.indexOf('@');
+    if (atIndex <= 0 || atIndex !== to.lastIndexOf('@') || atIndex === to.length - 1) {
       throw new Error('Endereço de email destinatário inválido');
     }
-    const dominio = to.slice(arroba + 1);
+    const domain = to.slice(atIndex + 1);
     if (
       /\s/.test(to) ||
-      !dominio.includes('.') ||
-      dominio.startsWith('.') ||
-      dominio.endsWith('.')
+      !domain.includes('.') ||
+      domain.startsWith('.') ||
+      domain.endsWith('.')
     ) {
       throw new Error('Endereço de email destinatário inválido');
     }
