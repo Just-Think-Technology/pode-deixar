@@ -13,7 +13,7 @@ import { PasswordManagementService } from './password-management.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { anonimizarEmailParaLog } from '../shared/auth-logger.service';
+import { anonymizeEmailForLog } from '../shared/auth-logger.service';
 import getLogger from '../shared/shared-logger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
@@ -21,7 +21,7 @@ import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
 const logger = getLogger('password');
 
 @Controller('auth')
-@ApiTags('Senha')
+@ApiTags('Password')
 export class PasswordController {
   constructor(private readonly passwordService: PasswordManagementService) {}
 
@@ -32,7 +32,7 @@ export class PasswordController {
     try {
       logger.info(
         'auth.endpoint',
-        `Forgot password requested for ${anonimizarEmailParaLog(dto.email)}`,
+        `Forgot password requested for ${anonymizeEmailForLog(dto.email)}`,
       );
     } catch {}
     return this.passwordService.forgotPassword(dto);

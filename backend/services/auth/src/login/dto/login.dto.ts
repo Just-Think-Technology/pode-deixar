@@ -9,7 +9,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LoginDto {
   @ApiProperty({
-    description: 'Endereço de email do usuário',
+    description: 'User email address',
     example: 'john.doe@example.com',
   })
   @IsEmail()
@@ -17,7 +17,7 @@ export class LoginDto {
   email: string;
 
   @ApiProperty({
-    description: 'Senha do usuário',
+    description: 'User password',
     example: 'Password123!',
   })
   @IsString()
@@ -25,7 +25,7 @@ export class LoginDto {
   password: string;
 
   @ApiPropertyOptional({
-    description: 'Opção "lembrar-me" para sessão estendida',
+    description: '"Remember me" option for an extended session',
     example: true,
     default: false,
   })

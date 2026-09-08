@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import getLogger from '../shared/shared-logger';
-import { ALGORITMOS_JWT, AUDIENCIA_JWT, EMISSOR_JWT } from './jwt.constantes';
+import { JWT_ALGORITHMS, JWT_AUDIENCE, JWT_ISSUER } from './jwt.constants';
 
 const logger = getLogger('jwt');
 
@@ -20,14 +20,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-      algorithms: [...ALGORITMOS_JWT],
-      issuer: EMISSOR_JWT,
-      audience: AUDIENCIA_JWT,
+      algorithms: [...JWT_ALGORITHMS],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
   }
 
   async validate(payload: any) {
-    // Refresh tokens (ou qualquer tipo distinto de acesso) não autenticam.
+    // Only access tokens authenticate here; refresh tokens are rejected.
     if (payload.type !== 'access') {
       throw new UnauthorizedException('Tipo de token inválido');
     }
