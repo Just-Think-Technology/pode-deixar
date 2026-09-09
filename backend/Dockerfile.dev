@@ -18,6 +18,12 @@ COPY prisma ./prisma
 RUN pnpm install --frozen-lockfile
 RUN pnpm exec prisma generate --schema=prisma/schema.prisma
 
+# Arquivos como `node`: os serviços rodam com `user: "node"` e precisam
+# escrever em /app (prisma generate, tsbuildinfo). Sem isso, EACCES.
+RUN chown -R node:node /app && mkdir -p /home/node && chown node:node /home/node
+ENV HOME=/home/node
+USER node
+
 FROM base AS auth-build
 FROM base AS users-build
 FROM base AS service-orders-build

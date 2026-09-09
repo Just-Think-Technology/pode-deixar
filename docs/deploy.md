@@ -11,13 +11,17 @@
 
 | Onde | Comando |
 |---|---|
-| Local (hot-reload, Postgres local) | `docker compose -f docker-compose.dev.yml up -d --build` |
 | Local (imagens, Postgres local) | `docker compose up -d --build` |
+| Local (hot-reload, Postgres local) | `docker compose -f docker-compose.dev.yml up -d --build` |
 | Staging (VPS, hot-reload) | `docker compose -f docker-compose.staging.yml up -d --build` |
 | Produção (VPS, imagens) | `docker compose -f docker-compose.production.yml up -d --build` |
 
-Atalho: `scripts/stack-up [dev|staging|production]` sobe a stack e imprime
-onde cada coisa está rodando.
+Atalho: `scripts/stack-up [dev|staging|production]` roda o `up -d --build`
+do arquivo correspondente e imprime no fim onde cada coisa está rodando
+(front, API, serviços, Mailpit, MinIO, Postgres). Com
+`STACK_UP_DRY_RUN=1` ele só imprime os endereços, sem subir nada. O
+`docker compose up` puro não imprime esse resumo (o compose não tem hook
+pós-subida) — por isso o atalho existe.
 
 ## Local
 
