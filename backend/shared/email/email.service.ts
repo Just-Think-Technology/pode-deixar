@@ -15,6 +15,12 @@ export class EmailService {
     const port = Number(this.configService.get<string>('SMTP_PORT')) || 587;
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASS');
+    // TLS obrigatório por padrão (fail-closed: protege contra downgrade
+    // MITM em produção). Desligar só com SMTP_REQUIRE_TLS=false explícito
+    // (Mailpit local responde 502 a STARTTLS, pois não o implementa).
+    const tlsObrigatorio =
+      (this.configService.get<string>('SMTP_REQUIRE_TLS') ?? 'true').toLowerCase() !==
+      'false';
 
     if (!host || !user || !pass) {
       const mensagem = 'SMTP não configurado (SMTP_HOST/SMTP_USER/SMTP_PASS ausentes)';
@@ -30,7 +36,7 @@ export class EmailService {
       host,
       port,
       secure: port === 465,
-      requireTLS: port !== 465,
+      requireTLS: tlsObrigatorio && port !== 465,
       tls: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
       auth: { user, pass },
     });
