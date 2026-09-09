@@ -1,0 +1,31 @@
+# ============================================================
+# Pode Deixar - Deploy de STAGING (comando único)
+# ============================================================
+#   docker compose -f docker-compose.staging.yml up -d --build
+#
+# Mesma stack do docker-compose.prod.yml, só trocando o env para
+# .env.staging. O `name` isola volumes/redes do staging vs produção.
+# ============================================================
+
+include:
+  - path: docker-compose.prod.yml
+
+name: pode-deixar-staging
+
+services:
+  auth:
+    env_file: ./.env.staging
+  users:
+    env_file: ./.env.staging
+  service-orders:
+    env_file: ./.env.staging
+  payments:
+    env_file: ./.env.staging
+  reviews:
+    env_file: ./.env.staging
+  minio:
+    env_file: ./.env.staging
+  minio-setup:
+    env_file: ./.env.staging
+  db-backup:
+    env_file: ./.env.staging

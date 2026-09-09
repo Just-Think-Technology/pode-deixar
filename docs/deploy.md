@@ -1,19 +1,36 @@
 # Deploy (All-Free Topology)
 
-> Stack files: `docker-compose.yml` (local, staging DB), `docker-compose.prod.yml`
-> (staging/prod deploy), `Caddyfile.docker` / `Caddyfile.prod`, `.env.example`
-> (single template — real `.env.staging` / `.env.production` never in git).
+> Stack files: `docker-compose.yml` + `docker-compose.dev.yml` (local),
+> `docker-compose.staging.yml` / `docker-compose.prod.yml` (deploy),
+> `Caddyfile.docker` / `Caddyfile.prod`, `.env.example` (single template —
+> real `.env.staging` / `.env.production` never in git). Cada arquivo tem
+> `name` próprio, então os comandos não precisam de `-p` nem `--env-file`.
+
+## Commands
+
+| Onde | Comando |
+|---|---|
+| Local (hot-reload, banco staging) | `docker compose -f docker-compose.dev.yml up -d --build` |
+| Local (imagens, banco staging) | `docker compose --env-file .env.staging up -d --build` |
+| Staging (VPS) | `docker compose -f docker-compose.staging.yml up -d --build` |
+| Produção (VPS) | `docker compose -f docker-compose.prod.yml up -d --build` |
 
 ## Local
 
-- `docker compose --env-file .env.staging up -d --build` (add
-  `-f docker-compose.dev.yml` for hot-reload)
-- Everything runs locally except the database: `DATABASE_URL` points to the
-  Neon staging DB — there is no local Postgres
-- The `auth` image runs `prisma migrate deploy` on startup, so bringing the
-  stack up may apply DDL to the staging DB; never run anything destructive
-  against staging by hand
-- Mailpit (`:8025`) is local-only; MinIO/Redis/Caddy are local
+- Tudo roda local, exceto o banco: `DATABASE_URL` aponta para o Neon de
+  staging — não há Postgres local; o storage é o MinIO local (minioadmin)
+- O `auth` aplica `prisma migrate deploy` no startup, então subir a stack
+  pode aplicar DDL no banco de staging; nunca rode nada destrutivo contra
+  staging à mão
+- Mailpit (`:8025`) é local-only; edições em `backend/shared/*` exigem
+  rebuild do serviço (o watch cobre só o `src` de cada serviço)
+
+## Deploy
+
+- One-off ao adotar este esquema: adicionar `MINIO_ROOT_USER` /
+  `MINIO_ROOT_PASSWORD` (espelhando `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`)
+  nos `.env.staging` / `.env.production` reais — o servidor MinIO só lê
+  `MINIO_ROOT_*`, e os arquivos de deploy não interpolam mais variáveis
 
 ## Topology
 

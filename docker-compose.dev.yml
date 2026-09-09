@@ -1,9 +1,24 @@
+# ============================================================
+# Pode Deixar - Stack local com hot-reload (comando único)
+# ============================================================
+#   docker compose -f docker-compose.dev.yml up -d --build
+#
+# Inclui o docker-compose.yml e aplica os overrides de dev. Banco é o
+# Neon de staging (via .env.staging); storage é 100% local (MinIO com
+# credencial fixa de dev, sobreposta por serviço abaixo).
+# ============================================================
+
+include:
+  - path: docker-compose.yml
+
+name: pode-deixar-dev
+
 services:
-  # -- MinIO (com defaults para dev) --
+  # -- MinIO local (credenciais fixas de dev) --
   minio:
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
 
   # -- Frontend (dev, hot-reload) --
   # Imagem de produção no compose base NÃO monta código; sem este override,
@@ -36,6 +51,10 @@ services:
       ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000,http://127.0.0.1:3000"
       SMTP_HOST: mailpit
       TZ: America/Sao_Paulo
+      # Storage local: acompanha o MinIO de dev acima (o banco continua
+      # sendo o de staging via .env.staging)
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
     ports:
       - "3001:3001"
     command: >
@@ -63,6 +82,10 @@ services:
     env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
+      # Storage local: acompanha o MinIO de dev acima (o banco continua
+      # sendo o de staging via .env.staging)
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
     ports:
       - "3002:3002"
     command: pnpm run --filter @pode-deixar/users start:dev
@@ -84,6 +107,10 @@ services:
     env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
+      # Storage local: acompanha o MinIO de dev acima (o banco continua
+      # sendo o de staging via .env.staging)
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
     ports:
       - "3003:3003"
     # tsbuildinfo incremental + deleteOutDir pode apagar dist e não reemitir
@@ -108,6 +135,10 @@ services:
     env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
+      # Storage local: acompanha o MinIO de dev acima (o banco continua
+      # sendo o de staging via .env.staging)
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
     ports:
       - "3004:3004"
     command: >
@@ -132,6 +163,10 @@ services:
     env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
+      # Storage local: acompanha o MinIO de dev acima (o banco continua
+      # sendo o de staging via .env.staging)
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
     ports:
       - "3005:3005"
     command: pnpm run --filter @pode-deixar/reviews start:dev
