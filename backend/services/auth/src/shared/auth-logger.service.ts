@@ -2,12 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
 import createLogger from '@pode-deixar/logger';
 
-/**
- * Anonimiza email para logs: registra apenas o sha256 hexadecimal,
- * suficiente para correlação forense sem expor PII. IP é mantido
- * intacto nos eventos (necessário para análise de lockout).
- */
-export function anonimizarEmailParaLog(email: string): string {
+// Email is SHA-256 hashed for forensic correlation without exposing PII; IP is kept intact for lockout analysis.
+export function anonymizeEmailForLog(email: string): string {
   return createHash('sha256').update(email).digest('hex');
 }
 
@@ -16,7 +12,7 @@ export class AuthLoggerService {
   private readonly logger = createLogger('auth-service');
 
   logLoginAttempt(email: string, success: boolean, ip?: string) {
-    const emailHash = anonimizarEmailParaLog(email);
+    const emailHash = anonymizeEmailForLog(email);
     this.logger.info(
       { event: 'auth.login_attempt', emailHash, success, ip },
       success ? 'Login succeeded' : 'Login failed',
@@ -24,7 +20,7 @@ export class AuthLoggerService {
   }
 
   logSecurityEvent(event: string, payload: Record<string, unknown>) {
-    const { email, ...restante } = payload as { email?: unknown } & Record<
+    const { email, ...rest } = payload as { email?: unknown } & Record<
       string,
       unknown
     >;
@@ -32,9 +28,9 @@ export class AuthLoggerService {
       {
         event,
         ...(typeof email === 'string'
-          ? { emailHash: anonimizarEmailParaLog(email) }
+          ? { emailHash: anonymizeEmailForLog(email) }
           : {}),
-        ...restante,
+        ...rest,
       },
       `Security event: ${event}`,
     );
@@ -52,7 +48,7 @@ export class AuthLoggerService {
       {
         event: 'auth.logout',
         userId,
-        ...(email ? { emailHash: anonimizarEmailParaLog(email) } : {}),
+        ...(email ? { emailHash: anonymizeEmailForLog(email) } : {}),
       },
       'User logged out',
     );
@@ -62,7 +58,7 @@ export class AuthLoggerService {
     this.logger.info(
       {
         event: 'auth.password_reset_requested',
-        emailHash: anonimizarEmailParaLog(email),
+        emailHash: anonymizeEmailForLog(email),
         success,
       },
       success ? 'Password reset requested' : 'Password reset request failed',
@@ -73,7 +69,7 @@ export class AuthLoggerService {
     this.logger.info(
       {
         event: 'auth.password_reset',
-        emailHash: anonimizarEmailParaLog(email),
+        emailHash: anonymizeEmailForLog(email),
         success,
       },
       success ? 'Password reset email sent' : 'Password reset failed',
@@ -84,7 +80,7 @@ export class AuthLoggerService {
     this.logger.info(
       {
         event: 'auth.password_reset_complete',
-        emailHash: anonimizarEmailParaLog(email),
+        emailHash: anonymizeEmailForLog(email),
       },
       'Password reset completed',
     );
@@ -101,7 +97,7 @@ export class AuthLoggerService {
     this.logger.info(
       {
         event: 'auth.registration',
-        emailHash: anonimizarEmailParaLog(email),
+        emailHash: anonymizeEmailForLog(email),
         role,
         ip,
       },
@@ -124,7 +120,7 @@ export class AuthLoggerService {
     this.logger.info(
       {
         event: 'auth.email_verification',
-        emailHash: anonimizarEmailParaLog(email),
+        emailHash: anonymizeEmailForLog(email),
         success,
         reason,
       },
@@ -136,7 +132,7 @@ export class AuthLoggerService {
     this.logger.info(
       {
         event: 'auth.resend_verification',
-        emailHash: anonimizarEmailParaLog(email),
+        emailHash: anonymizeEmailForLog(email),
         success,
       },
       success ? 'Verification email resent' : 'Resend verification failed',

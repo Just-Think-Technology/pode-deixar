@@ -1,12 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
 
 export class ServiceImageResponseDto {
-  @ApiProperty({ description: "ID da imagem" })
+  @ApiProperty({ description: "Image ID" })
   id: string;
 
-  @ApiProperty({ description: "URL pública da imagem" })
+  @ApiProperty({ description: "Public image URL" })
   url: string;
 
-  @ApiProperty({ description: "Data de upload" })
+  @ApiProperty({ description: "Upload date" })
   created_at: string;
 }

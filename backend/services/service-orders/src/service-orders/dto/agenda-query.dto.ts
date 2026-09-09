@@ -3,7 +3,7 @@ import { ApiProperty } from "@nestjs/swagger";
 
 export class AgendaQueryDto {
   @ApiProperty({
-    description: "Data inicial do período (YYYY-MM-DD)",
+    description: "Period start date (YYYY-MM-DD)",
     example: "2026-08-01",
   })
   @IsDateString({}, { message: "from deve ser uma data válida (YYYY-MM-DD)" })

@@ -5,14 +5,14 @@ import { ServiceOrderAddressDto } from "./service-order-address.dto";
 
 export class HireProviderServiceDto {
   @ApiProperty({
-    description: "ID do serviço do prestador (ProviderService)",
+    description: "Provider service ID (ProviderService)",
     example: "uuid-do-servico",
   })
   @IsString()
   providerServiceId: string;
 
   @ApiPropertyOptional({
-    description: "Endereço onde o serviço será realizado",
+    description: "Address where the service will be performed",
     type: ServiceOrderAddressDto,
   })
   @IsOptional()

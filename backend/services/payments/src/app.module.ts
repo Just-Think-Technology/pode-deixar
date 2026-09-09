@@ -30,7 +30,7 @@ const ROTULOS_PAYMENTS: RotulosCampos = {
   externalId: "ID externo da transação",
 };
 
-function traduzirErrosValidacao(errors: ValidationError[]): string[] {
+function translateValidationErrors(errors: ValidationError[]): string[] {
   return traduzirErrosNucleo(errors, ROTULOS_PAYMENTS);
 }
 
@@ -73,7 +73,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
         forbidNonWhitelisted: true,
         transform: true,
         exceptionFactory: (errors) =>
-          new BadRequestException(traduzirErrosValidacao(errors)),
+          new BadRequestException(translateValidationErrors(errors)),
       }),
     },
     {

@@ -28,7 +28,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
-@ApiTags("Pedidos de Serviço (Cliente)")
+@ApiTags("Service Orders (Client)")
 @Controller("services/me")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -38,30 +38,29 @@ export class ServiceOrdersController {
   @Get("agenda")
   @Roles("PROVIDER")
   @ApiOperation({
-    summary:
-      "Listar serviços pagos do prestador no período (agenda do calendário)",
+    summary: "List provider paid jobs in the period (calendar agenda)",
     description:
-      "Retorna apenas pedidos com pagamento PAID e status IN_PROGRESS/COMPLETED, onde o prestador autenticado é o prestador do pedido ou tem proposta ACCEPTED. Janela máxima de 92 dias.",
+      "Returns only orders with PAID payment and IN_PROGRESS/COMPLETED status where the authenticated provider owns the order or has an ACCEPTED proposal. Max 92-day window.",
   })
   @ApiQuery({
     name: "from",
     required: true,
-    description: "Data inicial (YYYY-MM-DD)",
+    description: "Start date (YYYY-MM-DD)",
     example: "2026-08-01",
   })
   @ApiQuery({
     name: "to",
     required: true,
-    description: "Data final (YYYY-MM-DD)",
+    description: "End date (YYYY-MM-DD)",
     example: "2026-08-31",
   })
   @ApiResponse({
     status: 200,
-    description: "Lista de serviços agendados retornada com sucesso",
+    description: "Scheduled jobs returned successfully",
   })
   @ApiResponse({
     status: 400,
-    description: "Período inválido ou janela maior que 92 dias",
+    description: "Invalid period or window larger than 92 days",
   })
   async agenda(@Request() req: any, @Query() query: AgendaQueryDto) {
     const userId = req.user.sub;
@@ -74,8 +73,8 @@ export class ServiceOrdersController {
 
   @Post()
   @Roles("CLIENT")
-  @ApiOperation({ summary: "Criar novo pedido de serviço (apenas clientes)" })
-  @ApiResponse({ status: 201, description: "Pedido criado com sucesso" })
+  @ApiOperation({ summary: "Create a new service order (clients only)" })
+  @ApiResponse({ status: 201, description: "Order created successfully" })
   async create(@Request() req: any, @Body() dto: CreateServiceOrderDto) {
     const userId = req.user.sub;
     const ip = req.ip;
@@ -84,30 +83,30 @@ export class ServiceOrdersController {
 
   @Get()
   @Roles("CLIENT")
-  @ApiOperation({ summary: "Listar meus pedidos de serviço" })
+  @ApiOperation({ summary: "List my service orders" })
   @ApiResponse({
     status: 200,
-    description: "Lista de pedidos retornada com sucesso",
+    description: "Order list returned successfully",
   })
   async findMyOrders(
     @Request() req: any,
-    @Query() paginacao: PaginationQueryDto,
+    @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
-    return this.serviceOrdersService.findByClient(userId, paginacao);
+    return this.serviceOrdersService.findByClient(userId, pagination);
   }
 
   @Post("hire")
   @Roles("CLIENT")
   @ApiOperation({
-    summary: "Contratar serviço com valor fixo (apenas clientes)",
+    summary: "Hire a fixed-price service (clients only)",
   })
-  @ApiResponse({ status: 201, description: "Serviço contratado com sucesso" })
+  @ApiResponse({ status: 201, description: "Service hired successfully" })
   @ApiResponse({
     status: 404,
-    description: "Serviço do prestador não encontrado",
+    description: "Provider service not found",
   })
-  @ApiResponse({ status: 400, description: "Serviço não disponível" })
+  @ApiResponse({ status: 400, description: "Service not available" })
   async hire(@Request() req: any, @Body() dto: HireProviderServiceDto) {
     const userId = req.user.sub;
     const ip = req.ip;
@@ -124,14 +123,17 @@ export class MyServiceOrdersController {
 
   @Get()
   @Roles("CLIENT")
-  @ApiOperation({ summary: "Obter detalhe de um pedido (apenas dono)" })
-  @ApiParam({ name: "orderId", description: "ID do pedido" })
+  @ApiOperation({ summary: "Get order detail (owner only)" })
+  @ApiParam({ name: "orderId", description: "Order ID" })
   @ApiResponse({
     status: 200,
-    description: "Detalhe do pedido retornado com sucesso",
+    description: "Order detail returned successfully",
   })
-  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
-  @ApiResponse({ status: 403, description: "Pedido não pertence ao cliente" })
+  @ApiResponse({ status: 404, description: "Order not found" })
+  @ApiResponse({
+    status: 403,
+    description: "Order does not belong to the client",
+  })
   async findOne(@Request() req: any, @Param("orderId") orderId: string) {
     const userId = req.user.sub;
     return this.serviceOrdersService.findByIdForClient(orderId, userId);
@@ -139,13 +141,13 @@ export class MyServiceOrdersController {
 
   @Patch()
   @Roles("CLIENT")
-  @ApiOperation({ summary: "Atualizar pedido (apenas dono, apenas se aberto)" })
-  @ApiParam({ name: "orderId", description: "ID do pedido" })
-  @ApiResponse({ status: 200, description: "Pedido atualizado com sucesso" })
-  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
+  @ApiOperation({ summary: "Update order (owner only, only if open)" })
+  @ApiParam({ name: "orderId", description: "Order ID" })
+  @ApiResponse({ status: 200, description: "Order updated successfully" })
+  @ApiResponse({ status: 404, description: "Order not found" })
   @ApiResponse({
     status: 400,
-    description: "Pedido não pertence ao cliente ou não está aberto",
+    description: "Order does not belong to the client or is not open",
   })
   async update(
     @Request() req: any,
@@ -159,11 +161,14 @@ export class MyServiceOrdersController {
 
   @Delete()
   @Roles("CLIENT")
-  @ApiOperation({ summary: "Cancelar pedido (apenas dono)" })
-  @ApiParam({ name: "orderId", description: "ID do pedido" })
-  @ApiResponse({ status: 200, description: "Pedido cancelado com sucesso" })
-  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
-  @ApiResponse({ status: 400, description: "Pedido não pertence ao cliente" })
+  @ApiOperation({ summary: "Cancel order (owner only)" })
+  @ApiParam({ name: "orderId", description: "Order ID" })
+  @ApiResponse({ status: 200, description: "Order cancelled successfully" })
+  @ApiResponse({ status: 404, description: "Order not found" })
+  @ApiResponse({
+    status: 400,
+    description: "Order does not belong to the client",
+  })
   async cancel(@Request() req: any, @Param("orderId") orderId: string) {
     const userId = req.user.sub;
     const ip = req.ip;
@@ -181,35 +186,35 @@ export class PublicServiceOrdersController {
   @Roles("PROVIDER")
   @ApiBearerAuth()
   @ApiOperation({
-    summary: "Listar pedidos abertos (apenas prestadores autenticados)",
+    summary: "List open orders (authenticated providers only)",
     description:
-      "Exclui pedidos direcionados a outro prestador. O endereço vem resumido (apenas cidade/UF).",
+      "Excludes orders directed to another provider. The address comes summarized (city/state only).",
   })
   @ApiResponse({
     status: 200,
-    description: "Lista de pedidos abertos retornada com sucesso",
+    description: "Open orders list returned successfully",
   })
-  @ApiResponse({ status: 401, description: "Token ausente ou inválido" })
-  @ApiResponse({ status: 403, description: "Acesso restrito a prestadores" })
+  @ApiResponse({ status: 401, description: "Missing or invalid token" })
+  @ApiResponse({ status: 403, description: "Restricted to providers" })
   async findOpenOrders(
     @Request() req: any,
-    @Query() paginacao: PaginationQueryDto,
+    @Query() pagination: PaginationQueryDto,
   ) {
-    return this.serviceOrdersService.findOpenOrders(req.user.sub, paginacao);
+    return this.serviceOrdersService.findOpenOrders(req.user.sub, pagination);
   }
 
   @Get(":orderId")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("CLIENT", "PROVIDER")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Obter detalhe de um pedido (autenticado)" })
-  @ApiParam({ name: "orderId", description: "ID do pedido" })
+  @ApiOperation({ summary: "Get order detail (authenticated)" })
+  @ApiParam({ name: "orderId", description: "Order ID" })
   @ApiResponse({
     status: 200,
-    description: "Detalhe do pedido retornado com sucesso",
+    description: "Order detail returned successfully",
   })
-  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
-  @ApiResponse({ status: 403, description: "Acesso negado a este pedido" })
+  @ApiResponse({ status: 404, description: "Order not found" })
+  @ApiResponse({ status: 403, description: "Access denied to this order" })
   async findOnePublic(@Request() req: any, @Param("orderId") orderId: string) {
     const userId = req.user.sub;
     const role = req.user.role;
@@ -227,18 +232,18 @@ export class ProviderReceivedOrdersController {
   @Get()
   @Roles("PROVIDER")
   @ApiOperation({
-    summary: "Listar pedidos recebidos (direcionados ao prestador)",
+    summary: "List received orders (directed to the provider)",
   })
   @ApiResponse({
     status: 200,
-    description: "Lista de pedidos recebidos retornada com sucesso",
+    description: "Received orders list returned successfully",
   })
   async findReceived(
     @Request() req: any,
-    @Query() paginacao: PaginationQueryDto,
+    @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
-    return this.serviceOrdersService.findReceivedByProvider(userId, paginacao);
+    return this.serviceOrdersService.findReceivedByProvider(userId, pagination);
   }
 }
 
@@ -252,17 +257,20 @@ export class ProviderOrderActionsController {
   @Post("complete")
   @Roles("PROVIDER")
   @ApiOperation({
-    summary: "Concluir pedido (apenas prestador designado ao pedido)",
+    summary: "Complete order (only the assigned provider)",
     description:
-      "Transiciona o pedido de IN_PROGRESS para COMPLETED. Pré-requisito para a avaliação do serviço.",
+      "Transitions the order from IN_PROGRESS to COMPLETED. Prerequisite for the service review.",
   })
-  @ApiParam({ name: "orderId", description: "ID do pedido" })
-  @ApiResponse({ status: 200, description: "Pedido concluído com sucesso" })
-  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
-  @ApiResponse({ status: 403, description: "Pedido não pertence ao prestador" })
+  @ApiParam({ name: "orderId", description: "Order ID" })
+  @ApiResponse({ status: 200, description: "Order completed successfully" })
+  @ApiResponse({ status: 404, description: "Order not found" })
+  @ApiResponse({
+    status: 403,
+    description: "Order does not belong to the provider",
+  })
   @ApiResponse({
     status: 400,
-    description: "Pedido não está em andamento ou já está concluído",
+    description: "Order is not in progress or is already completed",
   })
   async complete(@Request() req: any, @Param("orderId") orderId: string) {
     const userId = req.user.sub;

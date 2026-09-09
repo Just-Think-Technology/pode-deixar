@@ -1,8 +1,6 @@
 import { createClient } from 'redis';
 import { RedisThrottlerStorage } from '../redis-throttler-storage';
 
-// ─── Mocks ──────────────────────────────────────────────────────────────────
-
 jest.mock('redis', () => ({
   createClient: jest.fn(),
 }));
@@ -19,12 +17,6 @@ function buildFakeClient(overrides: Record<string, jest.Mock> = {}) {
     ...overrides,
   };
 }
-
-// ─── Tests ──────────────────────────────────────────────────────────────────
-// Regressão: trava o contrato do storage distribuído de rate limiting
-// (prefixo de chaves, SET NX EX atômico no primeiro hit, extensão da
-// expiração quando bloqueado e fail-CLOSED quando o Redis cai — admitir
-// sem contar (fail-open) deixaria o rate limit inoperante na queda do Redis).
 
 describe('RedisThrottlerStorage (shared)', () => {
   let fakeClient: ReturnType<typeof buildFakeClient>;
@@ -44,9 +36,10 @@ describe('RedisThrottlerStorage (shared)', () => {
     else process.env.THROTTLER_PREFIX = OLD_PREFIX;
   });
 
-  it('deve criar o cliente com REDIS_URL e conectar', () => {
+  it('should create the client with REDIS_URL and connect', () => {
     process.env.REDIS_URL = 'redis://localhost:6379';
 
+    // The constructor's client creation is the assertion target.
     // eslint-disable-next-line no-new
     new RedisThrottlerStorage();
 
@@ -56,7 +49,7 @@ describe('RedisThrottlerStorage (shared)', () => {
     expect(fakeClient.connect).toHaveBeenCalled();
   });
 
-  it('deve usar o prefixo throttler: por padrão e SET NX EX atômico no primeiro hit', async () => {
+  it('should use the throttler: prefix by default and atomic SET NX EX on the first hit', async () => {
     const storage = new RedisThrottlerStorage();
 
     const result = await storage.increment('user-1', 60000, 100, 0, 'default');
@@ -66,7 +59,6 @@ describe('RedisThrottlerStorage (shared)', () => {
       '1',
       { EX: 60, NX: true },
     );
-    // Chave criada pelo SET: sem INCR e sem EXPIRE adicional.
     expect(fakeClient.incr).not.toHaveBeenCalled();
     expect(fakeClient.expire).not.toHaveBeenCalled();
     expect(result).toEqual({
@@ -77,7 +69,7 @@ describe('RedisThrottlerStorage (shared)', () => {
     });
   });
 
-  it('deve respeitar THROTTLER_PREFIX quando configurado', async () => {
+  it('should respect THROTTLER_PREFIX when configured', async () => {
     process.env.THROTTLER_PREFIX = 'tenant-a:';
     const storage = new RedisThrottlerStorage();
 
@@ -90,7 +82,7 @@ describe('RedisThrottlerStorage (shared)', () => {
     );
   });
 
-  it('deve incrementar (sem renovar expiração) quando a chave já existe', async () => {
+  it('should increment (without renewing expiration) when the key already exists', async () => {
     fakeClient.set.mockResolvedValue(null);
     fakeClient.incr.mockResolvedValue(2);
     const storage = new RedisThrottlerStorage();
@@ -103,7 +95,7 @@ describe('RedisThrottlerStorage (shared)', () => {
     expect(result.isBlocked).toBe(false);
   });
 
-  it('deve bloquear quando ultrapassar o limite, expirando pelo maior entre ttl e blockDuration', async () => {
+  it('should block when exceeding the limit, expiring with the greater of ttl and blockDuration', async () => {
     fakeClient.set.mockResolvedValue(null);
     fakeClient.incr.mockResolvedValue(101);
     const storage = new RedisThrottlerStorage();
@@ -124,7 +116,7 @@ describe('RedisThrottlerStorage (shared)', () => {
     );
   });
 
-  it('deve manter o ttl quando blockDuration for menor que o ttl', async () => {
+  it('should keep the ttl when blockDuration is shorter than the ttl', async () => {
     fakeClient.set.mockResolvedValue(null);
     fakeClient.incr.mockResolvedValue(101);
     const storage = new RedisThrottlerStorage();
@@ -137,7 +129,7 @@ describe('RedisThrottlerStorage (shared)', () => {
     );
   });
 
-  it('deve usar o ttl informado quando o Redis não retornar ttl', async () => {
+  it('should use the given ttl when Redis returns no ttl', async () => {
     fakeClient.ttl.mockResolvedValue(-1);
     const storage = new RedisThrottlerStorage();
 
@@ -146,7 +138,7 @@ describe('RedisThrottlerStorage (shared)', () => {
     expect(result.timeToExpire).toBe(45000);
   });
 
-  it('deve falhar FECHADO (bloquear) quando o Redis lançar erro', async () => {
+  it('should fail CLOSED (block) when Redis throws an error', async () => {
     fakeClient.set.mockRejectedValueOnce(new Error('Redis down'));
     const storage = new RedisThrottlerStorage();
 

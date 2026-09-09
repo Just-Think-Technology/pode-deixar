@@ -25,7 +25,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
-@ApiTags("Fotos do Pedido")
+@ApiTags("Order Photos")
 @Controller("services/me/:orderId/photos")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -40,8 +40,8 @@ export class PhotosController {
       limits: { fileSize: 5 * 1024 * 1024, files: 10 },
     }),
   )
-  @ApiOperation({ summary: "Enviar fotos do local de trabalho (máx 10)" })
-  @ApiParam({ name: "orderId", description: "ID do pedido" })
+  @ApiOperation({ summary: "Upload workplace photos (max 10)" })
+  @ApiParam({ name: "orderId", description: "Order ID" })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
@@ -67,7 +67,7 @@ export class PhotosController {
   }
 }
 
-@ApiTags("Fotos do Pedido")
+@ApiTags("Order Photos")
 @Controller("services/photos")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -77,23 +77,19 @@ export class PhotoViewController {
   @Get(":photoId/view")
   @Roles("CLIENT", "PROVIDER", "ADMIN")
   @ApiOperation({
-    summary: "Obter URL temporária para visualizar uma foto do pedido",
+    summary: "Get a temporary URL to view an order photo",
     description:
-      "Retorna URL pré-assinada do MinIO com expiração de 15 minutos. Permitido ao cliente dono do pedido, a prestador com proposta no pedido ou a ADMIN.",
+      "Returns a pre-signed MinIO URL expiring in 15 minutes. Allowed for the owning client, a provider with a proposal on the order, or ADMIN.",
   })
-  @ApiParam({ name: "photoId", description: "ID da foto" })
+  @ApiParam({ name: "photoId", description: "Photo ID" })
   @ApiResponse({
     status: 200,
-    description: "URL temporária gerada com sucesso",
+    description: "Temporary URL generated successfully",
   })
-  @ApiResponse({ status: 401, description: "Token ausente ou inválido" })
-  @ApiResponse({ status: 403, description: "Acesso negado a esta foto" })
-  @ApiResponse({ status: 404, description: "Foto não encontrada" })
+  @ApiResponse({ status: 401, description: "Missing or invalid token" })
+  @ApiResponse({ status: 403, description: "Access denied to this photo" })
+  @ApiResponse({ status: 404, description: "Photo not found" })
   async view(@Request() req: any, @Param("photoId") photoId: string) {
-    return this.photosService.obterUrlVisualizacao(
-      photoId,
-      req.user.sub,
-      req.user.role,
-    );
+    return this.photosService.getViewUrl(photoId, req.user.sub, req.user.role);
   }
 }

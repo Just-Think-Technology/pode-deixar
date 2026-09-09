@@ -33,7 +33,7 @@ const TABELAS = [
 export default async function globalTeardown() {
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   try {
-    // CASCADE resolve as FKs; uma única passada limpa o banco compartilhado.
+    // CASCADE handles the FKs; a single pass cleans the shared database.
     await prisma.$executeRawUnsafe(
       `TRUNCATE ${TABELAS.map((t) => `"${t}"`).join(', ')} RESTART IDENTITY CASCADE`,
     );

@@ -27,7 +27,7 @@ const ROTULOS_REVIEWS: RotulosCampos = {
   providerId: "Prestador",
 };
 
-function traduzirErrosValidacao(errors: ValidationError[]): string {
+function translateValidationErrors(errors: ValidationError[]): string {
   return traduzirErrosNucleo(errors, ROTULOS_REVIEWS).join("; ");
 }
 
@@ -68,7 +68,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string {
         forbidNonWhitelisted: true,
         transform: true,
         exceptionFactory: (errors) =>
-          new BadRequestException(traduzirErrosValidacao(errors)),
+          new BadRequestException(translateValidationErrors(errors)),
       }),
     },
     {

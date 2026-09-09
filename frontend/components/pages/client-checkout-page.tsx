@@ -57,8 +57,8 @@ import type {
   PaymentMethod,
 } from "@/lib/client/payments/types";
 import {
-  isCreditCardCobranca,
-  isPixCobranca,
+  isCreditCardCharge,
+  isPixCharge,
 } from "@/lib/client/payments/types";
 import { cn } from "@/lib/utils";
 
@@ -162,7 +162,7 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
   };
 
   const handleCopyPix = async () => {
-    if (!charge || !isPixCobranca(charge.cobranca)) return;
+    if (!charge || !isPixCharge(charge.cobranca)) return;
     try {
       await navigator.clipboard.writeText(charge.cobranca.pixCopiaECola);
       toast.success("Código Pix copiado.");
@@ -475,10 +475,11 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isPixCobranca(charge.cobranca) ? (
+              {isPixCharge(charge.cobranca) ? (
                 <div className="space-y-4">
                   {charge.cobranca.qrCodeBase64 ? (
                     <div className="flex justify-center rounded-lg border border-border bg-white p-4">
+                      {/* Data-URI QR code: next/image cannot optimize it. */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={`data:image/png;base64,${charge.cobranca.qrCodeBase64}`}
@@ -510,7 +511,7 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
                 </div>
               ) : null}
 
-              {isCreditCardCobranca(charge.cobranca) ? (
+              {isCreditCardCharge(charge.cobranca) ? (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
                     Você será direcionado a um ambiente seguro para informar os

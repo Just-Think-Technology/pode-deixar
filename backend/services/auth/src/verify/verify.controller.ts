@@ -3,18 +3,18 @@ import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
 import { VerifyService } from './verify.service';
 
 @Controller('auth')
-@ApiTags('Acesso')
+@ApiTags('Access')
 export class VerifyController {
   constructor(private readonly verifyService: VerifyService) {}
 
   @Get('verify')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Validar token de acesso e retornar dados do usuário',
+    summary: 'Validate access token and return user data',
   })
   @ApiHeader({
     name: 'Authorization',
-    description: 'Token de autenticação (Bearer)',
+    description: 'Authentication token (Bearer)',
     required: false,
   })
   async verify(@Headers('authorization') authorization?: string) {

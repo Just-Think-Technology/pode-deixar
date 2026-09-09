@@ -75,8 +75,7 @@ describe("ReviewsController", () => {
 
     const result = await publicController.findByProvider("provider-1");
 
-    // Justificativa (AppSec): o controlador repassa o limite opcional para o
-    // teto anti-raspagem do serviço (ausente = undefined = padrão 50).
+    // The controller forwards the optional limit; when absent, the service default of 50 applies.
     expect(mockReviewsService.findByProvider).toHaveBeenCalledWith(
       "provider-1",
       undefined,

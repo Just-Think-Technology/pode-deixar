@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { Request, Response } from "express";
 import {
-  sanitizarDadosSensiveis,
+  sanitizeSensitiveData,
   resolverErroPrisma,
 } from "@pode-deixar/security";
 
@@ -42,9 +42,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
-      // Erros conhecidos do Prisma viram respostas genéricas por código,
-      // sem expor detalhes internos (tabela, campo, constraint) ao cliente.
-      // Qualquer outro erro vira 500 genérico; o detalhe fica só no log.
+      // Known Prisma errors map to generic responses to avoid leaking
+      // internals; anything else becomes a generic 500 with details only
+      // in the log.
       const resolvido = resolverErroPrisma(
         (exception as { code?: unknown }).code,
       );
@@ -57,14 +57,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // Log server-side mantém o detalhe original (mensagem + stack).
-    const detalhe =
+    const detail =
       exception instanceof Error ? exception.message : String(exception);
     this.logger.error(
-      sanitizarDadosSensiveis(
-        `${request.method} ${request.url} - ${status} - ${detalhe}`,
+      sanitizeSensitiveData(
+        `${request.method} ${request.url} - ${status} - ${detail}`,
       ),
-      sanitizarDadosSensiveis(
+      sanitizeSensitiveData(
         exception instanceof Error ? exception.stack || "" : "",
       ),
     );

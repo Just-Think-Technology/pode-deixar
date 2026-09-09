@@ -17,7 +17,7 @@ export interface TestAppSetup {
 }
 
 // --- MinIO stub ---
-// O MinioService real conecta no onModuleInit — inviável sem MinIO.
+// The real MinioService connects on onModuleInit — unfeasible without MinIO.
 // Substitui o comportamento de rede, mantendo o contrato usado pelos services.
 
 export const mockMinio = {
@@ -33,12 +33,10 @@ export const mockMinio = {
   ),
 };
 
-// --- App Lifecycle ---
-
 /**
- * Sobe o app Nest real (pipeline de validação, guards e filtros de produção).
- * - MinioService com stub (sem rede).
- * - Throttle com limite alto para não interferir nos testes.
+ * Boots the real Nest app (validation pipeline, guards and production filters).
+ * - Stubbed MinioService (no network).
+ * - High-limit throttle so it doesn't interfere with tests.
  */
 export async function setupTestApp(): Promise<TestAppSetup> {
   const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -49,9 +47,9 @@ export async function setupTestApp(): Promise<TestAppSetup> {
   })
     .overrideProvider(MinioService)
     .useValue(mockMinio)
-    // Justificativa AppSec: endpoints sensíveis têm @Throttle estrito
-    // (5 req/min); fluxos de teste compartilham um IP e estourariam 429.
-    // Storage fake que nunca bloqueia — o guard real continua executando.
+    // Sensitive endpoints carry strict @Throttle (5 req/min); test flows share
+    // one IP and would hit 429. Fake storage that never blocks — the real
+    // guard still runs.
     .overrideProvider(ThrottlerStorage)
     .useValue({
       increment: async () => ({
@@ -71,11 +69,9 @@ export async function setupTestApp(): Promise<TestAppSetup> {
   return { app, prisma };
 }
 
-// --- Factories ---
-
 /**
- * Cria um usuário direto no banco (bypassa o auth-service).
- * Emails únicos evitam colisão entre suites paralelas.
+ * Creates a user directly in the database (bypasses the auth-service).
+ * Unique emails avoid collisions between parallel suites.
  */
 export async function createTestUser(
   prisma: PrismaService,
@@ -99,7 +95,7 @@ export async function createTestUser(
 }
 
 /**
- * Emite um JWT válido para os guards (mesmo segredo do .env.test).
+ * Mints a valid JWT for the guards (same secret as .env.test).
  */
 export function mintToken(user: { id: string; email: string; role: string }) {
   const secret = process.env.JWT_ACCESS_SECRET || 'test-access-secret';

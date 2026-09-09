@@ -24,15 +24,15 @@ describe('POST /auth/verify-email', () => {
   });
 
   /**
-   * Registra um usuário e retorna o token bruto de verificação.
-   * Justificativa AppSec: o banco guarda apenas o sha256 do token, então o
-   * token bruto vem do eco não-prod do cadastro (equivale ao link do email).
+   * Registers a user and returns the raw verification token. The database
+   * stores only the token sha256, so the raw token comes from the non-prod
+   * signup echo (equivalent to the email link).
    */
   async function registerAndGetToken(): Promise<{ email: string; token: string }> {
     const user = createTestUser();
-    const registro = await registerUser(app, user);
+    const registration = await registerUser(app, user);
 
-    const token = registro.body.email_verification_token as string;
+    const token = registration.body.email_verification_token as string;
     if (!token)
       throw new Error('email_verification_token missing after registration');
 

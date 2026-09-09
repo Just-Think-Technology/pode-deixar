@@ -40,7 +40,7 @@ const SOBRESCRITAS_AUTH: MensagensRestricao = {
   maxLength: (r) => `${r} deve ter no máximo 200 caracteres`,
 };
 
-function traduzirErrosValidacao(errors: ValidationError[]): string[] {
+function translateValidationErrors(errors: ValidationError[]): string[] {
   return traduzirErrosNucleo(errors, ROTULOS_AUTH, SOBRESCRITAS_AUTH);
 }
 
@@ -83,7 +83,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
         forbidNonWhitelisted: true,
         transform: true,
         exceptionFactory: (errors) =>
-          new BadRequestException(traduzirErrosValidacao(errors)),
+          new BadRequestException(translateValidationErrors(errors)),
       }),
     },
     {
