@@ -1,8 +1,19 @@
 # Deploy (All-Free Topology)
 
-> The stack definition (`docker-compose.prod.yml`, `Caddyfile.prod`,
-> `.env.deploy.example`) lands with the staging/prod deploy change;
-> this doc describes the topology and the operation.
+> Stack files: `docker-compose.yml` (local, staging DB), `docker-compose.prod.yml`
+> (staging/prod deploy), `Caddyfile.docker` / `Caddyfile.prod`, `.env.example`
+> (single template — real `.env.staging` / `.env.production` never in git).
+
+## Local
+
+- `docker compose --env-file .env.staging up -d --build` (add
+  `-f docker-compose.dev.yml` for hot-reload)
+- Everything runs locally except the database: `DATABASE_URL` points to the
+  Neon staging DB — there is no local Postgres
+- The `auth` image runs `prisma migrate deploy` on startup, so bringing the
+  stack up may apply DDL to the staging DB; never run anything destructive
+  against staging by hand
+- Mailpit (`:8025`) is local-only; MinIO/Redis/Caddy are local
 
 ## Topology
 

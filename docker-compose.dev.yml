@@ -5,12 +5,6 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
 
-  # Postgres do Ubuntu usa 5432 (e há outro processo em 5433).
-  # No host: localhost:15432. Entre containers: postgres:5432.
-  postgres:
-    ports: !override
-      - "15432:5432"
-
   # -- Frontend (dev, hot-reload) --
   # Imagem de produção no compose base NÃO monta código; sem este override,
   # alterações no host não aparecem até rebuild.
@@ -36,7 +30,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    env_file: ./backend/.env.staging
+    env_file: ./.env.staging
     environment:
       FRONTEND_URL: http://localhost:8080
       ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000,http://127.0.0.1:3000"
@@ -65,7 +59,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    env_file: ./backend/.env.staging
+    env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
     ports:
@@ -85,7 +79,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    env_file: ./backend/.env.staging
+    env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
     ports:
@@ -108,7 +102,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    env_file: ./backend/.env.staging
+    env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
     ports:
@@ -131,7 +125,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    env_file: ./backend/.env.staging
+    env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
     ports:

@@ -2,10 +2,9 @@
 node_modules/
 .pnpm-store/
 
-# Environment files
+# Environment files (.env.staging / .env.production never committed)
 .env.*
 !.env.test
 !.env.example
-!.env.deploy.example
 
 
