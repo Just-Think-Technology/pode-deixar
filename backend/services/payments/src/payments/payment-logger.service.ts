@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import createLogger from "@pode-deixar/logger";
-import { sanitizarDadosSensiveis } from "@pode-deixar/security";
+import { sanitizeSensitiveData } from "@pode-deixar/security";
 
 @Injectable()
 export class PaymentLoggerService {
@@ -15,7 +15,7 @@ export class PaymentLoggerService {
     idempotencyKey?: string,
   ) {
     this.logger.info(
-      sanitizarDadosSensiveis({
+      sanitizeSensitiveData({
         event: "payment.created",
         paymentId,
         orderId,
@@ -24,7 +24,7 @@ export class PaymentLoggerService {
         method,
         idempotencyKey: idempotencyKey ?? undefined,
       }) as Record<string, unknown>,
-      sanitizarDadosSensiveis(
+      sanitizeSensitiveData(
         `Pagamento criado: ${paymentId} (order: ${orderId})`,
       ) as string,
     );
@@ -33,23 +33,23 @@ export class PaymentLoggerService {
   logPaymentStatusChange(
     paymentId: string,
     orderId: string,
-    statusAnterior: string,
-    statusNovo: string,
+    previousStatus: string,
+    newStatus: string,
     actor: string,
-    motivo?: string,
+    reason?: string,
   ) {
     this.logger.info(
-      sanitizarDadosSensiveis({
+      sanitizeSensitiveData({
         event: "payment.status_changed",
         paymentId,
         orderId,
-        statusAnterior,
-        statusNovo,
+        previousStatus,
+        newStatus,
         actor,
-        motivo: motivo ?? undefined,
+        reason: reason ?? undefined,
       }) as Record<string, unknown>,
-      sanitizarDadosSensiveis(
-        `Status alterado: ${paymentId} ${statusAnterior} -> ${statusNovo} (${actor})`,
+      sanitizeSensitiveData(
+        `Status alterado: ${paymentId} ${previousStatus} -> ${newStatus} (${actor})`,
       ) as string,
     );
   }
@@ -60,19 +60,19 @@ export class PaymentLoggerService {
     gateway: string,
     eventId: string,
     status: "sucesso" | "duplicado" | "falha",
-    motivo?: string,
+    reason?: string,
   ) {
     this.logger.info(
-      sanitizarDadosSensiveis({
+      sanitizeSensitiveData({
         event: "payment.webhook_received",
         paymentId,
         orderId,
         gateway,
         eventId,
         status,
-        motivo: motivo ?? undefined,
+        reason: reason ?? undefined,
       }) as Record<string, unknown>,
-      sanitizarDadosSensiveis(
+      sanitizeSensitiveData(
         `Webhook ${gateway}: ${eventId} (${status})`,
       ) as string,
     );
@@ -82,53 +82,53 @@ export class PaymentLoggerService {
     paymentId: string | null,
     orderId: string | null,
     error: string,
-    contexto?: Record<string, unknown>,
+    context?: Record<string, unknown>,
   ) {
     this.logger.error(
-      sanitizarDadosSensiveis({
+      sanitizeSensitiveData({
         event: "payment.error",
         paymentId,
         orderId,
         error,
-        ...contexto,
+        ...context,
       }) as Record<string, unknown>,
-      sanitizarDadosSensiveis(`Erro no pagamento: ${error}`) as string,
+      sanitizeSensitiveData(`Erro no pagamento: ${error}`) as string,
     );
   }
 
   logSuspiciousActivity(
     paymentId: string | null,
     orderId: string | null,
-    tipo: string,
-    detalhes: Record<string, unknown>,
+    kind: string,
+    details: Record<string, unknown>,
   ) {
     this.logger.warn(
-      sanitizarDadosSensiveis({
+      sanitizeSensitiveData({
         event: "payment.suspicious",
         paymentId,
         orderId,
-        tipo,
-        ...detalhes,
+        kind,
+        ...details,
       }) as Record<string, unknown>,
-      sanitizarDadosSensiveis(`Atividade suspeita: ${tipo}`) as string,
+      sanitizeSensitiveData(`Atividade suspeita: ${kind}`) as string,
     );
   }
 
   logAuthenticationFailure(
-    tipo: "webhook_key" | "assinatura" | "timestamp" | "replay",
+    kind: "webhook_key" | "assinatura" | "timestamp" | "replay",
     paymentId: string | null,
     orderId: string | null,
-    detalhes: Record<string, unknown>,
+    details: Record<string, unknown>,
   ) {
     this.logger.warn(
-      sanitizarDadosSensiveis({
+      sanitizeSensitiveData({
         event: "payment.auth_failure",
-        tipo,
+        kind,
         paymentId,
         orderId,
-        ...detalhes,
+        ...details,
       }) as Record<string, unknown>,
-      sanitizarDadosSensiveis(`Falha de autenticação: ${tipo}`) as string,
+      sanitizeSensitiveData(`Falha de autenticação: ${kind}`) as string,
     );
   }
 }

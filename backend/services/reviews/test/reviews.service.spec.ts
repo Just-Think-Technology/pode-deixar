@@ -218,12 +218,12 @@ describe("ReviewsService", () => {
       expect(mockPrisma.review.findMany).toHaveBeenCalledWith({
         where: { revieweeId: "provider-1" },
         orderBy: { createdAt: "desc" },
-        // Justificativa (AppSec): teto anti-raspagem na listagem pública.
+        // Public listing is capped to deter scraping.
         take: 50,
       });
     });
 
-    // Justificativa (AppSec): cobre o teto máximo da listagem pública.
+    // Covers the public listing cap.
     it("should cap limit at 50", async () => {
       mockPrisma.review.findMany.mockResolvedValue([]);
 

@@ -2,12 +2,12 @@ import { expect, test } from "@playwright/test";
 
 import { loginAsWorkerMock } from "./helpers/auth";
 
-test.describe("Agenda do prestador (JTT-94)", () => {
+test.describe("Provider agenda (JTT-94)", () => {
   test.beforeEach(async ({ page }) => {
     await loginAsWorkerMock(page);
   });
 
-  test("exibe a agenda semanal com serviços pagos", async ({ page }) => {
+  test("shows the weekly agenda with paid services", async ({ page }) => {
     await page.goto("/worker/agenda");
 
     await expect(page.getByRole("heading", { name: "Agenda" })).toBeVisible();
@@ -19,7 +19,7 @@ test.describe("Agenda do prestador (JTT-94)", () => {
     ).toBeVisible();
   });
 
-  test("abre o detalhe do agendamento com Maps e fotos em tela cheia", async ({
+  test("opens the appointment detail with Maps and fullscreen photos", async ({
     page,
   }) => {
     await page.goto("/worker/agenda");
@@ -51,7 +51,7 @@ test.describe("Agenda do prestador (JTT-94)", () => {
     ).toBeVisible();
   });
 
-  test("filtra pelo dia no mini calendário e restaura a semana no segundo clique", async ({
+  test("filters by day in the mini calendar and restores the week on second click", async ({
     page,
   }) => {
     await page.goto("/worker/agenda");

@@ -3,11 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthLoggerService } from '../shared/auth-logger.service';
-import {
-  ALGORITMOS_JWT,
-  AUDIENCIA_JWT,
-  EMISSOR_JWT,
-} from '../jwt/jwt.constantes';
+import { JWT_ALGORITHMS, JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
 @Injectable()
 export class VerifyService {
@@ -28,9 +24,9 @@ export class VerifyService {
     try {
       payload = await this.jwtService.verifyAsync(accessToken, {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        algorithms: [...ALGORITMOS_JWT],
-        issuer: EMISSOR_JWT,
-        audience: AUDIENCIA_JWT,
+        algorithms: [...JWT_ALGORITHMS],
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
       });
     } catch {
       this.authLogger.logTokenVerification('unknown', false, 'invalid_token');

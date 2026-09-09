@@ -26,12 +26,12 @@ describe("ProviderFinanceController", () => {
     controller = module.get<ProviderFinanceController>(ProviderFinanceController);
   });
 
-  it("deve ser definido", () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 
   describe("summary", () => {
-    it("deve repassar o prestador autenticado ao service", async () => {
+    it("should forward the authenticated provider to the service", async () => {
       const req = { user: { sub: "provider-1" } };
       const resumo = { currency: "BRL", toReceiveNet: 315 };
       service.getProviderFinanceSummary.mockResolvedValue(resumo);
@@ -44,7 +44,7 @@ describe("ProviderFinanceController", () => {
   });
 
   describe("items", () => {
-    it("deve repassar o prestador e o filtro de status ao service", async () => {
+    it("should forward the provider and status filter to the service", async () => {
       const req = { user: { sub: "provider-1" } };
       const itens = [{ paymentId: "payment-1", paymentStatus: "PAID" }];
       service.getProviderFinanceItems.mockResolvedValue(itens);
@@ -60,7 +60,7 @@ describe("ProviderFinanceController", () => {
       expect(result).toEqual(itens);
     });
 
-    it("deve chamar o service sem filtro quando o status não é informado", async () => {
+    it("should call the service without a filter when status is not given", async () => {
       const req = { user: { sub: "provider-1" } };
       service.getProviderFinanceItems.mockResolvedValue([]);
 
@@ -74,7 +74,7 @@ describe("ProviderFinanceController", () => {
   });
 
   describe("chart", () => {
-    it("deve repassar o prestador e o número de meses ao service", async () => {
+    it("should forward the provider and month count to the service", async () => {
       const req = { user: { sub: "provider-1" } };
       const dados = [{ month: "2026-03", netReceived: 0, feesRetained: 0 }];
       service.getProviderFinanceChart.mockResolvedValue(dados);
@@ -88,7 +88,7 @@ describe("ProviderFinanceController", () => {
       expect(result).toEqual(dados);
     });
 
-    it("deve usar 6 meses como padrão quando o query é vazio", async () => {
+    it("should default to 6 months when the query is empty", async () => {
       const req = { user: { sub: "provider-1" } };
       service.getProviderFinanceChart.mockResolvedValue([]);
 

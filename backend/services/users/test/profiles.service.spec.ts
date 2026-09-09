@@ -20,8 +20,8 @@ function mockFile(): Express.Multer.File {
     originalname: "avatar.png",
     encoding: "7bit",
     mimetype: "image/png",
-    // Justificativa (AppSec): bytes mágicos PNG reais — o serviço agora
-    // valida magic bytes e rejeita conteúdo falso ("fake-content").
+    // Real PNG magic bytes — the service now validates magic bytes and
+    // rejects fake content ("fake-content").
     buffer: Buffer.from([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
     ]),
@@ -481,8 +481,8 @@ describe("ProfilesService", () => {
       expect(mockMinio.deleteFile).not.toHaveBeenCalled();
     });
 
-    // Justificativa (AppSec): cobre a nova validação de magic bytes — cliente
-    // pode falsificar mimetype/extensão, então o conteúdo real é verificado.
+    // Covers the new magic-bytes validation — clients can forge
+    // mimetype/extension, so the real content is verified.
     it("should throw BadRequestException when file content is not an image", async () => {
       mockPrisma.user.findUnique.mockResolvedValue(mockUser);
       mockPrisma.clientProfile.findUnique.mockResolvedValue({
@@ -565,7 +565,7 @@ describe("ProfilesService", () => {
       expect(result).toBeDefined();
       expect(result.id).toBe("provider-1");
       expect(result.user.complete_name).toBe("João Eletricista");
-      // Justificativa (AppSec): perfil público não pode expor PII.
+      // Public profiles must not expose PII.
       expect(result.user).not.toHaveProperty("email");
       expect(result.user).not.toHaveProperty("phone");
       expect(result.user).not.toHaveProperty("postal_code");

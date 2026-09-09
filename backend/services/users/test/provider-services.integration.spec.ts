@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
-// import-require: estes serviços não têm esModuleInterop (diferente do auth),
-// então o default-import compila para `.default` inexistente em runtime.
+// import-require: these services lack esModuleInterop (unlike auth),
+// so the default import compiles to a nonexistent `.default` at runtime.
 import request = require('supertest');
 import { App } from 'supertest/types';
 import {
@@ -12,8 +12,6 @@ import {
   TestAppSetup,
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
-
-// ─── Integration: Serviços do prestador (HTTP + banco real) ────────────────
 
 describe('ProviderServices (integration)', () => {
   let app: INestApplication<App>;
@@ -109,7 +107,7 @@ describe('ProviderServices (integration)', () => {
   });
 
   describe('GET /providers/me/services', () => {
-    it('deve listar apenas os serviços do dono', async () => {
+    it('should list only the owner services', async () => {
       const { token } = await providerWithProfile();
       const cat = await category();
       const headers = bearerAuth(token);
@@ -136,8 +134,8 @@ describe('ProviderServices (integration)', () => {
     });
   });
 
-  describe('GET /providers/:providerId/services (público)', () => {
-    it('deve listar serviços ativos sem autenticação', async () => {
+  describe('GET /providers/:providerId/services (public)', () => {
+    it('should list active services without authentication', async () => {
       const { token, profileId } = await providerWithProfile();
       const cat = await category();
 
@@ -168,7 +166,7 @@ describe('ProviderServices (integration)', () => {
   });
 
   describe('PATCH /providers/me/services/:serviceId', () => {
-    it('deve atualizar o serviço do dono', async () => {
+    it('should update the owner service', async () => {
       const { token } = await providerWithProfile();
       const cat = await category();
       const headers = bearerAuth(token);
@@ -223,7 +221,7 @@ describe('ProviderServices (integration)', () => {
   });
 
   describe('DELETE /providers/me/services/:serviceId', () => {
-    it('deve desativar (soft delete) o serviço', async () => {
+    it('should deactivate (soft delete) the service', async () => {
       const { token, profileId } = await providerWithProfile();
       const cat = await category();
       const headers = bearerAuth(token);
@@ -249,7 +247,7 @@ describe('ProviderServices (integration)', () => {
       ).body;
       expect(deleted.is_active).toBe(false);
 
-      // Some da listagem pública, que só mostra ativos
+      // Gone from the public listing, which only shows active ones
       const publicList = (
         await request(app.getHttpServer())
           .get(`/providers/${profileId}/services`)

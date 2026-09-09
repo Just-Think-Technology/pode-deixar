@@ -20,16 +20,16 @@ import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 
-@ApiTags("Categorias")
+@ApiTags("Categories")
 @Controller("categories")
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
-  @ApiOperation({ summary: "Listar todas as categorias" })
+  @ApiOperation({ summary: "List all categories" })
   @ApiResponse({
     status: 200,
-    description: "Lista de categorias retornada com sucesso",
+    description: "Category list returned successfully",
   })
   async findAll(): Promise<
     {
@@ -45,7 +45,7 @@ export class CategoriesController {
   }
 }
 
-@ApiTags("Categorias (Admin)")
+@ApiTags("Categories (Admin)")
 @Controller("categories")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -54,11 +54,11 @@ export class AdminCategoriesController {
 
   @Post()
   @Roles("ADMIN")
-  @ApiOperation({ summary: "Criar nova categoria (apenas admin)" })
-  @ApiResponse({ status: 201, description: "Categoria criada com sucesso" })
+  @ApiOperation({ summary: "Create new category (admin only)" })
+  @ApiResponse({ status: 201, description: "Category created successfully" })
   @ApiResponse({
     status: 409,
-    description: "Já existe categoria com este nome ou slug",
+    description: "A category with this name or slug already exists",
   })
   async create(
     @Request() req: any,
@@ -76,10 +76,10 @@ export class AdminCategoriesController {
 
   @Patch(":id")
   @Roles("ADMIN")
-  @ApiOperation({ summary: "Atualizar categoria (apenas admin)" })
-  @ApiResponse({ status: 200, description: "Categoria atualizada com sucesso" })
-  @ApiResponse({ status: 404, description: "Categoria não encontrada" })
-  @ApiResponse({ status: 409, description: "Conflito de nome ou slug" })
+  @ApiOperation({ summary: "Update category (admin only)" })
+  @ApiResponse({ status: 200, description: "Category updated successfully" })
+  @ApiResponse({ status: 404, description: "Category not found" })
+  @ApiResponse({ status: 409, description: "Name or slug conflict" })
   async update(
     @Request() req: any,
     @Param("id") id: string,
@@ -97,12 +97,12 @@ export class AdminCategoriesController {
 
   @Delete(":id")
   @Roles("ADMIN")
-  @ApiOperation({ summary: "Excluir categoria (apenas admin)" })
-  @ApiResponse({ status: 200, description: "Categoria excluída com sucesso" })
-  @ApiResponse({ status: 404, description: "Categoria não encontrada" })
+  @ApiOperation({ summary: "Delete category (admin only)" })
+  @ApiResponse({ status: 200, description: "Category deleted successfully" })
+  @ApiResponse({ status: 404, description: "Category not found" })
   @ApiResponse({
     status: 409,
-    description: "Categoria possui serviços vinculados",
+    description: "Category has linked services",
   })
   async remove(@Request() req: any, @Param("id") id: string) {
     await this.categoriesService.remove(id, req.ip);

@@ -1,7 +1,5 @@
 import { getHelmetConfig } from '../helmet-config';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
 function runMiddleware(middleware: any) {
   const headers: Record<string, string> = {};
   const req: any = { secure: false };
@@ -19,10 +17,6 @@ function runMiddleware(middleware: any) {
   return { headers, next };
 }
 
-// ─── Tests ──────────────────────────────────────────────────────────────────
-// Regressão: trava as decisões de segurança documentadas (CSP, HSTS, frame
-// options). Mudança silenciosa aqui expõe todos os 5 serviços de uma vez.
-
 describe('getHelmetConfig (shared)', () => {
   const previousAllowedOrigins = process.env.ALLOWED_ORIGINS;
 
@@ -34,7 +28,7 @@ describe('getHelmetConfig (shared)', () => {
     }
   });
 
-  it('deve aplicar CSP com default-src self e frame-ancestors none', () => {
+  it('should apply CSP with default-src self and frame-ancestors none', () => {
     const { headers, next } = runMiddleware(getHelmetConfig());
 
     expect(next).toHaveBeenCalled();
@@ -44,7 +38,7 @@ describe('getHelmetConfig (shared)', () => {
     expect(csp).toContain("object-src 'none'");
   });
 
-  it('deve aplicar HSTS de 1 ano com includeSubDomains e preload', () => {
+  it('should apply 1-year HSTS with includeSubDomains and preload', () => {
     const { headers } = runMiddleware(getHelmetConfig());
 
     const hsts = headers['strict-transport-security'] ?? '';
@@ -53,13 +47,13 @@ describe('getHelmetConfig (shared)', () => {
     expect(hsts).toContain('preload');
   });
 
-  it('deve negar framing via X-Frame-Options', () => {
+  it('should deny framing via X-Frame-Options', () => {
     const { headers } = runMiddleware(getHelmetConfig());
 
     expect(headers['x-frame-options']).toBe('DENY');
   });
 
-  it('deve refletir ALLOWED_ORIGINS no connect-src', () => {
+  it('should reflect ALLOWED_ORIGINS in connect-src', () => {
     process.env.ALLOWED_ORIGINS = 'https://app.example.com';
 
     const { headers } = runMiddleware(getHelmetConfig());
@@ -69,7 +63,7 @@ describe('getHelmetConfig (shared)', () => {
     );
   });
 
-  it('não deve forçar upgrade-insecure-requests fora de produção', () => {
+  it('should not force upgrade-insecure-requests outside production', () => {
     const { headers } = runMiddleware(getHelmetConfig());
 
     expect(headers['content-security-policy'] ?? '').not.toContain(

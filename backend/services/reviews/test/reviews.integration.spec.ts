@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
-// import-require: estes serviços não têm esModuleInterop (diferente do auth),
-// então o default-import compila para `.default` inexistente em runtime.
+// Require syntax is needed here: without esModuleInterop a default import
+// would be undefined at runtime.
 import request = require('supertest');
 import { App } from 'supertest/types';
 import {
@@ -13,8 +13,6 @@ import {
   TestAppSetup,
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
-
-// ─── Integration: Avaliações (HTTP + banco real) ───────────────────────────
 
 describe('Reviews (integration)', () => {
   let app: INestApplication<App>;
@@ -42,7 +40,7 @@ describe('Reviews (integration)', () => {
   }
 
   describe('POST /reviews', () => {
-    it('deve permitir cliente avaliar prestador de pedido concluído e pago', async () => {
+    it('allows a client to review the provider of a completed paid order', async () => {
       const { client, provider, clientToken } = await clientAndProvider();
       const order = await createCompletedPaidOrder(
         prisma,
@@ -66,7 +64,7 @@ describe('Reviews (integration)', () => {
       expect(response.body.rating).toBe(5);
     });
 
-    it('deve permitir prestador avaliar cliente', async () => {
+    it('allows a provider to review the client', async () => {
       const { client, provider, providerToken } = await clientAndProvider();
       const order = await createCompletedPaidOrder(
         prisma,
@@ -84,7 +82,7 @@ describe('Reviews (integration)', () => {
       expect(response.body.reviewee_id).toBe(client.id);
     });
 
-    it('deve rejeitar segunda avaliação do mesmo autor (400)', async () => {
+    it('rejects a second review from the same author (400)', async () => {
       const { client, provider, clientToken } = await clientAndProvider();
       const order = await createCompletedPaidOrder(
         prisma,
@@ -107,7 +105,7 @@ describe('Reviews (integration)', () => {
         .expect(400);
     });
 
-    it('deve retornar 403 para quem não é parte do pedido', async () => {
+    it('returns 403 for users outside the order', async () => {
       const { client, provider } = await clientAndProvider();
       const outsider = await createTestUser(prisma, { role: 'CLIENT' });
       const order = await createCompletedPaidOrder(
@@ -123,7 +121,7 @@ describe('Reviews (integration)', () => {
         .expect(403);
     });
 
-    it('deve retornar 404 para pedido inexistente e 400 para nota inválida', async () => {
+    it('returns 404 for a missing order and 400 for an invalid rating', async () => {
       const { client, provider, clientToken } = await clientAndProvider();
       const order = await createCompletedPaidOrder(
         prisma,
@@ -150,7 +148,7 @@ describe('Reviews (integration)', () => {
   });
 
   describe('GET /reviews/me', () => {
-    it('deve listar avaliações escritas pelo usuário', async () => {
+    it('lists reviews written by the user', async () => {
       const { client, provider, clientToken } = await clientAndProvider();
       const order = await createCompletedPaidOrder(
         prisma,
@@ -175,7 +173,7 @@ describe('Reviews (integration)', () => {
   });
 
   describe('GET /reviews/service-order/:orderId', () => {
-    it('deve listar para as partes e negar para terceiros', async () => {
+    it('lists reviews for order parties and denies outsiders', async () => {
       const { client, provider, clientToken } = await clientAndProvider();
       const outsider = await createTestUser(prisma, { role: 'CLIENT' });
       const order = await createCompletedPaidOrder(
@@ -204,7 +202,7 @@ describe('Reviews (integration)', () => {
   });
 
   describe('PATCH /reviews/:reviewId', () => {
-    it('deve permitir ao autor atualizar nota e comentário', async () => {
+    it('allows the author to update the rating and comment', async () => {
       const { client, provider, clientToken } = await clientAndProvider();
       const order = await createCompletedPaidOrder(
         prisma,

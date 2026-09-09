@@ -8,9 +8,8 @@ export class NotificationsService {
 
   constructor(private prisma: PrismaService) {}
 
-  // O destinatário é sempre o usuário autenticado (userId): o valor
-  // enviado pelo cliente em dto.recipient é ignorado para impedir que um
-  // usuário crie notificações forjadas para terceiros.
+  // Recipient is always the authenticated user; ignore the client-supplied
+  // recipient to prevent forged notifications to third parties.
   async create(userId: string, dto: CreateNotificationDto) {
     const notification = await this.prisma.notification.create({
       data: {
@@ -22,19 +21,19 @@ export class NotificationsService {
         relatedType: dto.relatedType,
       },
     });
-    this.logger.log(`Notificação criada: ${notification.id} para ${userId}`);
+    this.logger.log(`Notification created: ${notification.id} for ${userId}`);
     return notification;
   }
 
   async findByRecipient(
     recipient: string,
-    lido?: boolean,
+    isRead?: boolean,
     page = 1,
     limit = 20,
   ) {
     const where: any = { recipient };
-    if (lido !== undefined) {
-      where.read = lido;
+    if (isRead !== undefined) {
+      where.read = isRead;
     }
     const [items, total] = await Promise.all([
       this.prisma.notification.findMany({
@@ -49,7 +48,7 @@ export class NotificationsService {
   }
 
   async markAsRead(notificationId: string, userId: string) {
-    // Verificação de segurança: apenas o destinatário pode marcar como lido
+    // Only the recipient may mark the notification as read.
     const notification = await this.prisma.notification.findFirst({
       where: { id: notificationId, recipient: userId },
     });

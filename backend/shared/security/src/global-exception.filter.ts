@@ -7,7 +7,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
-import { sanitizarDadosSensiveis } from "./sanitizar-dados-sensiveis";
+import { sanitizeSensitiveData } from "./sanitize-sensitive-data";
 import { resolverErroPrisma } from "./resolver-erro-prisma";
 
 @Catch()
@@ -60,10 +60,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.message : String(exception);
 
     this.logger.error(
-      sanitizarDadosSensiveis(
+      sanitizeSensitiveData(
         `${request.method} ${request.url} - ${status} - ${detalhe}`,
       ),
-      sanitizarDadosSensiveis(
+      sanitizeSensitiveData(
         exception instanceof Error ? exception.stack || "" : "",
       ),
     );

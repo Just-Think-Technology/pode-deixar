@@ -21,8 +21,8 @@ const user = url.username;
 const password = url.password;
 
 // Admin URL to connect to default postgres database to create test database.
-// Usa o banco `postgres` (sempre existe numa instalação fresca) em vez de
-// `pode_deixar`, que não existe no CI nem em ambientes recém-criados.
+// Uses the `postgres` database (always present on a fresh install) instead of
+// `pode_deixar`, which doesn't exist in CI or freshly created environments.
 const adminUrl = `postgresql://${user}:${password}@${host}:${port}/postgres?schema=public`;
 
 process.env.DATABASE_URL = databaseUrl;

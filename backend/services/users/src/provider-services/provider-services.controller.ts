@@ -24,7 +24,7 @@ import { UpdateProviderServiceDto } from "./dto/update-provider-service.dto";
 import { SearchProvidersQueryDto } from "./dto/search-providers-query.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 
-@ApiTags("Serviços do Prestador")
+@ApiTags("Provider Services")
 @Controller("providers/me/services")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -35,11 +35,11 @@ export class ProviderServicesController {
 
   @Post()
   @Roles("PROVIDER")
-  @ApiOperation({ summary: "Cadastrar novo serviço (apenas prestadores)" })
-  @ApiResponse({ status: 201, description: "Serviço criado com sucesso" })
+  @ApiOperation({ summary: "Register a new service (providers only)" })
+  @ApiResponse({ status: 201, description: "Service created successfully" })
   @ApiResponse({
     status: 404,
-    description: "Perfil de prestador não encontrado",
+    description: "Provider profile not found",
   })
   async createService(
     @Request() req: any,
@@ -54,14 +54,14 @@ export class ProviderServicesController {
 
   @Get()
   @Roles("PROVIDER")
-  @ApiOperation({ summary: "Listar meus serviços (apenas prestadores)" })
+  @ApiOperation({ summary: "List my services (providers only)" })
   @ApiResponse({
     status: 200,
-    description: "Lista de serviços retornada com sucesso",
+    description: "Service list returned successfully",
   })
   @ApiResponse({
     status: 404,
-    description: "Perfil de prestador não encontrado",
+    description: "Provider profile not found",
   })
   async getMyServices(@Request() req: any): Promise<any> {
     const userId = req.user.sub;
@@ -71,7 +71,7 @@ export class ProviderServicesController {
   }
 }
 
-@ApiTags("Busca de Prestadores")
+@ApiTags("Provider Search")
 @Controller("providers/search")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -82,29 +82,29 @@ export class ProviderSearchController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: "Buscar prestadores por categoria ou texto" })
+  @ApiOperation({ summary: "Search providers by category or text" })
   @ApiQuery({
     name: "categoryId",
     required: false,
-    description: "Filtrar por ID da categoria",
+    description: "Filter by category ID",
     example: "uuid-da-categoria",
   })
   @ApiQuery({
     name: "q",
     required: false,
-    description: "Texto para buscar no título ou descrição do serviço",
+    description: "Text to search in service title or description",
     example: "chuveiro",
   })
   @ApiResponse({
     status: 200,
-    description: "Lista de prestadores encontrados com seus serviços",
+    description: "List of matching providers with their services",
   })
   async searchProviders(@Query() query: SearchProvidersQueryDto) {
     return this.providerServicesService.searchProviders(query);
   }
 }
 
-@ApiTags("Serviços do Prestador (Público)")
+@ApiTags("Provider Services (Public)")
 @Controller("providers/:providerId/services")
 @ApiBearerAuth()
 export class PublicProviderServicesController {
@@ -113,15 +113,15 @@ export class PublicProviderServicesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: "Listar serviços públicos de um prestador" })
-  @ApiParam({ name: "providerId", description: "ID do perfil do prestador" })
+  @ApiOperation({ summary: "List public services of a provider" })
+  @ApiParam({ name: "providerId", description: "Provider profile ID" })
   @ApiResponse({
     status: 200,
-    description: "Lista de serviços ativos retornada com sucesso",
+    description: "Active service list returned successfully",
   })
   @ApiResponse({
     status: 404,
-    description: "Perfil de prestador não encontrado",
+    description: "Provider profile not found",
   })
   async getProviderServices(
     @Param("providerId") providerProfileId: string,
@@ -130,7 +130,7 @@ export class PublicProviderServicesController {
   }
 }
 
-@ApiTags("Serviços do Prestador (Dono)")
+@ApiTags("Provider Services (Owner)")
 @Controller("providers/me/services/:serviceId")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -141,12 +141,12 @@ export class ProviderServiceDetailController {
 
   @Patch()
   @Roles("PROVIDER")
-  @ApiOperation({ summary: "Atualizar serviço (apenas dono)" })
-  @ApiResponse({ status: 200, description: "Serviço atualizado com sucesso" })
-  @ApiResponse({ status: 404, description: "Serviço não encontrado" })
+  @ApiOperation({ summary: "Update service (owner only)" })
+  @ApiResponse({ status: 200, description: "Service updated successfully" })
+  @ApiResponse({ status: 404, description: "Service not found" })
   @ApiResponse({
     status: 400,
-    description: "Serviço não pertence a este prestador",
+    description: "Service does not belong to this provider",
   })
   async updateService(
     @Request() req: any,
@@ -167,12 +167,12 @@ export class ProviderServiceDetailController {
 
   @Delete()
   @Roles("PROVIDER")
-  @ApiOperation({ summary: "Desativar serviço (soft delete, apenas dono)" })
-  @ApiResponse({ status: 200, description: "Serviço desativado com sucesso" })
-  @ApiResponse({ status: 404, description: "Serviço não encontrado" })
+  @ApiOperation({ summary: "Deactivate service (soft delete, owner only)" })
+  @ApiResponse({ status: 200, description: "Service deactivated successfully" })
+  @ApiResponse({ status: 404, description: "Service not found" })
   @ApiResponse({
     status: 400,
-    description: "Serviço não pertence a este prestador",
+    description: "Service does not belong to this provider",
   })
   async deleteService(
     @Request() req: any,

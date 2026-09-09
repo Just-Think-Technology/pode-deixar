@@ -52,8 +52,8 @@ describe('useIsMobile Hook', () => {
     setViewport(1440, 900)
     window.dispatchEvent(new Event('resize'))
 
-    // O hook escuta matchMedia (mockado no setup), então validamos
-    // apenas que o retorno segue booleano após o evento
+    // The hook listens to matchMedia (mocked in setup), so we only assert
+    // the return stays boolean after the event
     expect(typeof result.current).toBe('boolean')
   })
 })

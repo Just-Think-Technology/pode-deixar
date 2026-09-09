@@ -269,7 +269,6 @@ export class ProfilesService {
         throw new NotFoundException("Perfil de prestador não encontrado");
       }
 
-      // Valida extensão e magic bytes antes de enviar ao armazenamento.
       validarArquivoImagem(file.originalname, file.buffer);
       const ext = extname(file.originalname).toLowerCase();
       const fileName = `${randomUUID()}${ext}`;
@@ -306,7 +305,6 @@ export class ProfilesService {
         throw new NotFoundException("Perfil de cliente não encontrado");
       }
 
-      // Valida extensão e magic bytes antes de enviar ao armazenamento.
       validarArquivoImagem(file.originalname, file.buffer);
       const ext = extname(file.originalname).toLowerCase();
       const fileName = `${randomUUID()}${ext}`;
@@ -339,8 +337,7 @@ export class ProfilesService {
   }
 
   async getPublicProviderProfile(providerProfileId: string) {
-    // Perfil público: nunca expõe PII (email, telefone, CEP) — por isso o
-    // select busca apenas id e nome, sem trazer dados sensíveis do banco.
+    // Public profile must never expose PII, so select only id and name.
     const profile = await this.prisma.providerProfile.findUnique({
       where: { id: providerProfileId },
       include: {

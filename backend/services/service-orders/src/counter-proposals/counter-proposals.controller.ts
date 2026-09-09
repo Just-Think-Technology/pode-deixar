@@ -31,15 +31,16 @@ export class CounterProposalsController {
 
   @Post()
   @Roles("CLIENT", "PROVIDER")
-  @ApiOperation({ summary: "Criar contraproposta (cliente ou prestador)" })
+  @ApiOperation({ summary: "Create counter-proposal (client or provider)" })
   @ApiResponse({
     status: 201,
-    description: "Contraproposta criada com sucesso",
+    description: "Counter-proposal created successfully",
   })
-  @ApiResponse({ status: 404, description: "Proposta não encontrada" })
+  @ApiResponse({ status: 404, description: "Proposal not found" })
   @ApiResponse({
     status: 400,
-    description: "Proposta não está pendente ou já possui contraproposta ativa",
+    description:
+      "Proposal is not pending or already has an active counter-proposal",
   })
   async create(@Request() req: any, @Body() dto: CreateCounterProposalDto) {
     const userId = req.user.sub;
@@ -49,37 +50,37 @@ export class CounterProposalsController {
 
   @Get("me")
   @Roles("CLIENT", "PROVIDER")
-  @ApiOperation({ summary: "Listar minhas contrapropostas enviadas" })
+  @ApiOperation({ summary: "List my sent counter-proposals" })
   @ApiResponse({
     status: 200,
-    description: "Lista de contrapropostas retornada com sucesso",
+    description: "Counter-proposals list returned successfully",
   })
   async findMySent(
     @Request() req: any,
-    @Query() paginacao: PaginationQueryDto,
+    @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
-    return this.counterProposalsService.findMySent(userId, paginacao);
+    return this.counterProposalsService.findMySent(userId, pagination);
   }
 
   @Get("proposal/:proposalId")
   @Roles("CLIENT", "PROVIDER")
-  @ApiOperation({ summary: "Listar contrapropostas de uma proposta" })
+  @ApiOperation({ summary: "List counter-proposals of a proposal" })
   @ApiParam({ name: "proposalId", description: "ID da proposta" })
   @ApiResponse({
     status: 200,
-    description: "Lista de contrapropostas retornada com sucesso",
+    description: "Counter-proposals list returned successfully",
   })
   async findByProposal(
     @Request() req: any,
     @Param("proposalId") proposalId: string,
-    @Query() paginacao: PaginationQueryDto,
+    @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
     return this.counterProposalsService.findByProposal(
       userId,
       proposalId,
-      paginacao,
+      pagination,
     );
   }
 }
@@ -95,16 +96,16 @@ export class CounterProposalActionController {
 
   @Post("accept")
   @Roles("CLIENT", "PROVIDER")
-  @ApiOperation({ summary: "Aceitar contraproposta" })
+  @ApiOperation({ summary: "Accept counter-proposal" })
   @ApiParam({ name: "counterProposalId", description: "ID da contraproposta" })
   @ApiResponse({
     status: 200,
-    description: "Contraproposta aceita com sucesso",
+    description: "Counter-proposal accepted successfully",
   })
-  @ApiResponse({ status: 404, description: "Contraproposta não encontrada" })
+  @ApiResponse({ status: 404, description: "Counter-proposal not found" })
   @ApiResponse({
     status: 400,
-    description: "Contraproposta não está pendente ou pedido não está aberto",
+    description: "Counter-proposal is not pending or order is not open",
   })
   async accept(
     @Request() req: any,
@@ -117,13 +118,13 @@ export class CounterProposalActionController {
 
   @Post("reject")
   @Roles("CLIENT", "PROVIDER")
-  @ApiOperation({ summary: "Rejeitar contraproposta" })
+  @ApiOperation({ summary: "Reject counter-proposal" })
   @ApiParam({ name: "counterProposalId", description: "ID da contraproposta" })
   @ApiResponse({
     status: 200,
-    description: "Contraproposta rejeitada com sucesso",
+    description: "Counter-proposal rejected successfully",
   })
-  @ApiResponse({ status: 404, description: "Contraproposta não encontrada" })
+  @ApiResponse({ status: 404, description: "Counter-proposal not found" })
   async reject(
     @Request() req: any,
     @Param("counterProposalId") counterProposalId: string,

@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
-// import-require: estes serviços não têm esModuleInterop (diferente do auth),
-// então o default-import compila para `.default` inexistente em runtime.
+// import-require: these services lack esModuleInterop (unlike auth),
+// so the default import compiles to a nonexistent `.default` at runtime.
 import request = require('supertest');
 import { App } from 'supertest/types';
 import {
@@ -59,7 +59,7 @@ describe('Profiles (integration)', () => {
       expect(response.body.user.complete_name).toBe('Test User');
     });
 
-    it('deve retornar 409 ao criar perfil duplicado', async () => {
+    it('should return 409 when creating a duplicate profile', async () => {
       const { token } = await clientAuth();
       const headers = bearerAuth(token);
 
@@ -95,7 +95,7 @@ describe('Profiles (integration)', () => {
   });
 
   describe('GET /profiles/me', () => {
-    it('deve retornar o perfil do dono', async () => {
+    it('should return the owner profile', async () => {
       const { token } = await clientAuth();
 
       await request(app.getHttpServer())
@@ -123,7 +123,7 @@ describe('Profiles (integration)', () => {
   });
 
   describe('PATCH /profiles/client', () => {
-    it('deve atualizar preferências', async () => {
+    it('should update preferences', async () => {
       const { token } = await clientAuth();
       const headers = bearerAuth(token);
 
@@ -183,7 +183,7 @@ describe('Profiles (integration)', () => {
   });
 
   describe('PATCH /profiles/avatar', () => {
-    it('deve enviar avatar e salvar a URL do MinIO (mock)', async () => {
+    it('should upload an avatar and save the MinIO URL (mock)', async () => {
       const { token } = await clientAuth();
       const headers = bearerAuth(token);
 
@@ -193,8 +193,8 @@ describe('Profiles (integration)', () => {
         .send({})
         .expect(201);
 
-      // Justificativa (AppSec): o serviço valida magic bytes — o upload usa
-      // bytes mágicos PNG reais em vez de conteúdo falso.
+      // The service validates magic bytes — the upload uses real PNG magic
+      // bytes instead of fake content.
       const pngReal = Buffer.from([
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
       ]);
@@ -232,8 +232,8 @@ describe('Profiles (integration)', () => {
     });
   });
 
-  describe('GET /providers/:providerId/profile (público)', () => {
-    it('deve retornar perfil público sem autenticação', async () => {
+  describe('GET /providers/:providerId/profile (public)', () => {
+    it('should return the public profile without authentication', async () => {
       const { token } = await providerAuth();
       const profileId = (
         await request(app.getHttpServer())

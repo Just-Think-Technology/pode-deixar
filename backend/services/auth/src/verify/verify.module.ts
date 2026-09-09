@@ -5,7 +5,7 @@ import { VerifyController } from './verify.controller';
 import { VerifyService } from './verify.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthLoggerService } from '../shared/auth-logger.service';
-import { AUDIENCIA_JWT, EMISSOR_JWT } from '../jwt/jwt.constantes';
+import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
 @Module({
   imports: [
@@ -15,7 +15,7 @@ import { AUDIENCIA_JWT, EMISSOR_JWT } from '../jwt/jwt.constantes';
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
         secret: config.get<string>('JWT_ACCESS_SECRET'),
-        signOptions: { issuer: EMISSOR_JWT, audience: AUDIENCIA_JWT },
+        signOptions: { issuer: JWT_ISSUER, audience: JWT_AUDIENCE },
       }),
     }),
   ],

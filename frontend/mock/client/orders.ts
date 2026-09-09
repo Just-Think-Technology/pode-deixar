@@ -123,8 +123,8 @@ export function resetMockClientOrders() {
 }
 
 export function getMockClientOrders(): ClientOrder[] {
-  // Mantém proposals no mock para a lista poder exibir contagem;
-  // a API real pode omitir o campo — a UI trata como opcional.
+  // Keeps proposals in the mock so the list can show the count;
+  // the real API may omit the field — the UI treats it as optional.
   return structuredClone(getRuntimeOrders());
 }
 

@@ -7,9 +7,9 @@ import type { WorkerPaymentStatusResponse } from "@/lib/worker/payments/types";
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 /**
- * Não há endpoint PROVIDER em API.md para pagamentos.
- * Em modo mock devolve o status seedado; fora do mock falha de forma explícita.
- * Contrato futuro: GET /payments/by-proposal/:proposalId (role PROVIDER).
+ * No PROVIDER endpoint in API.md for payments.
+ * In mock mode returns the seeded status; outside mock it fails explicitly.
+ * Future contract: GET /payments/by-proposal/:proposalId (role PROVIDER).
  */
 export function getPaymentStatusByProposal(
   _accessToken: string,
@@ -27,7 +27,7 @@ export function getPaymentStatusByProposal(
 }
 
 /**
- * Lista recebimentos do prestador autenticado.
+ * Lists receipts of the authenticated provider.
  * Contrato futuro: GET /payments/provider/me (role PROVIDER).
  */
 export function listWorkerPayments(

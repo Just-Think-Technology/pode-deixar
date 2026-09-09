@@ -4,7 +4,7 @@ import { Transform, Type } from "class-transformer";
 
 export class ListNotificationsQueryDto {
   @ApiPropertyOptional({
-    description: "Filtrar por estado de leitura",
+    description: "Filter by read state",
     example: false,
   })
   @IsOptional()
@@ -17,7 +17,7 @@ export class ListNotificationsQueryDto {
   lido?: boolean;
 
   @ApiPropertyOptional({
-    description: "Número da página",
+    description: "Page number",
     example: 1,
     default: 1,
   })
@@ -28,7 +28,7 @@ export class ListNotificationsQueryDto {
   page?: number = 1;
 
   @ApiPropertyOptional({
-    description: "Itens por página (máximo 50)",
+    description: "Items per page (max 50)",
     example: 20,
     default: 20,
   })
