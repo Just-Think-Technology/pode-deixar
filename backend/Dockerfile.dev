@@ -7,6 +7,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY shared/logger/package.json ./shared/logger/
 COPY shared/email/package.json ./shared/email/
 COPY shared/security/package.json ./shared/security/
+COPY shared/validation/package.json ./shared/validation/
 COPY services/auth/package.json ./services/auth/
 COPY services/users/package.json ./services/users/
 COPY services/service-orders/package.json ./services/service-orders/

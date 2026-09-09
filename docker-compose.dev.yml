@@ -49,6 +49,7 @@ services:
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/email:/app/shared/email
       - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
       - ./backend/prisma:/app/prisma
     depends_on:
       mailpit:
@@ -72,6 +73,7 @@ services:
       - ./backend/services/users/nest-cli.json:/app/services/users/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
       - ./backend/prisma:/app/prisma
 
   # -- Service Orders Service (dev, hot-reload) --
@@ -95,6 +97,7 @@ services:
       - ./backend/services/service-orders/nest-cli.json:/app/services/service-orders/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
       - ./backend/prisma:/app/prisma
 
   # -- Payments Service (dev, hot-reload) --
@@ -118,6 +121,7 @@ services:
       - ./backend/services/payments/nest-cli.json:/app/services/payments/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
       - ./backend/prisma:/app/prisma
 
   # -- Reviews Service (dev, hot-reload) --
@@ -138,6 +142,7 @@ services:
       - ./backend/services/reviews/nest-cli.json:/app/services/reviews/nest-cli.json
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
       - ./backend/prisma:/app/prisma
 
 volumes:
