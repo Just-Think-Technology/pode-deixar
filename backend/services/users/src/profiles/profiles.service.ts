@@ -14,7 +14,7 @@ import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { extname } from "path";
-import { validateImageFile } from "../shared/validate-image.util";
+import { validarArquivoImagem } from "@pode-deixar/validation";
 
 @Injectable()
 export class ProfilesService {
@@ -269,7 +269,7 @@ export class ProfilesService {
         throw new NotFoundException("Perfil de prestador não encontrado");
       }
 
-      validateImageFile(file.originalname, file.buffer);
+      validarArquivoImagem(file.originalname, file.buffer);
       const ext = extname(file.originalname).toLowerCase();
       const fileName = `${randomUUID()}${ext}`;
       const url = await this.minio.uploadFile(
@@ -305,7 +305,7 @@ export class ProfilesService {
         throw new NotFoundException("Perfil de cliente não encontrado");
       }
 
-      validateImageFile(file.originalname, file.buffer);
+      validarArquivoImagem(file.originalname, file.buffer);
       const ext = extname(file.originalname).toLowerCase();
       const fileName = `${randomUUID()}${ext}`;
       const url = await this.minio.uploadFile(

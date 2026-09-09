@@ -7,7 +7,10 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
-import { sanitizeSensitiveData } from "@pode-deixar/security";
+import {
+  sanitizeSensitiveData,
+  resolverErroPrisma,
+} from "@pode-deixar/security";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -39,18 +42,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
-      // Map known Prisma errors to generic responses to avoid leaking internals.
-      // Any other error becomes a generic 500; details stay in the log only.
-      const code = (exception as { code?: unknown }).code;
-      if (code === "P2002") {
-        status = HttpStatus.CONFLICT;
-        message = "Registro já existe";
-      } else if (code === "P2003") {
-        status = HttpStatus.BAD_REQUEST;
-        message = "Referência inválida";
-      } else if (code === "P2025") {
-        status = HttpStatus.NOT_FOUND;
-        message = "Registro não encontrado";
+      // Known Prisma errors map to generic responses to avoid leaking
+      // internals; anything else becomes a generic 500 with details only
+      // in the log.
+      const resolvido = resolverErroPrisma(
+        (exception as { code?: unknown }).code,
+      );
+      if (resolvido) {
+        status = resolvido.status;
+        message = resolvido.message;
       } else {
         status = HttpStatus.INTERNAL_SERVER_ERROR;
         message = "Erro interno do servidor";

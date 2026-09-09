@@ -16,49 +16,29 @@ import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor"
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
+import {
+  traduzirErrosValidacao as traduzirErrosNucleo,
+  RotulosCampos,
+} from "@pode-deixar/validation";
+
+// Rótulos dos campos do service-orders (user-facing, em português); as
+// mensagens de restrição vivem no núcleo compartilhado.
+const ROTULOS_ORDERS: RotulosCampos = {
+  title: "Título",
+  description: "Descrição",
+  categoryId: "Categoria",
+  price: "Preço",
+  providerServiceId: "Serviço do prestador",
+  budgetMin: "Orçamento mínimo",
+  budgetMax: "Orçamento máximo",
+  providerId: "Prestador",
+  estimatedDuration: "Duração estimada",
+  serviceOrderId: "ID do pedido",
+  proposalId: "ID da proposta",
+};
 
 function translateValidationErrors(errors: ValidationError[]): string[] {
-  const labels: Record<string, string> = {
-    title: "Título",
-    description: "Description",
-    categoryId: "Categoria",
-    price: "Preço",
-    providerServiceId: "Serviço do prestador",
-    budgetMin: "Orçamento mínimo",
-    budgetMax: "Orçamento máximo",
-    providerId: "Prestador",
-    estimatedDuration: "Duração estimada",
-    serviceOrderId: "ID do pedido",
-    proposalId: "ID da proposta",
-  };
-
-  const translations: Record<string, (label: string) => string> = {
-    isString: (label) => `${label} deve ser uma string`,
-    isNotEmpty: (label) => `${label} não pode estar vazio`,
-    isNumber: (label) => `${label} deve ser um número`,
-    isBoolean: (label) => `${label} deve ser verdadeiro ou falso`,
-    isInt: (label) => `${label} deve ser um número inteiro`,
-    isPositive: (label) => `${label} deve ser um número positivo`,
-    min: (label) => `${label} não pode ser menor que 0`,
-    minLength: (label) => `${label} deve ter no mínimo 3 caracteres`,
-    maxLength: (label) => `${label} está muito longo`,
-    matches: (label) => `${label} contém caracteres inválidos`,
-  };
-
-  return errors.map((error) => {
-    if (!error.constraints)
-      return `${labels[error.property] || error.property} inválido`;
-    return Object.entries(error.constraints)
-      .map(([key, msg]) => {
-        // eslint-disable-next-line security/detect-object-injection -- key comes from class-validator constraint names, not user input
-        const translator = translations[key];
-
-        return translator
-          ? translator(labels[error.property] || error.property)
-          : msg;
-      })
-      .join("; ");
-  });
+  return traduzirErrosNucleo(errors, ROTULOS_ORDERS);
 }
 
 @Module({

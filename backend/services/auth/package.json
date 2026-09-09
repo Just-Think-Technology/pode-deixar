@@ -36,6 +36,7 @@
     "@pode-deixar/email": "workspace:*",
     "@pode-deixar/logger": "workspace:*",
     "@pode-deixar/security": "workspace:*",
+    "@pode-deixar/validation": "workspace:*",
     "@prisma/client": "5.22.0",
     "@types/argon2": "^0.14.1",
     "@types/uuid": "^8.3.4",

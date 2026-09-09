@@ -15,43 +15,23 @@ import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor"
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
+import {
+  traduzirErrosValidacao as traduzirErrosNucleo,
+  RotulosCampos,
+} from "@pode-deixar/validation";
+
+// Rótulos dos campos do payments (user-facing, em português); as mensagens
+// de restrição vivem no núcleo compartilhado.
+const ROTULOS_PAYMENTS: RotulosCampos = {
+  serviceOrderId: "ID do pedido",
+  amount: "Valor",
+  method: "Método de pagamento",
+  paymentId: "ID do pagamento",
+  externalId: "ID externo da transação",
+};
 
 function translateValidationErrors(errors: ValidationError[]): string[] {
-  const fieldLabels: Record<string, string> = {
-    serviceOrderId: "ID do pedido",
-    amount: "Valor",
-    method: "Método de pagamento",
-    paymentId: "ID do pagamento",
-    externalId: "ID externo da transação",
-  };
-
-  const constraintTranslators: Record<string, (label: string) => string> = {
-    isString: (label) => `${label} deve ser uma string`,
-    isNotEmpty: (label) => `${label} não pode estar vazio`,
-    isNumber: (label) => `${label} deve ser um número`,
-    isInt: (label) => `${label} deve ser um número inteiro`,
-    isPositive: (label) => `${label} deve ser um número positivo`,
-    isEnum: (label) => `${label} deve ser um valor válido`,
-    isUuid: (label) => `${label} deve ser um UUID válido`,
-    min: (label) => `${label} não pode ser menor que 0`,
-    maxLength: (label) => `${label} está muito longo`,
-  };
-
-  return errors.map((error) => {
-    if (!error.constraints)
-      return `${fieldLabels[error.property] || error.property} inválido`;
-    return Object.entries(error.constraints)
-      .map(([key, defaultMessage]) => {
-        // Safe: the key comes from the constraint entry being processed.
-        // eslint-disable-next-line security/detect-object-injection
-        const translator = constraintTranslators[key];
-
-        return translator
-          ? translator(fieldLabels[error.property] || error.property)
-          : defaultMessage;
-      })
-      .join("; ");
-  });
+  return traduzirErrosNucleo(errors, ROTULOS_PAYMENTS);
 }
 
 @Module({

@@ -18,58 +18,34 @@ import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor"
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
+import {
+  traduzirErrosValidacao as traduzirErrosNucleo,
+  RotulosCampos,
+} from "@pode-deixar/validation";
+
+// Rótulos dos campos do users (user-facing, em português); as mensagens de
+// restrição vivem no núcleo compartilhado.
+const ROTULOS_USERS: RotulosCampos = {
+  title: "Título",
+  description: "Descrição",
+  fixedPrice: "Preço fixo",
+  categoryId: "Categoria",
+  avatarUrl: "URL do avatar",
+  bio: "Biografia",
+  hourlyRate: "Valor por hora",
+  skills: "Habilidades",
+  portfolio: "Portfólio",
+  isAvailable: "Disponível",
+  preferences: "Preferências",
+  name: "Nome",
+  slug: "Slug",
+  icon: "Ícone",
+};
 
 function translateValidationErrors(errors: ValidationError[]): string {
-  const fieldLabels: Record<string, string> = {
-    title: "Título",
-    description: "Description",
-    fixedPrice: "Preço fixo",
-    categoryId: "Categoria",
-    avatarUrl: "URL do avatar",
-    bio: "Biografia",
-    hourlyRate: "Valor por hora",
-    skills: "Habilidades",
-    portfolio: "Portfólio",
-    isAvailable: "Disponível",
-    preferences: "Preferências",
-    name: "Nome",
-    slug: "Slug",
-    icon: "Ícone",
-  };
-
-  const constraintMessages: Record<string, (label: string) => string> = {
-    isString: (r) => `${r} deve ser uma string`,
-    isNotEmpty: (r) => `${r} não pode estar vazio`,
-    isNumber: (r) => `${r} deve ser um número`,
-    isBoolean: (r) => `${r} deve ser verdadeiro ou falso`,
-    isInt: (r) => `${r} deve ser um número inteiro`,
-    isPositive: (r) => `${r} deve ser um número positivo`,
-    isUrl: (r) => `${r} deve ser uma URL válida`,
-    isEnum: (r) => `${r} deve ser um valor válido`,
-    isArray: (r) => `${r} deve ser uma lista`,
-    min: (r) => `${r} não pode ser menor que 0`,
-    minLength: (r) => `${r} deve ter no mínimo 3 caracteres`,
-    maxLength: (r) => `${r} está muito longo`,
-    matches: (r) => `${r} contém caracteres inválidos`,
-  };
-
-  return errors
-    .map((error) => {
-      if (!error.constraints)
-        return `${fieldLabels[error.property] || error.property} inválido`;
-      return Object.entries(error.constraints)
-        .map(([constraintKey, msg]) => {
-          // eslint-disable-next-line security/detect-object-injection -- key comes from class-validator's fixed constraint names
-          const formatter = constraintMessages[constraintKey];
-
-          return formatter
-            ? formatter(fieldLabels[error.property] || error.property)
-            : msg;
-        })
-        .join("; ");
-    })
-    .join("; ");
+  return traduzirErrosNucleo(errors, ROTULOS_USERS).join("; ");
 }
+
 @Module({
   imports: [
     ConfigModule.forRoot({
