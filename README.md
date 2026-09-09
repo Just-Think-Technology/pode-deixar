@@ -8,6 +8,7 @@
 - [O que o sistema faz](#o-que-o-sistema-faz)
 - [Como funciona](#como-funciona)
 - [Confiança e segurança](#confiança-e-segurança)
+- [Como rodar](#como-rodar)
 
 ---
 
@@ -46,6 +47,25 @@ O Pode Deixar organiza essa relação inteira em um só lugar, com regras claras
 - Avaliações vinculadas a serviços realmente concluídos e pagos, sem notas avulsas.
 - Dados de cartão nunca tocam nossos servidores: pagamento real só via tokenização do gateway.
 - Proteção contra abusos com limites de uso, bloqueio anti-força-bruta e registros auditáveis.
+
+## Como rodar
+
+```bash
+# Local com hot-reload (dia a dia): front :3000, API :8080, Postgres local
+docker compose -f docker-compose.dev.yml up -d --build
+
+# Atalho que sobe e mostra onde cada coisa está:
+scripts/stack-up dev        # ou: staging | production
+```
+
+| Ambiente | Comando | Banco |
+|---|---|---|
+| Local hot-reload | `docker compose -f docker-compose.dev.yml up -d --build` | Postgres local |
+| Local (imagens) | `docker compose up -d --build` | Postgres local |
+| Staging (VPS) | `docker compose -f docker-compose.staging.yml up -d --build` | Neon staging |
+| Produção (VPS) | `docker compose -f docker-compose.production.yml up -d --build` | Neon prod |
+
+Detalhes (envs, portas, regras de deploy): [docs/deploy.md](docs/deploy.md).
 
 ---
 
