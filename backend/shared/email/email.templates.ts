@@ -72,12 +72,11 @@ function baseLayout(content: string): string {
 }
 
 function button(label: string, href: string): string {
-  // Neutraliza quebra de atributo no href (CRLF/aspas) — defesa em profundidade.
-  const hrefSeguro = href.replace(/[\r\n]+/g, '').replace(/"/g, '%22');
+  const safeHref = href.replace(/[\r\n]+/g, '').replace(/"/g, '%22');
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0">
     <tr>
       <td align="center" style="background-color:${COLORS.primary};border-radius:8px;padding:0">
-        <a href="${hrefSeguro}" target="_blank" style="display:inline-block;padding:14px 40px;font-size:15px;font-weight:600;color:${COLORS.white};text-decoration:none;letter-spacing:0.3px;border-radius:8px">${label}</a>
+        <a href="${safeHref}" target="_blank" style="display:inline-block;padding:14px 40px;font-size:15px;font-weight:600;color:${COLORS.white};text-decoration:none;letter-spacing:0.3px;border-radius:8px">${label}</a>
       </td>
     </tr>
   </table>`;

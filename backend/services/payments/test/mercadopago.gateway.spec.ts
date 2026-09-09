@@ -18,7 +18,7 @@ describe("MercadoPagoGateway", () => {
     jest.restoreAllMocks();
   });
 
-  it("deve expor o nome canônico do gateway", () => {
+  it("should expose the canonical gateway name", () => {
     expect(gateway.name).toBe("MERCADO_PAGO");
   });
 
@@ -31,31 +31,31 @@ describe("MercadoPagoGateway", () => {
       process.env.NODE_ENV = originalNodeEnv;
     });
 
-    it("deve ser true em dev quando o token começa com TEST-", () => {
+    it("should be true in dev when the token starts with TEST-", () => {
       process.env.NODE_ENV = "development";
       process.env.PAYMENT_GATEWAY_ACCESS_TOKEN = "TEST-123456789";
       expect(gateway.isConfigured).toBe(true);
     });
 
-    it("deve ser false em dev quando o token é de produção", () => {
+    it("should be false in dev when the token is a production one", () => {
       process.env.NODE_ENV = "development";
       process.env.PAYMENT_GATEWAY_ACCESS_TOKEN = "APP_USR-123456789";
       expect(gateway.isConfigured).toBe(false);
     });
 
-    it("deve ser true em produção quando o token é APP_USR-", () => {
+    it("should be true in production when the token is APP_USR-", () => {
       process.env.NODE_ENV = "production";
       process.env.PAYMENT_GATEWAY_ACCESS_TOKEN = "APP_USR-123456789";
       expect(gateway.isConfigured).toBe(true);
     });
 
-    it("deve ser false em produção quando o token é de teste", () => {
+    it("should be false in production when the token is a test one", () => {
       process.env.NODE_ENV = "production";
       process.env.PAYMENT_GATEWAY_ACCESS_TOKEN = "TEST-123456789";
       expect(gateway.isConfigured).toBe(false);
     });
 
-    it("deve ser false quando o token não está configurado", () => {
+    it("should be false when the token is not configured", () => {
       delete process.env.PAYMENT_GATEWAY_ACCESS_TOKEN;
       expect(gateway.isConfigured).toBe(false);
     });
@@ -70,7 +70,7 @@ describe("MercadoPagoGateway", () => {
       process.env.PAYMENT_GATEWAY_NOTIFICATION_URL = originalNotificationUrl;
     });
 
-    it("deve criar cobrança PIX e retornar os dados de pagamento", async () => {
+    it("should create a PIX charge and return the payment data", async () => {
       process.env.PAYMENT_GATEWAY_PAYER_EMAIL = "teste@example.com";
       process.env.PAYMENT_GATEWAY_NOTIFICATION_URL =
         "https://exemplo.com/webhook";
@@ -122,7 +122,7 @@ describe("MercadoPagoGateway", () => {
       });
     });
 
-    it("deve usar o email padrão quando PAYMENT_GATEWAY_PAYER_EMAIL não existe", async () => {
+    it("should use the default email when PAYMENT_GATEWAY_PAYER_EMAIL is missing", async () => {
       delete process.env.PAYMENT_GATEWAY_PAYER_EMAIL;
       delete process.env.PAYMENT_GATEWAY_NOTIFICATION_URL;
       const fetchMock = jest.fn().mockResolvedValue({
@@ -151,7 +151,7 @@ describe("MercadoPagoGateway", () => {
       );
     });
 
-    it("deve lançar BadGatewayException quando a API retorna erro", async () => {
+    it("should throw BadGatewayException when the API returns an error", async () => {
       const fetchMock = jest.fn().mockResolvedValue({
         ok: false,
         json: async () => ({ message: "Credenciais inválidas" }),
@@ -167,7 +167,7 @@ describe("MercadoPagoGateway", () => {
       ).rejects.toThrow(BadGatewayException);
     });
 
-    it("deve rejeitar notification_url sem HTTPS (fail-closed)", async () => {
+    it("should reject notification_url without HTTPS (fail-closed)", async () => {
       process.env.PAYMENT_GATEWAY_NOTIFICATION_URL = "http://exemplo.com/webhook";
 
       const fetchMock = jest.fn();
@@ -185,7 +185,7 @@ describe("MercadoPagoGateway", () => {
   });
 
   describe("getPayment", () => {
-    it("deve retornar o status do pagamento pelo gateway", async () => {
+    it("should return the payment status from the gateway", async () => {
       const fetchMock = jest.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -216,7 +216,7 @@ describe("MercadoPagoGateway", () => {
       });
     });
 
-    it("deve lançar BadGatewayException quando a consulta falha", async () => {
+    it("should throw BadGatewayException when the lookup fails", async () => {
       const fetchMock = jest.fn().mockResolvedValue({
         ok: false,
         json: async () => ({ error: "not_found" }),
@@ -228,7 +228,7 @@ describe("MercadoPagoGateway", () => {
       );
     });
 
-    it("deve rejeitar ID fora do formato antes de chamar a API (injeção)", async () => {
+    it("should reject a malformed ID before calling the API (injection)", async () => {
       const fetchMock = jest.fn();
       global.fetch = fetchMock as unknown as typeof fetch;
 
@@ -246,14 +246,14 @@ describe("MercadoPagoGateway", () => {
       process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = originalSecret;
     });
 
-    it("deve rejeitar quando não há secret configurado (fail-closed)", () => {
+    it("should reject when no secret is configured (fail-closed)", () => {
       delete process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET;
       expect(
         gateway.validateWebhook({}, { data: { id: "123" } }),
       ).toBe(false);
     });
 
-    it("deve validar assinatura HMAC correta", () => {
+    it("should validate a correct HMAC signature", () => {
       process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = "secret-de-teste";
       const crypto = require("node:crypto");
       const tsAtual = Math.floor(Date.now() / 1000);
@@ -274,7 +274,7 @@ describe("MercadoPagoGateway", () => {
       expect(valid).toBe(true);
     });
 
-    it("deve rejeitar assinatura válida mas fora da janela de tempo (anti-replay)", () => {
+    it("should reject a valid signature outside the time window (anti-replay)", () => {
       process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = "secret-de-teste";
       const crypto = require("node:crypto");
       const tsVelho = Math.floor(Date.now() / 1000) - 3600;
@@ -295,7 +295,7 @@ describe("MercadoPagoGateway", () => {
       expect(valid).toBe(false);
     });
 
-    it("deve rejeitar assinatura inválida", () => {
+    it("should reject an invalid signature", () => {
       process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = "secret-de-teste";
 
       const valid = gateway.validateWebhook(
@@ -309,7 +309,7 @@ describe("MercadoPagoGateway", () => {
       expect(valid).toBe(false);
     });
 
-    it("deve rejeitar quando faltam campos da assinatura", () => {
+    it("should reject when signature fields are missing", () => {
       process.env.PAYMENT_GATEWAY_WEBHOOK_SECRET = "secret-de-teste";
 
       const valid = gateway.validateWebhook(

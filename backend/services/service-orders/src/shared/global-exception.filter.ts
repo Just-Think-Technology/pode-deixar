@@ -7,7 +7,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
-import { sanitizarDadosSensiveis } from "@pode-deixar/security";
+import { sanitizeSensitiveData } from "@pode-deixar/security";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -43,10 +43,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     this.logger.error(
-      sanitizarDadosSensiveis(
+      sanitizeSensitiveData(
         `${request.method} ${request.url} - ${status} - ${message}`,
       ),
-      sanitizarDadosSensiveis(
+      sanitizeSensitiveData(
         exception instanceof Error ? exception.stack || "" : "",
       ),
     );

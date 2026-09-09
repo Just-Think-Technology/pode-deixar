@@ -1,19 +1,19 @@
 import { ApiPropertyOptional, ApiProperty } from "@nestjs/swagger";
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
-const TIPOS_NOTIFICACAO = [
+const NOTIFICATION_TYPES = [
   "BUDGET",
   "PROPOSAL_ACCEPTED",
   "SERVICE_COMPLETED",
   "NEW_MESSAGE",
 ] as const;
 
-const TIPOS_RELACIONADOS = ["ORDER", "PROPOSAL", "REVIEW"] as const;
+const RELATED_TYPES = ["ORDER", "PROPOSAL", "REVIEW"] as const;
 
 export class CreateNotificationDto {
   @ApiPropertyOptional({
     description:
-      "Destinatário (ignorado pelo servidor: a notificação é sempre criada para o próprio usuário autenticado)",
+      "Recipient (ignored by the server: the notification is always created for the authenticated user)",
     example: "uuid-do-usuario",
   })
   @IsOptional()
@@ -21,32 +21,32 @@ export class CreateNotificationDto {
   recipient?: string;
 
   @ApiProperty({
-    description: "Tipo da notificação",
-    enum: TIPOS_NOTIFICACAO,
+    description: "Notification type",
+    enum: NOTIFICATION_TYPES,
   })
-  @IsIn([...TIPOS_NOTIFICACAO], { message: "Tipo de notificação inválido" })
+  @IsIn([...NOTIFICATION_TYPES], { message: "Tipo de notificação inválido" })
   type: "BUDGET" | "PROPOSAL_ACCEPTED" | "SERVICE_COMPLETED" | "NEW_MESSAGE";
 
-  @ApiProperty({ description: "Título da notificação", maxLength: 200 })
+  @ApiProperty({ description: "Notification title", maxLength: 200 })
   @IsString({ message: "Título deve ser uma string" })
   @MaxLength(200, { message: "Título deve ter no máximo 200 caracteres" })
   title: string;
 
-  @ApiProperty({ description: "Mensagem da notificação", maxLength: 200 })
+  @ApiProperty({ description: "Notification message", maxLength: 200 })
   @IsString({ message: "Mensagem deve ser uma string" })
   @MaxLength(200, { message: "Mensagem deve ter no máximo 200 caracteres" })
   message: string;
 
-  @ApiPropertyOptional({ description: "ID do recurso relacionado" })
+  @ApiPropertyOptional({ description: "Related resource ID" })
   @IsOptional()
   @IsUUID("4", { message: "ID relacionado deve ser um UUID válido" })
   relatedId?: string;
 
   @ApiPropertyOptional({
-    description: "Tipo do recurso relacionado",
-    enum: TIPOS_RELACIONADOS,
+    description: "Related resource type",
+    enum: RELATED_TYPES,
   })
   @IsOptional()
-  @IsIn([...TIPOS_RELACIONADOS], { message: "Tipo relacionado inválido" })
+  @IsIn([...RELATED_TYPES], { message: "Tipo relacionado inválido" })
   relatedType?: "ORDER" | "PROPOSAL" | "REVIEW";
 }

@@ -27,18 +27,18 @@ describe('Password Reset Flow', () => {
 
   /**
    * Registers + verifies a user, then triggers the forgot-password flow.
-   * Justificativa AppSec: o banco guarda apenas o sha256 do token de reset,
-   * então o token bruto vem do eco não-prod do forgot-password (equivale ao
-   * link recebido por email) em vez de leitura direta do banco.
+   * The database stores only the reset-token sha256, so the raw token comes
+   * from the non-prod forgot-password echo (equivalent to the emailed link)
+   * instead of a direct database read.
    */
   async function setupResetFlow() {
     const user = createTestUser();
-    const registro = await registerUser(app, user);
+    const registration = await registerUser(app, user);
     await verifyEmailViaApi(
       app,
       user.email,
       prisma,
-      registro.body.email_verification_token as string,
+      registration.body.email_verification_token as string,
     );
 
     const forgotResponse = await request(app.getHttpServer())
@@ -58,12 +58,12 @@ describe('Password Reset Flow', () => {
   describe('POST /auth/forgot-password', () => {
     it('should respond with a generic success message (no email enumeration)', async () => {
       const user = createTestUser();
-      const registro = await registerUser(app, user);
+      const registration = await registerUser(app, user);
       await verifyEmailViaApi(
         app,
         user.email,
         prisma,
-        registro.body.email_verification_token as string,
+        registration.body.email_verification_token as string,
       );
 
       const response = await request(app.getHttpServer())

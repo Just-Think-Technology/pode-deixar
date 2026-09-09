@@ -9,24 +9,17 @@ import { PasswordService } from '../password/password.service';
 import { EmailService } from '@pode-deixar/email';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import {
-  ALGORITMOS_JWT,
-  AUDIENCIA_JWT,
-  EMISSOR_JWT,
-} from '../jwt/jwt.constantes';
+import { JWT_ALGORITHMS, JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
-const TAMANHO_MINIMO_SEGREDO_JWT = 32;
+const MIN_JWT_SECRET_LENGTH = 32;
 
-/**
- * Validação fail-closed dos segredos JWT: exige segredos presentes e com
- * comprimento mínimo. Chamada no boot para impedir operação insegura.
- */
-export function exigirSegredosJwt(config: ConfigService): void {
-  for (const chave of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const) {
-    const segredo = config.get<string>(chave);
-    if (!segredo || segredo.length < TAMANHO_MINIMO_SEGREDO_JWT) {
+// Fail-closed JWT secret validation: requires present secrets with minimum length. Called at boot to prevent insecure operation.
+export function requireJwtSecrets(config: ConfigService): void {
+  for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const) {
+    const secret = config.get<string>(key);
+    if (!secret || secret.length < MIN_JWT_SECRET_LENGTH) {
       throw new Error(
-        `Configuração insegura: ${chave} ausente ou com menos de ${TAMANHO_MINIMO_SEGREDO_JWT} caracteres`,
+        `Configuração insegura: ${key} ausente ou com menos de ${MIN_JWT_SECRET_LENGTH} caracteres`,
       );
     }
   }
@@ -42,7 +35,7 @@ export class LoginService {
     private passwordService: PasswordService,
     private emailService: EmailService,
   ) {
-    exigirSegredosJwt(configService);
+    requireJwtSecrets(configService);
   }
 
   async login(dto: LoginDto, ip?: string) {
@@ -55,8 +48,7 @@ export class LoginService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Conta bloqueada responde 401 genérico (anti-enumeração); contadores de
-    // lockout continuam gerenciados no banco pela verificação de senha.
+    // Locked accounts return a generic 401 (anti-enumeration); lockout counters stay managed in the DB by password verification.
     if (user.lockoutUntil && user.lockoutUntil > new Date()) {
       this.authLogger.logSecurityEvent('account_locked_attempt', {
         email: dto.email,
@@ -96,7 +88,6 @@ export class LoginService {
           ip,
         });
 
-        // Resposta uniforme anti-enumeração mesmo ao atingir o bloqueio.
         throw new UnauthorizedException('Credenciais inválidas');
       } else {
         await this.prisma.user.updateMany({
@@ -109,15 +100,14 @@ export class LoginService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Email não verificado responde 401 genérico (anti-enumeração); reenvia
-    // a dica de verificação em best-effort sem vazar o estado da conta.
+    // Unverified emails return a generic 401 (anti-enumeration); the verification hint is resent best-effort without leaking account state.
     if (!user.emailVerified) {
       this.authLogger.logLoginAttempt(dto.email, false, ip);
       this.authLogger.logSecurityEvent('email_not_verified', {
         email: dto.email,
         ip,
       });
-      await this.reenviarDicaVerificacao(user.id, user.email);
+      await this.resendVerificationHint(user.id, user.email);
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
@@ -140,7 +130,7 @@ export class LoginService {
       },
     });
 
-    const expiresIn = 15 * 60; // access_token real TTL (15 min)
+    const expiresIn = 15 * 60;
 
     this.authLogger.logLoginAttempt(dto.email, true, ip);
 
@@ -163,9 +153,9 @@ export class LoginService {
     try {
       const payload = await this.jwtService.verifyAsync(dto.refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        algorithms: [...ALGORITMOS_JWT],
-        issuer: EMISSOR_JWT,
-        audience: AUDIENCIA_JWT,
+        algorithms: [...JWT_ALGORITHMS],
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
       });
 
       const hashedIncoming = this.hashRefreshToken(dto.refreshToken);
@@ -265,8 +255,8 @@ export class LoginService {
       secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
       expiresIn: '15m',
       algorithm: 'HS256',
-      issuer: EMISSOR_JWT,
-      audience: AUDIENCIA_JWT,
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
   }
 
@@ -280,31 +270,27 @@ export class LoginService {
       secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       expiresIn: '7d',
       algorithm: 'HS256',
-      issuer: EMISSOR_JWT,
-      audience: AUDIENCIA_JWT,
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
   }
 
-  /**
-   * Reenvia a dica de verificação para logins com email não confirmado.
-   * Gera novo token (armazenado como hash) e ignora falha de envio para
-   * não vazar o estado da conta nem quebrar o 401 uniforme.
-   */
-  private async reenviarDicaVerificacao(
+  // Resends a verification hint best-effort without leaking account state or breaking the uniform 401.
+  private async resendVerificationHint(
     userId: string,
     email: string,
   ): Promise<void> {
-    const tokenBruto = crypto.randomUUID();
-    const expiracao = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const rawToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await this.prisma.user.updateMany({
       where: { id: userId },
       data: {
-        emailVerificationToken: this.hashToken(tokenBruto),
-        emailVerificationExpires: expiracao,
+        emailVerificationToken: this.hashToken(rawToken),
+        emailVerificationExpires: expiresAt,
       },
     });
     try {
-      await this.emailService.sendEmailVerification(email, tokenBruto);
+      await this.emailService.sendEmailVerification(email, rawToken);
     } catch (error) {
       this.authLogger.logSecurityEvent('email_send_failed', {
         email,

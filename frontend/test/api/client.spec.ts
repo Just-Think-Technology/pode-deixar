@@ -21,11 +21,7 @@ function textResponse(text: string, status = 200) {
   return new Response(text, { status })
 }
 
-// ─── Tests ──────────────────────────────────────────────────────────────────
-// Integração: camada HTTP base (base URL, headers, erros) com fetch mockado.
-// Trava o contrato que todos os módulos em api/* usam para falar com o back.
-
-describe('api/client (integração HTTP)', () => {
+describe('api/client (HTTP integration)', () => {
   beforeEach(() => {
     vi.stubEnv('NEXT_PUBLIC_BACKEND_URL', 'http://api.test')
     vi.stubGlobal('fetch', fetchMock)
@@ -39,11 +35,11 @@ describe('api/client (integração HTTP)', () => {
   })
 
   describe('getApiBaseUrl()', () => {
-    it('usa NEXT_PUBLIC_BACKEND_URL no browser', () => {
+    it('uses NEXT_PUBLIC_BACKEND_URL in the browser', () => {
       expect(getApiBaseUrl()).toBe('http://api.test')
     })
 
-    it('lança erro quando a URL não está definida', () => {
+    it('throws an error when the URL is not set', () => {
       vi.stubEnv('NEXT_PUBLIC_BACKEND_URL', '')
 
       expect(() => getApiBaseUrl()).toThrow(
@@ -53,7 +49,7 @@ describe('api/client (integração HTTP)', () => {
   })
 
   describe('apiFetch()', () => {
-    it('retorna o JSON em caso de sucesso', async () => {
+    it('returns JSON on success', async () => {
       fetchMock.mockResolvedValue(jsonResponse({ id: '1' }))
 
       const data = await apiFetch<{ id: string }>('/services/me')
@@ -69,7 +65,7 @@ describe('api/client (integração HTTP)', () => {
       )
     })
 
-    it('preserva headers customizados', async () => {
+    it('preserves custom headers', async () => {
       fetchMock.mockResolvedValue(jsonResponse({}))
 
       await apiFetch('/x', { headers: { 'X-Custom': '1' } })
@@ -82,7 +78,7 @@ describe('api/client (integração HTTP)', () => {
       )
     })
 
-    it('mapeia 401 para sessão expirada', async () => {
+    it('maps 401 to expired session', async () => {
       fetchMock.mockResolvedValue(jsonResponse({}, 401))
 
       const err: any = await apiFetch('/x').catch((e) => e)
@@ -92,7 +88,7 @@ describe('api/client (integração HTTP)', () => {
       expect(err.message).toBe('Sessão expirada. Faça login novamente.')
     })
 
-    it('mapeia 403 para falta de permissão', async () => {
+    it('maps 403 to missing permission', async () => {
       fetchMock.mockResolvedValue(jsonResponse({}, 403))
 
       const err: any = await apiFetch('/x').catch((e) => e)
@@ -102,7 +98,7 @@ describe('api/client (integração HTTP)', () => {
       expect(err.message).toBe('Você não tem permissão para realizar esta ação.')
     })
 
-    it('usa a mensagem do backend quando string', async () => {
+    it('uses the backend message when it is a string', async () => {
       fetchMock.mockResolvedValue(
         jsonResponse({ message: 'Pedido não encontrado' }, 404),
       )
@@ -114,7 +110,7 @@ describe('api/client (integração HTTP)', () => {
       expect(err.body).toEqual({ message: 'Pedido não encontrado' })
     })
 
-    it('concatena mensagens do backend quando array', async () => {
+    it('concatenates backend messages when array', async () => {
       fetchMock.mockResolvedValue(
         jsonResponse({ message: ['erro a', 'erro b'] }, 400),
       )
@@ -124,13 +120,13 @@ describe('api/client (integração HTTP)', () => {
       expect(err.message).toBe('erro a, erro b')
     })
 
-    it('retorna null quando o corpo não é JSON', async () => {
+    it('returns null when the body is not JSON', async () => {
       fetchMock.mockResolvedValue(textResponse('not-json', 200))
 
       await expect(apiFetch('/x')).resolves.toBeNull()
     })
 
-    it('propaga falha de rede original', async () => {
+    it('propagates the original network failure', async () => {
       fetchMock.mockRejectedValue(new TypeError('network down'))
 
       const err: any = await apiFetch('/x').catch((e) => e)
@@ -139,9 +135,9 @@ describe('api/client (integração HTTP)', () => {
       expect(err.message).toBe('network down')
     })
 
-    it('mapeia timeout (abort) para 503', async () => {
+    it('maps timeout (abort) to 503', async () => {
       vi.useFakeTimers()
-      // Simula a semântica real do fetch: rejeita com AbortError no abort.
+      // Simulates real fetch semantics: rejects with AbortError on abort.
       fetchMock.mockImplementation(
         (_url: string, init?: RequestInit) =>
           new Promise((_resolve, reject) => {
@@ -161,7 +157,7 @@ describe('api/client (integração HTTP)', () => {
   })
 
   describe('apiFetchAuth()', () => {
-    it('envia o Bearer token', async () => {
+    it('sends the Bearer token', async () => {
       fetchMock.mockResolvedValue(jsonResponse({ ok: true }))
 
       await apiFetchAuth('/services/me', 'tok-abc', { method: 'GET' })

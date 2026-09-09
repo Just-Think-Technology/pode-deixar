@@ -19,10 +19,10 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 
-function traduzirErrosValidacao(errors: ValidationError[]): string {
-  const rotulos: Record<string, string> = {
+function translateValidationErrors(errors: ValidationError[]): string {
+  const fieldLabels: Record<string, string> = {
     title: "Título",
-    description: "Descrição",
+    description: "Description",
     fixedPrice: "Preço fixo",
     categoryId: "Categoria",
     avatarUrl: "URL do avatar",
@@ -37,7 +37,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string {
     icon: "Ícone",
   };
 
-  const traducoes: Record<string, (r: string) => string> = {
+  const constraintMessages: Record<string, (label: string) => string> = {
     isString: (r) => `${r} deve ser uma string`,
     isNotEmpty: (r) => `${r} não pode estar vazio`,
     isNumber: (r) => `${r} deve ser um número`,
@@ -56,14 +56,14 @@ function traduzirErrosValidacao(errors: ValidationError[]): string {
   return errors
     .map((error) => {
       if (!error.constraints)
-        return `${rotulos[error.property] || error.property} inválido`;
+        return `${fieldLabels[error.property] || error.property} inválido`;
       return Object.entries(error.constraints)
-        .map(([chave, msg]) => {
-          // eslint-disable-next-line security/detect-object-injection
-          const tradutor = traducoes[chave];
+        .map(([constraintKey, msg]) => {
+          // eslint-disable-next-line security/detect-object-injection -- key comes from class-validator's fixed constraint names
+          const formatter = constraintMessages[constraintKey];
 
-          return tradutor
-            ? tradutor(rotulos[error.property] || error.property)
+          return formatter
+            ? formatter(fieldLabels[error.property] || error.property)
             : msg;
         })
         .join("; ");
@@ -112,7 +112,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string {
         forbidNonWhitelisted: true,
         transform: true,
         exceptionFactory: (errors) =>
-          new BadRequestException(traduzirErrosValidacao(errors)),
+          new BadRequestException(translateValidationErrors(errors)),
       }),
     },
     {

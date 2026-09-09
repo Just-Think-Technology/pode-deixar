@@ -13,12 +13,12 @@ describe("MockPaymentGateway", () => {
     gateway = module.get<MockPaymentGateway>(MockPaymentGateway);
   });
 
-  it("deve expor o nome e estar sempre configurado", () => {
+  it("should expose the name and always be configured", () => {
     expect(gateway.name).toBe("MOCK");
     expect(gateway.isConfigured).toBe(true);
   });
 
-  it("deve gerar cobrança PIX com pixCopiaECola", async () => {
+  it("should generate a PIX charge with pixCopiaECola", async () => {
     const result = await gateway.createCharge({
       amount: 150,
       externalReference: "payment-1",
@@ -32,7 +32,7 @@ describe("MockPaymentGateway", () => {
     expect(result.cobranca.linkCheckout).toBeUndefined();
   });
 
-  it("deve gerar link de checkout para cartão de crédito", async () => {
+  it("should generate a checkout link for credit card", async () => {
     const result = await gateway.createCharge({
       amount: 80,
       externalReference: "payment-2",
@@ -45,7 +45,7 @@ describe("MockPaymentGateway", () => {
     expect(result.cobranca.pixCopiaECola).toBeUndefined();
   });
 
-  it("deve montar o chargeRef com base no externalReference", async () => {
+  it("should build chargeRef from externalReference", async () => {
     const result = await gateway.createCharge({
       amount: 10,
       externalReference: "payment-123456789",
@@ -55,7 +55,7 @@ describe("MockPaymentGateway", () => {
     expect(result.id).toBe("chg_mock_payment12345");
   });
 
-  it("não deve suportar consulta de pagamento nem webhooks", () => {
+  it("should not support payment lookup or webhooks", () => {
     expect(() => gateway.getPayment("x")).rejects.toThrow("consultas de pagamento não implementadas");
     expect(gateway.validateWebhook({}, {})).toBe(false);
     expect(gateway.extractEventId({}, {})).toBe("");

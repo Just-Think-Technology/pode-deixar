@@ -9,20 +9,20 @@ import { MinioService } from "../storage/minio.service";
 import sharp from "sharp";
 import * as crypto from "crypto";
 
-// Teto de pixels aceito pelo sharp (anti bomba de descompressão):
-// ~25MP cobre fotos de celular sem estourar memória no worker.
-const LIMITE_PIXELS_SHARP = 25_000_000;
+// Pixel cap guards against decompression bombs while still covering phone
+// photos without exhausting worker memory.
+const SHARP_PIXEL_LIMIT = 25_000_000;
 
-const TIPOS_IMAGEM_PERMITIDOS = [
+const ALLOWED_IMAGE_MIME_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/gif",
 ];
 
-// Confere os magic bytes do conteúdo contra o mimetype declarado
-// (o mimetype do multipart é informado pelo cliente e não é confiável).
-function conteudoImagemValido(buffer: Buffer, mimetype: string): boolean {
+// The client-provided multipart mimetype is untrusted, so verify magic bytes
+// against the declared type.
+function isImageContentValid(buffer: Buffer, mimetype: string): boolean {
   if (!buffer || buffer.length < 12) {
     return false;
   }
@@ -45,8 +45,8 @@ function conteudoImagemValido(buffer: Buffer, mimetype: string): boolean {
   }
 
   if (mimetype === "image/gif") {
-    const cabecalho = buffer.subarray(0, 6).toString("ascii");
-    return cabecalho === "GIF87a" || cabecalho === "GIF89a";
+    const header = buffer.subarray(0, 6).toString("ascii");
+    return header === "GIF87a" || header === "GIF89a";
   }
 
   if (mimetype === "image/webp") {
@@ -83,18 +83,16 @@ export class PhotosService {
       throw new ForbiddenException("Pedido não pertence ao cliente");
     }
 
-    // Fotos só podem ser enviadas enquanto o pedido está aberto (antes de
-    // propostas/contratação/conclusão): evita anexar conteúdo a pedidos
-    // que já saíram da vitrine.
+    // Only allow uploads on open orders to keep attachments off orders that
+    // already left the showcase.
     if (order.status !== "OPEN") {
       throw new BadRequestException(
         "Só é possível enviar fotos para pedidos com status aberto",
       );
     }
 
-    // Array.isArray primeiro: sem ele, um `photos` não-array (ex. objeto
-    // com `length` forjado) confundiria as checagens de cota abaixo (CodeQL:
-    // type confusion through parameter tampering).
+    // Check Array.isArray first: a forged non-array with `length` would
+    // confuse the quota checks below.
     if (!Array.isArray(files) || files.length === 0) {
       throw new BadRequestException("Nenhuma foto enviada");
     }
@@ -104,13 +102,13 @@ export class PhotosService {
     }
 
     for (const file of files) {
-      if (!TIPOS_IMAGEM_PERMITIDOS.includes(file.mimetype)) {
+      if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
         throw new BadRequestException(
           `Tipo de arquivo inválido: ${file.mimetype}. Apenas imagens são permitidas (jpeg, png, webp, gif)`,
         );
       }
 
-      if (!conteudoImagemValido(file.buffer, file.mimetype)) {
+      if (!isImageContentValid(file.buffer, file.mimetype)) {
         throw new BadRequestException(
           `O conteúdo do arquivo "${file.originalname}" não corresponde a uma imagem válida (jpeg, png, webp ou gif)`,
         );
@@ -122,7 +120,7 @@ export class PhotosService {
     for (const file of files) {
       try {
         const webpBuffer = await sharp(file.buffer, {
-          limitInputPixels: LIMITE_PIXELS_SHARP,
+          limitInputPixels: SHARP_PIXEL_LIMIT,
         })
           .webp({ quality: 80 })
           .toBuffer();
@@ -134,8 +132,8 @@ export class PhotosService {
       }
     }
 
-    // Cota (máx. 10 fotos por pedido) e criações na mesma transação para
-    // impedir estouro da cota sob uploads concorrentes.
+    // Enforce the quota and create rows in one transaction to prevent overruns
+    // under concurrent uploads.
     return this.prisma.$transaction(async (tx) => {
       const existingCount = await tx.orderPhoto.count({
         where: { serviceOrderId: orderId },
@@ -150,7 +148,7 @@ export class PhotosService {
       const uploaded = [];
 
       for (let i = 0; i < files.length; i++) {
-        // eslint-disable-next-line security/detect-object-injection
+        // eslint-disable-next-line security/detect-object-injection -- numeric loop index, not a user-controlled key
         const webpBuffer = webpBuffers[i];
         const fileName = `${orderId}/${crypto.randomUUID()}.webp`;
 
@@ -169,7 +167,7 @@ export class PhotosService {
 
         uploaded.push({
           id: photo.id,
-          // Endpoint autenticado (bucket privado): mesma convenção do detalhe.
+          // Private bucket, so expose the authenticated endpoint like the order detail does.
           url: `/api/services/photos/${photo.id}/view`,
           created_at: photo.createdAt,
         });
@@ -179,43 +177,41 @@ export class PhotosService {
     });
   }
 
-  // URL temporária de visualização de uma foto do pedido. Autorização:
-  // cliente dono do pedido, prestador com proposta no pedido ou ADMIN.
-  async obterUrlVisualizacao(photoId: string, userId: string, role: string) {
-    const foto = await this.prisma.orderPhoto.findUnique({
+  async getViewUrl(photoId: string, userId: string, role: string) {
+    const photo = await this.prisma.orderPhoto.findUnique({
       where: { id: photoId },
       include: {
         serviceOrder: { select: { id: true, clientId: true } },
       },
     });
 
-    if (!foto || !foto.serviceOrder) {
+    if (!photo || !photo.serviceOrder) {
       throw new NotFoundException("Foto não encontrada");
     }
 
-    const ordem = foto.serviceOrder;
+    const order = photo.serviceOrder;
 
-    if (role === "ADMIN" || ordem.clientId === userId) {
-      return this.gerarRespostaVisualizacao(foto.url);
+    if (role === "ADMIN" || order.clientId === userId) {
+      return this.buildViewResponse(photo.url);
     }
 
     if (role === "PROVIDER") {
-      const proposta = await this.prisma.proposal.findFirst({
-        where: { serviceOrderId: ordem.id, providerId: userId },
+      const proposal = await this.prisma.proposal.findFirst({
+        where: { serviceOrderId: order.id, providerId: userId },
         select: { id: true },
       });
 
-      if (proposta) {
-        return this.gerarRespostaVisualizacao(foto.url);
+      if (proposal) {
+        return this.buildViewResponse(photo.url);
       }
     }
 
     throw new ForbiddenException("Acesso negado a esta foto");
   }
 
-  private async gerarRespostaVisualizacao(urlArmazenada: string) {
-    const nomeArquivo = this.minio.extractFileName(urlArmazenada);
-    const url = await this.minio.gerarUrlTemporaria(nomeArquivo);
+  private async buildViewResponse(storedUrl: string) {
+    const fileName = this.minio.extractFileName(storedUrl);
+    const url = await this.minio.generateTemporaryUrl(fileName);
     return { url };
   }
 }

@@ -13,21 +13,21 @@ import { RegisterService } from './register.service';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import { extrairIpSeguro } from '../shared/extrair-ip-seguro';
-import { anonimizarEmailParaLog } from '../shared/auth-logger.service';
+import { extractSafeIp } from '../shared/extract-safe-ip';
+import { anonymizeEmailForLog } from '../shared/auth-logger.service';
 import getLogger from '../shared/shared-logger';
 
 const logger = getLogger('register');
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
-@ApiTags('Cadastro')
+@ApiTags('Signup')
 export class RegisterController {
   constructor(private readonly registerService: RegisterService) {}
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Registrar um novo usuário' })
+  @ApiOperation({ summary: 'Register a new user' })
   @ApiBody({ type: RegisterDto })
   async register(
     @Body() dto: RegisterDto,
@@ -36,16 +36,16 @@ export class RegisterController {
     try {
       logger.info(
         'auth.endpoint',
-        `Register called for ${anonimizarEmailParaLog(dto.email)}`,
+        `Register called for ${anonymizeEmailForLog(dto.email)}`,
       );
     } catch {}
-    return this.registerService.register(dto, extrairIpSeguro(ip));
+    return this.registerService.register(dto, extractSafeIp(ip));
   }
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Verificar email do usuário com token' })
+  @ApiOperation({ summary: 'Verify user email with token' })
   @ApiBody({ type: VerifyEmailDto })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     try {
@@ -57,13 +57,13 @@ export class RegisterController {
   @Post('resend-email-verification')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Reenviar link de verificação de email' })
+  @ApiOperation({ summary: 'Resend email verification link' })
   @ApiBody({ type: ResendVerificationDto })
   async resendVerificationEmail(@Body() dto: ResendVerificationDto) {
     try {
       logger.info(
         'auth.endpoint',
-        `Resend verification requested for ${anonimizarEmailParaLog(dto.email)}`,
+        `Resend verification requested for ${anonymizeEmailForLog(dto.email)}`,
       );
     } catch {}
     return this.registerService.resendVerificationEmail(dto);

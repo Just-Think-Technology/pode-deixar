@@ -55,7 +55,7 @@ export async function requireValidSession(area: AppArea): Promise<AuthSession> {
     redirect(getLoginHrefForArea(area));
   }
 
-  // Em modo mock (e2e / UI sem backend), confia no cookie de sessão.
+  // In mock mode (e2e / UI without backend), trust the session cookie.
   if (USE_MOCK) {
     if (session.user.role !== requiredRole) {
       await clearAuthSession();

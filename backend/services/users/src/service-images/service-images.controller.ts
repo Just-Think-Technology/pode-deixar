@@ -46,7 +46,7 @@ function fileFilter(
   }
 }
 
-@ApiTags("Imagens do Serviço")
+@ApiTags("Service Images")
 @Controller("providers/me/services/:serviceId/images")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -62,7 +62,7 @@ export class ServiceImagesController {
       fileFilter,
     }),
   )
-  @ApiOperation({ summary: "Fazer upload de imagem para um serviço" })
+  @ApiOperation({ summary: "Upload an image for a service" })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
@@ -71,14 +71,14 @@ export class ServiceImagesController {
         file: {
           type: "string",
           format: "binary",
-          description: "Arquivo de imagem (JPEG, PNG, WebP ou GIF, máx 5MB)",
+          description: "Image file (JPEG, PNG, WebP or GIF, max 5MB)",
         },
       },
     },
   })
-  @ApiResponse({ status: 201, description: "Imagem enviada com sucesso" })
-  @ApiResponse({ status: 400, description: "Arquivo inválido" })
-  @ApiResponse({ status: 404, description: "Serviço não encontrado" })
+  @ApiResponse({ status: 201, description: "Image uploaded successfully" })
+  @ApiResponse({ status: 400, description: "Invalid file" })
+  @ApiResponse({ status: 404, description: "Service not found" })
   async upload(
     @Request() req: any,
     @Param("serviceId", ParseUUIDPipe) serviceId: string,
@@ -99,9 +99,9 @@ export class ServiceImagesController {
   }
 
   @Get()
-  @ApiOperation({ summary: "Listar imagens de um serviço" })
-  @ApiResponse({ status: 200, description: "Lista de imagens retornada" })
-  @ApiResponse({ status: 404, description: "Serviço não encontrado" })
+  @ApiOperation({ summary: "List images of a service" })
+  @ApiResponse({ status: 200, description: "Image list returned" })
+  @ApiResponse({ status: 404, description: "Service not found" })
   async list(
     @Request() req: any,
     @Param("serviceId", ParseUUIDPipe) serviceId: string,
@@ -111,9 +111,9 @@ export class ServiceImagesController {
   }
 
   @Delete(":imageId")
-  @ApiOperation({ summary: "Remover imagem de um serviço" })
-  @ApiResponse({ status: 200, description: "Imagem removida com sucesso" })
-  @ApiResponse({ status: 404, description: "Imagem ou serviço não encontrado" })
+  @ApiOperation({ summary: "Remove an image from a service" })
+  @ApiResponse({ status: 200, description: "Image removed successfully" })
+  @ApiResponse({ status: 404, description: "Image or service not found" })
   async delete(
     @Request() req: any,
     @Param("serviceId", ParseUUIDPipe) serviceId: string,

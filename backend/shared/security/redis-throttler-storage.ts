@@ -16,7 +16,6 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
 
   constructor() {
     const url = process.env.REDIS_URL || 'redis://localhost:6379';
-    // Prefixo configurável para isolar ambientes (padrão: 'throttler:').
     this.prefix = process.env.THROTTLER_PREFIX || 'throttler:';
     this.client = createClient({ url });
     this.client.connect().catch((err) => {
@@ -35,8 +34,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
     const ttlSecs = Math.ceil(ttl / 1000);
 
     try {
-      // INCR+EXPIRE atômico via SET NX EX: cria com TTL de uma vez;
-      // incrementa apenas se a chave já existia (evita corrida no primeiro hit).
+      // SET NX EX creates the key with its TTL atomically and only increments when the key already exists, avoiding a race on the first hit.
       const created = await this.client.set(prefixedKey, '1', {
         EX: ttlSecs,
         NX: true,
@@ -49,7 +47,6 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
       if (isBlocked) {
         timeToBlockExpire = blockDuration;
         if (blockDuration > 0) {
-          // Mantém o bloqueio pelo maior entre ttl e blockDuration.
           const blockSecs = Math.ceil(blockDuration / 1000);
           await this.client.expire(
             prefixedKey,
@@ -68,8 +65,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
         timeToBlockExpire,
       };
     } catch (error) {
-      // Fail-closed: sem o Redis não há como contar hits, então bloqueia
-      // em vez de admitir a requisição sem limite.
+      // Fail closed: without Redis there is no hit counting, so block instead of admitting the request without a limit.
       console.error('Redis throttler storage error:', error);
       return {
         totalHits: limit + 1,

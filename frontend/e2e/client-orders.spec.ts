@@ -2,15 +2,15 @@ import { expect, test } from "@playwright/test";
 
 import { loginAsClientMock } from "./helpers/auth";
 
-test.describe("Solicitações do cliente (JTT-79)", () => {
-  // Mock mutável compartilhado: accept/reject precisam rodar em sequência.
+test.describe("Client requests (JTT-79)", () => {
+  // Shared mutable mock: accept/reject must run in sequence.
   test.describe.configure({ mode: "serial" });
 
   test.beforeEach(async ({ page }) => {
     await loginAsClientMock(page);
   });
 
-  test("lista solicitações do cliente", async ({ page }) => {
+  test("lists the client requests", async ({ page }) => {
     await page.goto("/client/orders");
 
     await expect(
@@ -26,7 +26,7 @@ test.describe("Solicitações do cliente (JTT-79)", () => {
     ).toBeVisible();
   });
 
-  test("abre detalhe e mostra propostas pendentes", async ({ page }) => {
+  test("opens detail and shows pending proposals", async ({ page }) => {
     await page.goto("/client/orders/mock-client-order-001");
 
     await expect(
@@ -50,7 +50,7 @@ test.describe("Solicitações do cliente (JTT-79)", () => {
     ).toBeVisible();
   });
 
-  test("recusa proposta pendente", async ({ page }) => {
+  test("declines a pending proposal", async ({ page }) => {
     await page.goto("/client/orders/mock-client-order-001");
 
     // Segunda proposta (R$ 220,00)
@@ -62,7 +62,7 @@ test.describe("Solicitações do cliente (JTT-79)", () => {
     await expect(page.getByText("R$ 220,00")).toBeVisible();
   });
 
-  test("aceita proposta pendente e redireciona ao checkout", async ({
+  test("accepts a pending proposal and redirects to checkout", async ({
     page,
   }) => {
     await page.goto("/client/orders/mock-client-order-001");

@@ -10,7 +10,7 @@ export type PaymentMethod = "PIX" | "CREDIT_CARD";
 export type CreatePaymentPayload = {
   serviceOrderId: string;
   method: PaymentMethod;
-  /** Obrigatório no backend (400 se ausente) — definido no checkout. */
+  /** Required by the backend (400 if missing) — set at checkout. */
   scheduledAt: string;
   scheduledEndAt?: string;
 };
@@ -28,13 +28,13 @@ export type Payment = {
   updatedAt: string;
 };
 
-export type ChargeCobrancaPix = {
+export type PixCharge = {
   pixCopiaECola: string;
   qrCodeBase64?: string;
   mercadoPagoId?: number;
 };
 
-export type ChargeCobrancaCreditCard = {
+export type CreditCardCharge = {
   linkCheckout: string;
 };
 
@@ -42,7 +42,7 @@ export type ChargeResponse = {
   paymentId: string;
   chargeRef: string;
   status: PaymentStatus;
-  cobranca: ChargeCobrancaPix | ChargeCobrancaCreditCard;
+  cobranca: PixCharge | CreditCardCharge;
 };
 
 export type PaymentStatusResponse = {
@@ -57,14 +57,14 @@ export type PaymentStatusResponse = {
   createdAt: string;
 };
 
-export function isPixCobranca(
-  cobranca: ChargeResponse["cobranca"],
-): cobranca is ChargeCobrancaPix {
-  return "pixCopiaECola" in cobranca;
+export function isPixCharge(
+  charge: ChargeResponse["cobranca"],
+): charge is PixCharge {
+  return "pixCopiaECola" in charge;
 }
 
-export function isCreditCardCobranca(
-  cobranca: ChargeResponse["cobranca"],
-): cobranca is ChargeCobrancaCreditCard {
-  return "linkCheckout" in cobranca;
+export function isCreditCardCharge(
+  charge: ChargeResponse["cobranca"],
+): charge is CreditCardCharge {
+  return "linkCheckout" in charge;
 }

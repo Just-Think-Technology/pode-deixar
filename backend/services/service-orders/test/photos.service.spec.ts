@@ -15,7 +15,7 @@ jest.mock("sharp", () => {
   }));
 });
 
-// PNG 1x1 válido (passa na checagem de magic bytes do service)
+// Valid 1x1 PNG (passes the service's magic-bytes check)
 const PNG_1X1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64",
@@ -55,7 +55,7 @@ describe("PhotosService", () => {
 
   const mockMinio = {
     uploadFile: jest.fn(),
-    gerarUrlTemporaria: jest.fn(),
+    generateTemporaryUrl: jest.fn(),
     extractFileName: jest.fn(),
   };
 
@@ -170,7 +170,7 @@ describe("PhotosService", () => {
     });
   });
 
-  describe("obterUrlVisualizacao", () => {
+  describe("getViewUrl", () => {
     const mockFoto = {
       id: "photo-1",
       serviceOrderId: "order-1",
@@ -181,16 +181,16 @@ describe("PhotosService", () => {
     it("should return presigned url for the order owner", async () => {
       mockPrisma.orderPhoto.findUnique.mockResolvedValue(mockFoto);
       mockMinio.extractFileName.mockReturnValue("order-1/uuid.webp");
-      mockMinio.gerarUrlTemporaria.mockResolvedValue("https://minio/presigned");
+      mockMinio.generateTemporaryUrl.mockResolvedValue("https://minio/presigned");
 
-      const result = await service.obterUrlVisualizacao(
+      const result = await service.getViewUrl(
         "photo-1",
         "client-1",
         "CLIENT",
       );
 
       expect(result).toEqual({ url: "https://minio/presigned" });
-      expect(mockMinio.gerarUrlTemporaria).toHaveBeenCalledWith(
+      expect(mockMinio.generateTemporaryUrl).toHaveBeenCalledWith(
         "order-1/uuid.webp",
       );
     });
@@ -202,9 +202,9 @@ describe("PhotosService", () => {
       });
       mockPrisma.proposal.findFirst.mockResolvedValue({ id: "proposal-1" });
       mockMinio.extractFileName.mockReturnValue("order-1/uuid.webp");
-      mockMinio.gerarUrlTemporaria.mockResolvedValue("https://minio/presigned");
+      mockMinio.generateTemporaryUrl.mockResolvedValue("https://minio/presigned");
 
-      const result = await service.obterUrlVisualizacao(
+      const result = await service.getViewUrl(
         "photo-1",
         "provider-1",
         "PROVIDER",
@@ -217,7 +217,7 @@ describe("PhotosService", () => {
       mockPrisma.orderPhoto.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.obterUrlVisualizacao("invalid-id", "client-1", "CLIENT"),
+        service.getViewUrl("invalid-id", "client-1", "CLIENT"),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -229,7 +229,7 @@ describe("PhotosService", () => {
       mockPrisma.proposal.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.obterUrlVisualizacao("photo-1", "provider-9", "PROVIDER"),
+        service.getViewUrl("photo-1", "provider-9", "PROVIDER"),
       ).rejects.toThrow(ForbiddenException);
     });
   });

@@ -21,7 +21,7 @@ const user = url.username;
 const password = url.password;
 
 // Admin URL to connect to default postgres database to create test database.
-// Usa o banco `postgres` (sempre existe numa instalação fresca).
+// Uses the `postgres` database (always present on a fresh install).
 const adminUrl = `postgresql://${user}:${password}@${host}:${port}/postgres?schema=public`;
 
 process.env.DATABASE_URL = databaseUrl;

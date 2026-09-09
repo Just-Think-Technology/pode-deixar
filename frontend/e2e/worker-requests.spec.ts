@@ -2,12 +2,12 @@ import { expect, test } from "@playwright/test";
 
 import { loginAsWorkerMock } from "./helpers/auth";
 
-test.describe("Solicitações do prestador (JTT-83)", () => {
+test.describe("Provider requests (JTT-83)", () => {
   test.beforeEach(async ({ page }) => {
     await loginAsWorkerMock(page);
   });
 
-  test("lista solicitações recebidas", async ({ page }) => {
+  test("lists received requests", async ({ page }) => {
     await page.goto("/worker/requests");
 
     await expect(
@@ -22,7 +22,7 @@ test.describe("Solicitações do prestador (JTT-83)", () => {
     ).toBeVisible();
   });
 
-  test("abre detalhe da solicitação", async ({ page }) => {
+  test("opens the request detail", async ({ page }) => {
     await page.goto("/worker/requests/mock-request-001");
 
     await expect(
@@ -35,7 +35,7 @@ test.describe("Solicitações do prestador (JTT-83)", () => {
     await expect(page.getByLabel("Preço (R$)")).toBeVisible();
   });
 
-  test("envia proposta válida e redireciona para propostas", async ({
+  test("submits a valid proposal and redirects to proposals", async ({
     page,
   }) => {
     await page.goto("/worker/requests/mock-request-001");
@@ -56,7 +56,7 @@ test.describe("Solicitações do prestador (JTT-83)", () => {
     ).toBeVisible();
   });
 
-  test("proposta inválida mostra erro e permanece na página", async ({
+  test("invalid proposal shows an error and stays on the page", async ({
     page,
   }) => {
     await page.goto("/worker/requests/mock-request-001");

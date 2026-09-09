@@ -9,14 +9,14 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateProposalDto {
   @ApiProperty({
-    description: "ID do pedido de serviço",
+    description: "Service order ID",
     example: "uuid-do-pedido",
   })
   @IsString()
   serviceOrderId: string;
 
   @ApiProperty({
-    description: "Preço proposto",
+    description: "Proposed price",
     example: 150.0,
   })
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -24,7 +24,7 @@ export class CreateProposalDto {
   price: number;
 
   @ApiProperty({
-    description: "Descrição da proposta",
+    description: "Description da proposta",
     example:
       "Posso realizar o serviço ainda esta semana, com garantia de 90 dias",
   })
@@ -33,7 +33,7 @@ export class CreateProposalDto {
   description: string;
 
   @ApiPropertyOptional({
-    description: "Duração estimada do serviço",
+    description: "Estimated service duration",
     example: "2 horas",
   })
   @IsOptional()

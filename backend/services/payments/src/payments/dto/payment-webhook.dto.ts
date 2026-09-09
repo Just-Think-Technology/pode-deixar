@@ -9,14 +9,14 @@ import { ApiProperty } from "@nestjs/swagger";
 
 export class PaymentWebhookDto {
   @ApiProperty({
-    description: "ID do pagamento no sistema (Pode Deixar)",
+    description: "Payment ID in the system (Pode Deixar)",
     example: "uuid-do-pagamento",
   })
   @IsUUID()
   paymentId: string;
 
   @ApiProperty({
-    description: "ID único do evento (usado para idempotência/anti-replay)",
+    description: "Unique event ID (used for idempotency/anti-replay)",
     example: "evt_mock_abcdef",
   })
   @IsString()
@@ -24,7 +24,7 @@ export class PaymentWebhookDto {
   eventId: string;
 
   @ApiProperty({
-    description: "ID da transação no gateway de pagamento (mock)",
+    description: "Transaction ID at the payment gateway (mock)",
     example: "tx_mock_1234567890",
   })
   @IsString()
@@ -32,7 +32,7 @@ export class PaymentWebhookDto {
   externalId: string;
 
   @ApiProperty({
-    description: "Valor confirmado pelo gateway (mock)",
+    description: "Amount confirmed by the gateway (mock)",
     example: 150.0,
   })
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -40,7 +40,7 @@ export class PaymentWebhookDto {
   amount: number;
 
   @ApiProperty({
-    description: "Timestamp do evento (Unix seconds) para anti-replay",
+    description: "Event timestamp (Unix seconds) for anti-replay",
     example: "1710000000",
   })
   @IsString()

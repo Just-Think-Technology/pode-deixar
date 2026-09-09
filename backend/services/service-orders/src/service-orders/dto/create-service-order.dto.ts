@@ -13,7 +13,7 @@ import { ServiceOrderAddressDto } from "./service-order-address.dto";
 
 export class CreateServiceOrderDto {
   @ApiProperty({
-    description: "Título do pedido de serviço",
+    description: "Service order title",
     example: "Preciso de um encanador para consertar vazamento",
   })
   @IsString()
@@ -21,7 +21,7 @@ export class CreateServiceOrderDto {
   title: string;
 
   @ApiProperty({
-    description: "Descrição detalhada do serviço necessário",
+    description: "Detailed description of the required service",
     example:
       "O chuveiro está vazando e preciso de alguém para consertar ainda esta semana",
   })
@@ -37,7 +37,7 @@ export class CreateServiceOrderDto {
   categoryId: string;
 
   @ApiPropertyOptional({
-    description: "ID do prestador (para solicitação direta)",
+    description: "Provider ID (for direct requests)",
     example: "uuid-do-prestador",
   })
   @IsOptional()
@@ -45,7 +45,7 @@ export class CreateServiceOrderDto {
   providerId?: string;
 
   @ApiPropertyOptional({
-    description: "Orçamento mínimo",
+    description: "Minimum budget",
     example: 50.0,
   })
   @IsOptional()
@@ -54,7 +54,7 @@ export class CreateServiceOrderDto {
   budgetMin?: number;
 
   @ApiPropertyOptional({
-    description: "Orçamento máximo",
+    description: "Maximum budget",
     example: 200.0,
   })
   @IsOptional()
@@ -63,7 +63,7 @@ export class CreateServiceOrderDto {
   budgetMax?: number;
 
   @ApiPropertyOptional({
-    description: "Endereço onde o serviço será realizado",
+    description: "Address where the service will be performed",
     type: ServiceOrderAddressDto,
   })
   @IsOptional()

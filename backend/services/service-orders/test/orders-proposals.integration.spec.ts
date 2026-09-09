@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
-// import-require: estes serviços não têm esModuleInterop (diferente do auth),
-// então o default-import compila para `.default` inexistente em runtime.
+// import-require: these services lack esModuleInterop (unlike auth),
+// so the default import compiles to a nonexistent `.default` at runtime.
 import request = require('supertest');
 import { App } from 'supertest/types';
 import {
@@ -15,7 +15,7 @@ import {
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-// PNG 1x1 válido (o upload converte para webp via sharp).
+// Valid 1x1 PNG (the upload converts to webp via sharp).
 const PNG_1X1 = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
   'base64',
@@ -108,7 +108,7 @@ describe('Orders & Proposals (integration)', () => {
   });
 
   describe('GET /services/me', () => {
-    it('deve listar apenas os pedidos do cliente', async () => {
+    it('should list only the client orders', async () => {
       const { token } = await clientAuth();
       const cat = await createCategory(prisma);
 
@@ -125,7 +125,7 @@ describe('Orders & Proposals (integration)', () => {
   });
 
   describe('POST /proposals', () => {
-    it('deve permitir proposta de prestador em pedido aberto', async () => {
+    it('should allow a provider proposal on an open order', async () => {
       const client = await clientAuth();
       const provider = await providerAuth();
       const cat = await createCategory(prisma);
@@ -145,7 +145,7 @@ describe('Orders & Proposals (integration)', () => {
       expect(response.body.status).toBe('PENDING');
     });
 
-    it('deve rejeitar segunda proposta ativa do mesmo prestador', async () => {
+    it('should reject a second active proposal from the same provider', async () => {
       const client = await clientAuth();
       const provider = await providerAuth();
       const cat = await createCategory(prisma);
@@ -250,7 +250,7 @@ describe('Orders & Proposals (integration)', () => {
   });
 
   describe('POST /services/me/:orderId/photos', () => {
-    it('deve enviar foto válida e retornar URL (MinIO mock)', async () => {
+    it('should upload a valid photo and return its URL (MinIO mock)', async () => {
       const { token } = await clientAuth();
       const cat = await createCategory(prisma);
       const orderId = (await createOrder(token, cat.id)).body.id;
@@ -265,8 +265,8 @@ describe('Orders & Proposals (integration)', () => {
         .expect(201);
 
       expect(mockMinio.uploadFile).toHaveBeenCalled();
-      // Bucket privado: a resposta expõe o endpoint de visualização
-      // autenticado, não a URL direta do MinIO.
+      // Private bucket: the response exposes the authenticated view endpoint,
+      // not the direct MinIO URL.
       expect(response.body[0].url).toMatch(
         /^\/api\/services\/photos\/.+\/view$/,
       );
