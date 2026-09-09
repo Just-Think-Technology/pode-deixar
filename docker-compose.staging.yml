@@ -1,10 +1,13 @@
 # ============================================================
-# Pode Deixar - Deploy de STAGING (comando único)
+# Pode Deixar - Staging com hot-reload (comando único)
 # ============================================================
 #   docker compose -f docker-compose.staging.yml up -d --build
 #
-# Mesma stack do docker-compose.prod.yml, só trocando o env para
-# .env.staging. O `name` isola volumes/redes do staging vs produção.
+# Mesmos serviços do docker-compose.prod.yml (sem frontend — Vercel;
+# sem Mailpit — SMTP real; sem Postgres — Neon staging), mas rodando
+# em modo dev: Dockerfile.dev + código montado + start:dev, igual ao
+# docker-compose.dev.yml. Listas de volumes: manter espelhadas com o
+# dev.yml. Sem `ports:` (acesso só via Caddy, como em prod).
 # ============================================================
 
 include:
@@ -15,14 +18,87 @@ name: pode-deixar-staging
 services:
   auth:
     env_file: ./.env.staging
+    build:
+      dockerfile: Dockerfile.dev
+    command: >
+      sh -c "pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
+             pnpm run --filter @pode-deixar/auth start:dev"
+    volumes:
+      - ./backend/services/auth/src:/app/services/auth/src
+      - ./backend/services/auth/tsconfig.json:/app/services/auth/tsconfig.json
+      - ./backend/services/auth/tsconfig.build.json:/app/services/auth/tsconfig.build.json
+      - ./backend/services/auth/nest-cli.json:/app/services/auth/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/email:/app/shared/email
+      - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
+      - ./backend/prisma:/app/prisma
+
   users:
     env_file: ./.env.staging
+    build:
+      dockerfile: Dockerfile.dev
+    command: pnpm run --filter @pode-deixar/users start:dev
+    volumes:
+      - ./backend/services/users/src:/app/services/users/src
+      - ./backend/services/users/tsconfig.json:/app/services/users/tsconfig.json
+      - ./backend/services/users/tsconfig.build.json:/app/services/users/tsconfig.build.json
+      - ./backend/services/users/nest-cli.json:/app/services/users/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
+      - ./backend/prisma:/app/prisma
+
   service-orders:
     env_file: ./.env.staging
+    build:
+      dockerfile: Dockerfile.dev
+    command: >
+      sh -c "rm -f /app/services/service-orders/tsconfig.build.tsbuildinfo &&
+             pnpm run --filter @pode-deixar/service-orders start:dev"
+    volumes:
+      - ./backend/services/service-orders/src:/app/services/service-orders/src
+      - ./backend/services/service-orders/tsconfig.json:/app/services/service-orders/tsconfig.json
+      - ./backend/services/service-orders/tsconfig.build.json:/app/services/service-orders/tsconfig.build.json
+      - ./backend/services/service-orders/nest-cli.json:/app/services/service-orders/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
+      - ./backend/prisma:/app/prisma
+
   payments:
     env_file: ./.env.staging
+    build:
+      dockerfile: Dockerfile.dev
+    command: >
+      sh -c "pnpm exec prisma generate --schema=prisma/schema.prisma &&
+             pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
+             pnpm run --filter @pode-deixar/payments start:dev"
+    volumes:
+      - ./backend/services/payments/src:/app/services/payments/src
+      - ./backend/services/payments/tsconfig.json:/app/services/payments/tsconfig.json
+      - ./backend/services/payments/tsconfig.build.json:/app/services/payments/tsconfig.build.json
+      - ./backend/services/payments/nest-cli.json:/app/services/payments/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
+      - ./backend/prisma:/app/prisma
+
   reviews:
     env_file: ./.env.staging
+    build:
+      dockerfile: Dockerfile.dev
+    command: pnpm run --filter @pode-deixar/reviews start:dev
+    volumes:
+      - ./backend/services/reviews/src:/app/services/reviews/src
+      - ./backend/services/reviews/tsconfig.json:/app/services/reviews/tsconfig.json
+      - ./backend/services/reviews/tsconfig.build.json:/app/services/reviews/tsconfig.build.json
+      - ./backend/services/reviews/nest-cli.json:/app/services/reviews/nest-cli.json
+      - ./backend/shared/logger:/app/shared/logger
+      - ./backend/shared/security:/app/shared/security
+      - ./backend/shared/validation:/app/shared/validation
+      - ./backend/prisma:/app/prisma
+
   minio:
     env_file: ./.env.staging
   minio-setup:

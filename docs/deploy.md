@@ -13,8 +13,8 @@
 |---|---|
 | Local (hot-reload, Postgres local) | `docker compose -f docker-compose.dev.yml up -d --build` |
 | Local (imagens, Postgres local) | `docker compose up -d --build` |
-| Staging (VPS) | `docker compose -f docker-compose.staging.yml up -d --build` |
-| Produção (VPS) | `docker compose -f docker-compose.prod.yml up -d --build` |
+| Staging (VPS, hot-reload) | `docker compose -f docker-compose.staging.yml up -d --build` |
+| Produção (VPS, imagens) | `docker compose -f docker-compose.prod.yml up -d --build` |
 
 ## Local
 
@@ -28,6 +28,12 @@
   rebuild do serviço (o watch cobre só o `src` de cada serviço)
 
 ## Deploy
+
+- Staging roda em hot-reload (mesmos serviços da prod, código montado +
+  `start:dev`); produção roda imagens compiladas. Listas de volumes do
+  staging: manter espelhadas com o `docker-compose.dev.yml`
+- O `auth` aplica `prisma migrate deploy` no startup contra o Neon de cada
+  ambiente; nunca rode nada destrutivo contra staging/prod à mão
 
 - One-off ao adotar este esquema: adicionar `MINIO_ROOT_USER` /
   `MINIO_ROOT_PASSWORD` (espelhando `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`)
