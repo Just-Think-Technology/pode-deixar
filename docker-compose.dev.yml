@@ -61,7 +61,7 @@ services:
       # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-    ports:
+    ports: !override
       - "3001:3001"
     command: >
       sh -c "pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
@@ -92,7 +92,7 @@ services:
       # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-    ports:
+    ports: !override
       - "3002:3002"
     command: pnpm run --filter @pode-deixar/users start:dev
     volumes:
@@ -117,7 +117,7 @@ services:
       # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-    ports:
+    ports: !override
       - "3003:3003"
     # tsbuildinfo incremental + deleteOutDir pode apagar dist e não reemitir
     command: >
@@ -145,7 +145,7 @@ services:
       # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-    ports:
+    ports: !override
       - "3004:3004"
     command: >
       sh -c "pnpm exec prisma generate --schema=prisma/schema.prisma &&
@@ -173,7 +173,7 @@ services:
       # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-    ports:
+    ports: !override
       - "3005:3005"
     command: pnpm run --filter @pode-deixar/reviews start:dev
     volumes:
