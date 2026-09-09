@@ -10,18 +10,19 @@
 
 | Onde | Comando |
 |---|---|
-| Local (hot-reload, banco staging) | `docker compose -f docker-compose.dev.yml up -d --build` |
-| Local (imagens, banco staging) | `docker compose --env-file .env.staging up -d --build` |
+| Local (hot-reload, Postgres local) | `docker compose -f docker-compose.dev.yml up -d --build` |
+| Local (imagens, Postgres local) | `docker compose --env-file .env.staging up -d --build` |
 | Staging (VPS) | `docker compose -f docker-compose.staging.yml up -d --build` |
 | Produção (VPS) | `docker compose -f docker-compose.prod.yml up -d --build` |
 
 ## Local
 
-- Tudo roda local, exceto o banco: `DATABASE_URL` aponta para o Neon de
-  staging — não há Postgres local; o storage é o MinIO local (minioadmin)
-- O `auth` aplica `prisma migrate deploy` no startup, então subir a stack
-  pode aplicar DDL no banco de staging; nunca rode nada destrutivo contra
-  staging à mão
+- Tudo roda local: Postgres próprio (host `localhost:15432`, entre
+  containers `postgres:5432`), MinIO local (minioadmin), Redis, Mailpit,
+  Caddy (+ backup diário do banco local)
+- O `.env.staging` fornece segredos e configs não-relacionadas ao banco
+  (JWT, SMTP, MinIO...); `DATABASE_URL` é sobreposta para o Postgres local
+- O `auth` aplica `prisma migrate deploy` no startup contra o banco local
 - Mailpit (`:8025`) é local-only; edições em `backend/shared/*` exigem
   rebuild do serviço (o watch cobre só o `src` de cada serviço)
 

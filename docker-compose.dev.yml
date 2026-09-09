@@ -4,8 +4,9 @@
 #   docker compose -f docker-compose.dev.yml up -d --build
 #
 # Inclui o docker-compose.yml e aplica os overrides de dev. Banco é o
-# Neon de staging (via .env.staging); storage é 100% local (MinIO com
-# credencial fixa de dev, sobreposta por serviço abaixo).
+# Postgres local (porta do host 15432, pois o Postgres do sistema usa a
+# 5432); storage é o MinIO local (credencial fixa de dev, sobreposta por
+# serviço abaixo).
 # ============================================================
 
 include:
@@ -14,6 +15,11 @@ include:
 name: pode-deixar-dev
 
 services:
+  # -- Postgres local: porta do host diferente da do sistema --
+  postgres:
+    ports: !override
+      - "15432:5432"
+
   # -- MinIO local (credenciais fixas de dev) --
   minio:
     environment:

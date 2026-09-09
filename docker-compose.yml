@@ -1,12 +1,11 @@
 # ============================================================
-# Pode Deixar - Stack local (desenvolvimento contra o banco de staging)
+# Pode Deixar - Stack local (PostgreSQL próprio)
 # ============================================================
-# Tudo roda local (serviços, frontend, MinIO, Redis, Mailpit, Caddy),
-# EXCETO o banco: DATABASE_URL aponta para o Neon de staging, vindo do
-# .env.staging. Não há Postgres local neste arquivo.
-# O serviço `auth` aplica migrations (prisma migrate deploy) no startup
-# via entrypoint da imagem — ou seja, subir a stack pode aplicar DDL no
-# banco de staging. Nada destrutivo à mão contra staging (ver AGENTS.md).
+# Tudo roda local: serviços, frontend, Postgres, MinIO, Redis, Mailpit,
+# Caddy (+ backup diário do banco local). O .env.staging fornece segredos
+# e configs não-relacionadas ao banco (JWT, SMTP, MinIO...); DATABASE_URL
+# é sobreposta por serviço para o Postgres local. Staging/prod usam os
+# arquivos docker-compose.staging.yml / docker-compose.prod.yml (Neon).
 #
 #   docker compose --env-file .env.staging up -d --build
 #
@@ -15,6 +14,24 @@
 # ============================================================
 
 services:
+
+  # -- PostgreSQL (local) --
+  postgres:
+    image: postgres:16-alpine
+    env_file: ./.env.staging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pode_deixar}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-pode_deixar}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # -- Auth Service --
   auth:
@@ -31,9 +48,14 @@ services:
       FRONTEND_URL: http://localhost:8080
       SMTP_HOST: mailpit
       TZ: America/Sao_Paulo
+      # Banco local (sobrepõe o DATABASE_URL do .env.staging, que é Neon)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
+      DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
       - "127.0.0.1:3001:3001"
     depends_on:
+      postgres:
+        condition: service_healthy
       mailpit:
         condition: service_started
 
@@ -50,9 +72,14 @@ services:
     env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
+      # Banco local (sobrepõe o DATABASE_URL do .env.staging, que é Neon)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
+      DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
       - "127.0.0.1:3002:3002"
     depends_on:
+      postgres:
+        condition: service_healthy
       auth:
         condition: service_started
 
@@ -69,9 +96,14 @@ services:
     env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
+      # Banco local (sobrepõe o DATABASE_URL do .env.staging, que é Neon)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
+      DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
       - "127.0.0.1:3003:3003"
     depends_on:
+      postgres:
+        condition: service_healthy
       auth:
         condition: service_started
 
@@ -88,9 +120,14 @@ services:
     env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
+      # Banco local (sobrepõe o DATABASE_URL do .env.staging, que é Neon)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
+      DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
       - "127.0.0.1:3004:3004"
     depends_on:
+      postgres:
+        condition: service_healthy
       auth:
         condition: service_started
 
@@ -107,9 +144,14 @@ services:
     env_file: ./.env.staging
     environment:
       TZ: America/Sao_Paulo
+      # Banco local (sobrepõe o DATABASE_URL do .env.staging, que é Neon)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
+      DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
       - "127.0.0.1:3005:3005"
     depends_on:
+      postgres:
+        condition: service_healthy
       auth:
         condition: service_started
 
@@ -189,6 +231,46 @@ services:
       timeout: 5s
       retries: 5
 
+  # -- PostgreSQL Backup (pg_dump cron, banco local) --
+  postgres-backup:
+    image: postgres:16-alpine
+    env_file: ./.env.staging
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-pode_deixar}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      BACKUP_SCHEDULE: "0 3 * * *"  # Diário às 03:00 UTC
+      BACKUP_RETENTION_DAYS: "7"
+      BACKUP_DIR: /backups
+    volumes:
+      - backup_data:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      apk add --no-cache cron &&
+      echo \"$${BACKUP_SCHEDULE} /usr/local/bin/backup.sh >> /var/log/cron.log 2>&1\" > /etc/crontabs/root &&
+      cat > /usr/local/bin/backup.sh << 'EOF'
+      #!/bin/sh
+      set -e
+      TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
+      FILE=\"$${BACKUP_DIR}/pode_deixar_$${TIMESTAMP}.sql.gz\"
+      echo \"[$$(date)] Iniciando backup para $${FILE}\"
+      pg_dump -h $${POSTGRES_HOST} -U $${POSTGRES_USER} -d $${POSTGRES_DB} | gzip > $${FILE}
+      echo \"[$$(date)] Backup concluído: $${FILE}\"
+      # Limpeza de backups antigos
+      find $${BACKUP_DIR} -name 'pode_deixar_*.sql.gz' -mtime +$${BACKUP_RETENTION_DAYS} -delete
+      echo \"[$$(date)] Limpeza de backups antigos (> $${BACKUP_RETENTION_DAYS} dias) concluída\"
+      EOF
+      chmod +x /usr/local/bin/backup.sh &&
+      # Executa backup inicial imediatamente
+      /usr/local/bin/backup.sh &&
+      # Inicia cron em foreground
+      crond -f -l 2
+      "
+
   # -- Proxy Reverso (Caddy) --
   caddy:
     image: caddy:2-alpine
@@ -206,4 +288,6 @@ services:
 
 volumes:
   minio_data:
+  postgres_data:
+  backup_data:
   redis_data:
