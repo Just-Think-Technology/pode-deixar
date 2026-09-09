@@ -10,7 +10,8 @@
 #
 #   docker compose --env-file .env.staging up -d --build
 #
-# Com hot-reload: acrescente -f docker-compose.dev.yml
+# Para hot-reload use o docker-compose.dev.yml (comando único, sem flags):
+#   docker compose -f docker-compose.dev.yml up -d --build
 # ============================================================
 
 services:
