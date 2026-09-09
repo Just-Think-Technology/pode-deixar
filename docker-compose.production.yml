@@ -1,9 +1,9 @@
 # ============================================================
 # Pode Deixar - Deploy de PRODUÇÃO (comando único)
 # ============================================================
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.production.yml up -d --build
 #
-# Arquivo prod-only: env sempre do .env.production (nunca commitado).
+# Arquivo production-only: env sempre do .env.production (nunca commitado).
 # O deploy de staging usa o docker-compose.staging.yml (mesma stack,
 # env do .env.staging). O `name` isola volumes/redes por ambiente.
 #
@@ -16,7 +16,7 @@
 # - Backup via pg_dump direto no Neon
 # ============================================================
 
-name: pode-deixar-prod
+name: pode-deixar-production
 
 services:
 
@@ -187,7 +187,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile.prod:/etc/caddy/Caddyfile
+      - ./Caddyfile.production:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

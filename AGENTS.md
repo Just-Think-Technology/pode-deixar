@@ -171,6 +171,6 @@ new service): [docs/task-checklists.md](docs/task-checklists.md).
 
 All-free topology (Vercel + Oracle VPS + Neon + Cloudflare + Resend/Brevo),
 `docker-compose.dev.yml` for local (own Postgres), `docker-compose.staging.yml` /
-`docker-compose.prod.yml` for deploy (one command each, stacks isolated by
+`docker-compose.production.yml` for deploy (one command each, stacks isolated by
 `name`), Caddy vhosts, per-stack Redis:
 [docs/deploy.md](docs/deploy.md).

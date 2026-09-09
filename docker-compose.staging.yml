@@ -3,7 +3,7 @@
 # ============================================================
 #   docker compose -f docker-compose.staging.yml up -d --build
 #
-# Mesmos serviços do docker-compose.prod.yml (sem frontend — Vercel;
+# Mesmos serviços do docker-compose.production.yml (sem frontend — Vercel;
 # sem Mailpit — SMTP real; sem Postgres — Neon staging), mas rodando
 # em modo dev: Dockerfile.dev + código montado + start:dev, igual ao
 # docker-compose.dev.yml. Listas de volumes: manter espelhadas com o
@@ -11,7 +11,7 @@
 # ============================================================
 
 include:
-  - path: docker-compose.prod.yml
+  - path: docker-compose.production.yml
 
 name: pode-deixar-staging
 

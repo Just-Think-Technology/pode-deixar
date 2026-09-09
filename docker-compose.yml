@@ -5,7 +5,7 @@
 # Caddy (+ backup diário do banco local). O .env.dev (versionado) fornece
 # as configs de dev; DATABASE_URL é montada para o Postgres local mesmo
 # que outro --env-file seja passado. Staging/prod usam os arquivos
-# docker-compose.staging.yml / docker-compose.prod.yml (Neon).
+# docker-compose.staging.yml / docker-compose.production.yml (Neon).
 #
 #   docker compose up -d --build
 #

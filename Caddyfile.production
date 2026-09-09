@@ -1,5 +1,5 @@
 # Pode Deixar - Reverse Proxy (deploy staging/produção)
-# Usado pelo docker-compose.prod.yml (montado em /etc/caddy/Caddyfile).
+# Usado pelo docker-compose.production.yml (montado em /etc/caddy/Caddyfile).
 # {$API_DOMAIN} vem do ambiente (ex.: api-staging.seudominio.com).
 # HTTPS automático (requer portas 80/443 publicadas e DNS apontando p/ a VPS).
 

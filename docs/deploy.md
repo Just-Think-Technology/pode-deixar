@@ -1,8 +1,8 @@
 # Deploy (All-Free Topology)
 
 > Stack files: `docker-compose.yml` + `docker-compose.dev.yml` (local,
-> `.env.dev`), `docker-compose.staging.yml` / `docker-compose.prod.yml`
-> (deploy), `Caddyfile.docker` / `Caddyfile.prod`, `.env.example` (single
+> `.env.dev`), `docker-compose.staging.yml` / `docker-compose.production.yml`
+> (deploy), `Caddyfile.docker` / `Caddyfile.production`, `.env.example` (single
 > template — real `.env.staging` / `.env.production` never in git). Cada
 > arquivo de deploy tem `name` próprio, então os comandos não precisam
 > de `-p` nem `--env-file`.
@@ -14,7 +14,10 @@
 | Local (hot-reload, Postgres local) | `docker compose -f docker-compose.dev.yml up -d --build` |
 | Local (imagens, Postgres local) | `docker compose up -d --build` |
 | Staging (VPS, hot-reload) | `docker compose -f docker-compose.staging.yml up -d --build` |
-| Produção (VPS, imagens) | `docker compose -f docker-compose.prod.yml up -d --build` |
+| Produção (VPS, imagens) | `docker compose -f docker-compose.production.yml up -d --build` |
+
+Atalho: `scripts/stack-up [dev|staging|production]` sobe a stack e imprime
+onde cada coisa está rodando.
 
 ## Local
 
@@ -45,7 +48,7 @@
 | Piece | Staging | Production | Notes |
 |---|---|---|---|
 | Frontend | Vercel (preview/`develop`) | Vercel (`main`) | `FRONTEND_URL` / `ALLOWED_ORIGINS` per env |
-| Backend | 1 Oracle ARM VPS, `-p pode-deixar-staging` | same VPS, `-p pode-deixar-prod` | project name isolates volumes, networks, Redis |
+| Backend | 1 Oracle ARM VPS, `pode-deixar-staging` | same VPS, `pode-deixar-production` | project `name` isolates volumes, networks, Redis |
 | Database | Neon (staging DB) | Neon (prod DB) | `DATABASE_URL` with `?sslmode=require`; app role is least-privilege |
 | DNS/CDN | Cloudflare | Cloudflare | A record → VPS; Caddy issues HTTPS automatically |
 | SMTP | Resend/Brevo (test key) | Resend/Brevo | Mailpit is local-only |
@@ -53,10 +56,12 @@
 
 ## Rules
 
-- Single compose file for both envs; the env is selected with
-  `ENV_FILE=.env.staging|production` (the file fails fast when unset)
+- One compose file per env (`staging` / `production`); staging includes the
+  production file and only swaps the env
 - No published ports except Caddy 80/443; no local Postgres/frontend/Mailpit
-  in the prod file
-- One Redis per stack; migrations (`pnpm prisma:migrate`) run before `up`
+  in the deploy files
+- One Redis per stack; `auth` runs `prisma migrate deploy` on startup
+- Renaming a stack `name` orphans its volumes: migrating MinIO data needs a
+  manual volume copy (see chat/PR history) before dropping the old ones
 - Secrets live in GitHub Environments (`staging` / `production`), never in git —
   agents must never open the real `.env.staging` / `.env.production` files
