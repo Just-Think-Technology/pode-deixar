@@ -68,6 +68,22 @@ describe('EmailService (shared)', () => {
       );
     });
 
+    it('deve desligar requireTLS com SMTP_REQUIRE_TLS=false (Mailpit local)', () => {
+      buildService({ SMTP_PORT: 1025, SMTP_REQUIRE_TLS: 'false' });
+
+      expect(nodemailer.createTransport).toHaveBeenCalledWith(
+        expect.objectContaining({ port: 1025, secure: false, requireTLS: false }),
+      );
+    });
+
+    it('deve manter requireTLS=true com SMTP_REQUIRE_TLS=true explícito', () => {
+      buildService({ SMTP_REQUIRE_TLS: 'true' });
+
+      expect(nodemailer.createTransport).toHaveBeenCalledWith(
+        expect.objectContaining({ requireTLS: true }),
+      );
+    });
+
     it('should THROW in production when SMTP credentials are missing', () => {
       const PREVIOUS_NODE_ENV = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
