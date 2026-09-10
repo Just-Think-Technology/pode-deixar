@@ -11,7 +11,7 @@ import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 import { FinanceItemsQueryDto } from "./dto/finance-items-query.dto";
 import { FinanceChartQueryDto } from "./dto/finance-chart-query.dto";
 
-@ApiTags("Financeiro do Prestador")
+@ApiTags("Provider Finance")
 @Controller("payments/provider/me/finance")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -21,13 +21,13 @@ export class ProviderFinanceController {
   @Get("summary")
   @Roles("PROVIDER")
   @ApiOperation({
-    summary: "Resumo financeiro do prestador autenticado",
+    summary: "Financial summary of the authenticated provider",
     description:
-      "Totais calculados no backend (fonte da verdade): taxa da plataforma, líquido a receber, pendente e recebido no mês.",
+      "Totals computed in the backend (source of truth): platform fee, net receivable, pending and received this month.",
   })
   @ApiResponse({
     status: 200,
-    description: "Resumo financeiro retornado com sucesso",
+    description: "Financial summary returned successfully",
   })
   async summary(@Request() req: any): Promise<{
     currency: string;
@@ -45,19 +45,19 @@ export class ProviderFinanceController {
   @Get("items")
   @Roles("PROVIDER")
   @ApiOperation({
-    summary: "Listar itens financeiros do prestador autenticado",
+    summary: "List financial items of the authenticated provider",
     description:
-      "Pagamentos de pedidos em que o prestador autenticado é o provider da proposta aceita.",
+      "Payments for orders where the authenticated provider owns the accepted proposal.",
   })
   @ApiQuery({
     name: "status",
     required: false,
-    description: "Filtro por status do pagamento do cliente",
+    description: "Filter by client payment status",
     enum: ["PENDING", "PAID", "FAILED", "REFUNDED", "CANCELLED"],
   })
   @ApiResponse({
     status: 200,
-    description: "Lista de itens financeiros retornada com sucesso",
+    description: "Financial items list returned successfully",
   })
   async items(
     @Request() req: any,
@@ -86,19 +86,20 @@ export class ProviderFinanceController {
   @Get("chart")
   @Roles("PROVIDER")
   @ApiOperation({
-    summary: "Gráfico mensal do prestador autenticado",
+    summary: "Monthly chart of the authenticated provider",
     description:
-      "Valores líquidos recebidos e taxas retidas por mês (pagamentos PAID), incluindo meses sem movimento com zeros.",
+      "Net amounts received and fees retained per month (PAID payments), including empty months as zeros.",
   })
   @ApiQuery({
     name: "months",
     required: false,
-    description: "Quantidade de meses (incluindo o atual) — padrão 6, máx 24",
+    description:
+      "Number of months (including the current one) — default 6, max 24",
     example: 6,
   })
   @ApiResponse({
     status: 200,
-    description: "Dados mensais retornados com sucesso",
+    description: "Monthly data returned successfully",
   })
   async chart(
     @Request() req: any,

@@ -11,10 +11,8 @@ async function bootstrap() {
     logger: false,
   });
 
-  // Security headers with CSP
   app.use(getHelmetConfig());
 
-  // CORS configuration
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:3000",
@@ -28,7 +26,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle("Pode Deixar - Payments Service")
-    .setDescription("API de pagamentos")
+    .setDescription("Payments API")
     .setVersion("1.0")
     .addBearerAuth()
     .build();

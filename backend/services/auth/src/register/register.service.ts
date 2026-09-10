@@ -9,9 +9,8 @@ import { PasswordService } from '../password/password.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 
-// Resposta única do cadastro (conta nova ou email já existente): impede
-// oráculo de enumeração de contas (CWE-204). O chamador não distingue os casos.
-const MENSAGEM_CADASTRO =
+// Identical response for new and existing emails to prevent an account-enumeration oracle (CWE-204).
+const SIGNUP_RESPONSE_MESSAGE =
   'Usuário cadastrado com sucesso. Verifique seu email para ativar sua conta.';
 
 @Injectable()
@@ -31,9 +30,7 @@ export class RegisterService {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    // Email já cadastrado: responde igual ao cadastro novo (sem oráculo).
-    // Se ainda não verificado, renova o token (hash, como no cadastro) e
-    // reenvia o email best-effort (silencioso) — sem revelar nada ao chamador.
+    // Existing email: same response as a new signup; unverified accounts get a rotated token and a best-effort resend without revealing anything.
     if (existingUser) {
       if (!existingUser.emailVerified) {
         const emailVerificationToken = uuidv4();
@@ -63,11 +60,11 @@ export class RegisterService {
       this.authLogger.logSecurityEvent('register_existing_email', {
         email: dto.email,
       });
-      return { message: MENSAGEM_CADASTRO };
+      return { message: SIGNUP_RESPONSE_MESSAGE };
     }
 
     const passwordHash = await this.passwordService.hash(dto.password);
-    // Token bruto circula apenas por email/eco não-prod; no banco fica o hash.
+    // Only the hash is stored; the raw token travels by email (and non-prod echo) only.
     const emailVerificationToken = uuidv4();
     const emailVerificationTokenHash = this.hashToken(emailVerificationToken);
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -126,13 +123,12 @@ export class RegisterService {
         type: 'verification',
         error: error.message,
       });
-      // Email failure não bloqueia cadastro — avisa para conferir spam
     }
 
     this.authLogger.logRegistration(dto.email, dto.role, ip);
 
     return {
-      message: MENSAGEM_CADASTRO,
+      message: SIGNUP_RESPONSE_MESSAGE,
       user: {
         id: user.id,
         complete_name: user.completeName,
@@ -202,7 +198,7 @@ export class RegisterService {
     }
     if (user.emailVerified) {
       this.authLogger.logResendVerification(dto.email, false);
-      // Resposta genérica anti-enumeração também para email já verificado.
+      // Generic anti-enumeration response for already-verified emails too.
       return {
         message: 'Se o email existir, um novo link de verificação foi enviado',
       };

@@ -14,7 +14,7 @@ async function bootstrap() {
   // Security headers with CSP
   app.use(getHelmetConfig());
 
-  // CORS configuration (allowlist via env — nunca "*")
+  // CORS configuration (allowlist via env — never "*")
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:3000",
@@ -24,12 +24,12 @@ async function bootstrap() {
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   });
 
-  // Trust proxy para detecção correta de IP (rate-limit/logs)
+  // Trust proxy for correct IP detection (rate-limit/logs)
   app.getHttpAdapter().getInstance().set("trust proxy", 1);
 
   const config = new DocumentBuilder()
     .setTitle("Pode Deixar - Services Service")
-    .setDescription("API de pedidos de serviço e propostas")
+    .setDescription("Service order and proposal API")
     .setVersion("1.0")
     .addBearerAuth()
     .build();

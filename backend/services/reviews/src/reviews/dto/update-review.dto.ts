@@ -9,7 +9,11 @@ import {
 } from "class-validator";
 
 export class UpdateReviewDto {
-  @ApiPropertyOptional({ description: "Nota de 1 a 5", minimum: 1, maximum: 5 })
+  @ApiPropertyOptional({
+    description: "Rating from 1 to 5",
+    minimum: 1,
+    maximum: 5,
+  })
   @IsOptional()
   @IsInt({ message: "Nota deve ser um número inteiro" })
   @Min(1, { message: "Nota mínima é 1" })
@@ -17,7 +21,7 @@ export class UpdateReviewDto {
   rating?: number;
 
   @ApiPropertyOptional({
-    description: "Comentário da avaliação",
+    description: "Review comment",
     maxLength: 500,
   })
   @IsOptional()

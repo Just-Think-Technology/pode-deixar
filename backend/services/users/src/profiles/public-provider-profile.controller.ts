@@ -8,22 +8,22 @@ import {
 } from "@nestjs/swagger";
 import { ProfilesService } from "./profiles.service";
 
-@ApiTags("Perfil Público do Prestador")
+@ApiTags("Provider Public Profile")
 @Controller("providers/:providerId/profile")
 export class PublicProviderProfileController {
   constructor(private readonly profilesService: ProfilesService) {}
 
   @Get()
-  @ApiOperation({ summary: "Visualizar perfil público de um prestador" })
+  @ApiOperation({ summary: "View public profile of a provider" })
   @ApiParam({
     name: "providerId",
-    description: "ID do perfil do prestador",
+    description: "Provider profile ID",
   })
   @ApiResponse({
     status: 200,
-    description: "Perfil público retornado com sucesso",
+    description: "Public profile returned successfully",
   })
-  @ApiNotFoundResponse({ description: "Perfil de prestador não encontrado" })
+  @ApiNotFoundResponse({ description: "Provider profile not found" })
   async getPublicProviderProfile(
     @Param("providerId") providerProfileId: string,
   ) {

@@ -92,6 +92,7 @@ function AgendaEventDetailContent({
                   aria-label={`Ampliar foto ${index + 1} de ${event.photos.length}`}
                   className="overflow-hidden rounded-md ring-1 ring-foreground/10 transition hover:ring-[#2F80ED] focus-visible:ring-2 focus-visible:ring-ring"
                 >
+                  {/* Mock/data-URI photo: next/image cannot optimize it. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photo.url}

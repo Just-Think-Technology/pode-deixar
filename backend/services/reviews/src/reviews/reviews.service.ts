@@ -9,10 +9,10 @@ import { ReviewsLoggerService } from "../shared/reviews-logger.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
 
-const JANELA_EDICAO_MINUTOS = 5;
-const MS_POR_MINUTO = 60 * 1000;
+const EDIT_WINDOW_MINUTES = 5;
+const MS_PER_MINUTE = 60 * 1000;
 
-interface OrdemParaAvaliacao {
+interface OrderForReview {
   clientId: string;
   providerId: string | null;
 }
@@ -46,15 +46,15 @@ export class ReviewsService {
     };
   }
 
-  private async recalcularAvaliacao(revieweeId: string, tx: any) {
-    const agregado = await tx.review.aggregate({
+  private async recalculateRating(revieweeId: string, tx: any) {
+    const aggregate = await tx.review.aggregate({
       where: { revieweeId },
       _avg: { rating: true },
       _count: { _all: true },
     });
 
-    const rating = agregado._avg.rating ?? 0;
-    const totalReviews = agregado._count._all;
+    const rating = aggregate._avg.rating ?? 0;
+    const totalReviews = aggregate._count._all;
 
     await tx.providerProfile.updateMany({
       where: { userId: revieweeId },
@@ -67,10 +67,7 @@ export class ReviewsService {
     });
   }
 
-  private obterAlvoDaAvaliacao(
-    order: OrdemParaAvaliacao,
-    reviewerId: string,
-  ): string {
+  private resolveReviewee(order: OrderForReview, reviewerId: string): string {
     if (order.clientId === reviewerId) {
       if (!order.providerId) {
         throw new BadRequestException("Pedido sem prestador definido");
@@ -108,9 +105,9 @@ export class ReviewsService {
       );
     }
 
-    const revieweeId = this.obterAlvoDaAvaliacao(order, reviewerId);
+    const revieweeId = this.resolveReviewee(order, reviewerId);
 
-    const jaAvaliado = await this.prisma.review.findUnique({
+    const existingReview = await this.prisma.review.findUnique({
       where: {
         serviceOrderId_reviewerId: {
           serviceOrderId: order.id,
@@ -119,13 +116,13 @@ export class ReviewsService {
       },
     });
 
-    if (jaAvaliado) {
+    if (existingReview) {
       throw new BadRequestException("Você já avaliou este pedido");
     }
 
     try {
       const review = await this.prisma.$transaction(async (tx) => {
-        const criada = await tx.review.create({
+        const created = await tx.review.create({
           data: {
             serviceOrderId: order.id,
             reviewerId,
@@ -135,9 +132,9 @@ export class ReviewsService {
           },
         });
 
-        await this.recalcularAvaliacao(revieweeId, tx);
+        await this.recalculateRating(revieweeId, tx);
 
-        return criada;
+        return created;
       });
 
       this.logger.logReviewCreated(
@@ -166,7 +163,7 @@ export class ReviewsService {
     return reviews.map((r) => this.formatReview(r));
   }
 
-  // Listagem pública com teto anti-raspagem: no máximo 50 por chamada.
+  // Public listing is capped to deter scraping.
   async findByProvider(providerId: string, limit?: number) {
     const take = Math.min(Math.max(limit ?? 50, 1), 50);
     const reviews = await this.prisma.review.findMany({
@@ -217,10 +214,10 @@ export class ReviewsService {
       throw new ForbiddenException("Você não pode editar esta avaliação");
     }
 
-    const limiteEdicao =
-      review.createdAt.getTime() + JANELA_EDICAO_MINUTOS * MS_POR_MINUTO;
+    const editDeadline =
+      review.createdAt.getTime() + EDIT_WINDOW_MINUTES * MS_PER_MINUTE;
 
-    if (Date.now() > limiteEdicao) {
+    if (Date.now() > editDeadline) {
       throw new BadRequestException(
         "Avaliação só pode ser editada nos primeiros 5 minutos",
       );
@@ -230,8 +227,8 @@ export class ReviewsService {
       throw new BadRequestException("Informe ao menos um campo para atualizar");
     }
 
-    const atualizada = await this.prisma.$transaction(async (tx) => {
-      const editada = await tx.review.update({
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const edited = await tx.review.update({
         where: { id: reviewId },
         data: {
           rating: dto.rating ?? review.rating,
@@ -239,14 +236,14 @@ export class ReviewsService {
         },
       });
 
-      await this.recalcularAvaliacao(review.revieweeId, tx);
+      await this.recalculateRating(review.revieweeId, tx);
 
-      return editada;
+      return edited;
     });
 
     this.logger.logReviewUpdated(reviewerId, reviewId, ip);
 
-    return this.formatReview(atualizada);
+    return this.formatReview(updated);
   }
 
   async remove(reviewerId: string, reviewId: string, ip?: string) {
@@ -265,7 +262,7 @@ export class ReviewsService {
     await this.prisma.$transaction(async (tx) => {
       await tx.review.delete({ where: { id: reviewId } });
 
-      await this.recalcularAvaliacao(review.revieweeId, tx);
+      await this.recalculateRating(review.revieweeId, tx);
     });
 
     this.logger.logReviewDeleted(reviewerId, reviewId, ip);

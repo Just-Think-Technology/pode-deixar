@@ -5,8 +5,8 @@ import { NotificationsService } from "../src/notifications/notifications.service
 import { PrismaService } from "../src/prisma/prisma.service";
 import { CreateNotificationDto } from "../src/notifications/dto/create-notification.dto";
 
-// Cobertura do fix anti-forgery: o destinatário é sempre o usuário
-// autenticado; o valor enviado pelo cliente é ignorado.
+// Anti-forgery coverage: the recipient is always the authenticated user;
+// the client-supplied value is ignored.
 describe("NotificationsService", () => {
   let service: NotificationsService;
 
@@ -55,9 +55,9 @@ describe("NotificationsService", () => {
       message: 123,
     });
 
-    const erros = await validate(dto);
+    const errors = await validate(dto);
 
-    expect(erros.length).toBeGreaterThan(0);
+    expect(errors.length).toBeGreaterThan(0);
   });
 
   it("should accept valid notification payload", async () => {
@@ -67,8 +67,8 @@ describe("NotificationsService", () => {
       message: "Você recebeu um orçamento",
     });
 
-    const erros = await validate(dto);
+    const errors = await validate(dto);
 
-    expect(erros).toHaveLength(0);
+    expect(errors).toHaveLength(0);
   });
 });

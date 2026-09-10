@@ -6,16 +6,12 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
-// --- Types ---
-
 export type TestRole = 'CLIENT' | 'PROVIDER' | 'ADMIN';
 
 export interface TestAppSetup {
   app: INestApplication<App>;
   prisma: PrismaService;
 }
-
-// --- App Lifecycle ---
 
 export async function setupTestApp(): Promise<TestAppSetup> {
   const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -24,9 +20,9 @@ export async function setupTestApp(): Promise<TestAppSetup> {
       ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10_000 }]),
     ],
   })
-    // Justificativa AppSec: endpoints sensíveis têm @Throttle estrito;
-    // fluxos de teste compartilham um IP e estourariam 429. Storage fake
-    // que nunca bloqueia — o guard real continua executando.
+    // Sensitive endpoints have strict throttling; test flows share one IP and
+    // would hit 429, so a never-blocking fake storage is used while the real
+    // guard still runs.
     .overrideProvider(ThrottlerStorage)
     .useValue({
       increment: async () => ({
@@ -45,8 +41,6 @@ export async function setupTestApp(): Promise<TestAppSetup> {
 
   return { app, prisma };
 }
-
-// --- Factories ---
 
 export async function createTestUser(
   prisma: PrismaService,
@@ -89,7 +83,6 @@ export async function createCategory(prisma: PrismaService) {
   });
 }
 
-/** Pedido concluído e pago entre cliente e prestador, pronto para avaliar. */
 export async function createCompletedPaidOrder(
   prisma: PrismaService,
   clientId: string,

@@ -87,8 +87,10 @@ databases (`docker compose up -d postgres` from the repo root).
 
 ## Conventions
 
-- **Language:** code and comments in Portuguese (business rules, validation messages)
-- **This file and docs/ are in English**; code identifiers stay as-is
+- **Language:** code, comments and identifiers in English; user-facing copy
+  (validation messages, API error messages, emails, UI text) stays in
+  Portuguese for BR users — comments explain only why/decisions, never what
+- **This file and docs/ are in English**
 - **Validation:** class-validator + class-transformer, messages in Portuguese
 - **Auth:** JWT (access 15min + refresh 7 days) with rotation and blacklist
 - **Roles:** CLIENT, PROVIDER, ADMIN

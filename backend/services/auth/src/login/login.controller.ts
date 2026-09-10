@@ -20,38 +20,38 @@ import { LoginService } from './login.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
-import { extrairIpSeguro } from '../shared/extrair-ip-seguro';
-import { anonimizarEmailParaLog } from '../shared/auth-logger.service';
+import { extractSafeIp } from '../shared/extract-safe-ip';
+import { anonymizeEmailForLog } from '../shared/auth-logger.service';
 import getLogger from '../shared/shared-logger';
 
 const logger = getLogger('login');
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
-@ApiTags('Acesso')
+@ApiTags('Access')
 export class LoginController {
   constructor(private readonly loginService: LoginService) {}
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Autenticar usuário e retornar tokens JWT' })
+  @ApiOperation({ summary: 'Authenticate user and return JWT tokens' })
   @ApiBody({ type: LoginDto })
   async login(@Body() dto: LoginDto, @Headers('x-forwarded-for') ip?: string) {
     try {
       logger.info(
         'auth.endpoint',
-        `Login called for ${anonimizarEmailParaLog(dto.email)}`,
+        `Login called for ${anonymizeEmailForLog(dto.email)}`,
       );
     } catch {}
-    return this.loginService.login(dto, extrairIpSeguro(ip));
+    return this.loginService.login(dto, extractSafeIp(ip));
   }
 
-  @ApiTags('Acesso')
+  @ApiTags('Access')
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Atualizar token' })
+  @ApiOperation({ summary: 'Refresh token' })
   @ApiBody({ type: RefreshTokenDto })
   async refreshToken(@Body() dto: RefreshTokenDto) {
     try {
@@ -60,15 +60,15 @@ export class LoginController {
     return this.loginService.refreshToken(dto);
   }
 
-  @ApiTags('Acesso')
+  @ApiTags('Access')
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Logout do usuário (invalidar tokens)' })
+  @ApiOperation({ summary: 'Log out user (invalidate tokens)' })
   @ApiBearerAuth()
   @ApiHeader({
     name: 'Authorization',
-    description: 'Token de autenticação',
+    description: 'Authentication token',
     required: true,
   })
   async logout(@Request() req: any) {

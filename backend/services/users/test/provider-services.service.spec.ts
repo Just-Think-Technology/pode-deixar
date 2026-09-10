@@ -389,8 +389,8 @@ describe("ProviderServicesService", () => {
 
     beforeEach(() => {
       mockPrisma.providerProfile.findMany.mockReset();
-      // Justificativa (AppSec): a busca agora pagina no banco (skip/take) e
-      // usa count para o total do envelope, em vez de carregar tudo em memória.
+      // Search now paginates in the database (skip/take) and uses count for
+      // the envelope total instead of loading everything into memory.
       mockPrisma.providerProfile.count.mockResolvedValue(1);
     });
 
@@ -405,7 +405,7 @@ describe("ProviderServicesService", () => {
       expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
       expect(result.data).toHaveLength(1);
       expect(result.data[0].user.complete_name).toBe("João Eletricista");
-      // Justificativa (AppSec): resultado público da busca sem PII.
+      // Public search result carries no PII.
       expect(result.data[0].user).not.toHaveProperty("email");
       expect(result.data[0].user).not.toHaveProperty("phone");
       expect(result.data[0].user).not.toHaveProperty("postal_code");
@@ -492,10 +492,9 @@ describe("ProviderServicesService", () => {
       expect(result.meta.total).toBe(0);
     });
 
-    // Justificativa (AppSec): a ordenação por proximidade de CEP foi removida
-    // junto com o CEP (PII) do resultado público; a ordenação é por avaliação
-    // no banco. Estes testes agora cobrem o filtro de texto no banco e o
-    // teto de paginação.
+    // CEP-proximity ordering was removed along with the CEP (PII) from the
+    // public result; ordering is by rating in the database. These tests now
+    // cover text filtering in the database and the pagination cap.
     it("should filter text in database with case-insensitive contains", async () => {
       mockPrisma.providerProfile.findMany.mockResolvedValue([
         mockProfileWithServices,

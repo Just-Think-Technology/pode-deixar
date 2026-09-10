@@ -51,12 +51,12 @@ describe("PaymentsController", () => {
     controller = module.get<PaymentsController>(PaymentsController);
   });
 
-  it("deve ser definido", () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 
   describe("findAll", () => {
-    it("deve repassar o usuário autenticado ao service", async () => {
+    it("should forward the authenticated user to the service", async () => {
       const req = { user: { sub: "user-1" } };
       const pagamentos = [{ id: "payment-1", status: "PAID" }];
       service.findAll.mockResolvedValue(pagamentos);
@@ -69,7 +69,7 @@ describe("PaymentsController", () => {
   });
 
   describe("create", () => {
-    it("deve repassar o usuário e o DTO ao service", async () => {
+    it("should forward the user and DTO to the service", async () => {
       const req = { user: { sub: "user-1" } };
       const dto = {
         serviceOrderId: "uuid-do-pedido",
@@ -87,7 +87,7 @@ describe("PaymentsController", () => {
   });
 
   describe("generateCharge", () => {
-    it("deve repassar o usuário e o paymentId ao service", async () => {
+    it("should forward the user and paymentId to the service", async () => {
       const req = { user: { sub: "user-1" } };
       const cobranca = { paymentId: "uuid-payment-1", status: "PENDING" };
       service.generateCharge.mockResolvedValue(cobranca);
@@ -103,7 +103,7 @@ describe("PaymentsController", () => {
   });
 
   describe("getStatus", () => {
-    it("deve repassar o usuário e o paymentId ao service", async () => {
+    it("should forward the user and paymentId to the service", async () => {
       const req = { user: { sub: "user-1" } };
       const status = { paymentId: "uuid-payment-1", status: "PAID" };
       service.getStatus.mockResolvedValue(status);
@@ -118,7 +118,7 @@ describe("PaymentsController", () => {
   describe("webhook (mock)", () => {
     const timestampValido = () => String(Math.floor(Date.now() / 1000));
 
-    it("deve confirmar quando a chave de webhook é válida", async () => {
+    it("should confirm when the webhook key is valid", async () => {
       process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
       const dto = {
         paymentId: "uuid-payment-1",
@@ -137,7 +137,7 @@ describe("PaymentsController", () => {
       delete process.env.MOCK_WEBHOOK_KEY;
     });
 
-    it("deve lançar 403 genérico quando a chave de webhook não confere", async () => {
+    it("should throw a generic 403 when the webhook key does not match", async () => {
       process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
       const dto = {
         paymentId: "uuid-payment-1",
@@ -154,7 +154,7 @@ describe("PaymentsController", () => {
       delete process.env.MOCK_WEBHOOK_KEY;
     });
 
-    it("deve rejeitar timestamp fora da janela aceitável", async () => {
+    it("should reject a timestamp outside the acceptable window", async () => {
       process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
       const dto = {
         paymentId: "uuid-payment-1",
@@ -171,7 +171,7 @@ describe("PaymentsController", () => {
       delete process.env.MOCK_WEBHOOK_KEY;
     });
 
-    it("deve exigir timestamp (anti-replay obrigatório)", async () => {
+    it("should require a timestamp (mandatory anti-replay)", async () => {
       process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
       const dto = {
         paymentId: "uuid-payment-1",
@@ -187,7 +187,7 @@ describe("PaymentsController", () => {
       delete process.env.MOCK_WEBHOOK_KEY;
     });
 
-    it("deve desabilitar o mock em produção", async () => {
+    it("should disable the mock in production", async () => {
       process.env.NODE_ENV = "production";
       process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
       const dto = {
@@ -206,7 +206,7 @@ describe("PaymentsController", () => {
       delete process.env.MOCK_WEBHOOK_KEY;
     });
 
-    it("deve bloquear o mock antes do HTTPS em produção (mock nunca ao vivo)", async () => {
+    it("should block the mock before HTTPS in production (mock never live)", async () => {
       process.env.NODE_ENV = "production";
       process.env.MOCK_WEBHOOK_KEY = "chave-secreta";
       const dto = {
@@ -217,7 +217,7 @@ describe("PaymentsController", () => {
         timestamp: timestampValido(),
       };
 
-      // O bloqueio de produção vem antes do HTTPS: mock nunca opera em prod.
+      // The production block comes before HTTPS: the mock never runs in prod.
       await expect(
         controller.webhook(
           { headers: { "x-forwarded-proto": "http" } } as any,
@@ -246,7 +246,7 @@ describe("PaymentsController", () => {
       gateways.getByName.mockReturnValue(gateway);
     });
 
-    it("deve resolver o gateway pelo nome e repassar ao service", async () => {
+    it("should resolve the gateway by name and forward to the service", async () => {
       const result = { id: "payment-1", status: "PAID" };
       service.handleGatewayWebhook.mockResolvedValue(result);
 
@@ -272,7 +272,7 @@ describe("PaymentsController", () => {
       expect(response).toEqual(result);
     });
 
-    it("deve lançar 404 para gateway desconhecido", async () => {
+    it("should throw 404 for an unknown gateway", async () => {
       gateways.getByName.mockReturnValue(undefined);
 
       await expect(
@@ -281,7 +281,7 @@ describe("PaymentsController", () => {
       expect(service.handleGatewayWebhook).not.toHaveBeenCalled();
     });
 
-    it("deve rejeitar quando a req NÃO chega via HTTPS em produção", async () => {
+    it("should reject when the req does NOT arrive via HTTPS in production", async () => {
       process.env.NODE_ENV = "production";
 
       await expect(

@@ -77,7 +77,7 @@ export class MercadoPagoGateway implements PaymentGateway {
     const data = await response.json();
     if (!response.ok) {
       throw new BadGatewayException(
-        `Falha ao criar cobrança no Mercado Pago: ${this.extrairErro(data)}`,
+        `Falha ao criar cobrança no Mercado Pago: ${this.extractError(data)}`,
       );
     }
 
@@ -113,7 +113,7 @@ export class MercadoPagoGateway implements PaymentGateway {
     const data = await response.json();
     if (!response.ok) {
       throw new BadGatewayException(
-        `Falha ao consultar pagamento no Mercado Pago: ${this.extrairErro(data)}`,
+        `Falha ao consultar pagamento no Mercado Pago: ${this.extractError(data)}`,
       );
     }
 
@@ -143,14 +143,14 @@ export class MercadoPagoGateway implements PaymentGateway {
       return false;
     }
 
-    const tsNumero = Number(ts);
-    if (!Number.isFinite(tsNumero)) {
+    const tsNumber = Number(ts);
+    if (!Number.isFinite(tsNumber)) {
       return false;
     }
 
-    const JANELA_ACEITAVEL_S = 5 * 60;
-    const agoraS = Math.floor(Date.now() / 1000);
-    if (Math.abs(agoraS - tsNumero) > JANELA_ACEITAVEL_S) {
+    const ACCEPTABLE_WINDOW_S = 5 * 60;
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    if (Math.abs(nowSeconds - tsNumber) > ACCEPTABLE_WINDOW_S) {
       return false;
     }
 
@@ -161,16 +161,16 @@ export class MercadoPagoGateway implements PaymentGateway {
       return false;
     }
     const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts};`;
-    const esperado = Buffer.from(
+    const expected = Buffer.from(
       createHmac("sha256", this.webhookSecret).update(manifest).digest("hex"),
     );
-    const recebido = Buffer.from(v1);
+    const received = Buffer.from(v1);
 
-    if (esperado.length !== recebido.length) {
+    if (expected.length !== received.length) {
       return false;
     }
 
-    return timingSafeEqual(esperado, recebido);
+    return timingSafeEqual(expected, received);
   }
 
   extractEventId(
@@ -182,24 +182,24 @@ export class MercadoPagoGateway implements PaymentGateway {
     }
     const gatewayPaymentId = this.extractGatewayPaymentId(body);
     const slug = this.name.toLowerCase().replace(/_/g, "");
-    const corpo = body as
+    const payload = body as
       { type?: unknown; topic?: unknown; action?: unknown } | null | undefined;
-    const tipo =
-      typeof corpo?.type === "string" && corpo.type
-        ? corpo.type
-        : typeof corpo?.topic === "string" && corpo.topic
-          ? corpo.topic
+    const type =
+      typeof payload?.type === "string" && payload.type
+        ? payload.type
+        : typeof payload?.topic === "string" && payload.topic
+          ? payload.topic
           : undefined;
-    const acao =
-      typeof corpo?.action === "string" && corpo.action
-        ? corpo.action
+    const action =
+      typeof payload?.action === "string" && payload.action
+        ? payload.action
         : undefined;
-    if (!tipo && !acao) {
+    if (!type && !action) {
       return `${slug}:${gatewayPaymentId}`;
     }
-    const prefixoTipo = tipo ?? "notificacao";
-    const sufixoAcao = acao ? `:${acao}` : "";
-    return `${slug}:${prefixoTipo}${sufixoAcao}:${gatewayPaymentId}`;
+    const typePrefix = type ?? "notificacao";
+    const actionSuffix = action ? `:${action}` : "";
+    return `${slug}:${typePrefix}${actionSuffix}:${gatewayPaymentId}`;
   }
 
   extractGatewayPaymentId(body: unknown): string {
@@ -211,19 +211,19 @@ export class MercadoPagoGateway implements PaymentGateway {
       (body as { data: { id?: unknown } }).data !== null &&
       "id" in (body as { data: { id?: unknown } }).data
     ) {
-      const bruto = String((body as { data: { id: unknown } }).data.id);
-      if (!/^\d+$/.test(bruto)) {
+      const raw = String((body as { data: { id: unknown } }).data.id);
+      if (!/^\d+$/.test(raw)) {
         throw new BadRequestException(
           "Identificador de pagamento inválido no gateway",
         );
       }
-      return bruto;
+      return raw;
     }
     return "";
   }
 
   translateStatus(gatewayStatus: string): PaymentStatus {
-    const mapa: Record<string, PaymentStatus> = {
+    const statusMap: Record<string, PaymentStatus> = {
       approved: "PAID",
       pending: "PENDING",
       in_process: "PENDING",
@@ -232,19 +232,20 @@ export class MercadoPagoGateway implements PaymentGateway {
       refunded: "REFUNDED",
     };
 
+    // Read-only lookup in a static map; unknown keys fall through to the rejection below.
     // eslint-disable-next-line security/detect-object-injection
-    const traduzido = mapa[gatewayStatus];
+    const translated = statusMap[gatewayStatus];
 
-    if (!traduzido) {
+    if (!translated) {
       throw new BadRequestException(
         `Status do gateway desconhecido: ${gatewayStatus}`,
       );
     }
 
-    return traduzido;
+    return translated;
   }
 
-  private extrairErro(data: unknown): string {
+  private extractError(data: unknown): string {
     if (
       typeof data === "object" &&
       data !== null &&
