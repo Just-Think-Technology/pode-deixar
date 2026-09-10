@@ -2,10 +2,11 @@
 node_modules/
 .pnpm-store/
 
-# Environment files
+# Environment files (.env.staging / .env.production never committed;
+# .env.dev holds local-only throwaway values and IS versioned)
 .env.*
 !.env.test
 !.env.example
-!.env.deploy.example
+!.env.dev
 
 

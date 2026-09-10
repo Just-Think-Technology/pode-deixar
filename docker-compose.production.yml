@@ -1,19 +1,11 @@
 # ============================================================
-# Pode Deixar - Stack de deploy (staging e produção)
+# Pode Deixar - Deploy de PRODUÇÃO (comando único)
 # ============================================================
-# UM arquivo para os dois ambientes. Cada stack é isolada pelo
-# nome do projeto (-p) e pelo seu arquivo de env. Volumes, redes e o
-# Redis são separados automaticamente por stack. O --env-file é
-# obrigatório: além de alimentar os containers, ele fornece as variáveis
-# usadas na interpolação deste arquivo (ex.: credenciais do MinIO).
+#   docker compose -f docker-compose.production.yml up -d --build
 #
-#   Staging:
-#     docker compose -f docker-compose.prod.yml --env-file .env.staging \
-#       -p pode-deixar-staging up -d --build
-#
-#   Produção:
-#     docker compose -f docker-compose.prod.yml --env-file .env.production \
-#       -p pode-deixar-prod up -d --build
+# Arquivo production-only: env sempre do .env.production (nunca commitado).
+# O deploy de staging usa o docker-compose.staging.yml (mesma stack,
+# env do .env.staging). O `name` isola volumes/redes por ambiente.
 #
 # Diferenças para o docker-compose.yml de desenvolvimento:
 # - Sem Postgres local (banco é o Neon, via DATABASE_URL)
@@ -23,6 +15,8 @@
 #   usa a rede do compose (auth:3001, users:3002, ...)
 # - Backup via pg_dump direto no Neon
 # ============================================================
+
+name: pode-deixar-production
 
 services:
 
@@ -35,7 +29,7 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    env_file: ./.env.production
     environment:
       NODE_ENV: production
       FRONTEND_URL: ${FRONTEND_URL:-https://app.pode-deixar.com}
@@ -53,7 +47,7 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    env_file: ./.env.production
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
@@ -70,7 +64,7 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    env_file: ./.env.production
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
@@ -87,7 +81,7 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    env_file: ./.env.production
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
@@ -101,7 +95,7 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    env_file: ./.env.production
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
@@ -110,10 +104,10 @@ services:
   minio:
     image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: server /data --console-address ":9001"
-    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    env_file: ./.env.production
+    # Credenciais root vindas do env (MINIO_ROOT_USER/PASSWORD, que
+    # espelham MINIO_ACCESS_KEY/SECRET_KEY) — sem interpolação, para o
+    # comando continuar sendo só `docker compose -f ... up -d`
     volumes:
       - minio_data:/data
     healthcheck:
@@ -125,7 +119,7 @@ services:
   # -- MinIO Client (criação dos buckets) --
   minio-setup:
     image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
-    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    env_file: ./.env.production
     depends_on:
       minio:
         condition: service_healthy
@@ -155,7 +149,7 @@ services:
   # -- Backup do banco (pg_dump contra o Neon) --
   db-backup:
     image: postgres:16-alpine
-    env_file: ./${ENV_FILE:?Defina ENV_FILE como .env.staging ou .env.production}
+    env_file: ./.env.production
     environment:
       BACKUP_SCHEDULE: "0 3 * * *"  # Diário às 03:00 UTC
       BACKUP_RETENTION_DAYS: "7"
@@ -164,8 +158,9 @@ services:
       - backup_data:/backups
     entrypoint: >
       /bin/sh -c "
-      apk add --no-cache cron &&
-      echo \"$${BACKUP_SCHEDULE} /usr/local/bin/backup.sh >> /var/log/cron.log 2>&1\" > /etc/crontabs/root &&
+      # crond/crontab já vêm no BusyBox da imagem (não instalar nada);
+      # o pipe para `crontab -` grava no spool que o crond realmente lê
+      echo \"$${BACKUP_SCHEDULE} /usr/local/bin/backup.sh >> /var/log/cron.log 2>&1\" | crontab - &&
       cat > /usr/local/bin/backup.sh << 'EOF'
       #!/bin/sh
       set -e
@@ -192,7 +187,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile.prod:/etc/caddy/Caddyfile
+      - ./Caddyfile.production:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

@@ -1,0 +1,63 @@
+#!/bin/sh
+# Sobe uma stack e imprime onde cada coisa está rodando.
+# Uso: scripts/stack-up [dev|staging|production]
+#   STACK_UP_DRY_RUN=1 scripts/stack-up dev   # só imprime os endereços, sem subir
+set -eu
+
+ENV_KEY="${1:-dev}"
+cd "$(dirname "$0")/.."
+
+case "$ENV_KEY" in
+  dev)
+    FILE=docker-compose.dev.yml
+    ENV_FILE=.env.dev
+    ;;
+  staging)
+    FILE=docker-compose.staging.yml
+    ENV_FILE=.env.staging
+    ;;
+  production)
+    FILE=docker-compose.production.yml
+    ENV_FILE=.env.production
+    ;;
+  *)
+    echo "Uso: $0 [dev|staging|production]" >&2
+    exit 1
+    ;;
+esac
+
+# Lê uma chave simples do env file sem exportar segredos para o shell.
+ler_env() {
+  sed -n "s/^$1=\"\{0,1\}\([^\"]*\)\".*/\1/p" "$ENV_FILE" | head -n 1
+}
+
+if [ "${STACK_UP_DRY_RUN:-0}" != "1" ]; then
+  docker compose -f "$FILE" up -d --build
+fi
+
+echo ""
+echo "=============================================="
+if [ "$ENV_KEY" = "dev" ]; then
+  echo " Stack dev no ar (projeto pode-deixar-dev)"
+  echo "=============================================="
+  echo "  Frontend ......... http://localhost:3000"
+  echo "  API (Caddy) ...... http://localhost:8080/api"
+  echo "  Auth ............. http://localhost:3001"
+  echo "  Users ............ http://localhost:3002"
+  echo "  Pedidos .......... http://localhost:3003"
+  echo "  Pagamentos ....... http://localhost:3004"
+  echo "  Reviews .......... http://localhost:3005"
+  echo "  Mailpit .......... http://localhost:8025 (SMTP :1025)"
+  echo "  MinIO console .... http://localhost:9001 (API :9000)"
+  echo "  Postgres ......... localhost:15432 (entre containers: postgres:5432)"
+else
+  API_DOMAIN="$(ler_env API_DOMAIN || true)"
+  FRONTEND_URL="$(ler_env FRONTEND_URL || true)"
+  echo " Stack $ENV_KEY no ar (via Caddy 80/443)"
+  echo "=============================================="
+  echo "  API .............. https://${API_DOMAIN:-<API_DOMAIN?>}/api"
+  echo "  Frontend ......... ${FRONTEND_URL:-<FRONTEND_URL?>} (Vercel)"
+  echo "  (serviços sem porta publicada — acesso só via Caddy;"
+  echo "   MinIO/Redis internos à stack)"
+fi
+echo ""
