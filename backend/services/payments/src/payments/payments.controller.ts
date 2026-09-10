@@ -24,9 +24,7 @@ import {
 import { Throttle } from "@nestjs/throttler";
 import { PaymentsService } from "./payments.service";
 import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import { RolesGuard } from "../auth/roles.guard";
-import { Roles } from "../auth/roles.decorator";
+import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
 import { PaymentLoggerService } from "./payment-logger.service";

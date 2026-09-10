@@ -41,8 +41,11 @@ docs/                # Security, product and deploy decisions
 - No sync HTTP between services — integration is via the shared PostgreSQL
   (single Prisma schema in `backend/prisma/`); the frontend reaches services
   through the Caddy gateway (`/api/*`)
-- Auth guards live only in `@pode-deixar/security`; per-service copies are
-  tech debt — migrate them when touching a service's auth
+- Auth guards (`JwtAuthGuard`, `RolesGuard`, `Roles`), the global exception
+  filter, token payload/revocation helpers and validation core live only in
+  `@pode-deixar/security` / `@pode-deixar/validation`; the auth service keeps
+  its own specialized guard/strategy/filter versions (IP logging, access-type
+  check, DB user lookup)
 - New code layering: controller (HTTP + validation) → service (business
   rules) → repository (Prisma); no Prisma in controllers, DTO on every input
 - Code used by 2+ services is extracted to `backend/shared/` (`@pode-deixar/*`)

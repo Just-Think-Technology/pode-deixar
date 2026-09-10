@@ -7,9 +7,7 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { PaymentsService } from "./payments.service";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import { RolesGuard } from "../auth/roles.guard";
-import { Roles } from "../auth/roles.decorator";
+import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 import { FinanceItemsQueryDto } from "./dto/finance-items-query.dto";
 import { FinanceChartQueryDto } from "./dto/finance-chart-query.dto";
 

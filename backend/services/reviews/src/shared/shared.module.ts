@@ -3,8 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { JwtStrategy } from "../auth/jwt.strategy";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import { RolesGuard } from "../auth/roles.guard";
+import { JwtAuthGuard, RolesGuard } from "@pode-deixar/security";
 import { ReviewsLoggerService } from "./reviews-logger.service";
 
 @Global()

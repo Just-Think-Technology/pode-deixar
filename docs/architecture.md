@@ -35,9 +35,13 @@ outside the task scope (see "Never do" 13 in AGENTS.md).
   `@pode-deixar/security`, `@pode-deixar/validation`) hold cross-service
   concerns: logging, email, Helmet CSP (`getHelmetConfig()`), Redis throttler
   storage, validation messages (`traduzirErrosValidacao`), image validation
-  (`validarArquivoImagem`), Prisma error mapping (`resolverErroPrisma`)
+  (`validarArquivoImagem`), Prisma error mapping (`resolverErroPrisma`),
+  auth guards (`JwtAuthGuard`, `RolesGuard`, `Roles`), token payload and
+  revocation checks (`assertTokenPayload`, `checkTokenRevocation`) and the
+  shared `GlobalExceptionFilter` (masks Prisma internals, generic 500)
 - **Auth guards (JWT + roles) live only in `@pode-deixar/security`.**
-  Per-service `jwt-auth.guard` / `roles.guard` copies are tech debt:
-  migrate a service to the shared guards when touching its auth
+  The auth service keeps specialized versions (IP logging on denial,
+  access-token type check, DB user lookup); users/service-orders/payments/
+  reviews use the shared guards, strategy helpers and exception filter
 - **Second-use rule:** code needed by a second service is extracted to
   `backend/shared/` by the task creating the second usage — no third copy
