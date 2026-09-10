@@ -9,10 +9,8 @@ dotenv.config({
   ),
 });
 
-// Use test database URL from env or default to localhost
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pode_deixar_test_reviews?schema=public';
 
-// Parse the URL to extract components
 const url = new URL(databaseUrl.replace('postgresql://', 'http://'));
 const host = url.hostname;
 const port = url.port || '5432';
@@ -20,8 +18,6 @@ const testDbName = url.pathname.slice(1).split('?')[0];
 const user = url.username;
 const password = url.password;
 
-// Admin URL to connect to default postgres database to create test database.
-// Usa o banco `postgres` (sempre existe numa instalação fresca).
 const adminUrl = `postgresql://${user}:${password}@${host}:${port}/postgres?schema=public`;
 
 process.env.DATABASE_URL = databaseUrl;
@@ -29,18 +25,15 @@ process.env.DATABASE_URL = databaseUrl;
 export default async function globalSetup() {
   console.log(`Using test database: ${testDbName} at ${host}:${port}`);
 
-  // First, connect to default database to create test database if needed
   const adminPrisma = new PrismaClient({ datasources: { db: { url: adminUrl } } });
   try {
     await adminPrisma.$connect();
-    // Drop the test database if it exists to ensure clean schema
     try {
       await adminPrisma.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${testDbName}"`);
       console.log(`Database ${testDbName} dropped`);
     } catch (e: any) {
       console.error('Error dropping database:', e.message);
     }
-    // Create the fresh database
     try {
       await adminPrisma.$executeRawUnsafe(`CREATE DATABASE "${testDbName}"`);
       console.log(`Database ${testDbName} created fresh`);
@@ -64,7 +57,6 @@ export default async function globalSetup() {
     throw error;
   }
 
-  // Always run prisma migrate deploy to ensure schema is up-to-date
   console.log('Running Prisma migrations to ensure schema is current...');
   const schemaPath = path.resolve(__dirname, '../../../prisma/schema.prisma');
   const { execSync } = await import('child_process');
@@ -79,7 +71,6 @@ export default async function globalSetup() {
     console.error('Migration failed, but continuing test setup:', migrateError.message);
   }
 
-  // Connect to test database and apply extension
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   try {
     await prisma.$connect();

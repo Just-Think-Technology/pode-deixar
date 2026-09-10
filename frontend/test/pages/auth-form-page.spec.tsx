@@ -1,11 +1,11 @@
 import { describe, it, expect, vitest, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-// Os forms importam (via lib/auth) o pacote `server-only`, que lança erro
-// fora de Server Components — neutralizado para testes unitários em jsdom.
+// The forms import (via lib/auth) the `server-only` package, which throws
+// outside Server Components — neutralized for unit tests in jsdom.
 vi.mock('server-only', () => ({}))
 
-// Os handlers usam useRouter do App Router, indisponível em jsdom — stub.
+// The handlers use the App Router useRouter, unavailable in jsdom — stub.
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),

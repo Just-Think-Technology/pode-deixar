@@ -2,8 +2,8 @@ import { getMockProposalById } from "@/mock/worker/proposals";
 import type { WorkerPaymentStatusResponse } from "@/lib/worker/payments/types";
 
 /**
- * Seeds de recebimentos do prestador (JTT-95 + JTT-93).
- * Inclui vários status para a listagem do painel.
+ * Seeded provider receipts (JTT-95 + JTT-93).
+ * Covers several statuses for the panel listing.
  */
 const SEEDED_PAYMENTS: WorkerPaymentStatusResponse[] = [
   {

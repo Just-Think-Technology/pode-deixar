@@ -24,7 +24,7 @@ export class CreateCounterProposalDto {
   price: number;
 
   @ApiProperty({
-    description: "Descrição da contraproposta",
+    description: "Description da contraproposta",
     example: "Posso fazer por este valor, mas com prazo maior",
   })
   @IsString()

@@ -2,7 +2,7 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-    // Evita conflito de lock do `.next` quando Docker e Playwright rodam juntos.
+    // Separate distDir for E2E so Docker and Playwright never share the .next lock.
     ...(process.env.NEXT_E2E === "true" ? { distDir: ".next-e2e" } : {}),
     turbopack: {
         root: path.resolve(__dirname),
@@ -16,10 +16,9 @@ const nextConfig: NextConfig = {
         ],
     },
     async headers() {
-        // CSP compatível com Next.js: hidratação e estilos exigem
-        // 'unsafe-inline' sem nonces configurados (ver docs do Next sobre
-        // content-security-policy); o restante segue estrito. Em dev há
-        // exceções p/ localhost (MinIO/backend/websocket do HMR) — nunca em prod.
+        // Next.js hydration and styles require 'unsafe-inline' without configured
+        // nonces; the rest stays strict. Dev allows localhost (MinIO/backend/HMR
+        // websocket) — never in prod.
         const dev = process.env.NODE_ENV !== "production";
         const imgSrc = ["'self'", "https:", "data:", "blob:"];
         const connectSrc = ["'self'", "https:"];

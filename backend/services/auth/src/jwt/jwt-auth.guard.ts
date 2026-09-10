@@ -16,7 +16,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         const ip = req.headers?.['x-forwarded-for'] || req.ip;
         logger.warn(
           'auth.jwt',
-          `Tentativa de acesso não autorizado de ${ip} - ${e.message}`,
+          `Unauthorized access attempt from ${ip} - ${e.message}`,
         );
       } catch {}
       throw e;

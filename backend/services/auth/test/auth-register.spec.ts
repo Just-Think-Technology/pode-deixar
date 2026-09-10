@@ -84,8 +84,8 @@ describe('POST /auth/register', () => {
   });
 
   describe('Conflict cases', () => {
-    // Justificativa AppSec (CWE-204): email duplicado responde 201 genérico
-    // idêntico ao cadastro novo — sem oráculo de enumeração de contas.
+    // Duplicate email gets the same generic 201 as a new signup — no
+    // account-enumeration oracle.
     it('should return generic 201 for duplicate email (no enumeration oracle)', async () => {
       const user = createTestUser();
 
@@ -114,7 +114,8 @@ describe('POST /auth/register', () => {
 
       await request(app.getHttpServer()).post('/auth/register').send(user).expect(201);
 
-      // O banco guarda hash (nunca o token bruto); o token bruto vai só no email.
+      // The database stores the hash (never the raw token); the raw token only
+      // goes in the email.
       const emailMock = app.get(EmailService) as unknown as {
         sendEmailVerification: jest.Mock;
       };

@@ -13,12 +13,12 @@ import {
 } from './apps';
 
 // ─── E2E: jornada completa do cliente ───────────────────────────────────────
-// Cadastro (auth) → verificação → login → perfil (users) → pedido → proposta
-// → aceite → conclusão (orders) → pagamento + webhook (payments) → avaliação
-// (reviews). O token emitido pelo auth-service é aceito pelos outros 4
-// serviços de verdade (mesmo segredo), como em produção.
+// Signup (auth) → verification → login → profile (users) → order → proposal
+// → acceptance → completion (orders) → payment + webhook (payments) → review
+// (reviews). The token issued by the auth-service is accepted by the other 4
+// services for real (same secret), as in production.
 
-describe('Jornada do cliente (e2e cross-service)', () => {
+describe('Client journey (cross-service e2e)', () => {
   let apps: E2EApps;
   let authApp: INestApplication;
   let accessToken: string;
@@ -29,10 +29,9 @@ describe('Jornada do cliente (e2e cross-service)', () => {
   const previousWebhookKey = process.env.MOCK_WEBHOOK_KEY;
 
   beforeAll(async () => {
-    // Ordem determinística e OBRIGATÓRIA: auth primeiro (ver comentário
-    // sobre o singleton do passport em apps.ts). Se o auth bootar por
-    // último, a strategy dele (req.user sem `sub`) hijacka os guards
-    // dos outros 4 serviços no mesmo processo.
+    // Deterministic, MANDATORY order: auth first (see the passport-singleton
+    // comment in apps.ts). If auth boots last, its strategy (req.user without
+    // `sub`) hijacks the guards of the other 4 services in the same process.
     authApp = await bootAuthApp();
     apps = await bootApps();
     process.env.MOCK_WEBHOOK_KEY = 'test-webhook-key';
@@ -48,7 +47,7 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     await shutdownApps(apps);
   });
 
-  it('1. cliente se cadastra, verifica o email e faz login (auth)', async () => {
+  it('1. client signs up, verifies email and logs in (auth)', async () => {
     const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const dto = {
       complete_name: 'Cliente Jornada',
@@ -71,7 +70,7 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     expect(registered.user.email_verified).toBe(false);
     expect(mockEmail.sendEmailVerification).toHaveBeenCalled();
 
-    // Email duplicado recebe a mesma resposta genérica (anti-enumeração)
+    // Duplicate email gets the same generic response (anti-enumeration)
     const duplicate = (
       await request(authApp.getHttpServer())
         .post('/auth/register')
@@ -81,8 +80,8 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     expect(duplicate.message).toBe(registered.message);
     expect(duplicate.user).toBeUndefined();
 
-    // O re-cadastro de email não verificado rotaciona o token (hash no
-    // banco): o token bruto vigente é o do último email enviado (mock).
+    // Re-registering an unverified email rotates the token (hash in the
+    // database): the current raw token is the one from the last sent email (mock).
     const rawToken = (
       mockEmail.sendEmailVerification.mock.calls.at(-1) as unknown[]
     )[1] as string;
@@ -103,9 +102,9 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     expect(accessToken).toBeDefined();
   });
 
-  it('2. perfil auto-criado no cadastro é legível/editável (users)', async () => {
-    // O register (auth) já criou o clientProfile no mesmo banco — prova
-    // de integração via dados compartilhados, lida com o token do auth.
+  it('2. auto-created signup profile is readable/editable (users)', async () => {
+    // The auth register already created the clientProfile in the same database —
+    // integration proof via shared data, driven with the auth token.
     const profile = (
       await request(apps.usersApp.getHttpServer())
         .get('/profiles/me')
@@ -145,7 +144,7 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     expect(order.status).toBe('OPEN');
   });
 
-  it('4. prestador propõe e cliente aceita (orders)', async () => {
+  it('4. provider proposes and client accepts (orders)', async () => {
     const provider = await createTestUser(apps.prisma, { role: 'PROVIDER' });
     const providerToken = mintToken(provider);
 
@@ -169,7 +168,7 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     ).body;
     expect(accepted.status).toBe('ACCEPTED');
 
-    // Prestador conclui para liberar pagamento e avaliação
+    // Provider completes to unlock payment and review
     const completed = (
       await request(apps.ordersApp.getHttpServer())
         .post(`/services/me/${orderId}/complete`)
@@ -179,7 +178,7 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     expect(completed.status).toBe('COMPLETED');
   });
 
-  it('5. cliente paga via PIX e confirma (payments)', async () => {
+  it('5. client pays via PIX and confirms (payments)', async () => {
     const payment = (
       await request(apps.paymentsApp.getHttpServer())
         .post('/payments')
@@ -203,7 +202,7 @@ describe('Jornada do cliente (e2e cross-service)', () => {
           eventId: `evt_e2e_client_${Date.now()}`,
           externalId: 'tx_mock_e2e_client_1',
           amount: 300,
-          // Justificativa AppSec: timestamp anti-replay agora é obrigatório.
+          // Anti-replay timestamp is now required.
           timestamp: String(Math.floor(Date.now() / 1000)),
         })
         .expect(201)
@@ -211,7 +210,7 @@ describe('Jornada do cliente (e2e cross-service)', () => {
     expect(confirmed.payment.status).toBe('PAID');
   });
 
-  it('6. cliente avalia o serviço (reviews)', async () => {
+  it('6. client reviews the service (reviews)', async () => {
     const review = (
       await request(apps.reviewsApp.getHttpServer())
         .post('/reviews')

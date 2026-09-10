@@ -29,7 +29,7 @@ import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
 import { PaymentLoggerService } from "./payment-logger.service";
 
-@ApiTags("Pagamentos")
+@ApiTags("Payments")
 @Controller("payments")
 export class PaymentsController {
   constructor(
@@ -42,8 +42,8 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("CLIENT")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Lista pagamentos do cliente autenticado" })
-  @ApiResponse({ status: 200, description: "Lista de pagamentos retornada" })
+  @ApiOperation({ summary: "List payments of the authenticated client" })
+  @ApiResponse({ status: 200, description: "Payments list returned" })
   findAll(@Request() req: any) {
     return this.paymentsService.findAll(req.user.sub);
   }
@@ -52,10 +52,10 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("CLIENT")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Registrar transação de pagamento no banco" })
-  @ApiResponse({ status: 201, description: "Pagamento registrado (PENDING)" })
-  @ApiResponse({ status: 400, description: "Dados inválidos" })
-  @ApiResponse({ status: 403, description: "Pedido não pertence ao cliente" })
+  @ApiOperation({ summary: "Register payment transaction in the database" })
+  @ApiResponse({ status: 201, description: "Payment registered (PENDING)" })
+  @ApiResponse({ status: 400, description: "Invalid data" })
+  @ApiResponse({ status: 403, description: "Order does not belong to client" })
   create(@Request() req: any, @Body() dto: CreatePaymentDto) {
     return this.paymentsService.create(req.user.sub, dto);
   }
@@ -66,14 +66,14 @@ export class PaymentsController {
   @Roles("CLIENT")
   @ApiBearerAuth()
   @ApiOperation({
-    summary: "Gerar cobrança após aceite de proposta (mock ou gateway)",
+    summary: "Generate charge after proposal acceptance (mock or gateway)",
     description:
-      "Gera cobrança via Mercado Pago (PIX) quando configurado; caso contrário, retorna dados mockados.",
+      "Generates a charge via Mercado Pago (PIX) when configured; otherwise returns mocked data.",
   })
-  @ApiParam({ name: "paymentId", description: "ID do pagamento" })
-  @ApiResponse({ status: 200, description: "Cobrança gerada" })
-  @ApiResponse({ status: 404, description: "Pagamento não encontrado" })
-  @ApiResponse({ status: 400, description: "Pagamento não está pendente" })
+  @ApiParam({ name: "paymentId", description: "Payment ID" })
+  @ApiResponse({ status: 200, description: "Charge generated" })
+  @ApiResponse({ status: 404, description: "Payment not found" })
+  @ApiResponse({ status: 400, description: "Payment is not pending" })
   generateCharge(
     @Request() req: any,
     @Param("paymentId", ParseUUIDPipe) paymentId: string,
@@ -85,13 +85,13 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("CLIENT")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Consultar status do pagamento" })
-  @ApiParam({ name: "paymentId", description: "ID do pagamento" })
-  @ApiResponse({ status: 200, description: "Status do pagamento retornado" })
-  @ApiResponse({ status: 404, description: "Pagamento não encontrado" })
+  @ApiOperation({ summary: "Get payment status" })
+  @ApiParam({ name: "paymentId", description: "Payment ID" })
+  @ApiResponse({ status: 200, description: "Payment status returned" })
+  @ApiResponse({ status: 404, description: "Payment not found" })
   @ApiResponse({
     status: 403,
-    description: "Pagamento não pertence ao cliente",
+    description: "Payment does not belong to client",
   })
   getStatus(
     @Request() req: any,
@@ -103,13 +103,13 @@ export class PaymentsController {
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post("webhook")
   @ApiOperation({
-    summary: "Webhook (mock) — confirmar pagamento recebido",
+    summary: "Webhook (mock) — confirm received payment",
     description:
-      "Simula o retorno do gateway de pagamento e marca o pagamento como PAID. Endpoint restrito a HTTPS.",
+      "Simulates the payment gateway callback and marks the payment as PAID. Restricted to HTTPS.",
   })
-  @ApiResponse({ status: 200, description: "Pagamento confirmado (PAID)" })
-  @ApiResponse({ status: 404, description: "Pagamento não encontrado" })
-  @ApiResponse({ status: 403, description: "Chave de webhook inválida" })
+  @ApiResponse({ status: 200, description: "Payment confirmed (PAID)" })
+  @ApiResponse({ status: 404, description: "Payment not found" })
+  @ApiResponse({ status: 403, description: "Invalid webhook key" })
   async webhook(
     @Req() httpRequest: ExpressRequest,
     @Headers("x-webhook-key") webhookKey: string | undefined,
@@ -119,9 +119,9 @@ export class PaymentsController {
       throw new ForbiddenException("Webhook mock indisponível em produção");
     }
 
-    this.garantirRequestHttps(httpRequest);
+    this.ensureHttpsRequest(httpRequest);
 
-    if (!this.validarChaveWebhook(webhookKey)) {
+    if (!this.validateWebhookKey(webhookKey)) {
       this.logger.logAuthenticationFailure("webhook_key", dto.paymentId, null, {
         eventId: dto.eventId,
         providedKey: webhookKey ? "[REDACTED]" : "missing",
@@ -130,7 +130,7 @@ export class PaymentsController {
     }
 
     try {
-      this.validarTimestampWebhook(dto.timestamp, "Webhook mock");
+      this.validateWebhookTimestamp(dto.timestamp, "Webhook mock");
     } catch (e) {
       this.logger.logAuthenticationFailure("timestamp", dto.paymentId, null, {
         eventId: dto.eventId,
@@ -143,38 +143,38 @@ export class PaymentsController {
     return this.paymentsService.confirmPayment(dto);
   }
 
-  private validarChaveWebhook(webhookKey: string | undefined): boolean {
-    const esperada = process.env.MOCK_WEBHOOK_KEY || "";
-    if (!webhookKey || !esperada) {
+  private validateWebhookKey(webhookKey: string | undefined): boolean {
+    const expected = process.env.MOCK_WEBHOOK_KEY || "";
+    if (!webhookKey || !expected) {
       return false;
     }
-    // Compara hashes para não vazar o tamanho da chave (oráculo de comprimento).
+    // Compare hashes to avoid leaking key length.
     const a = crypto.createHash("sha256").update(webhookKey).digest();
-    const b = crypto.createHash("sha256").update(esperada).digest();
+    const b = crypto.createHash("sha256").update(expected).digest();
     return crypto.timingSafeEqual(a, b);
   }
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @Post("webhook/:gateway")
   @ApiOperation({
-    summary: "Webhook de gateway de pagamento — sincronização de status",
+    summary: "Payment gateway webhook — status sync",
     description:
-      "Recebe notificações do gateway (ex.: mercadopago), valida a assinatura e atualiza o status do pagamento. Endpoint restrito a HTTPS.",
+      "Receives gateway notifications (e.g. mercadopago), validates the signature and updates the payment status. Restricted to HTTPS.",
   })
   @ApiParam({
     name: "gateway",
-    description: "Nome do gateway (ex.: mercadopago)",
+    description: "Gateway name (e.g. mercadopago)",
     example: "mercadopago",
   })
-  @ApiResponse({ status: 200, description: "Webhook processado" })
-  @ApiResponse({ status: 404, description: "Gateway desconhecido" })
-  @ApiResponse({ status: 403, description: "Assinatura de webhook inválida" })
+  @ApiResponse({ status: 200, description: "Webhook processed" })
+  @ApiResponse({ status: 404, description: "Unknown gateway" })
+  @ApiResponse({ status: 403, description: "Invalid webhook signature" })
   async gatewayWebhook(
     @Req() httpRequest: ExpressRequest,
     @Param("gateway") gatewayName: string,
     @Headers() headers: Record<string, string>,
     @Body() dto: unknown,
   ) {
-    this.garantirRequestHttps(httpRequest);
+    this.ensureHttpsRequest(httpRequest);
 
     const gateway = this.gateways.getByName(gatewayName);
     if (!gateway) {
@@ -186,41 +186,39 @@ export class PaymentsController {
     return this.paymentsService.handleGatewayWebhook(gateway, headers, dto);
   }
 
-  private garantirRequestHttps(req: ExpressRequest) {
+  private ensureHttpsRequest(req: ExpressRequest) {
     if (process.env.NODE_ENV !== "production") {
       return;
     }
 
-    const protocoloForwarded = req.headers["x-forwarded-proto"];
+    const forwardedProtocol = req.headers["x-forwarded-proto"];
 
-    const protocolo =
-      typeof protocoloForwarded === "string"
-        ? protocoloForwarded.split(",")[0]?.trim()
+    const protocol =
+      typeof forwardedProtocol === "string"
+        ? forwardedProtocol.split(",")[0]?.trim()
         : req.protocol;
 
-    if (protocolo !== "https") {
+    if (protocol !== "https") {
       this.logger.logAuthenticationFailure("replay", null, null, {
         path: req.path,
-        protocol: protocolo,
+        protocol,
         ip: req.ip,
       });
       throw new ForbiddenException("Webhook deve ser recebido via HTTPS");
     }
   }
 
-  private validarTimestampWebhook(timestamp: string, rotulo?: string) {
-    const tsNumero = Number(timestamp);
-    if (!Number.isFinite(tsNumero)) {
-      throw new ForbiddenException(
-        `${rotulo || "Webhook"}: timestamp inválido`,
-      );
+  private validateWebhookTimestamp(timestamp: string, label?: string) {
+    const tsNumber = Number(timestamp);
+    if (!Number.isFinite(tsNumber)) {
+      throw new ForbiddenException(`${label || "Webhook"}: timestamp inválido`);
     }
 
-    const JANELA_ACEITAVEL_S = 5 * 60;
-    const agoraS = Math.floor(Date.now() / 1000);
-    if (Math.abs(agoraS - tsNumero) > JANELA_ACEITAVEL_S) {
+    const ACCEPTABLE_WINDOW_S = 5 * 60;
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    if (Math.abs(nowSeconds - tsNumber) > ACCEPTABLE_WINDOW_S) {
       throw new ForbiddenException(
-        `${rotulo || "Webhook"}: timestamp fora da janela aceitável`,
+        `${label || "Webhook"}: timestamp fora da janela aceitável`,
       );
     }
   }

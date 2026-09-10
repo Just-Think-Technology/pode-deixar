@@ -8,8 +8,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ServicesLoggerService } from "../shared/services-logger.service";
 import { CreateCounterProposalDto } from "./dto/create-counter-proposal.dto";
 import {
-  normalizarPaginacao,
-  PaginacaoConsulta,
+  normalizePagination,
+  PaginationQuery,
 } from "../shared/pagination-query.dto";
 
 @Injectable()
@@ -227,7 +227,7 @@ export class CounterProposalsService {
   async findByProposal(
     userId: string,
     proposalId: string,
-    paginacao?: PaginacaoConsulta,
+    pagination?: PaginationQuery,
   ) {
     const proposal = await this.prisma.proposal.findUnique({
       where: { id: proposalId },
@@ -247,7 +247,7 @@ export class CounterProposalsService {
       );
     }
 
-    const { skip, take } = normalizarPaginacao(paginacao);
+    const { skip, take } = normalizePagination(pagination);
     const counterProposals = await this.prisma.counterProposal.findMany({
       where: { proposalId },
       orderBy: { createdAt: "desc" },
@@ -258,8 +258,8 @@ export class CounterProposalsService {
     return counterProposals.map((cp) => this.formatCounterProposal(cp));
   }
 
-  async findMySent(senderId: string, paginacao?: PaginacaoConsulta) {
-    const { skip, take } = normalizarPaginacao(paginacao);
+  async findMySent(senderId: string, pagination?: PaginationQuery) {
+    const { skip, take } = normalizePagination(pagination);
     const counterProposals = await this.prisma.counterProposal.findMany({
       where: { senderId },
       orderBy: { createdAt: "desc" },

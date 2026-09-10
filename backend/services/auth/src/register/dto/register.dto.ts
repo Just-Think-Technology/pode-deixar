@@ -15,7 +15,7 @@ export enum PublicRole {
 }
 
 export class RegisterDto {
-  @ApiProperty({ description: 'Nome completo do usuário', example: 'John Doe' })
+  @ApiProperty({ description: 'User full name', example: 'John Doe' })
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
@@ -26,7 +26,7 @@ export class RegisterDto {
   complete_name: string;
 
   @ApiProperty({
-    description: 'Endereço de email do usuário',
+    description: 'User email address',
     example: 'john.doe@example.com',
   })
   @IsEmail()
@@ -35,7 +35,7 @@ export class RegisterDto {
 
   @ApiProperty({
     description:
-      'Senha do usuário (mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 número, 1 especial)',
+      'User password (minimum 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special)',
     example: 'Password123!',
     minLength: 8,
   })
@@ -47,7 +47,7 @@ export class RegisterDto {
   password: string;
 
   @ApiProperty({
-    description: 'Confirmação de senha (deve coincidir com o campo senha)',
+    description: 'Password confirmation (must match the password field)',
     example: 'Password123!',
     minLength: 8,
   })
@@ -56,20 +56,20 @@ export class RegisterDto {
   confirm_password: string;
 
   @ApiProperty({
-    description: 'Número de telefone do usuário',
+    description: 'User phone number',
     example: '+1234567890',
   })
   @IsString()
   @IsNotEmpty()
   phone: string;
 
-  @ApiProperty({ description: 'CEP do usuário', example: '12345-678' })
+  @ApiProperty({ description: 'User postal code', example: '12345-678' })
   @IsString()
   @IsNotEmpty()
   postal_code: string;
 
   @ApiProperty({
-    description: 'Função do usuário',
+    description: 'User role',
     enum: PublicRole,
     example: PublicRole.CLIENT,
   })

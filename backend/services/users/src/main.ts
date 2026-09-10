@@ -11,10 +11,9 @@ async function bootstrap() {
     logger: false,
   });
 
-  // Security headers with CSP
   app.use(getHelmetConfig());
 
-  // CORS configuration (allowlist — nunca "*")
+  // Allowlist only, never "*".
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:3000",
@@ -24,12 +23,12 @@ async function bootstrap() {
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   });
 
-  // Trust proxy para detecção correta de IP (rate-limit/logs)
+  // Trust proxy for correct client IP in rate limiting and logs.
   app.getHttpAdapter().getInstance().set("trust proxy", 1);
 
   const config = new DocumentBuilder()
     .setTitle("Pode Deixar - Users Service")
-    .setDescription("API de gerenciamento de perfis de usuários")
+    .setDescription("User profile management API")
     .setVersion("1.0")
     .addBearerAuth()
     .build();

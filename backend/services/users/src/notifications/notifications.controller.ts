@@ -23,7 +23,6 @@ export class NotificationsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("CLIENT", "PROVIDER", "ADMIN")
   create(@Body() dto: CreateNotificationDto, @User("sub") userId: string) {
-    // O recipient do corpo é ignorado: a notificação vai para o próprio autor.
     return this.notificationsService.create(userId, dto);
   }
 
