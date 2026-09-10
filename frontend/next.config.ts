@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
         const dev = process.env.NODE_ENV !== "production";
         const imgSrc = ["'self'", "https:", "data:", "blob:"];
         const connectSrc = ["'self'", "https:"];
+        // React dev exige eval() (reconstrução de callstacks no HMR);
+        // em produção o React nunca usa eval, então segue estrito.
+        const scriptSrc = ["'self'", "'unsafe-inline'"];
         if (dev) {
             imgSrc.push("http://localhost:*", "http://127.0.0.1:*");
             connectSrc.push(
@@ -30,10 +33,11 @@ const nextConfig: NextConfig = {
                 "ws://localhost:*",
                 "ws://127.0.0.1:*",
             );
+            scriptSrc.push("'unsafe-eval'");
         }
         const csp = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline'",
+            `script-src ${scriptSrc.join(" ")}`,
             "style-src 'self' 'unsafe-inline'",
             `img-src ${imgSrc.join(" ")}`,
             "font-src 'self' data:",
