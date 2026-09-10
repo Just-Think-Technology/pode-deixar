@@ -106,8 +106,8 @@ describe('GET /auth/verify', () => {
     });
 
     it('should return authorized false and not user data for an expired token', async () => {
-      // Justificativa AppSec: estratégia exige iss/aud fixos; incluídos aqui
-      // para que o teste rejeite por expiração (não por emissor/audiência).
+      // The strategy requires fixed iss/aud; included here so the test rejects
+      // on expiry (not on issuer/audience).
       const expiredToken = jwtService.sign(
         {
           sub: '00000000-0000-0000-0000-000000000000',
@@ -137,8 +137,8 @@ describe('GET /auth/verify', () => {
     });
 
     it('should return authorized false for a token signed with a different secret', async () => {
-      // Justificativa AppSec: iss/aud incluídos para que a rejeição ocorra
-      // pela assinatura (objeto do teste), não pelo endurecimento JWT.
+      // iss/aud included so rejection happens on the signature (the test's
+      // subject), not on JWT hardening.
       const fakeToken = jwtService.sign(
         {
           sub: '00000000-0000-0000-0000-000000000000',

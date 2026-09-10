@@ -24,9 +24,9 @@ export async function setupTestApp(): Promise<TestAppSetup> {
       ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10_000 }]),
     ],
   })
-    // Justificativa AppSec: endpoints sensíveis têm @Throttle estrito
-    // (5-60 req/min); fluxos de teste compartilham um IP e estourariam 429.
-    // Storage fake que nunca bloqueia — o guard real continua executando.
+    // Sensitive endpoints carry strict @Throttle (5-60 req/min); test flows
+    // share one IP and would hit 429. Fake storage that never blocks — the
+    // real guard still runs.
     .overrideProvider(ThrottlerStorage)
     .useValue({
       increment: async () => ({

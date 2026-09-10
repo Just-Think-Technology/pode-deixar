@@ -33,13 +33,13 @@ export class ProposalsController {
   @Post()
   @Roles("PROVIDER")
   @ApiOperation({
-    summary: "Criar proposta para um pedido (apenas prestadores)",
+    summary: "Create a proposal for an order (providers only)",
   })
-  @ApiResponse({ status: 201, description: "Proposta criada com sucesso" })
-  @ApiResponse({ status: 404, description: "Pedido não encontrado" })
+  @ApiResponse({ status: 201, description: "Proposal created successfully" })
+  @ApiResponse({ status: 404, description: "Order not found" })
   @ApiResponse({
     status: 400,
-    description: "Pedido não está aberto ou já possui proposta",
+    description: "Order is not open or already has a proposal",
   })
   async create(@Request() req: any, @Body() dto: CreateProposalDto) {
     const userId = req.user.sub;
@@ -49,17 +49,17 @@ export class ProposalsController {
 
   @Get("me")
   @Roles("PROVIDER")
-  @ApiOperation({ summary: "Listar minhas propostas (apenas prestadores)" })
+  @ApiOperation({ summary: "List my proposals (providers only)" })
   @ApiResponse({
     status: 200,
-    description: "Lista de propostas retornada com sucesso",
+    description: "Proposals list returned successfully",
   })
   async findMyProposals(
     @Request() req: any,
-    @Query() paginacao: PaginationQueryDto,
+    @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
-    return this.proposalsService.findByProvider(userId, paginacao);
+    return this.proposalsService.findByProvider(userId, pagination);
   }
 }
 
@@ -72,13 +72,13 @@ export class ProposalDetailController {
 
   @Get()
   @Roles("PROVIDER")
-  @ApiOperation({ summary: "Obter detalhe de uma proposta (apenas dono)" })
-  @ApiParam({ name: "proposalId", description: "ID da proposta" })
+  @ApiOperation({ summary: "Get proposal detail (owner only)" })
+  @ApiParam({ name: "proposalId", description: "Proposal ID" })
   @ApiResponse({
     status: 200,
-    description: "Detalhe da proposta retornado com sucesso",
+    description: "Proposal detail returned successfully",
   })
-  @ApiResponse({ status: 404, description: "Proposta não encontrada" })
+  @ApiResponse({ status: 404, description: "Proposal not found" })
   async findOne(@Request() req: any, @Param("proposalId") proposalId: string) {
     const userId = req.user.sub;
     return this.proposalsService.findByIdForProvider(proposalId, userId);
@@ -87,11 +87,11 @@ export class ProposalDetailController {
   @Patch()
   @Roles("PROVIDER")
   @ApiOperation({
-    summary: "Atualizar proposta (apenas dono, apenas pendente)",
+    summary: "Update proposal (owner only, only if pending)",
   })
-  @ApiParam({ name: "proposalId", description: "ID da proposta" })
-  @ApiResponse({ status: 200, description: "Proposta atualizada com sucesso" })
-  @ApiResponse({ status: 404, description: "Proposta não encontrada" })
+  @ApiParam({ name: "proposalId", description: "Proposal ID" })
+  @ApiResponse({ status: 200, description: "Proposal updated successfully" })
+  @ApiResponse({ status: 404, description: "Proposal not found" })
   async update(
     @Request() req: any,
     @Param("proposalId") proposalId: string,
@@ -104,10 +104,10 @@ export class ProposalDetailController {
 
   @Delete()
   @Roles("PROVIDER")
-  @ApiOperation({ summary: "Retirar proposta (apenas dono, apenas pendente)" })
-  @ApiParam({ name: "proposalId", description: "ID da proposta" })
-  @ApiResponse({ status: 200, description: "Proposta retirada com sucesso" })
-  @ApiResponse({ status: 404, description: "Proposta não encontrada" })
+  @ApiOperation({ summary: "Withdraw proposal (owner only, only if pending)" })
+  @ApiParam({ name: "proposalId", description: "Proposal ID" })
+  @ApiResponse({ status: 200, description: "Proposal withdrawn successfully" })
+  @ApiResponse({ status: 404, description: "Proposal not found" })
   async withdraw(@Request() req: any, @Param("proposalId") proposalId: string) {
     const userId = req.user.sub;
     const ip = req.ip;
@@ -124,13 +124,13 @@ export class AcceptRejectController {
 
   @Post("accept")
   @Roles("CLIENT")
-  @ApiOperation({ summary: "Aceitar proposta (apenas dono do pedido)" })
-  @ApiParam({ name: "proposalId", description: "ID da proposta" })
-  @ApiResponse({ status: 200, description: "Proposta aceita com sucesso" })
-  @ApiResponse({ status: 404, description: "Proposta não encontrada" })
+  @ApiOperation({ summary: "Accept proposal (order owner only)" })
+  @ApiParam({ name: "proposalId", description: "Proposal ID" })
+  @ApiResponse({ status: 200, description: "Proposal accepted successfully" })
+  @ApiResponse({ status: 404, description: "Proposal not found" })
   @ApiResponse({
     status: 400,
-    description: "Pedido não está aberto ou proposta não está pendente",
+    description: "Order is not open or proposal is not pending",
   })
   async accept(@Request() req: any, @Param("proposalId") proposalId: string) {
     const userId = req.user.sub;
@@ -140,10 +140,10 @@ export class AcceptRejectController {
 
   @Post("reject")
   @Roles("CLIENT")
-  @ApiOperation({ summary: "Rejeitar proposta (apenas dono do pedido)" })
-  @ApiParam({ name: "proposalId", description: "ID da proposta" })
-  @ApiResponse({ status: 200, description: "Proposta rejeitada com sucesso" })
-  @ApiResponse({ status: 404, description: "Proposta não encontrada" })
+  @ApiOperation({ summary: "Reject proposal (order owner only)" })
+  @ApiParam({ name: "proposalId", description: "Proposal ID" })
+  @ApiResponse({ status: 200, description: "Proposal rejected successfully" })
+  @ApiResponse({ status: 404, description: "Proposal not found" })
   async reject(@Request() req: any, @Param("proposalId") proposalId: string) {
     const userId = req.user.sub;
     const ip = req.ip;

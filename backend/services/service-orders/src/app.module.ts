@@ -37,7 +37,7 @@ const ROTULOS_ORDERS: RotulosCampos = {
   proposalId: "ID da proposta",
 };
 
-function traduzirErrosValidacao(errors: ValidationError[]): string[] {
+function translateValidationErrors(errors: ValidationError[]): string[] {
   return traduzirErrosNucleo(errors, ROTULOS_ORDERS);
 }
 
@@ -81,7 +81,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string[] {
         forbidNonWhitelisted: true,
         transform: true,
         exceptionFactory: (errors) =>
-          new BadRequestException(traduzirErrosValidacao(errors)),
+          new BadRequestException(translateValidationErrors(errors)),
       }),
     },
     {

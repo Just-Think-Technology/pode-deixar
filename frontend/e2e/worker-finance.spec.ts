@@ -2,12 +2,12 @@ import { expect, test } from "@playwright/test";
 
 import { loginAsWorkerMock } from "./helpers/auth";
 
-test.describe("Financeiro do prestador (JTT-95)", () => {
+test.describe("Provider finances (JTT-95)", () => {
   test.beforeEach(async ({ page }) => {
     await loginAsWorkerMock(page);
   });
 
-  test("mostra cards, gráficos e linha com bruto/taxa/líquido", async ({
+  test("shows cards, charts and row with gross/fee/net", async ({
     page,
   }) => {
     await page.goto("/worker/finance");
@@ -49,7 +49,7 @@ test.describe("Financeiro do prestador (JTT-95)", () => {
     ).toBeVisible();
   });
 
-  test("filtra lançamentos por status Pago", async ({ page }) => {
+  test("filters entries by Paid status", async ({ page }) => {
     await page.goto("/worker/finance");
 
     await expect(
@@ -68,7 +68,7 @@ test.describe("Financeiro do prestador (JTT-95)", () => {
     ).toHaveCount(0);
   });
 
-  test("menu do painel leva à tela Financeiro", async ({ page }) => {
+  test("panel menu leads to the Finance screen", async ({ page }) => {
     await page.goto("/worker/dashboard");
 
     await page.getByRole("link", { name: "Financeiro" }).click();
@@ -78,7 +78,7 @@ test.describe("Financeiro do prestador (JTT-95)", () => {
     ).toBeVisible();
   });
 
-  test("rota antiga /worker/payments redireciona para Financeiro", async ({
+  test("legacy /worker/payments route redirects to Finance", async ({
     page,
   }) => {
     await page.goto("/worker/payments");

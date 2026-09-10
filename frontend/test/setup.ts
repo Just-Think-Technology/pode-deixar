@@ -3,8 +3,8 @@
  * You can place global mocks or setup logic here.
  */
 
-// jest-dom custom matchers for Vitest (entry explícito: o bare import não
-// registra os matchers no jest-dom 6.10 + vitest 4)
+// jest-dom custom matchers for Vitest (explicit entry: the bare import does
+// not register the matchers on jest-dom 6.10 + vitest 4)
 import '@testing-library/jest-dom/vitest'
 import { vi } from 'vitest'
 

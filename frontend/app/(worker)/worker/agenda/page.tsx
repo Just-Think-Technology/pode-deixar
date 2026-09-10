@@ -12,7 +12,7 @@ type WorkerAgendaRouteProps = {
 export default async function WorkerAgendaRoute({
   searchParams,
 }: WorkerAgendaRouteProps) {
-  const { dia } = await searchParams;
+  const { dia: day } = await searchParams;
   let events: Awaited<ReturnType<typeof getAgendaEventsAction>> = [];
   let initialLoadError: string | undefined;
 
@@ -25,7 +25,7 @@ export default async function WorkerAgendaRoute({
   return (
     <WorkerAgendaPage
       events={events}
-      initialDay={dia}
+      initialDay={day}
       initialLoadError={initialLoadError}
     />
   );

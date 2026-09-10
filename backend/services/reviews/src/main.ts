@@ -25,7 +25,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle("Pode Deixar - Reviews Service")
-    .setDescription("API de avaliações de clientes e prestadores")
+    .setDescription("API for client and provider reviews")
     .setVersion("1.0")
     .addBearerAuth()
     .build();

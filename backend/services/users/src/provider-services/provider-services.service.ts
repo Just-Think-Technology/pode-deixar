@@ -278,23 +278,22 @@ export class ProviderServicesService {
   }
 
   async searchProviders(query: SearchProvidersQueryDto) {
-    // Limite com teto anti-abuso (o DTO também valida @Max(50)).
+    // Cap page size against abuse (the DTO also enforces @Max(50)).
     const page = query.page ?? 1;
-    const limite = Math.min(query.limit ?? 10, 50);
-    const skip = (page - 1) * limite;
+    const limit = Math.min(query.limit ?? 10, 50);
+    const skip = (page - 1) * limit;
 
-    const filtroServico: any = { isActive: true };
+    const serviceFilter: any = { isActive: true };
     if (query.categoryId) {
-      filtroServico.categoryId = query.categoryId;
+      serviceFilter.categoryId = query.categoryId;
     }
 
-    const condicoes: any[] = [{ services: { some: filtroServico } }];
+    const conditions: any[] = [{ services: { some: serviceFilter } }];
 
-    // Filtro de texto executado no banco (contains case-insensitive sobre
-    // nome do prestador, título e descrição), com paginação via skip/take —
-    // evita carregar todos os perfis em memória.
+    // Run the text filter in the database with skip/take to avoid loading
+    // all profiles into memory.
     if (query.q) {
-      condicoes.push({
+      conditions.push({
         OR: [
           {
             user: { completeName: { contains: query.q, mode: "insensitive" } },
@@ -302,7 +301,7 @@ export class ProviderServicesService {
           {
             services: {
               some: {
-                ...filtroServico,
+                ...serviceFilter,
                 OR: [
                   { title: { contains: query.q, mode: "insensitive" } },
                   { description: { contains: query.q, mode: "insensitive" } },
@@ -314,10 +313,10 @@ export class ProviderServicesService {
       });
     }
 
-    const where = { AND: condicoes };
+    const where = { AND: conditions };
 
-    // Select público: sem PII (email, telefone, CEP não são buscados).
-    // A ordenação por proximidade de CEP foi removida junto com o CEP.
+    // Public select excludes PII; postal-code proximity ordering was removed
+    // with the postal code.
     const includeClause = {
       user: {
         select: {
@@ -326,7 +325,7 @@ export class ProviderServicesService {
         },
       },
       services: {
-        where: filtroServico,
+        where: serviceFilter,
         orderBy: { createdAt: "desc" },
         include: {
           category: { select: { id: true, name: true, slug: true } },
@@ -338,26 +337,26 @@ export class ProviderServicesService {
       },
     } as const;
 
-    const [total, perfis] = await Promise.all([
+    const [total, profiles] = await Promise.all([
       this.prisma.providerProfile.count({ where }),
       this.prisma.providerProfile.findMany({
         where,
         include: includeClause,
         orderBy: { rating: "desc" },
         skip,
-        take: limite,
+        take: limit,
       }),
     ]);
 
-    const dados = perfis.map((p: any) => this.formatProfileResult(p));
+    const results = profiles.map((p: any) => this.formatProfileResult(p));
 
     return {
-      data: dados,
+      data: results,
       meta: {
         total,
         page,
-        limit: limite,
-        totalPages: Math.ceil(total / limite),
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
     };
   }

@@ -2,12 +2,12 @@ import { expect, test } from "@playwright/test";
 
 import { loginAsClientMock } from "./helpers/auth";
 
-test.describe("Checkout / confirmação de pagamento (JTT-92)", () => {
+test.describe("Checkout / payment confirmation (JTT-92)", () => {
   test.beforeEach(async ({ page }) => {
     await loginAsClientMock(page);
   });
 
-  test("mostra checkout de pedido com proposta aceita", async ({ page }) => {
+  test("shows checkout for an order with an accepted proposal", async ({ page }) => {
     await page.goto("/client/orders/mock-client-order-003/checkout");
 
     await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
@@ -22,7 +22,7 @@ test.describe("Checkout / confirmação de pagamento (JTT-92)", () => {
     ).toBeVisible();
   });
 
-  test("gera cobrança Pix, simula pagamento e confirma PAID", async ({
+  test("generates a PIX charge, simulates payment and confirms PAID", async ({
     page,
   }) => {
     await page.goto("/client/orders/mock-client-order-003/checkout");
@@ -55,7 +55,7 @@ test.describe("Checkout / confirmação de pagamento (JTT-92)", () => {
     await expect(page.getByRole("link", { name: "Ver pedido" })).toBeVisible();
   });
 
-  test("gera cobrança de cartão com link externo mock", async ({ page }) => {
+  test("generates a card charge with a mock external link", async ({ page }) => {
     await page.goto("/client/orders/mock-client-order-003/checkout");
 
     await page.getByLabel("Horário de início").fill("09:00");

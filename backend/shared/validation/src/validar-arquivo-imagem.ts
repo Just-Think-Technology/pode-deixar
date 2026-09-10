@@ -18,19 +18,16 @@ const EXTENSOES_POR_TIPO: Record<string, string[]> = {
   gif: ['.gif'],
 };
 
-// Detecta o tipo real do arquivo pelos magic bytes (não confia no
-// mimetype/extensão enviados pelo cliente, que são falsificáveis).
+// Client-supplied mimetype/extension are forgeable, so sniff the real type.
 function detectarTipoPorMagicBytes(
   buffer: Buffer,
 ): 'jpeg' | 'png' | 'webp' | 'gif' | null {
   if (!buffer || buffer.length < 3) {
     return null;
   }
-  // JPEG: FF D8 FF
   if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return 'jpeg';
   }
-  // PNG: 89 50 4E 47 0D 0A 1A 0A
   if (
     buffer.length >= 8 &&
     buffer[0] === 0x89 &&
@@ -44,7 +41,6 @@ function detectarTipoPorMagicBytes(
   ) {
     return 'png';
   }
-  // GIF87a / GIF89a
   if (
     buffer.length >= 6 &&
     buffer[0] === 0x47 &&
@@ -56,7 +52,6 @@ function detectarTipoPorMagicBytes(
   ) {
     return 'gif';
   }
-  // WebP: "RIFF" + 4 bytes de tamanho + "WEBP"
   if (
     buffer.length >= 12 &&
     buffer[0] === 0x52 &&

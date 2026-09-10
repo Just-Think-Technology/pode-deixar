@@ -74,6 +74,7 @@ export function AgendaPhotoLightbox({
           <CarouselContent className="h-full items-center">
             {event.photos.map((item, photoIndex) => (
               <CarouselItem key={item.id} className="flex justify-center">
+                {/* Mock/data-URI photo: next/image cannot optimize it. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.url}
@@ -94,6 +95,7 @@ export function AgendaPhotoLightbox({
         </Carousel>
       ) : photo ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-4">
+          {/* Mock/data-URI photo: next/image cannot optimize it. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={photo.url}

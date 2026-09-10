@@ -4,7 +4,7 @@ import { PaymentStatus } from "@prisma/client";
 
 export class FinanceItemsQueryDto {
   @ApiPropertyOptional({
-    description: "Filtra itens por status do pagamento do cliente",
+    description: "Filter items by client payment status",
     enum: PaymentStatus,
     example: PaymentStatus.PAID,
   })

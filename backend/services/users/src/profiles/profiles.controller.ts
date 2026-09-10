@@ -27,7 +27,7 @@ import { CreateProviderProfileDto } from "./dto/create-provider-profile.dto";
 import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 
-@ApiTags("Perfis")
+@ApiTags("Profiles")
 @Controller("profiles")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -36,9 +36,9 @@ export class ProfilesController {
 
   @Get("me")
   @Roles("CLIENT", "PROVIDER")
-  @ApiOperation({ summary: "Obter perfil do usuário atual" })
-  @ApiResponse({ status: 200, description: "Perfil recuperado com sucesso" })
-  @ApiResponse({ status: 404, description: "Perfil não encontrado" })
+  @ApiOperation({ summary: "Get current user profile" })
+  @ApiResponse({ status: 200, description: "Profile retrieved successfully" })
+  @ApiResponse({ status: 404, description: "Profile not found" })
   async getMyProfile(@Request() req: any) {
     const userId = req.user.sub;
     const role = req.user.role;
@@ -47,12 +47,12 @@ export class ProfilesController {
 
   @Post("client")
   @Roles("CLIENT")
-  @ApiOperation({ summary: "Criar perfil de cliente" })
+  @ApiOperation({ summary: "Create client profile" })
   @ApiResponse({
     status: 201,
-    description: "Perfil de cliente criado com sucesso",
+    description: "Client profile created successfully",
   })
-  @ApiResponse({ status: 409, description: "Perfil já existe" })
+  @ApiResponse({ status: 409, description: "Profile already exists" })
   async createClientProfile(
     @Request() req: any,
     @Body() dto: CreateClientProfileDto,
@@ -64,12 +64,12 @@ export class ProfilesController {
 
   @Patch("client")
   @Roles("CLIENT")
-  @ApiOperation({ summary: "Atualizar perfil de cliente" })
+  @ApiOperation({ summary: "Update client profile" })
   @ApiResponse({
     status: 200,
-    description: "Perfil de cliente atualizado com sucesso",
+    description: "Client profile updated successfully",
   })
-  @ApiResponse({ status: 404, description: "Perfil não encontrado" })
+  @ApiResponse({ status: 404, description: "Profile not found" })
   async updateClientProfile(
     @Request() req: any,
     @Body() dto: UpdateClientProfileDto,
@@ -81,12 +81,12 @@ export class ProfilesController {
 
   @Post("provider")
   @Roles("PROVIDER")
-  @ApiOperation({ summary: "Criar perfil de prestador" })
+  @ApiOperation({ summary: "Create provider profile" })
   @ApiResponse({
     status: 201,
-    description: "Perfil de prestador criado com sucesso",
+    description: "Provider profile created successfully",
   })
-  @ApiResponse({ status: 409, description: "Perfil já existe" })
+  @ApiResponse({ status: 409, description: "Profile already exists" })
   async createProviderProfile(
     @Request() req: any,
     @Body() dto: CreateProviderProfileDto,
@@ -98,12 +98,12 @@ export class ProfilesController {
 
   @Patch("provider")
   @Roles("PROVIDER")
-  @ApiOperation({ summary: "Atualizar perfil de prestador" })
+  @ApiOperation({ summary: "Update provider profile" })
   @ApiResponse({
     status: 200,
-    description: "Perfil de prestador atualizado com sucesso",
+    description: "Provider profile updated successfully",
   })
-  @ApiResponse({ status: 404, description: "Perfil não encontrado" })
+  @ApiResponse({ status: 404, description: "Profile not found" })
   async updateProviderProfile(
     @Request() req: any,
     @Body() dto: UpdateProviderProfileDto,
@@ -134,7 +134,7 @@ export class ProfilesController {
       },
     }),
   )
-  @ApiOperation({ summary: "Enviar avatar" })
+  @ApiOperation({ summary: "Upload avatar" })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
@@ -143,14 +143,14 @@ export class ProfilesController {
         file: {
           type: "string",
           format: "binary",
-          description: "Arquivo de imagem (JPEG, PNG, WebP ou GIF, máx 2MB)",
+          description: "Image file (JPEG, PNG, WebP or GIF, max 2MB)",
         },
       },
     },
   })
-  @ApiResponse({ status: 200, description: "Avatar enviado com sucesso" })
-  @ApiResponse({ status: 400, description: "Arquivo inválido" })
-  @ApiResponse({ status: 404, description: "Perfil não encontrado" })
+  @ApiResponse({ status: 200, description: "Avatar uploaded successfully" })
+  @ApiResponse({ status: 400, description: "Invalid file" })
+  @ApiResponse({ status: 404, description: "Profile not found" })
   async uploadAvatar(
     @Request() req: any,
     @UploadedFile() file: Express.Multer.File,

@@ -35,7 +35,7 @@ export class PasswordManagementService {
       };
     }
 
-    // Token bruto circula apenas por email/eco não-prod; no banco fica o hash.
+    // Only the hash is stored; the raw token travels by email (and non-prod echo) only.
     const resetToken = uuidv4();
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 

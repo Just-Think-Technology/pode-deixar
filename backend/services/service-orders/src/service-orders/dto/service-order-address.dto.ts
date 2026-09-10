@@ -3,7 +3,7 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class ServiceOrderAddressDto {
   @ApiPropertyOptional({
-    description: "Logradouro (rua/avenida)",
+    description: "Street (street/avenue)",
     example: "Rua Augusta",
   })
   @IsOptional()
@@ -12,7 +12,7 @@ export class ServiceOrderAddressDto {
   street?: string;
 
   @ApiPropertyOptional({
-    description: "Número do imóvel",
+    description: "Building number",
     example: "500",
   })
   @IsOptional()
@@ -21,7 +21,7 @@ export class ServiceOrderAddressDto {
   number?: string;
 
   @ApiPropertyOptional({
-    description: "Bairro",
+    description: "Neighborhood",
     example: "Consolação",
   })
   @IsOptional()
@@ -30,7 +30,7 @@ export class ServiceOrderAddressDto {
   neighborhood?: string;
 
   @ApiPropertyOptional({
-    description: "Cidade",
+    description: "City",
     example: "São Paulo",
   })
   @IsOptional()
@@ -39,7 +39,7 @@ export class ServiceOrderAddressDto {
   city?: string;
 
   @ApiPropertyOptional({
-    description: "UF (2 letras)",
+    description: "State (2 letters)",
     example: "SP",
   })
   @IsOptional()
@@ -48,7 +48,7 @@ export class ServiceOrderAddressDto {
   state?: string;
 
   @ApiPropertyOptional({
-    description: "CEP",
+    description: "Postal code",
     example: "01305-000",
   })
   @IsOptional()
@@ -57,72 +57,75 @@ export class ServiceOrderAddressDto {
   postalCode?: string;
 }
 
-export function sanitizarEndereco(address?: ServiceOrderAddressDto) {
+export function sanitizeAddress(address?: ServiceOrderAddressDto) {
   if (!address) {
     return undefined;
   }
 
-  const limpo: Record<string, string> = {};
+  const cleaned: Record<string, string> = {};
 
   if (typeof address.street === "string" && address.street.trim().length > 0) {
-    limpo.street = address.street.trim();
+    cleaned.street = address.street.trim();
   }
   if (typeof address.number === "string" && address.number.trim().length > 0) {
-    limpo.number = address.number.trim();
+    cleaned.number = address.number.trim();
   }
   if (
     typeof address.neighborhood === "string" &&
     address.neighborhood.trim().length > 0
   ) {
-    limpo.neighborhood = address.neighborhood.trim();
+    cleaned.neighborhood = address.neighborhood.trim();
   }
   if (typeof address.city === "string" && address.city.trim().length > 0) {
-    limpo.city = address.city.trim();
+    cleaned.city = address.city.trim();
   }
   if (typeof address.state === "string" && address.state.trim().length > 0) {
-    limpo.state = address.state.trim();
+    cleaned.state = address.state.trim();
   }
   if (
     typeof address.postalCode === "string" &&
     address.postalCode.trim().length > 0
   ) {
-    limpo.postalCode = address.postalCode.trim();
+    cleaned.postalCode = address.postalCode.trim();
   }
 
-  return Object.keys(limpo).length > 0 ? limpo : undefined;
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined;
 }
 
-export function formatarEndereco(address: unknown) {
+export function formatAddress(address: unknown) {
   if (!address || typeof address !== "object") {
     return null;
   }
 
-  const endereco = address as Record<string, unknown>;
+  const addressData = address as Record<string, unknown>;
 
   return {
-    street: typeof endereco.street === "string" ? endereco.street : null,
-    number: typeof endereco.number === "string" ? endereco.number : null,
+    street: typeof addressData.street === "string" ? addressData.street : null,
+    number: typeof addressData.number === "string" ? addressData.number : null,
     neighborhood:
-      typeof endereco.neighborhood === "string" ? endereco.neighborhood : null,
-    city: typeof endereco.city === "string" ? endereco.city : null,
-    state: typeof endereco.state === "string" ? endereco.state : null,
+      typeof addressData.neighborhood === "string"
+        ? addressData.neighborhood
+        : null,
+    city: typeof addressData.city === "string" ? addressData.city : null,
+    state: typeof addressData.state === "string" ? addressData.state : null,
     postal_code:
-      typeof endereco.postalCode === "string" ? endereco.postalCode : null,
+      typeof addressData.postalCode === "string"
+        ? addressData.postalCode
+        : null,
   };
 }
 
-// Visão resumida para listagens públicas/autenticadas de vitrine:
-// expõe apenas cidade/UF (o endereço completo fica restrito ao detalhe
-// autenticado do pedido).
-export function formatarEnderecoResumido(address: unknown) {
+// Only expose city/state on the showcase; the full address stays restricted
+// to the authenticated order detail.
+export function formatAddressSummary(address: unknown) {
   if (!address || typeof address !== "object") {
     return null;
   }
 
-  const endereco = address as Record<string, unknown>;
+  const addressData = address as Record<string, unknown>;
 
   return {
-    city: typeof endereco.city === "string" ? endereco.city : null,
-    state: typeof endereco.state === "string" ? endereco.state : null,
+    city: typeof addressData.city === "string" ? addressData.city : null,
+    state: typeof addressData.state === "string" ? addressData.state : null,
   };
 }

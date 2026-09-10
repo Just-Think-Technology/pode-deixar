@@ -10,10 +10,13 @@ import { PrismaService } from "../prisma/prisma.service";
 import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
 import { PaymentGateway } from "../gateway/payment-gateway.interface";
 import { PaymentLoggerService } from "./payment-logger.service";
-import { CreatePaymentDto, MOEDAS_SUPORTADAS } from "./dto/create-payment.dto";
+import {
+  CreatePaymentDto,
+  SUPPORTED_CURRENCIES,
+} from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
 
-const TRANSICOES_VALIDAS: Record<PaymentStatus, PaymentStatus[]> = {
+const VALID_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
   PENDING: ["PAID", "FAILED", "CANCELLED"],
   PAID: ["REFUNDED", "CANCELLED"],
   FAILED: ["CANCELLED"],
@@ -21,20 +24,20 @@ const TRANSICOES_VALIDAS: Record<PaymentStatus, PaymentStatus[]> = {
   REFUNDED: [],
 };
 
-const GATEWAY_MOCK = "MOCK";
+const MOCK_GATEWAY = "MOCK";
 
-const TAXA_PLATAFORMA_PADRAO = 0.1;
+const DEFAULT_PLATFORM_FEE_RATE = 0.1;
 
-const MOEDA_BRL = "BRL";
+const BRL_CURRENCY = "BRL";
 
-interface EventoWebhook {
+interface WebhookEvent {
   gateway: string;
   eventId: string;
   paymentId?: string;
   payload?: unknown;
 }
 
-export interface ResultadoWebhook {
+export interface WebhookResult {
   payment: {
     id: string;
     status: PaymentStatus;
@@ -50,10 +53,7 @@ export class PaymentsService {
     private readonly logger: PaymentLoggerService,
   ) {}
 
-  private async buscarPagamentoDentroDoModelo(
-    paymentId: string,
-    userId: string,
-  ) {
+  private async findClientPayment(paymentId: string, userId: string) {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
       include: { serviceOrder: { select: { clientId: true } } },
@@ -72,26 +72,30 @@ export class PaymentsService {
     return payment;
   }
 
-  private get taxaPlataforma(): number {
-    const configurada = Number(process.env.PLATFORM_FEE_RATE);
-    if (Number.isFinite(configurada) && configurada >= 0 && configurada < 1) {
-      return configurada;
+  private get platformFeeRate(): number {
+    const configuredRate = Number(process.env.PLATFORM_FEE_RATE);
+    if (
+      Number.isFinite(configuredRate) &&
+      configuredRate >= 0 &&
+      configuredRate < 1
+    ) {
+      return configuredRate;
     }
-    return TAXA_PLATAFORMA_PADRAO;
+    return DEFAULT_PLATFORM_FEE_RATE;
   }
 
-  private arredondarParaCentavos(valor: number): number {
-    return Number(new Prisma.Decimal(valor).toFixed(2));
+  private roundToCents(value: number): number {
+    return Number(new Prisma.Decimal(value).toFixed(2));
   }
 
-  private calcularFees(valor: number) {
-    const feeRate = this.taxaPlataforma;
-    const feeAmount = this.arredondarParaCentavos(valor * feeRate);
-    const netAmount = this.arredondarParaCentavos(valor - feeAmount);
+  private calculateFees(value: number) {
+    const feeRate = this.platformFeeRate;
+    const feeAmount = this.roundToCents(value * feeRate);
+    const netAmount = this.roundToCents(value - feeAmount);
     return { feeRate, feeAmount, netAmount };
   }
 
-  private calcularLiquido(
+  private calculateNetAmounts(
     payment:
       | {
           amount: number;
@@ -106,15 +110,15 @@ export class PaymentsService {
           netAmount: Prisma.Decimal | null;
         },
   ) {
-    const feeRate = Number(payment.feeRate ?? this.taxaPlataforma);
+    const feeRate = Number(payment.feeRate ?? this.platformFeeRate);
     const feeAmount =
       payment.feeAmount != null
         ? Number(payment.feeAmount)
-        : this.arredondarParaCentavos(Number(payment.amount) * feeRate);
+        : this.roundToCents(Number(payment.amount) * feeRate);
     const netAmount =
       payment.netAmount != null
         ? Number(payment.netAmount)
-        : this.arredondarParaCentavos(Number(payment.amount) - feeAmount);
+        : this.roundToCents(Number(payment.amount) - feeAmount);
     return { feeRate, feeAmount, netAmount };
   }
 
@@ -136,15 +140,15 @@ export class PaymentsService {
   }
 
   async getProviderFinanceSummary(userId: string) {
-    const payments = await this.buscarPagamentosDoProvider(userId);
+    const payments = await this.findProviderPayments(userId);
 
-    const agregado = payments.reduce(
+    const totals = payments.reduce(
       (acc, payment) => {
-        const { feeAmount, netAmount } = this.calcularLiquido(payment);
-        const pagoNoMesAtual =
+        const { feeAmount, netAmount } = this.calculateNetAmounts(payment);
+        const paidThisMonth =
           payment.status === "PAID" &&
           payment.paidAt &&
-          this.pertenceAoMesAtual(payment.paidAt);
+          this.isInCurrentMonth(payment.paidAt);
 
         if (payment.status === "PENDING") {
           acc.pendingNet += netAmount;
@@ -156,7 +160,7 @@ export class PaymentsService {
           acc.toReceiveNet += netAmount;
         }
 
-        if (pagoNoMesAtual) {
+        if (paidThisMonth) {
           acc.receivedThisMonthNet += netAmount;
           acc.feesThisMonth += feeAmount;
         }
@@ -174,14 +178,14 @@ export class PaymentsService {
     );
 
     return {
-      currency: MOEDA_BRL,
-      feeRate: this.taxaPlataforma,
-      ...agregado,
+      currency: BRL_CURRENCY,
+      feeRate: this.platformFeeRate,
+      ...totals,
     };
   }
 
   async getProviderFinanceItems(userId: string, status?: PaymentStatus) {
-    const proposals = await this.buscarProposalsAceitasDoProvider(userId);
+    const proposals = await this.findAcceptedProviderProposals(userId);
     const orderIds = proposals.map((proposal) => proposal.serviceOrderId);
 
     if (orderIds.length === 0) {
@@ -196,25 +200,25 @@ export class PaymentsService {
       orderBy: { createdAt: "desc" },
     });
 
-    const proposalPorPedido = new Map(
+    const proposalByOrder = new Map(
       proposals.map((proposal) => [proposal.serviceOrderId, proposal.id]),
     );
 
     return payments.map((payment) =>
       this.formatFinanceItem(
         payment,
-        proposalPorPedido.get(payment.serviceOrderId),
+        proposalByOrder.get(payment.serviceOrderId),
       ),
     );
   }
 
   async getProviderFinanceChart(userId: string, months: number) {
-    const inicio = this.inicioDoPeriodo(months);
+    const startDate = this.startOfPeriod(months);
 
     const payments = await this.prisma.payment.findMany({
       where: {
         status: "PAID",
-        paidAt: { gte: inicio },
+        paidAt: { gte: startDate },
         serviceOrder: {
           proposals: {
             some: { providerId: userId, status: "ACCEPTED" },
@@ -230,31 +234,34 @@ export class PaymentsService {
       },
     });
 
-    const porMes = new Map<
+    const byMonth = new Map<
       string,
       { netReceived: number; feesRetained: number }
     >();
 
     for (const payment of payments) {
-      const chaveMes = this.chaveDoMes(payment.paidAt);
-      const { feeAmount, netAmount } = this.calcularLiquido(payment);
-      const atual = porMes.get(chaveMes) ?? { netReceived: 0, feesRetained: 0 };
-      atual.netReceived += netAmount;
-      atual.feesRetained += feeAmount;
-      porMes.set(chaveMes, atual);
+      const monthKey = this.monthKey(payment.paidAt);
+      const { feeAmount, netAmount } = this.calculateNetAmounts(payment);
+      const current = byMonth.get(monthKey) ?? {
+        netReceived: 0,
+        feesRetained: 0,
+      };
+      current.netReceived += netAmount;
+      current.feesRetained += feeAmount;
+      byMonth.set(monthKey, current);
     }
 
-    return this.preencherMesesVazios(porMes, months);
+    return this.fillEmptyMonths(byMonth, months);
   }
 
-  private async buscarProposalsAceitasDoProvider(userId: string) {
+  private async findAcceptedProviderProposals(userId: string) {
     return this.prisma.proposal.findMany({
       where: { providerId: userId, status: "ACCEPTED" },
       select: { id: true, serviceOrderId: true },
     });
   }
 
-  private async buscarPagamentosDoProvider(userId: string) {
+  private async findProviderPayments(userId: string) {
     return this.prisma.payment.findMany({
       where: {
         serviceOrder: {
@@ -295,7 +302,7 @@ export class PaymentsService {
         },
     proposalId: string | undefined,
   ) {
-    const { feeRate, feeAmount, netAmount } = this.calcularLiquido(payment);
+    const { feeRate, feeAmount, netAmount } = this.calculateNetAmounts(payment);
 
     return {
       paymentId: payment.id,
@@ -312,52 +319,52 @@ export class PaymentsService {
     };
   }
 
-  private pertenceAoMesAtual(data: Date): boolean {
-    const agora = new Date();
+  private isInCurrentMonth(date: Date): boolean {
+    const now = new Date();
     return (
-      data.getUTCFullYear() === agora.getUTCFullYear() &&
-      data.getUTCMonth() === agora.getUTCMonth()
+      date.getUTCFullYear() === now.getUTCFullYear() &&
+      date.getUTCMonth() === now.getUTCMonth()
     );
   }
 
-  private inicioDoPeriodo(months: number): Date {
-    const agora = new Date();
+  private startOfPeriod(months: number): Date {
+    const now = new Date();
     return new Date(
-      Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth() - (months - 1), 1),
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (months - 1), 1),
     );
   }
 
-  private chaveDoMes(data: Date | null): string {
-    if (!data) {
+  private monthKey(date: Date | null): string {
+    if (!date) {
       return "";
     }
-    return `${data.getUTCFullYear()}-${String(data.getUTCMonth() + 1).padStart(2, "0")}`;
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
   }
 
-  private preencherMesesVazios(
-    porMes: Map<string, { netReceived: number; feesRetained: number }>,
+  private fillEmptyMonths(
+    byMonth: Map<string, { netReceived: number; feesRetained: number }>,
     months: number,
   ) {
-    const agora = new Date();
-    const resultado: {
+    const now = new Date();
+    const result: {
       month: string;
       netReceived: number;
       feesRetained: number;
     }[] = [];
 
     for (let i = months - 1; i >= 0; i--) {
-      const data = new Date(
-        Date.UTC(agora.getUTCFullYear(), agora.getUTCMonth() - i, 1),
+      const date = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1),
       );
-      const chave = this.chaveDoMes(data);
-      resultado.push({
-        month: chave,
-        netReceived: porMes.get(chave)?.netReceived ?? 0,
-        feesRetained: porMes.get(chave)?.feesRetained ?? 0,
+      const key = this.monthKey(date);
+      result.push({
+        month: key,
+        netReceived: byMonth.get(key)?.netReceived ?? 0,
+        feesRetained: byMonth.get(key)?.feesRetained ?? 0,
       });
     }
 
-    return resultado;
+    return result;
   }
 
   async create(userId: string, dto: CreatePaymentDto) {
@@ -396,15 +403,15 @@ export class PaymentsService {
       );
     }
 
-    const valor = Number(amount);
-    if (!Number.isFinite(valor) || valor <= 0) {
+    const amountValue = Number(amount);
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
       throw new BadRequestException("Valor do pagamento inválido");
     }
 
     const currency = dto.currency ?? "BRL";
-    if (!MOEDAS_SUPORTADAS.includes(currency)) {
+    if (!SUPPORTED_CURRENCIES.includes(currency)) {
       throw new BadRequestException(
-        `Moeda não suportada. Use: ${MOEDAS_SUPORTADAS.join(", ")}`,
+        `Moeda não suportada. Use: ${SUPPORTED_CURRENCIES.join(", ")}`,
       );
     }
 
@@ -427,33 +434,32 @@ export class PaymentsService {
       );
     }
 
-    const existente = await this.buscarPagamentoPorIdempotencia(
+    const existing = await this.findPaymentByIdempotency(
       order.id,
       dto.idempotencyKey,
     );
 
-    if (existente) {
-      return existente;
+    if (existing) {
+      return existing;
     }
 
-    const fees = this.calcularFees(valor);
+    const fees = this.calculateFees(amountValue);
 
-    // Garante chave de idempotência sempre preenchida (código gera quando o
-    // cliente não informa; a migração NOT NULL/única é de outro agente).
-    const chaveIdempotencia = dto.idempotencyKey ?? randomUUID();
+    // Always fill the idempotency key; the NOT NULL/unique migration is owned elsewhere.
+    const idempotencyKey = dto.idempotencyKey ?? randomUUID();
 
     const [payment] = await this.prisma.$transaction([
       this.prisma.payment.create({
         data: {
           serviceOrderId: order.id,
-          amount: valor,
+          amount: amountValue,
           currency,
           method: dto.method,
           status: "PENDING",
           feeRate: fees.feeRate,
           feeAmount: fees.feeAmount,
           netAmount: fees.netAmount,
-          idempotencyKey: chaveIdempotencia,
+          idempotencyKey,
         },
       }),
       this.prisma.serviceOrder.update({
@@ -468,16 +474,16 @@ export class PaymentsService {
     this.logger.logPaymentCreated(
       payment.id,
       order.id,
-      valor,
+      amountValue,
       currency,
       dto.method,
-      chaveIdempotencia,
+      idempotencyKey,
     );
 
     return payment;
   }
 
-  private async buscarPagamentoPorIdempotencia(
+  private async findPaymentByIdempotency(
     serviceOrderId: string,
     idempotencyKey?: string,
   ) {
@@ -491,7 +497,7 @@ export class PaymentsService {
   }
 
   async generateCharge(userId: string, paymentId: string) {
-    const payment = await this.buscarPagamentoDentroDoModelo(paymentId, userId);
+    const payment = await this.findClientPayment(paymentId, userId);
 
     if (payment.status !== "PENDING") {
       throw new BadRequestException(
@@ -510,35 +516,33 @@ export class PaymentsService {
         ? this.gateways.active
         : this.gateways.mock;
 
-    // Reivindicação atômica antes de chamar o gateway (corrida de cobrança):
-    // só um chamador vence o claim; os demais recebem "já gerada".
-    const refReivindicada = randomUUID();
-    const reivindicacao = await this.prisma.payment.updateMany({
+    // Claim-first: only one charge-race caller wins the claim; the rest see "already generated".
+    const claimedRef = randomUUID();
+    const claim = await this.prisma.payment.updateMany({
       where: { id: payment.id, externalRef: null },
-      data: { externalRef: refReivindicada },
+      data: { externalRef: claimedRef },
     });
 
-    if (reivindicacao.count === 0) {
+    if (claim.count === 0) {
       throw new BadRequestException(
         "Cobrança já gerada para este pagamento (idempotente)",
       );
     }
 
     try {
-      return await this.gerarCobranca(payment, gateway, refReivindicada);
-    } catch (erro) {
-      // Libera a reivindicação quando o gateway falha para permitir nova
-      // tentativa (antes o externalRef ficava nulo e permitia retry).
+      return await this.createGatewayCharge(payment, gateway, claimedRef);
+    } catch (error) {
+      // Release the claim when the gateway fails so the charge can be retried.
       await this.prisma.payment.updateMany({
-        where: { id: payment.id, externalRef: refReivindicada },
+        where: { id: payment.id, externalRef: claimedRef },
         data: { externalRef: null },
       });
-      throw erro;
+      throw error;
     }
   }
 
   async getStatus(userId: string, paymentId: string) {
-    const payment = await this.buscarPagamentoDentroDoModelo(paymentId, userId);
+    const payment = await this.findClientPayment(paymentId, userId);
 
     return {
       paymentId: payment.id,
@@ -553,22 +557,22 @@ export class PaymentsService {
     };
   }
 
-  async confirmPayment(dto: PaymentWebhookDto): Promise<ResultadoWebhook> {
-    const jaProcessado = await this.eventoJaProcessado(
-      GATEWAY_MOCK,
+  async confirmPayment(dto: PaymentWebhookDto): Promise<WebhookResult> {
+    const alreadyProcessed = await this.findProcessedEvent(
+      MOCK_GATEWAY,
       dto.eventId,
     );
 
-    if (jaProcessado) {
+    if (alreadyProcessed) {
       this.logger.logWebhookReceived(
         dto.paymentId,
         null,
-        GATEWAY_MOCK,
+        MOCK_GATEWAY,
         dto.eventId,
         "duplicado",
         "Evento já processado anteriormente",
       );
-      return this.retornarPagamentoIdempotente(
+      return this.returnIdempotentPayment(
         dto.paymentId,
         "Pagamento confirmado anteriormente (evento duplicado)",
       );
@@ -586,38 +590,38 @@ export class PaymentsService {
         dto.paymentId,
         null,
         "Pagamento não encontrado",
-        { eventId: dto.eventId, gateway: GATEWAY_MOCK },
+        { eventId: dto.eventId, gateway: MOCK_GATEWAY },
       );
       throw new NotFoundException("Webhook rejeitado");
     }
 
     try {
-      this.conferirValorGateway(payment.amount, dto.amount);
+      this.verifyGatewayAmount(payment.amount, dto.amount);
 
       if (payment.status !== "PAID") {
-        this.validarTransicaoEstado(payment.status, "PAID");
-        this.validarAgendamentoParaPagamento(payment.serviceOrder.scheduledAt);
+        this.validateStatusTransition(payment.status, "PAID");
+        this.validateScheduleForPayment(payment.serviceOrder.scheduledAt);
       }
-    } catch (erro) {
-      const motivo =
-        erro instanceof Error ? erro.message : "Validação do webhook falhou";
+    } catch (error) {
+      const reason =
+        error instanceof Error ? error.message : "Validação do webhook falhou";
       this.logger.logWebhookReceived(
         dto.paymentId,
         null,
-        GATEWAY_MOCK,
+        MOCK_GATEWAY,
         dto.eventId,
         "falha",
-        motivo,
+        reason,
       );
-      if (erro instanceof BadRequestException) {
+      if (error instanceof BadRequestException) {
         throw new BadRequestException("Webhook rejeitado");
       }
-      throw erro;
+      throw error;
     }
 
-    const transacao = await this.tentarTransacao(
+    const transaction = await this.attemptTransaction(
       {
-        gateway: GATEWAY_MOCK,
+        gateway: MOCK_GATEWAY,
         eventId: dto.eventId,
         paymentId: payment.id,
         payload: { externalId: dto.externalId },
@@ -633,16 +637,16 @@ export class PaymentsService {
         }),
     );
 
-    if (transacao.duplicado) {
+    if (transaction.duplicate) {
       this.logger.logWebhookReceived(
         dto.paymentId,
         null,
-        GATEWAY_MOCK,
+        MOCK_GATEWAY,
         dto.eventId,
         "duplicado",
         "Evento duplicado processado concorrentemente",
       );
-      return this.retornarPagamentoIdempotente(
+      return this.returnIdempotentPayment(
         dto.paymentId,
         "Evento duplicado processado concorrentemente",
       );
@@ -651,7 +655,7 @@ export class PaymentsService {
     this.logger.logWebhookReceived(
       dto.paymentId,
       payment.serviceOrderId,
-      GATEWAY_MOCK,
+      MOCK_GATEWAY,
       dto.eventId,
       "sucesso",
     );
@@ -661,35 +665,35 @@ export class PaymentsService {
       payment.serviceOrderId,
       payment.status,
       "PAID",
-      GATEWAY_MOCK,
+      MOCK_GATEWAY,
       "Confirmação via webhook mock",
     );
 
-    await this.registrarHistoricoStatus(
+    await this.recordStatusHistory(
       payment.id,
       payment.status,
       "PAID",
-      GATEWAY_MOCK,
+      MOCK_GATEWAY,
       "Confirmação via webhook mock",
     );
 
-    return { payment: transacao.pagamento };
+    return { payment: transaction.payment };
   }
 
   async handleGatewayWebhook(
     gateway: PaymentGateway,
     headers: Record<string, string | undefined>,
     body: unknown,
-  ): Promise<ResultadoWebhook> {
+  ): Promise<WebhookResult> {
     if (!gateway.validateWebhook(headers, body)) {
-      let eventIdParaLog = "desconhecido";
+      let logEventId = "desconhecido";
       try {
-        eventIdParaLog = gateway.extractEventId(headers, body);
+        logEventId = gateway.extractEventId(headers, body);
       } catch {
-        // Mantém fallback genérico no log (ID inválido já é o motivo da rejeição).
+        // Generic log fallback to avoid leaking details; the invalid ID is already the rejection reason.
       }
       this.logger.logAuthenticationFailure("assinatura", null, null, {
-        eventId: eventIdParaLog,
+        eventId: logEventId,
         gateway: gateway.name.toLowerCase(),
       });
       throw new ForbiddenException("Webhook rejeitado");
@@ -697,19 +701,22 @@ export class PaymentsService {
 
     const eventId = gateway.extractEventId(headers, body);
 
-    const jaProcessado = await this.eventoJaProcessado(gateway.name, eventId);
+    const alreadyProcessed = await this.findProcessedEvent(
+      gateway.name,
+      eventId,
+    );
 
-    if (jaProcessado) {
+    if (alreadyProcessed) {
       this.logger.logWebhookReceived(
-        jaProcessado.paymentId,
+        alreadyProcessed.paymentId,
         null,
         gateway.name,
         eventId,
         "duplicado",
         "Webhook já processado (idempotente)",
       );
-      return this.retornarPagamentoIdempotente(
-        jaProcessado.paymentId,
+      return this.returnIdempotentPayment(
+        alreadyProcessed.paymentId,
         "Webhook já processado (idempotente)",
       );
     }
@@ -717,14 +724,14 @@ export class PaymentsService {
     let gatewayPaymentId: string;
     try {
       gatewayPaymentId = gateway.extractGatewayPaymentId(body);
-    } catch (erro) {
+    } catch (error) {
       this.logger.logWebhookReceived(
         null,
         null,
         gateway.name,
         eventId,
         "falha",
-        erro instanceof Error ? erro.message : "ID do gateway inválido",
+        error instanceof Error ? error.message : "ID do gateway inválido",
       );
       throw new BadRequestException("Webhook rejeitado");
     }
@@ -754,7 +761,7 @@ export class PaymentsService {
 
     let status: PaymentStatus;
     try {
-      this.conferirValorGateway(
+      this.verifyGatewayAmount(
         payment.amount,
         gatewayPayment.transactionAmount,
       );
@@ -762,29 +769,27 @@ export class PaymentsService {
       status = gateway.translateStatus(gatewayPayment.status);
 
       if (payment.status !== status) {
-        this.validarTransicaoEstado(payment.status, status);
+        this.validateStatusTransition(payment.status, status);
         if (status === "PAID") {
-          this.validarAgendamentoParaPagamento(
-            payment.serviceOrder.scheduledAt,
-          );
+          this.validateScheduleForPayment(payment.serviceOrder.scheduledAt);
         }
       }
-    } catch (erro) {
-      if (erro instanceof BadRequestException) {
+    } catch (error) {
+      if (error instanceof BadRequestException) {
         this.logger.logWebhookReceived(
           payment.id,
           null,
           gateway.name,
           eventId,
           "falha",
-          erro.message,
+          error.message,
         );
         throw new BadRequestException("Webhook rejeitado");
       }
-      throw erro;
+      throw error;
     }
 
-    const transacao = await this.tentarTransacao(
+    const transaction = await this.attemptTransaction(
       {
         gateway: gateway.name,
         eventId,
@@ -806,7 +811,7 @@ export class PaymentsService {
         }),
     );
 
-    if (transacao.duplicado) {
+    if (transaction.duplicate) {
       this.logger.logWebhookReceived(
         payment.id,
         payment.serviceOrderId,
@@ -815,7 +820,7 @@ export class PaymentsService {
         "duplicado",
         "Evento duplicado processado concorrentemente",
       );
-      return this.retornarPagamentoIdempotente(
+      return this.returnIdempotentPayment(
         payment.id,
         "Webhook com event_id já registrado (concorrência)",
       );
@@ -838,7 +843,7 @@ export class PaymentsService {
       `Status do gateway: ${gatewayPayment.status}`,
     );
 
-    await this.registrarHistoricoStatus(
+    await this.recordStatusHistory(
       payment.id,
       payment.status,
       status,
@@ -846,36 +851,36 @@ export class PaymentsService {
       `Status do gateway: ${gatewayPayment.status}`,
     );
 
-    return { payment: transacao.pagamento };
+    return { payment: transaction.payment };
   }
 
-  private async eventoJaProcessado(gateway: string, eventId: string) {
+  private async findProcessedEvent(gateway: string, eventId: string) {
     return this.prisma.paymentWebhookEvent.findUnique({
       where: { gateway_eventId: { gateway, eventId } },
     });
   }
 
-  private async registrarHistoricoStatus(
+  private async recordStatusHistory(
     paymentId: string,
-    statusAnterior: PaymentStatus | null,
-    statusNovo: PaymentStatus,
+    previousStatus: PaymentStatus | null,
+    newStatus: PaymentStatus,
     actor: string,
-    motivo?: string,
+    reason?: string,
   ) {
     await this.prisma.paymentStatusHistory.create({
       data: {
         paymentId,
-        statusAnterior: statusAnterior ?? undefined,
-        statusNovo,
+        statusAnterior: previousStatus ?? undefined,
+        statusNovo: newStatus,
         actor,
-        motivo,
+        motivo: reason,
       },
     });
   }
 
-  private async retornarPagamentoIdempotente(
+  private async returnIdempotentPayment(
     paymentId?: string | null,
-    mensagem?: string,
+    notice?: string,
   ) {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId || "" },
@@ -885,56 +890,57 @@ export class PaymentsService {
       throw new NotFoundException("Webhook rejeitado");
     }
 
-    return { ...(mensagem ? { notice: mensagem } : {}), payment };
+    return { ...(notice ? { notice } : {}), payment };
   }
 
-  private async tentarTransacao(
-    evento: EventoWebhook,
-
-    atualizar: (
+  private async attemptTransaction(
+    event: WebhookEvent,
+    update: (
       tx: Prisma.TransactionClient,
     ) => Promise<{ id: string; status: PaymentStatus }>,
   ) {
     try {
-      // Reivindicação primeiro: insere o evento dentro da transação antes de
-      // qualquer mutação; concorrentes falham com P2002 sem alterar o pagamento.
-
-      const pagamento = await this.prisma.$transaction(async (tx: any) => {
+      // Claim-first: insert the event inside the transaction before any mutation; concurrent callers fail with P2002 without changing the payment.
+      const payment = await this.prisma.$transaction(async (tx: any) => {
         await tx.paymentWebhookEvent.create({
           data: {
-            gateway: evento.gateway,
-            eventId: evento.eventId,
-            paymentId: evento.paymentId,
-            payload: evento.payload ?? undefined,
+            gateway: event.gateway,
+            eventId: event.eventId,
+            paymentId: event.paymentId,
+            payload: event.payload ?? undefined,
           },
         });
-        return atualizar(tx);
+        return update(tx);
       });
-      return { duplicado: false, pagamento };
-    } catch (erro) {
-      const codigo =
-        erro instanceof Prisma.PrismaClientKnownRequestError
-          ? erro.code
-          : (erro as { code?: string } | null)?.code;
-      if (codigo === "P2002") {
-        return { duplicado: true, pagamento: undefined as never };
+      return { duplicate: false, payment };
+    } catch (error) {
+      const code =
+        error instanceof Prisma.PrismaClientKnownRequestError
+          ? error.code
+          : (error as { code?: string } | null)?.code;
+      if (code === "P2002") {
+        return { duplicate: true, payment: undefined as never };
       }
-      throw erro;
+      throw error;
     }
   }
 
-  private validarTransicaoEstado(atual: PaymentStatus, novo: PaymentStatus) {
+  private validateStatusTransition(
+    current: PaymentStatus,
+    next: PaymentStatus,
+  ) {
+    // Safe: the key is a PaymentStatus enum value.
     // eslint-disable-next-line security/detect-object-injection
-    const permitidas = TRANSICOES_VALIDAS[atual] ?? [];
+    const allowed = VALID_TRANSITIONS[current] ?? [];
 
-    if (!permitidas.includes(novo)) {
+    if (!allowed.includes(next)) {
       throw new BadRequestException(
-        `Transição de estado inválida: ${atual} -> ${novo}`,
+        `Transição de estado inválida: ${current} -> ${next}`,
       );
     }
   }
 
-  private validarAgendamentoParaPagamento(scheduledAt: Date | null) {
+  private validateScheduleForPayment(scheduledAt: Date | null) {
     if (!scheduledAt) {
       throw new BadRequestException(
         "O pedido não possui data de agendamento — o checkout deve informar scheduledAt",
@@ -942,18 +948,18 @@ export class PaymentsService {
     }
   }
 
-  private conferirValorGateway(valorLocal: unknown, valorGateway: number) {
-    if (Number(valorLocal) !== Number(valorGateway)) {
+  private verifyGatewayAmount(localAmount: unknown, gatewayAmount: number) {
+    if (Number(localAmount) !== Number(gatewayAmount)) {
       throw new BadRequestException(
         "Valor informado pelo gateway não corresponde ao valor registrado",
       );
     }
   }
 
-  private async gerarCobranca(
+  private async createGatewayCharge(
     payment: { id: string; amount: unknown; method: PaymentMethod },
     gateway: PaymentGateway,
-    refReivindicada: string,
+    claimedRef: string,
   ) {
     const charge = await gateway.createCharge({
       amount: Number(payment.amount),
@@ -962,9 +968,8 @@ export class PaymentsService {
       description: `Pedido ${payment.id}`,
     });
 
-    // Atualização consistente com a reivindicação vencedora.
     await this.prisma.payment.updateMany({
-      where: { id: payment.id, externalRef: refReivindicada },
+      where: { id: payment.id, externalRef: claimedRef },
       data: { externalRef: String(charge.id) },
     });
 

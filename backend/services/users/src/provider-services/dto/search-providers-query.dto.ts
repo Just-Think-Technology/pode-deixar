@@ -11,7 +11,7 @@ import { Type } from "class-transformer";
 
 export class SearchProvidersQueryDto {
   @ApiPropertyOptional({
-    description: "Filtrar por ID da categoria",
+    description: "Filter by category ID",
     example: "uuid-da-categoria",
   })
   @IsOptional()
@@ -19,7 +19,7 @@ export class SearchProvidersQueryDto {
   categoryId?: string;
 
   @ApiPropertyOptional({
-    description: "Texto para buscar no título ou descrição do serviço",
+    description: "Text to search in service title or description",
     example: "chuveiro",
     maxLength: 100,
   })
@@ -29,7 +29,7 @@ export class SearchProvidersQueryDto {
   q?: string;
 
   @ApiPropertyOptional({
-    description: "CEP do cliente para ordenar por proximidade",
+    description: "Client postal code for proximity ordering",
     example: "01001000",
   })
   @IsOptional()
@@ -37,7 +37,7 @@ export class SearchProvidersQueryDto {
   postalCode?: string;
 
   @ApiPropertyOptional({
-    description: "Número da página",
+    description: "Page number",
     example: 1,
     default: 1,
   })
@@ -48,7 +48,7 @@ export class SearchProvidersQueryDto {
   page?: number = 1;
 
   @ApiPropertyOptional({
-    description: "Itens por página (máximo 50)",
+    description: "Items per page (max 50)",
     example: 10,
     default: 10,
   })

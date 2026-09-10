@@ -11,19 +11,19 @@ import {
 } from "class-validator";
 
 export class CreateReviewDto {
-  @ApiProperty({ description: "ID do pedido de serviço concluído" })
+  @ApiProperty({ description: "Completed service order ID" })
   @IsUUID()
   @IsNotEmpty({ message: "Pedido de serviço é obrigatório" })
   serviceOrderId: string;
 
-  @ApiProperty({ description: "Nota de 1 a 5", minimum: 1, maximum: 5 })
+  @ApiProperty({ description: "Rating from 1 to 5", minimum: 1, maximum: 5 })
   @IsInt({ message: "Nota deve ser um número inteiro" })
   @Min(1, { message: "Nota mínima é 1" })
   @Max(5, { message: "Nota máxima é 5" })
   rating: number;
 
   @ApiPropertyOptional({
-    description: "Comentário da avaliação",
+    description: "Review comment",
     maxLength: 500,
   })
   @IsOptional()

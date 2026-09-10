@@ -6,14 +6,13 @@ import type {
   PaymentStatusResponse,
 } from "@/lib/client/payments/types";
 
-/** PNG 1x1 transparente em base64 (QR mock opcional). */
 const MOCK_QR_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 type StoredPayment = Payment & {
   charged: boolean;
   chargeRef: string | null;
-  cobranca: ChargeResponse["cobranca"] | null;
+  charge: ChargeResponse["cobranca"] | null;
 };
 
 type MockPaymentsGlobal = typeof globalThis & {
@@ -97,7 +96,7 @@ export function mockCreatePayment(payload: CreatePaymentPayload): Payment {
     updatedAt: now,
     charged: false,
     chargeRef: null,
-    cobranca: null,
+    charge: null,
   };
 
   getStore().set(id, stored);
@@ -112,34 +111,34 @@ export function mockChargePayment(paymentId: string): ChargeResponse {
   if (stored.status !== "PENDING") {
     throw new Error("Pagamento não está pendente");
   }
-  if (stored.charged && stored.chargeRef && stored.cobranca) {
+  if (stored.charged && stored.chargeRef && stored.charge) {
     return {
       paymentId: stored.id,
       chargeRef: stored.chargeRef,
       status: stored.status,
-      cobranca: stored.cobranca,
+      cobranca: stored.charge,
     };
   }
 
   const chargeRef = `chg_mock_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
-  let cobranca: ChargeResponse["cobranca"];
+  let charge: ChargeResponse["cobranca"];
 
   if (stored.method === "PIX") {
-    cobranca = {
+    charge = {
       pixCopiaECola: `00020126580014br.gov.bcb.pix0136${chargeRef}520400005303986540${stored.amount.toFixed(2)}5802BR5925Pode Deixar Mock6009SAO PAULO62070503***6304ABCD`,
       qrCodeBase64: MOCK_QR_BASE64,
     };
   } else {
-    // Mock representa o sandbox do Mercado Pago: URL realista no domínio do
-    // gateway para que a allowlist de checkout (https + mercadopago.*) aceite.
-    cobranca = {
+    // Sandbox stands in for Mercado Pago: realistic gateway-domain URL so the
+    // checkout allowlist (https + mercadopago.*) accepts it.
+    charge = {
       linkCheckout: `https://www.mercadopago.com/mock-checkout/${chargeRef}`,
     };
   }
 
   stored.charged = true;
   stored.chargeRef = chargeRef;
-  stored.cobranca = cobranca;
+  stored.charge = charge;
   stored.externalRef = chargeRef;
   stored.updatedAt = new Date().toISOString();
 
@@ -147,7 +146,7 @@ export function mockChargePayment(paymentId: string): ChargeResponse {
     paymentId: stored.id,
     chargeRef,
     status: "PENDING",
-    cobranca,
+    cobranca: charge,
   };
 }
 
@@ -191,7 +190,6 @@ export function mockFindPendingPaymentByOrder(
   return null;
 }
 
-/** Simula confirmação do webhook mock (PENDING → PAID). */
 export function mockConfirmPayment(paymentId: string): PaymentStatusResponse {
   const stored = getStore().get(paymentId);
   if (!stored) {

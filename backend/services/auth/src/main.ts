@@ -12,14 +12,12 @@ async function bootstrap() {
     logger: false,
   });
 
-  // Security headers with CSP
   app.use(getHelmetConfig());
 
-  // CORS configuration
-  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map((origem) =>
-    origem.trim(),
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map((origin) =>
+    origin.trim(),
   ) || ['http://localhost:3000'];
-  // Fail-closed: curinga com credentials expõe tokens a qualquer origem.
+  // Fail closed: a wildcard with credentials would expose tokens to any origin.
   if (allowedOrigins.includes('*')) {
     throw new Error(
       'Configuração insegura: ALLOWED_ORIGINS contém "*" com credentials habilitado',
@@ -45,20 +43,19 @@ async function bootstrap() {
   // Trust proxy for proper IP detection
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // Swagger API Documentation — apenas fora de produção
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('Pode Deixar - Auth Service')
-      .setDescription('API de autenticação e gerenciamento de usuários')
+      .setDescription('Authentication and user management API')
       .setVersion('1.0')
-      .addTag('auth', 'Endpoints de autenticação')
+      .addTag('auth', 'Authentication endpoints')
       .addBearerAuth(
         {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
           name: 'JWT',
-          description: 'Informe o token JWT',
+          description: 'Enter the JWT token',
           in: 'header',
         },
         'JWT-auth',

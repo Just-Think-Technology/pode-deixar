@@ -83,7 +83,6 @@ export class ServiceImagesService {
   ) {
     await this.getProviderService(providerProfileId, serviceId);
 
-    // Valida extensão e magic bytes antes de enviar ao armazenamento.
     validarArquivoImagem(file.originalname, file.buffer);
     const ext = extname(file.originalname).toLowerCase();
     const fileName = `${providerProfileId}/${serviceId}/${randomUUID()}${ext}`;

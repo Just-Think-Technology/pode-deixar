@@ -10,11 +10,11 @@ import {
 } from './apps';
 
 // ─── E2E: jornada completa do prestador ─────────────────────────────────────
-// Perfil (users) → serviço → pedido (orders) → proposta → aceite → conclusão
-// → pagamento + webhook (payments) → avaliação (reviews) → rating refletido
-// no perfil (users). Tudo no mesmo banco, como em produção.
+// Profile (users) → service → order (orders) → proposal → acceptance → completion
+// → payment + webhook (payments) → review (reviews) → rating reflected
+// on the profile (users). All in the same database, as in production.
 
-describe('Jornada do prestador (e2e cross-service)', () => {
+describe('Provider journey (cross-service e2e)', () => {
   let apps: E2EApps;
   let clientToken: string;
   let providerToken: string;
@@ -52,11 +52,11 @@ describe('Jornada do prestador (e2e cross-service)', () => {
     await shutdownApps(apps);
   });
 
-  it('1. prestador cria perfil e cadastra serviço (users)', async () => {
+  it('1. provider creates profile and registers a service (users)', async () => {
     const clientHeaders = bearerAuth(clientToken);
     const providerHeaders = bearerAuth(providerToken);
 
-    // Cliente também precisa de perfil para existir no ecossistema
+    // The client also needs a profile to exist in the ecosystem
     await request(apps.usersApp.getHttpServer())
       .post('/profiles/client')
       .set(clientHeaders)
@@ -88,7 +88,7 @@ describe('Jornada do prestador (e2e cross-service)', () => {
     expect(service.fixed_price).toBe(150);
   });
 
-  it('2. cliente cria pedido (orders)', async () => {
+  it('2. client creates an order (orders)', async () => {
     const order = (
       await request(apps.ordersApp.getHttpServer())
         .post('/services/me')
@@ -106,7 +106,7 @@ describe('Jornada do prestador (e2e cross-service)', () => {
     expect(order.client_id).toBe(clientId);
   });
 
-  it('3. prestador envia proposta (orders)', async () => {
+  it('3. provider sends a proposal (orders)', async () => {
     const proposal = (
       await request(apps.ordersApp.getHttpServer())
         .post('/proposals')
@@ -123,7 +123,7 @@ describe('Jornada do prestador (e2e cross-service)', () => {
     expect(proposal.status).toBe('PENDING');
   });
 
-  it('4. cliente aceita a proposta (orders)', async () => {
+  it('4. client accepts the proposal (orders)', async () => {
     const accepted = (
       await request(apps.ordersApp.getHttpServer())
         .post(`/proposals/${proposalId}/accept`)
@@ -142,7 +142,7 @@ describe('Jornada do prestador (e2e cross-service)', () => {
     expect(order.status).toBe('IN_PROGRESS');
   });
 
-  it('5. prestador conclui o serviço (orders)', async () => {
+  it('5. provider completes the service (orders)', async () => {
     const order = (
       await request(apps.ordersApp.getHttpServer())
         .post(`/services/me/${orderId}/complete`)
@@ -153,7 +153,7 @@ describe('Jornada do prestador (e2e cross-service)', () => {
     expect(order.status).toBe('COMPLETED');
   });
 
-  it('6. cliente gera pagamento e confirma via webhook (payments)', async () => {
+  it('6. client generates payment and confirms via webhook (payments)', async () => {
     const payment = (
       await request(apps.paymentsApp.getHttpServer())
         .post('/payments')
@@ -177,7 +177,7 @@ describe('Jornada do prestador (e2e cross-service)', () => {
           eventId: `evt_e2e_${Date.now()}`,
           externalId: 'tx_mock_e2e_1',
           amount: 180,
-          // Justificativa AppSec: timestamp anti-replay agora é obrigatório.
+          // Anti-replay timestamp is now required.
           timestamp: String(Math.floor(Date.now() / 1000)),
         })
         .expect(201)
@@ -185,7 +185,7 @@ describe('Jornada do prestador (e2e cross-service)', () => {
     expect(confirmed.payment.status).toBe('PAID');
   });
 
-  it('7. cliente avalia e o rating reflete no perfil (reviews → users)', async () => {
+  it('7. client reviews and the rating reflects on the profile (reviews → users)', async () => {
     const review = (
       await request(apps.reviewsApp.getHttpServer())
         .post('/reviews')
@@ -201,8 +201,8 @@ describe('Jornada do prestador (e2e cross-service)', () => {
     expect(review.reviewer_id).toBe(clientId);
     expect(review.reviewee_id).toBe(providerId);
 
-    // Assertiva cross-service: o reviews-service recalculou o rating
-    // na MESMA tabela que o users-service lê.
+    // Cross-service assertion: the reviews-service recalculated the rating
+    // on the SAME table the users-service reads.
     const profile = (
       await request(apps.usersApp.getHttpServer())
         .get(`/providers/${providerProfileId}/profile`)

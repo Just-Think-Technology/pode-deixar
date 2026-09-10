@@ -21,6 +21,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       'Bad Request': 'Requisição inválida',
       'Internal Server Error': 'Erro interno do servidor',
     };
+    // Safe: fixed translation-table lookup with fallback to the original message.
     // eslint-disable-next-line security/detect-object-injection
     return translations[msg] || msg;
   }
@@ -76,7 +77,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       error = exception.name;
     }
 
-    // Log the error
     this.logger.error(
       `${request.method} ${request.url} - ${status} - ${message}`,
       exception instanceof Error ? exception.stack : String(exception),

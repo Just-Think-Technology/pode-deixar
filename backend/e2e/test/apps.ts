@@ -26,7 +26,7 @@ export interface E2EApps {
 }
 
 // --- Email mock ---
-// O EmailService real enviaria SMTP — inviável sem servidor de email.
+// The real EmailService would send SMTP — unfeasible without a mail server.
 
 export const mockEmail = {
   sendEmailVerification: jest.fn(async () => true),
@@ -34,8 +34,8 @@ export const mockEmail = {
 };
 
 // --- MinIO stub ---
-// Os MinioServices reais conectam no onModuleInit — inviável sem MinIO.
-// A jornada e2e não envia arquivos; o stub só destrava o boot.
+// The real MinioServices connect on onModuleInit — unfeasible without MinIO.
+// The e2e journey uploads no files; the stub only unblocks boot.
 
 export const mockMinio = {
   avatarBucket: 'avatars',
@@ -85,17 +85,16 @@ async function bootApp(
 }
 
 /**
- * Sobe os 4 serviços no mesmo processo (supertest dispensa listen, sem
- * conflito de portas) contra o MESMO banco — a topologia real de produção.
+ * Boots the 4 services in the same process (supertest needs no listen, so no
+ * port conflicts) against the SAME database — the real production topology.
  *
- * ATENÇÃO — singleton do passport: o `@nestjs/passport` compartilha o
- * registro de strategies por processo. Todos os serviços registram sua
- * JwtStrategy sob o nome padrão 'jwt' e o ÚLTIMO registro vence globalmente.
- * Os 4 serviços abaixo retornam o mesmo formato `{ sub, email, role, ... }`,
- * então qualquer vencedor entre eles é equivalente. O auth-service, porém,
- * retorna `{ id, ... }` SEM `sub` — por isso ele NUNCA pode ser bootado por
- * último (ver bootAuthApp). Em produção isso não existe, pois cada serviço
- * roda no seu próprio processo.
+ * WARNING — passport singleton: `@nestjs/passport` shares the strategy
+ * registry per process. Every service registers its JwtStrategy under the
+ * default 'jwt' name and the LAST registration wins globally. The 4 services
+ * below return the same `{ sub, email, role, ... }` shape, so any winner is
+ * equivalent. The auth-service, however, returns `{ id, ... }` WITHOUT
+ * `sub` — so it must NEVER boot last (see bootAuthApp). This doesn't exist
+ * in production, where each service runs in its own process.
  */
 export async function bootApps(): Promise<E2EApps> {
   const [usersApp, ordersApp, paymentsApp, reviewsApp] = await Promise.all([
@@ -117,12 +116,12 @@ export async function bootApps(): Promise<E2EApps> {
 }
 
 /**
- * Sobe só o auth-service (com EmailService mockado — sem SMTP).
- * Separado do bootApps para jornadas que não passam por cadastro.
+ * Boots only the auth-service (with mocked EmailService — no SMTP).
+ * Separate from bootApps for journeys that skip signup.
  *
- * REGRA DE OURO: bootar o auth ANTES dos demais apps (ver comentário em
- * bootApps sobre o singleton do passport). Os endpoints usados na jornada
- * (register/verify/login) são públicos e não dependem da strategy ativa.
+ * GOLDEN RULE: boot auth BEFORE the other apps (see the passport-singleton
+ * comment in bootApps). The journey endpoints (register/verify/login) are
+ * public and don't depend on the active strategy.
  */
 export async function bootAuthApp(): Promise<INestApplication> {
   // Justificativa AppSec: o boot do auth valida segredos JWT fail-closed

@@ -10,17 +10,17 @@ import { CreateServiceOrderDto } from "./dto/create-service-order.dto";
 import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
 import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import {
-  sanitizarEndereco,
-  formatarEndereco,
-  formatarEnderecoResumido,
+  sanitizeAddress,
+  formatAddress,
+  formatAddressSummary,
 } from "./dto/service-order-address.dto";
 import {
-  normalizarPaginacao,
-  PaginacaoConsulta,
+  normalizePagination,
+  PaginationQuery,
 } from "../shared/pagination-query.dto";
 
-const JANELA_AGENDA_MAXIMA_DIAS = 92;
-const MS_POR_DIA = 24 * 60 * 60 * 1000;
+const MAX_AGENDA_WINDOW_DAYS = 92;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class ServiceOrdersService {
@@ -48,15 +48,14 @@ export class ServiceOrdersService {
         : null,
       budget_min: order.budgetMin,
       budget_max: order.budgetMax,
-      address: formatarEndereco(order.address),
+      address: formatAddress(order.address),
       status: order.status,
       created_at: order.createdAt,
       updated_at: order.updatedAt,
     };
   }
 
-  // A `url` exposta é o endpoint de visualização autenticado (o bucket não
-  // é público): o frontend busca com Bearer e recebe a presigned temporária.
+  // Exposed `url` is the authenticated view endpoint since the bucket is not public.
   private formatPhotos(photos: any[] | undefined) {
     return (photos ?? []).map((p: any) => ({
       id: p.id,
@@ -64,12 +63,11 @@ export class ServiceOrdersService {
     }));
   }
 
-  // Item da vitrine de pedidos abertos: mesmo formato do pedido, porém com
-  // endereço resumido (apenas cidade/UF) para não expor rua/número/CEP.
+  // Showcase items use a brief address to avoid exposing street/number/ZIP.
   private formatOpenOrderListItem(order: any) {
     return {
       ...this.formatOrder(order),
-      address: formatarEnderecoResumido(order.address),
+      address: formatAddressSummary(order.address),
     };
   }
 
@@ -114,7 +112,7 @@ export class ServiceOrdersService {
       await this.validateProvider(dto.providerId, clientId);
     }
 
-    const endereco = sanitizarEndereco(dto.address);
+    const address = sanitizeAddress(dto.address);
 
     const order = await this.prisma.serviceOrder.create({
       data: {
@@ -125,7 +123,7 @@ export class ServiceOrdersService {
         categoryId: dto.categoryId,
         budgetMin: dto.budgetMin ?? null,
         budgetMax: dto.budgetMax ?? null,
-        ...(endereco ? { address: endereco } : {}),
+        ...(address ? { address: address } : {}),
       },
       include: {
         category: { select: { id: true, name: true, slug: true } },
@@ -139,9 +137,9 @@ export class ServiceOrdersService {
 
   async findReceivedByProvider(
     providerId: string,
-    paginacao?: PaginacaoConsulta,
+    pagination?: PaginationQuery,
   ) {
-    const { skip, take } = normalizarPaginacao(paginacao);
+    const { skip, take } = normalizePagination(pagination);
     const orders = await this.prisma.serviceOrder.findMany({
       where: { providerId },
       orderBy: { createdAt: "desc" },
@@ -155,8 +153,8 @@ export class ServiceOrdersService {
     return orders.map((o) => this.formatOrder(o));
   }
 
-  async findByClient(clientId: string, paginacao?: PaginacaoConsulta) {
-    const { skip, take } = normalizarPaginacao(paginacao);
+  async findByClient(clientId: string, pagination?: PaginationQuery) {
+    const { skip, take } = normalizePagination(pagination);
     const orders = await this.prisma.serviceOrder.findMany({
       where: { clientId },
       orderBy: { createdAt: "desc" },
@@ -265,10 +263,9 @@ export class ServiceOrdersService {
     throw new ForbiddenException("Acesso negado a este pedido");
   }
 
-  // Vitrine de pedidos abertos (uso exclusivo de prestadores autenticados):
-  // exclui pedidos direcionados a outro prestador e retorna endereço resumido.
-  async findOpenOrders(callerUserId: string, paginacao?: PaginacaoConsulta) {
-    const { skip, take } = normalizarPaginacao(paginacao);
+  // Open-order showcase for authenticated providers only; excludes orders directed to another provider.
+  async findOpenOrders(callerUserId: string, pagination?: PaginationQuery) {
+    const { skip, take } = normalizePagination(pagination);
     const orders = await this.prisma.serviceOrder.findMany({
       where: {
         status: "OPEN",
@@ -427,7 +424,7 @@ export class ServiceOrdersService {
       );
     }
 
-    const endereco = sanitizarEndereco(dto.address);
+    const address = sanitizeAddress(dto.address);
 
     const order = await this.prisma.serviceOrder.create({
       data: {
@@ -439,7 +436,7 @@ export class ServiceOrdersService {
         description: providerService.description,
         categoryId: providerService.categoryId,
         status: "IN_PROGRESS",
-        ...(endereco ? { address: endereco } : {}),
+        ...(address ? { address: address } : {}),
       },
       include: {
         category: { select: { id: true, name: true, slug: true } },
@@ -473,13 +470,13 @@ export class ServiceOrdersService {
       throw new BadRequestException("from deve ser anterior ou igual a to");
     }
 
-    const dias = Math.ceil(
-      (toDate.getTime() - fromDate.getTime()) / MS_POR_DIA,
+    const days = Math.ceil(
+      (toDate.getTime() - fromDate.getTime()) / MS_PER_DAY,
     );
 
-    if (dias > JANELA_AGENDA_MAXIMA_DIAS) {
+    if (days > MAX_AGENDA_WINDOW_DAYS) {
       throw new BadRequestException(
-        `A janela máxima de consulta é de ${JANELA_AGENDA_MAXIMA_DIAS} dias`,
+        `A janela máxima de consulta é de ${MAX_AGENDA_WINDOW_DAYS} days`,
       );
     }
 
@@ -523,7 +520,7 @@ export class ServiceOrdersService {
       scheduled_at: order.scheduledAt,
       scheduled_end_at: order.scheduledEndAt ?? null,
       order_status: order.status,
-      address: formatarEndereco(order.address),
+      address: formatAddress(order.address),
       photos: this.formatPhotos(order.photos),
       payment: payment
         ? {

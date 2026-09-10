@@ -2,8 +2,6 @@ import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { EmailService } from '../email.service';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────
-
 const mockSendMail = jest.fn();
 
 jest.mock('nodemailer', () => ({
@@ -11,8 +9,6 @@ jest.mock('nodemailer', () => ({
     sendMail: mockSendMail,
   })),
 }));
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
 const CONFIG: Record<string, string | number> = {
   SMTP_HOST: 'smtp.example.com',
@@ -34,11 +30,7 @@ function buildService(overrides: Partial<typeof CONFIG> = {}) {
   return new EmailService(buildConfigService(overrides));
 }
 
-// ─── Tests ──────────────────────────────────────────────────────────────────
-// Regressão: cobre o contrato do EmailService sem precisar de banco —
-// inclusive a propagação de erros do transporter (regressão corrigida:
-// sendMail jamais deve engolir exceção retornando false, pois os callers
-// em auth (register/resend/password-reset) tratam falha via try/catch).
+// sendMail must propagate transporter errors instead of returning false because callers in auth handle failure via try/catch.
 
 describe('EmailService (shared)', () => {
   beforeEach(() => {
@@ -47,7 +39,7 @@ describe('EmailService (shared)', () => {
   });
 
   describe('Transporter setup', () => {
-    it('deve criar o transporte com TLS obrigatório e valores do ConfigService', () => {
+    it('should create the transport with mandatory TLS and ConfigService values', () => {
       buildService();
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith({
@@ -60,7 +52,7 @@ describe('EmailService (shared)', () => {
       });
     });
 
-    it('deve usar secure=true quando a porta for 465', () => {
+    it('should use secure=true when the port is 465', () => {
       buildService({ SMTP_PORT: 465 });
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith(
@@ -68,7 +60,7 @@ describe('EmailService (shared)', () => {
       );
     });
 
-    it('deve usar a porta padrão 587 quando não configurada', () => {
+    it('should use the default port 587 when not configured', () => {
       buildService({ SMTP_PORT: undefined as unknown as number });
 
       expect(nodemailer.createTransport).toHaveBeenCalledWith(
@@ -92,19 +84,19 @@ describe('EmailService (shared)', () => {
       );
     });
 
-    it('deve LANCAR em produção quando as credenciais SMTP estiverem ausentes', () => {
-      const NODE_ENV_ANTERIOR = process.env.NODE_ENV;
+    it('should THROW in production when SMTP credentials are missing', () => {
+      const PREVIOUS_NODE_ENV = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
       try {
         expect(() => buildService({ SMTP_PASS: undefined as unknown as string })).toThrow(
           /SMTP não configurado/,
         );
       } finally {
-        process.env.NODE_ENV = NODE_ENV_ANTERIOR;
+        process.env.NODE_ENV = PREVIOUS_NODE_ENV;
       }
     });
 
-    it('deve apenas avisar e continuar fora de produção sem credenciais', () => {
+    it('should only warn and continue outside production without credentials', () => {
       expect(() =>
         buildService({ SMTP_PASS: undefined as unknown as string }),
       ).not.toThrow();
@@ -112,7 +104,7 @@ describe('EmailService (shared)', () => {
   });
 
   describe('sendEmailVerification()', () => {
-    it('deve enviar com destinatário, assunto e URL de verificação', async () => {
+    it('should send with recipient, subject and verification URL', async () => {
       const service = buildService();
 
       await service.sendEmailVerification('user@example.com', 'token-123');
@@ -129,7 +121,7 @@ describe('EmailService (shared)', () => {
       );
     });
 
-    it('deve retornar true no sucesso', async () => {
+    it('should return true on success', async () => {
       const service = buildService();
 
       await expect(
@@ -137,7 +129,7 @@ describe('EmailService (shared)', () => {
       ).resolves.toBe(true);
     });
 
-    it('deve codificar o token na URL de verificação', async () => {
+    it('should encode the token in the verification URL', async () => {
       const service = buildService();
 
       await service.sendEmailVerification('user@example.com', 'a+b/c=d?e&f');
@@ -147,7 +139,7 @@ describe('EmailService (shared)', () => {
       expect(body).not.toContain('a+b/c=d?e&f');
     });
 
-    it('deve PROPAGAR o erro do transporter em vez de retornar false', async () => {
+    it('should PROPAGATE the transporter error instead of returning false', async () => {
       const service = buildService();
       mockSendMail.mockRejectedValueOnce(new Error('SMTP connection refused'));
 
@@ -158,7 +150,7 @@ describe('EmailService (shared)', () => {
   });
 
   describe('sendPasswordReset()', () => {
-    it('deve enviar com destinatário, assunto e URL de reset', async () => {
+    it('should send with recipient, subject and reset URL', async () => {
       const service = buildService();
 
       await service.sendPasswordReset('user@example.com', 'reset-456');
@@ -175,7 +167,7 @@ describe('EmailService (shared)', () => {
       );
     });
 
-    it('deve retornar true no sucesso', async () => {
+    it('should return true on success', async () => {
       const service = buildService();
 
       await expect(
@@ -183,7 +175,7 @@ describe('EmailService (shared)', () => {
       ).resolves.toBe(true);
     });
 
-    it('deve PROPAGAR o erro do transporter em vez de retornar false', async () => {
+    it('should PROPAGATE the transporter error instead of returning false', async () => {
       const service = buildService();
       mockSendMail.mockRejectedValueOnce(new Error('SMTP timeout'));
 
@@ -193,8 +185,8 @@ describe('EmailService (shared)', () => {
     });
   });
 
-  describe('endurecimento do sink (to/subject)', () => {
-    it('deve rejeitar destinatário com CRLF (header injection)', async () => {
+  describe('sink hardening (to/subject)', () => {
+    it('should reject recipient with CRLF (header injection)', async () => {
       const service = buildService();
 
       await expect(
@@ -207,7 +199,7 @@ describe('EmailService (shared)', () => {
       expect(mockSendMail).not.toHaveBeenCalled();
     });
 
-    it('deve rejeitar destinatário com formato inválido ou múltiplos endereços', async () => {
+    it('should reject recipient with invalid format or multiple addresses', async () => {
       const service = buildService();
 
       await expect(
@@ -222,25 +214,25 @@ describe('EmailService (shared)', () => {
       ).rejects.toThrow(/destinatário inválido/);
     });
 
-    it('deve achatar CRLF e truncar o assunto em 200 caracteres', async () => {
+    it('should flatten CRLF and truncate the subject to 200 characters', async () => {
       const service = buildService();
-      const assunto = 'linha1\r\nlinha2\nlinha3' + 'x'.repeat(300);
+      const subject = 'linha1\r\nlinha2\nlinha3' + 'x'.repeat(300);
 
       await service.sendMail({
         to: 'user@example.com',
-        subject: assunto,
+        subject,
         html: '<p>oi</p>',
       });
 
-      const enviado = mockSendMail.mock.calls[0][0];
-      expect(enviado.subject).not.toMatch(/[\r\n]/);
-      expect(enviado.subject).toContain('linha1 linha2 linha3');
-      expect(enviado.subject.length).toBeLessThanOrEqual(200);
+      const sent = mockSendMail.mock.calls[0][0];
+      expect(sent.subject).not.toMatch(/[\r\n]/);
+      expect(sent.subject).toContain('linha1 linha2 linha3');
+      expect(sent.subject.length).toBeLessThanOrEqual(200);
     });
   });
 
-  describe('remetente', () => {
-    it('deve usar SMTP_FROM como remetente', async () => {
+  describe('sender', () => {
+    it('should use SMTP_FROM as sender', async () => {
       const service = buildService();
 
       await service.sendEmailVerification('user@example.com', 't');
@@ -250,7 +242,7 @@ describe('EmailService (shared)', () => {
       );
     });
 
-    it('deve usar remetente padrão quando SMTP_FROM não configurado', async () => {
+    it('should use default sender when SMTP_FROM is not configured', async () => {
       const service = buildService({ SMTP_FROM: undefined as unknown as string });
 
       await service.sendEmailVerification('user@example.com', 't');

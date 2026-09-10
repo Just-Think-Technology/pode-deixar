@@ -4,7 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class ResendVerificationDto {
   @ApiProperty({
     example: 'user@email.com',
-    description: 'Endereço de email para reenviar link de verificação',
+    description: 'Email address to resend the verification link to',
   })
   @IsEmail()
   @IsString()

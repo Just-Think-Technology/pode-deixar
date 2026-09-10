@@ -8,7 +8,7 @@ import { Request, Response } from 'express';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import createLogger from '@pode-deixar/logger';
-import { sanitizarDadosSensiveis } from './sanitizar-dados-sensiveis';
+import { sanitizeSensitiveData } from './sanitize-sensitive-data';
 
 const logger = createLogger('auth-service', 'http');
 
@@ -34,7 +34,7 @@ export class ResponseLoggerInterceptor implements NestInterceptor {
             route,
             statusCode: response.statusCode,
             durationMs,
-            response: sanitizarDadosSensiveis(responseBody),
+            response: sanitizeSensitiveData(responseBody),
           },
           `HTTP ${method} ${route} ${response.statusCode} ${durationMs}ms`,
         );

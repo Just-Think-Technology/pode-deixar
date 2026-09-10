@@ -42,9 +42,10 @@ const ROTULOS_USERS: RotulosCampos = {
   icon: "Ícone",
 };
 
-function traduzirErrosValidacao(errors: ValidationError[]): string {
+function translateValidationErrors(errors: ValidationError[]): string {
   return traduzirErrosNucleo(errors, ROTULOS_USERS).join("; ");
 }
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -87,7 +88,7 @@ function traduzirErrosValidacao(errors: ValidationError[]): string {
         forbidNonWhitelisted: true,
         transform: true,
         exceptionFactory: (errors) =>
-          new BadRequestException(traduzirErrosValidacao(errors)),
+          new BadRequestException(translateValidationErrors(errors)),
       }),
     },
     {
