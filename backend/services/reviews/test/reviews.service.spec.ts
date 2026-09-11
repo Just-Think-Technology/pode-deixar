@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ReviewsService } from "../src/reviews/reviews.service";
-import { PrismaService } from "../src/prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { ReviewsLoggerService } from "../src/shared/reviews-logger.service";
 import {
   NotFoundException,

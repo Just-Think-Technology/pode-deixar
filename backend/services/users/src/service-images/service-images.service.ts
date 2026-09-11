@@ -4,7 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { MinioService } from "../storage/minio.service";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { randomUUID } from "crypto";

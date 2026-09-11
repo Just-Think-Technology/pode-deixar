@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProviderServicesService } from "../src/provider-services/provider-services.service";
-import { PrismaService } from "../src/prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
 import { NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { SearchProvidersQueryDto } from "../src/provider-services/dto/search-providers-query.dto";

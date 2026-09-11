@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { HealthController } from "../src/health/health.controller";
+import { HealthController } from "@pode-deixar/prisma";
 import { HealthCheckService, HealthCheckResult } from "@nestjs/terminus";
-import { DatabaseHealthIndicator } from "../src/health/database.health";
+import { DatabaseHealthIndicator } from "@pode-deixar/prisma";
 
 describe("HealthController", () => {
   let controller: HealthController;

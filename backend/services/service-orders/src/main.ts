@@ -1,49 +1,16 @@
-import { NestFactory } from "@nestjs/core";
-import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
-import { getHelmetConfig } from "@pode-deixar/security";
-import createLogger from "@pode-deixar/logger";
-
-const logger = createLogger("service-orders-service");
+import { bootstrapService } from "@pode-deixar/logger";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    logger: false,
+  await bootstrapService({
+    module: AppModule,
+    serviceName: "services-service",
+    displayName: "Service-orders",
+    portEnvVar: "SERVICE_ORDERS_PORT",
+    defaultPort: 3003,
+    swaggerTitle: "Pode Deixar - Services Service",
+    swaggerDescription: "Service order and proposal API",
   });
-
-  // Security headers with CSP
-  app.use(getHelmetConfig());
-
-  // CORS configuration (allowlist via env — never "*")
-  app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(",") || [
-      "http://localhost:3000",
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  });
-
-  // Trust proxy for correct IP detection (rate-limit/logs)
-  app.getHttpAdapter().getInstance().set("trust proxy", 1);
-
-  const config = new DocumentBuilder()
-    .setTitle("Pode Deixar - Services Service")
-    .setDescription("Service order and proposal API")
-    .setVersion("1.0")
-    .addBearerAuth()
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("api/docs", app, document);
-
-  const port = process.env.SERVICE_ORDERS_PORT || 3003;
-  await app.listen(port);
-  logger.info("bootstrap", `Service-orders service running on port ${port}`);
-  logger.info(
-    "bootstrap",
-    `Swagger docs available at http://localhost:${port}/api/docs`,
-  );
 }
 
 bootstrap();

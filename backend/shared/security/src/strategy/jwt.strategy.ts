@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
-import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "@pode-deixar/prisma";
 import {
   assertTokenPayload,
   checkTokenRevocation,
-} from "@pode-deixar/security";
-import { PrismaService } from "../prisma/prisma.service";
+} from "../token-validation";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {

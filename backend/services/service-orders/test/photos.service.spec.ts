@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PhotosService } from "../src/photos/photos.service";
-import { PrismaService } from "../src/prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { MinioService } from "../src/storage/minio.service";
 import {
   BadRequestException,

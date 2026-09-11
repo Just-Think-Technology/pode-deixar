@@ -184,4 +184,8 @@ export function createLogger(serviceName: string, featureName?: string, options:
   return logger;
 }
 
+export { createResponseLoggerInterceptor } from './response-logger.interceptor';
+export { bootstrapService } from './bootstrap';
+export type { BootstrapServiceOptions } from './bootstrap';
+
 export default createLogger;

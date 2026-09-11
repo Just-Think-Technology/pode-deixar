@@ -75,6 +75,7 @@ services:
       - ./backend/shared/email:/app/shared/email
       - ./backend/shared/security:/app/shared/security
       - ./backend/shared/validation:/app/shared/validation
+      - ./backend/shared/prisma:/app/shared/prisma
       - ./backend/prisma:/app/prisma
     depends_on:
       mailpit:
@@ -103,6 +104,7 @@ services:
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/security:/app/shared/security
       - ./backend/shared/validation:/app/shared/validation
+      - ./backend/shared/prisma:/app/shared/prisma
       - ./backend/prisma:/app/prisma
 
   # -- Service Orders Service (dev, hot-reload) --
@@ -131,6 +133,7 @@ services:
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/security:/app/shared/security
       - ./backend/shared/validation:/app/shared/validation
+      - ./backend/shared/prisma:/app/shared/prisma
       - ./backend/prisma:/app/prisma
 
   # -- Payments Service (dev, hot-reload) --
@@ -159,6 +162,7 @@ services:
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/security:/app/shared/security
       - ./backend/shared/validation:/app/shared/validation
+      - ./backend/shared/prisma:/app/shared/prisma
       - ./backend/prisma:/app/prisma
 
   # -- Reviews Service (dev, hot-reload) --
@@ -184,6 +188,7 @@ services:
       - ./backend/shared/logger:/app/shared/logger
       - ./backend/shared/security:/app/shared/security
       - ./backend/shared/validation:/app/shared/validation
+      - ./backend/shared/prisma:/app/shared/prisma
       - ./backend/prisma:/app/prisma
 
 volumes:

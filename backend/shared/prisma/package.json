@@ -1,0 +1,30 @@
+{
+  "name": "@pode-deixar/prisma",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "test": "cross-env NODE_ENV=test jest",
+    "prisma:generate": "prisma generate --schema=../../prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@nestjs/swagger": "^11.0.0",
+    "@nestjs/terminus": "^11.0.0",
+    "@prisma/client": "5.22.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.0.0",
+    "cross-env": "^10.1.0",
+    "jest": "^30.0.0",
+    "prisma": "5.22.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.4.0"
+  }
+}

@@ -35,6 +35,7 @@
     "@nestjs/throttler": "^6.2.1",
     "@pode-deixar/email": "workspace:*",
     "@pode-deixar/logger": "workspace:*",
+    "@pode-deixar/prisma": "workspace:*",
     "@pode-deixar/security": "workspace:*",
     "@pode-deixar/validation": "workspace:*",
     "@prisma/client": "5.22.0",

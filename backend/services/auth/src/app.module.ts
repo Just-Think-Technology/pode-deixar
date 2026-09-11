@@ -7,11 +7,11 @@ import { ValidationError } from 'class-validator';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth.module';
-import { PrismaModule } from './prisma/prisma.module';
+import { PrismaModule } from '@pode-deixar/prisma';
 import { CommonModule } from './shared/common.module';
-import { HealthModule } from './health/health.module';
+import { HealthModule } from '@pode-deixar/prisma';
 import { GlobalExceptionFilter } from './shared/global-exception.filter';
-import { ResponseLoggerInterceptor } from './shared/response-logger.interceptor';
+import { createResponseLoggerInterceptor } from '@pode-deixar/logger';
 import { EmailModule } from '@pode-deixar/email';
 import { RedisThrottlerStorage } from '@pode-deixar/security';
 import {
@@ -92,7 +92,7 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: ResponseLoggerInterceptor,
+      useClass: createResponseLoggerInterceptor('auth-service'),
     },
   ],
 })

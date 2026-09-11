@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.bootstrapService = exports.createResponseLoggerInterceptor = void 0;
 exports.createLogger = createLogger;
 const pino_1 = __importDefault(require("pino"));
 const pino_pretty_1 = __importDefault(require("pino-pretty"));
@@ -154,4 +155,8 @@ function createLogger(serviceName, featureName, options = {}) {
     loggerCache.set(key, logger);
     return logger;
 }
+var response_logger_interceptor_1 = require("./response-logger.interceptor");
+Object.defineProperty(exports, "createResponseLoggerInterceptor", { enumerable: true, get: function () { return response_logger_interceptor_1.createResponseLoggerInterceptor; } });
+var bootstrap_1 = require("./bootstrap");
+Object.defineProperty(exports, "bootstrapService", { enumerable: true, get: function () { return bootstrap_1.bootstrapService; } });
 exports.default = createLogger;

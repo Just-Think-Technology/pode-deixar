@@ -1,9 +1,9 @@
-import { sanitizeSensitiveData } from "../src/shared/sanitize-sensitive-data";
+import { sanitizeSensitiveData } from "@pode-deixar/security";
 
 describe("sanitizeSensitiveData", () => {
-  it("should redact the full card number, keeping only the last 4", () => {
+  it("should fully redact the card number", () => {
     const result = sanitizeSensitiveData("cartão 4111111111111111 pago");
-    expect(result).toContain("[CARD-****1111]");
+    expect(result).toContain("[REDACTED]");
     expect(result).not.toContain("4111111111111111");
   });
 

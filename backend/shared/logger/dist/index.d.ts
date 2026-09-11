@@ -13,5 +13,8 @@ export interface LoggerOptions {
     logsParentDir?: string;
 }
 export declare function createLogger(serviceName: string, featureName?: string, options?: LoggerOptions): LoggerWithEvent;
+export { createResponseLoggerInterceptor } from './response-logger.interceptor';
+export { bootstrapService } from './bootstrap';
+export type { BootstrapServiceOptions } from './bootstrap';
 export default createLogger;
 //# sourceMappingURL=index.d.ts.map

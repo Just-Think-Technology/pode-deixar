@@ -4,7 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { LoginService } from './login.service';
 import { LoginController } from './login.controller';
 
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@pode-deixar/prisma';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { PasswordService } from '../password/password.service';
