@@ -198,7 +198,7 @@ services:
 
   # -- MinIO Client (Bucket Setup) --
   minio-setup:
-    image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    image: quay.io/minio/aistor/mc:latest@sha256:b8a369454c7cffe3aab1cc6e6b3e7e1eb958415ea275315245d994d830299dbb
     env_file: ./.env.dev
     depends_on:
       minio:
