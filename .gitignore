@@ -4,6 +4,7 @@ node_modules/
 
 # Environment files (.env.staging / .env.production never committed;
 # .env.dev holds local-only throwaway values and IS versioned)
+.env
 .env.*
 !.env.test
 !.env.example
