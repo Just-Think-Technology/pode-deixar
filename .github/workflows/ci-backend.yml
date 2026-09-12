@@ -129,6 +129,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
+      - run: locale-gen pt_BR.UTF-8 2>/dev/null || true
+
       # Each matrix job runs in an isolated runner with its own Postgres container,
       # so a single database per job is sufficient. Named by service only for
       # more readable logs.
@@ -143,6 +145,9 @@ jobs:
       - run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar_test;"
 
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
+
+      - run: locale-gen pt_BR.UTF-8 2>/dev/null || true
+
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
 
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
@@ -185,6 +190,8 @@ jobs:
           cache-dependency-path: backend/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - run: locale-gen pt_BR.UTF-8 2>/dev/null || true
 
       - run: pnpm exec prisma generate --schema=prisma/schema.prisma
 
