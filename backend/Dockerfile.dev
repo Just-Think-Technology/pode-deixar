@@ -8,6 +8,7 @@ COPY shared/logger/package.json ./shared/logger/
 COPY shared/email/package.json ./shared/email/
 COPY shared/security/package.json ./shared/security/
 COPY shared/validation/package.json ./shared/validation/
+COPY shared/prisma/package.json ./shared/prisma/
 COPY services/auth/package.json ./services/auth/
 COPY services/users/package.json ./services/users/
 COPY services/service-orders/package.json ./services/service-orders/

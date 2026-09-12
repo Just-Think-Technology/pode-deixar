@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProfilesService } from "../src/profiles/profiles.service";
-import { PrismaService } from "../src/prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { MinioService } from "../src/storage/minio.service";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
 import {

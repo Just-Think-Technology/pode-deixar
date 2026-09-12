@@ -23,7 +23,8 @@
     "paths": {
       "@pode-deixar/logger": ["../../shared/logger/dist"],
       "@pode-deixar/logger/*": ["../../shared/logger/dist/*"],
-      "@pode-deixar/security": ["../../shared/security/dist"]
+      "@pode-deixar/security": ["../../shared/security/dist"],
+      "@pode-deixar/prisma": ["../../shared/prisma/dist"]
     }
   },
   "include": ["src/**/*.ts"]

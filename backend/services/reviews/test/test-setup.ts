@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaService } from "@pode-deixar/prisma";
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
 export type TestRole = 'CLIENT' | 'PROVIDER' | 'ADMIN';

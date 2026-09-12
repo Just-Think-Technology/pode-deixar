@@ -5,7 +5,7 @@ import {
   ProposalDetailController,
   AcceptRejectController,
 } from "./proposals.controller";
-import { PrismaModule } from "../prisma/prisma.module";
+import { PrismaModule } from "@pode-deixar/prisma";
 import { SharedModule } from "../shared/shared.module";
 
 @Module({

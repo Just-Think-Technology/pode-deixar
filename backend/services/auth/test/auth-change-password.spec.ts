@@ -9,7 +9,7 @@ import {
   bearerAuth,
   teardownTestApp
 } from './test-setup';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaService } from '@pode-deixar/prisma';
 
 describe('PUT /auth/change-password', () => {
   let app: INestApplication<App>;

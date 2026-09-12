@@ -13,7 +13,7 @@ import {
   mockMinio,
   TestAppSetup,
 } from './test-setup';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaService } from "@pode-deixar/prisma";
 
 // Valid 1x1 PNG (the upload converts to webp via sharp).
 const PNG_1X1 = Buffer.from(

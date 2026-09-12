@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { CategoriesService } from "../src/categories/categories.service";
-import { PrismaService } from "../src/prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
 import { NotFoundException, ConflictException } from "@nestjs/common";
 

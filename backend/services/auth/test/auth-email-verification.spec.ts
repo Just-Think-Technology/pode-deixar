@@ -7,7 +7,7 @@ import {
   registerUser,
   teardownTestApp
 } from './test-setup';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaService } from '@pode-deixar/prisma';
 
 describe('POST /auth/verify-email', () => {
   let app: INestApplication<App>;

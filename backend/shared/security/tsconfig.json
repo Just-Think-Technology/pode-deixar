@@ -21,7 +21,8 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@pode-deixar/logger": ["../logger/dist"]
+      "@pode-deixar/logger": ["../logger/dist"],
+      "@pode-deixar/prisma": ["../prisma/dist"]
     }
   },
   "include": ["*.ts", "src/**/*.ts"],

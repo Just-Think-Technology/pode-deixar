@@ -11,7 +11,7 @@ import {
   bearerAuth,
   TestAppSetup,
 } from './test-setup';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaService } from "@pode-deixar/prisma";
 
 describe('ProviderServices (integration)', () => {
   let app: INestApplication<App>;

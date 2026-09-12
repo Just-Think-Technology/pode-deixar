@@ -4,7 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { ServicesLoggerService } from "../shared/services-logger.service";
 import { CreateCounterProposalDto } from "./dto/create-counter-proposal.dto";
 import {

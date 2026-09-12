@@ -10,12 +10,16 @@
     "test": "cross-env NODE_ENV=test jest"
   },
   "dependencies": {
+    "@pode-deixar/prisma": "workspace:*",
     "helmet": "^8.0.0",
+    "passport-jwt": "^4.0.1",
     "redis": "^4.6.0"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.0",
     "@nestjs/throttler": "^6.0.0"
   },
@@ -23,6 +27,7 @@
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
+    "@types/passport-jwt": "^4.0.1",
     "cross-env": "^10.1.0",
     "jest": "^30.0.0",
     "ts-jest": "^29.2.5",

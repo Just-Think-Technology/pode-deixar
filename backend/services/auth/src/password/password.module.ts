@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PasswordManagementService } from './password-management.service';
 import { PasswordController } from './password.controller';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@pode-deixar/prisma';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { PasswordService } from './password.service';
 import { LoginModule } from '../login/login.module';

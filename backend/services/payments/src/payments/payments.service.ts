@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
 import { PaymentGateway } from "../gateway/payment-gateway.interface";
 import { PaymentLoggerService } from "./payment-logger.service";

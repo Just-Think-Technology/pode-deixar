@@ -2,7 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { NotificationsService } from "../src/notifications/notifications.service";
-import { PrismaService } from "../src/prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { CreateNotificationDto } from "../src/notifications/dto/create-notification.dto";
 
 // Anti-forgery coverage: the recipient is always the authenticated user;
