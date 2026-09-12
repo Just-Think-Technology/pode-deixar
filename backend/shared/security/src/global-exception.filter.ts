@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { Request, Response } from "express";
 import { sanitizeSensitiveData } from "./sanitize-sensitive-data";
-import { resolverErroPrisma } from "./resolver-erro-prisma";
+import { resolvePrismaError } from "./resolve-prisma-error";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -40,28 +40,28 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
-      // Erros conhecidos do Prisma viram respostas genéricas por código,
-      // sem expor detalhes internos (tabela, campo, constraint) ao cliente.
-      // Qualquer outro erro vira 500 genérico; o detalhe fica só no log.
-      const resolvido = resolverErroPrisma(
+      // Known Prisma errors become generic code-based responses, without
+      // exposing internals (table, column, constraint) to the client.
+      // Anything else becomes a generic 500; detail stays in the log only.
+      const resolved = resolvePrismaError(
         (exception as { code?: unknown }).code,
       );
-      if (resolvido) {
-        status = resolvido.status;
-        message = resolvido.message;
+      if (resolved) {
+        status = resolved.status;
+        message = resolved.message;
       } else {
         status = HttpStatus.INTERNAL_SERVER_ERROR;
         message = "Erro interno do servidor";
       }
     }
 
-    // Log server-side mantém o detalhe original (mensagem + stack).
-    const detalhe =
+    // Server-side logging keeps the original detail (message + stack).
+    const detail =
       exception instanceof Error ? exception.message : String(exception);
 
     this.logger.error(
       sanitizeSensitiveData(
-        `${request.method} ${request.url} - ${status} - ${detalhe}`,
+        `${request.method} ${request.url} - ${status} - ${detail}`,
       ),
       sanitizeSensitiveData(
         exception instanceof Error ? exception.stack || "" : "",

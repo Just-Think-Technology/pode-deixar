@@ -5,6 +5,8 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 // Cap page size to avoid oversized responses.
 export const DEFAULT_PAGINATION_TAKE = 20;
 export const MAX_PAGINATION_TAKE = 50;
+export const DEFAULT_PAGE = 1;
+export const DEFAULT_PAGE_LIMIT = 20;
 
 export class PaginationQueryDto {
   @ApiPropertyOptional({
@@ -57,4 +59,52 @@ export function normalizePagination(pagination?: PaginationQuery): {
   }
 
   return { skip, take };
+}
+
+export interface PageQuery {
+  page?: number;
+  limit?: number;
+}
+
+// 1-based page/limit variant. Subclasses may redeclare `limit` with their own
+// default; the base validators still apply through the prototype chain.
+export class PageQueryDto {
+  @ApiPropertyOptional({
+    description: "Page number",
+    example: 1,
+    default: DEFAULT_PAGE,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: "Página deve ser um número inteiro" })
+  @Min(1, { message: "Página não pode ser menor que 1" })
+  page?: number = DEFAULT_PAGE;
+
+  @ApiPropertyOptional({
+    description: "Items per page (max 50)",
+    example: DEFAULT_PAGE_LIMIT,
+    default: DEFAULT_PAGE_LIMIT,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: "Limite deve ser um número inteiro" })
+  @Min(1, { message: "Limite não pode ser menor que 1" })
+  @Max(MAX_PAGINATION_TAKE, {
+    message: `Limite não pode ser maior que ${MAX_PAGINATION_TAKE}`,
+  })
+  limit?: number = DEFAULT_PAGE_LIMIT;
+}
+
+// Convert page/limit to skip/take, enforcing the shared caps.
+export function toSkipTake(
+  query?: PageQuery,
+  defaultLimit: number = DEFAULT_PAGE_LIMIT,
+): { skip: number; take: number } {
+  let page = Math.floor(query?.page ?? DEFAULT_PAGE);
+  if (!Number.isFinite(page) || page < 1) {
+    page = DEFAULT_PAGE;
+  }
+
+  const { take } = normalizePagination({ take: query?.limit ?? defaultLimit });
+  return { skip: (page - 1) * take, take };
 }

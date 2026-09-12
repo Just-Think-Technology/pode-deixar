@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
-import { PrismaService } from "@pode-deixar/prisma";
+import { PaymentsRepository } from "./payments.repository";
 import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
 import { PaymentGateway } from "../gateway/payment-gateway.interface";
 import { PaymentLoggerService } from "./payment-logger.service";
@@ -48,16 +48,13 @@ export interface WebhookResult {
 @Injectable()
 export class PaymentsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: PaymentsRepository,
     private readonly gateways: PaymentGatewayFactory,
     private readonly logger: PaymentLoggerService,
   ) {}
 
   private async findClientPayment(paymentId: string, userId: string) {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: paymentId },
-      include: { serviceOrder: { select: { clientId: true } } },
-    });
+    const payment = await this.repository.findPaymentWithClient(paymentId);
 
     if (!payment) {
       throw new NotFoundException(`Pagamento ${paymentId} não encontrado`);
@@ -123,20 +120,7 @@ export class PaymentsService {
   }
 
   findAll(userId: string) {
-    return this.prisma.payment.findMany({
-      where: { serviceOrder: { clientId: userId } },
-      include: {
-        serviceOrder: {
-          select: {
-            id: true,
-            title: true,
-            clientId: true,
-            status: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    return this.repository.findClientPayments(userId);
   }
 
   async getProviderFinanceSummary(userId: string) {
@@ -192,13 +176,10 @@ export class PaymentsService {
       return [];
     }
 
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        serviceOrderId: { in: orderIds },
-        ...(status ? { status } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const payments = await this.repository.findPaymentsByOrderIds(
+      orderIds,
+      status,
+    );
 
     const proposalByOrder = new Map(
       proposals.map((proposal) => [proposal.serviceOrderId, proposal.id]),
@@ -215,24 +196,10 @@ export class PaymentsService {
   async getProviderFinanceChart(userId: string, months: number) {
     const startDate = this.startOfPeriod(months);
 
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        status: "PAID",
-        paidAt: { gte: startDate },
-        serviceOrder: {
-          proposals: {
-            some: { providerId: userId, status: "ACCEPTED" },
-          },
-        },
-      },
-      select: {
-        paidAt: true,
-        feeRate: true,
-        feeAmount: true,
-        netAmount: true,
-        amount: true,
-      },
-    });
+    const payments = await this.repository.findPaidPaymentsSince(
+      userId,
+      startDate,
+    );
 
     const byMonth = new Map<
       string,
@@ -255,23 +222,11 @@ export class PaymentsService {
   }
 
   private async findAcceptedProviderProposals(userId: string) {
-    return this.prisma.proposal.findMany({
-      where: { providerId: userId, status: "ACCEPTED" },
-      select: { id: true, serviceOrderId: true },
-    });
+    return this.repository.findAcceptedProposals(userId);
   }
 
   private async findProviderPayments(userId: string) {
-    return this.prisma.payment.findMany({
-      where: {
-        serviceOrder: {
-          proposals: {
-            some: { providerId: userId, status: "ACCEPTED" },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    return this.repository.findProviderPayments(userId);
   }
 
   private formatFinanceItem(
@@ -368,16 +323,9 @@ export class PaymentsService {
   }
 
   async create(userId: string, dto: CreatePaymentDto) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: dto.serviceOrderId },
-      include: {
-        proposals: {
-          where: { status: "ACCEPTED" },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
-    });
+    const order = await this.repository.findOrderWithAcceptedProposal(
+      dto.serviceOrderId,
+    );
 
     if (!order) {
       throw new NotFoundException(
@@ -448,28 +396,18 @@ export class PaymentsService {
     // Always fill the idempotency key; the NOT NULL/unique migration is owned elsewhere.
     const idempotencyKey = dto.idempotencyKey ?? randomUUID();
 
-    const [payment] = await this.prisma.$transaction([
-      this.prisma.payment.create({
-        data: {
-          serviceOrderId: order.id,
-          amount: amountValue,
-          currency,
-          method: dto.method,
-          status: "PENDING",
-          feeRate: fees.feeRate,
-          feeAmount: fees.feeAmount,
-          netAmount: fees.netAmount,
-          idempotencyKey,
-        },
-      }),
-      this.prisma.serviceOrder.update({
-        where: { id: order.id },
-        data: {
-          scheduledAt,
-          scheduledEndAt,
-        },
-      }),
-    ]);
+    const payment = await this.repository.createPayment({
+      serviceOrderId: order.id,
+      amount: amountValue,
+      currency,
+      method: dto.method,
+      feeRate: fees.feeRate,
+      feeAmount: fees.feeAmount,
+      netAmount: fees.netAmount,
+      idempotencyKey,
+      scheduledAt,
+      scheduledEndAt,
+    });
 
     this.logger.logPaymentCreated(
       payment.id,
@@ -491,9 +429,10 @@ export class PaymentsService {
       return null;
     }
 
-    return this.prisma.payment.findFirst({
-      where: { serviceOrderId, idempotencyKey },
-    });
+    return this.repository.findPaymentByIdempotency(
+      serviceOrderId,
+      idempotencyKey,
+    );
   }
 
   async generateCharge(userId: string, paymentId: string) {
@@ -518,10 +457,7 @@ export class PaymentsService {
 
     // Claim-first: only one charge-race caller wins the claim; the rest see "already generated".
     const claimedRef = randomUUID();
-    const claim = await this.prisma.payment.updateMany({
-      where: { id: payment.id, externalRef: null },
-      data: { externalRef: claimedRef },
-    });
+    const claim = await this.repository.claimCharge(payment.id, claimedRef);
 
     if (claim.count === 0) {
       throw new BadRequestException(
@@ -533,10 +469,7 @@ export class PaymentsService {
       return await this.createGatewayCharge(payment, gateway, claimedRef);
     } catch (error) {
       // Release the claim when the gateway fails so the charge can be retried.
-      await this.prisma.payment.updateMany({
-        where: { id: payment.id, externalRef: claimedRef },
-        data: { externalRef: null },
-      });
+      await this.repository.releaseChargeClaim(payment.id, claimedRef);
       throw error;
     }
   }
@@ -578,12 +511,9 @@ export class PaymentsService {
       );
     }
 
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: dto.paymentId },
-      include: {
-        serviceOrder: { select: { scheduledAt: true } },
-      },
-    });
+    const payment = await this.repository.findPaymentWithSchedule(
+      dto.paymentId,
+    );
 
     if (!payment) {
       this.logger.logPaymentError(
@@ -626,15 +556,12 @@ export class PaymentsService {
         paymentId: payment.id,
         payload: { externalId: dto.externalId },
       },
-      async (tx) =>
-        tx.payment.update({
-          where: { id: dto.paymentId },
-          data: {
-            status: "PAID",
-            paidAt: new Date(),
-            externalRef: dto.externalId,
-          },
-        }),
+      {
+        paymentId: dto.paymentId,
+        status: "PAID",
+        paidAt: new Date(),
+        externalRef: dto.externalId,
+      },
     );
 
     if (transaction.duplicate) {
@@ -738,12 +665,9 @@ export class PaymentsService {
 
     const gatewayPayment = await gateway.getPayment(gatewayPaymentId);
 
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: gatewayPayment.externalReference || "" },
-      include: {
-        serviceOrder: { select: { scheduledAt: true } },
-      },
-    });
+    const payment = await this.repository.findPaymentWithSchedule(
+      gatewayPayment.externalReference || "",
+    );
 
     if (!payment) {
       this.logger.logPaymentError(
@@ -800,15 +724,12 @@ export class PaymentsService {
           gatewayStatus: gatewayPayment.status,
         },
       },
-      async (tx) =>
-        tx.payment.update({
-          where: { id: payment.id },
-          data: {
-            status,
-            paidAt: status === "PAID" ? new Date() : null,
-            externalRef: String(gatewayPayment.id),
-          },
-        }),
+      {
+        paymentId: payment.id,
+        status,
+        paidAt: status === "PAID" ? new Date() : null,
+        externalRef: String(gatewayPayment.id),
+      },
     );
 
     if (transaction.duplicate) {
@@ -855,9 +776,7 @@ export class PaymentsService {
   }
 
   private async findProcessedEvent(gateway: string, eventId: string) {
-    return this.prisma.paymentWebhookEvent.findUnique({
-      where: { gateway_eventId: { gateway, eventId } },
-    });
+    return this.repository.findProcessedEvent(gateway, eventId);
   }
 
   private async recordStatusHistory(
@@ -867,24 +786,20 @@ export class PaymentsService {
     actor: string,
     reason?: string,
   ) {
-    await this.prisma.paymentStatusHistory.create({
-      data: {
-        paymentId,
-        statusAnterior: previousStatus ?? undefined,
-        statusNovo: newStatus,
-        actor,
-        motivo: reason,
-      },
-    });
+    await this.repository.recordStatusHistory(
+      paymentId,
+      previousStatus,
+      newStatus,
+      actor,
+      reason,
+    );
   }
 
   private async returnIdempotentPayment(
     paymentId?: string | null,
     notice?: string,
   ) {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id: paymentId || "" },
-    });
+    const payment = await this.repository.findPaymentById(paymentId || "");
 
     if (!payment) {
       throw new NotFoundException("Webhook rejeitado");
@@ -895,23 +810,16 @@ export class PaymentsService {
 
   private async attemptTransaction(
     event: WebhookEvent,
-    update: (
-      tx: Prisma.TransactionClient,
-    ) => Promise<{ id: string; status: PaymentStatus }>,
+    update: {
+      paymentId: string;
+      status: PaymentStatus;
+      paidAt: Date | null;
+      externalRef: string;
+    },
   ) {
     try {
       // Claim-first: insert the event inside the transaction before any mutation; concurrent callers fail with P2002 without changing the payment.
-      const payment = await this.prisma.$transaction(async (tx: any) => {
-        await tx.paymentWebhookEvent.create({
-          data: {
-            gateway: event.gateway,
-            eventId: event.eventId,
-            paymentId: event.paymentId,
-            payload: event.payload ?? undefined,
-          },
-        });
-        return update(tx);
-      });
+      const payment = await this.repository.applyWebhookEvent(event, update);
       return { duplicate: false, payment };
     } catch (error) {
       const code =
@@ -968,10 +876,11 @@ export class PaymentsService {
       description: `Pedido ${payment.id}`,
     });
 
-    await this.prisma.payment.updateMany({
-      where: { id: payment.id, externalRef: claimedRef },
-      data: { externalRef: String(charge.id) },
-    });
+    await this.repository.finalizeCharge(
+      payment.id,
+      claimedRef,
+      String(charge.id),
+    );
 
     return {
       paymentId: payment.id,

@@ -72,6 +72,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../shared/logger
+      '@pode-deixar/storage':
+        specifier: workspace:*
+        version: link:../shared/storage
       '@prisma/client':
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -693,6 +696,9 @@ importers:
       '@pode-deixar/security':
         specifier: workspace:*
         version: link:../../shared/security
+      '@pode-deixar/storage':
+        specifier: workspace:*
+        version: link:../../shared/storage
       '@pode-deixar/validation':
         specifier: workspace:*
         version: link:../../shared/validation
@@ -862,6 +868,9 @@ importers:
       '@pode-deixar/security':
         specifier: workspace:*
         version: link:../../shared/security
+      '@pode-deixar/storage':
+        specifier: workspace:*
+        version: link:../../shared/storage
       '@pode-deixar/validation':
         specifier: workspace:*
         version: link:../../shared/validation
@@ -1162,11 +1171,60 @@ importers:
         specifier: ^5.4.0
         version: 5.9.3
 
+  shared/storage:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^4.0.0
+        version: 4.0.4(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@nestjs/platform-express':
+        specifier: ^11.0.0
+        version: 11.1.28(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)
+      minio:
+        specifier: ^8.0.7
+        version: 8.0.7
+      multer:
+        specifier: ^2.3.0
+        version: 2.3.0
+    devDependencies:
+      '@types/express':
+        specifier: ^5.0.6
+        version: 5.0.6
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      '@types/multer':
+        specifier: ^2.2.0
+        version: 2.2.0
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
+      jest:
+        specifier: ^30.0.0
+        version: 30.4.2(@types/node@20.19.43)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
+      ts-jest:
+        specifier: ^29.2.5
+        version: 29.4.12(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(jest-util@30.4.1)(jest@30.4.2(@types/node@20.19.43)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3)))(typescript@5.9.3)
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+
   shared/validation:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.4.7(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
       class-validator:
         specifier: ^0.14.0
         version: 0.14.4

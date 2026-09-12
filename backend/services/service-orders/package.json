@@ -34,6 +34,7 @@
     "@pode-deixar/logger": "workspace:*",
     "@pode-deixar/prisma": "workspace:*",
     "@pode-deixar/security": "workspace:*",
+    "@pode-deixar/storage": "workspace:*",
     "@pode-deixar/validation": "workspace:*",
     "@prisma/client": "5.22.0",
     "class-transformer": "^0.5.1",

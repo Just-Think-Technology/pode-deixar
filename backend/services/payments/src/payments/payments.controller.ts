@@ -27,6 +27,7 @@ import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { PaymentWebhookDto } from "./dto/payment-webhook.dto";
+import { GatewayParamDto } from "./dto/gateway-param.dto";
 import { PaymentLoggerService } from "./payment-logger.service";
 
 @ApiTags("Payments")
@@ -170,16 +171,16 @@ export class PaymentsController {
   @ApiResponse({ status: 403, description: "Invalid webhook signature" })
   async gatewayWebhook(
     @Req() httpRequest: ExpressRequest,
-    @Param("gateway") gatewayName: string,
+    @Param() params: GatewayParamDto,
     @Headers() headers: Record<string, string>,
     @Body() dto: unknown,
   ) {
     this.ensureHttpsRequest(httpRequest);
 
-    const gateway = this.gateways.getByName(gatewayName);
+    const gateway = this.gateways.getByName(params.gateway);
     if (!gateway) {
       throw new NotFoundException(
-        `Gateway de pagamento desconhecido: ${gatewayName}`,
+        `Gateway de pagamento desconhecido: ${params.gateway}`,
       );
     }
 

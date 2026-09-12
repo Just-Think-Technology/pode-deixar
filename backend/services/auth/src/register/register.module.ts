@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { RegisterService } from './register.service';
+import { RegisterRepository } from './register.repository';
 import { RegisterController } from './register.controller';
-import { PrismaService } from '@pode-deixar/prisma';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { PasswordService } from '../password/password.service';
 
@@ -9,7 +9,7 @@ import { PasswordService } from '../password/password.service';
   controllers: [RegisterController],
   providers: [
     RegisterService,
-    PrismaService,
+    RegisterRepository,
     AuthLoggerService,
     PasswordService,
   ],

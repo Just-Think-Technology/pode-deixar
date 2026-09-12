@@ -1,7 +1,7 @@
 import { ValidationError } from 'class-validator';
 import {
-  traduzirErrosValidacao,
-  MENSAGENS_RESTRICAO_PADRAO,
+  translateValidationErrors,
+  DEFAULT_CONSTRAINT_MESSAGES,
 } from '../index';
 
 function erro(
@@ -14,19 +14,19 @@ function erro(
   return e;
 }
 
-describe('traduzirErrosValidacao', () => {
+describe('translateValidationErrors', () => {
   it('retorna "<rótulo> inválido" quando não há constraints', () => {
-    expect(traduzirErrosValidacao([erro('email')], { email: 'Email' })).toEqual([
+    expect(translateValidationErrors([erro('email')], { email: 'Email' })).toEqual([
       'Email inválido',
     ]);
   });
 
   it('usa a propriedade quando não há rótulo', () => {
-    expect(traduzirErrosValidacao([erro('xyz')], {})).toEqual(['xyz inválido']);
+    expect(translateValidationErrors([erro('xyz')], {})).toEqual(['xyz inválido']);
   });
 
   it('traduz chaves conhecidas com o rótulo do campo', () => {
-    const out = traduzirErrosValidacao(
+    const out = translateValidationErrors(
       [erro('password', { minLength: 'original', isString: 'original' })],
       { password: 'Senha' },
     );
@@ -36,7 +36,7 @@ describe('traduzirErrosValidacao', () => {
   });
 
   it('mantém a mensagem original em chaves sem tradutor', () => {
-    const out = traduzirErrosValidacao(
+    const out = translateValidationErrors(
       [erro('code', { isChaveInexistente: 'mensagem original' })],
       {},
     );
@@ -44,7 +44,7 @@ describe('traduzirErrosValidacao', () => {
   });
 
   it('sobrescritas do serviço vencem o padrão (ex.: minLength do auth)', () => {
-    const out = traduzirErrosValidacao(
+    const out = translateValidationErrors(
       [erro('password', { minLength: 'x', maxLength: 'y' })],
       { password: 'Senha' },
       {
@@ -76,7 +76,7 @@ describe('traduzirErrosValidacao', () => {
       'maxLength',
       'matches',
     ]) {
-      expect(typeof MENSAGENS_RESTRICAO_PADRAO[chave]).toBe('function');
+      expect(typeof DEFAULT_CONSTRAINT_MESSAGES[chave]).toBe('function');
     }
   });
 });

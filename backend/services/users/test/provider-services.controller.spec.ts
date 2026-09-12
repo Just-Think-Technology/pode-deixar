@@ -14,18 +14,12 @@ describe("ProviderServicesController", () => {
   let searchController: ProviderSearchController;
 
   const mockProviderServicesService = {
-    getProviderProfileByUserId: jest.fn(),
-    createService: jest.fn(),
-    getMyServices: jest.fn(),
+    createServiceForUser: jest.fn(),
+    getMyServicesForUser: jest.fn(),
     getProviderServices: jest.fn(),
-    updateService: jest.fn(),
-    deleteService: jest.fn(),
+    updateServiceForUser: jest.fn(),
+    deleteServiceForUser: jest.fn(),
     searchProviders: jest.fn(),
-  };
-
-  const mockProviderProfile = {
-    id: "provider-profile-1",
-    userId: "user-1",
   };
 
   const mockRequest = (overrides = {}) => ({
@@ -55,7 +49,7 @@ describe("ProviderServicesController", () => {
   });
 
   describe("ProviderServicesController - createService", () => {
-    it("should resolve profile and call service.createService", async () => {
+    it("should delegate to service.createServiceForUser", async () => {
       const req = mockRequest();
       const dto = {
         title: "Instalação de chuveiro",
@@ -63,45 +57,35 @@ describe("ProviderServicesController", () => {
         fixedPrice: 150.0,
         categoryId: "cat-eletrica",
       };
-       const expectedService = { id: "service-1", title: "Instalação de chuveiro" };
+      const expectedService = { id: "service-1", title: "Instalação de chuveiro" };
 
-      mockProviderServicesService.getProviderProfileByUserId.mockResolvedValue(
-        mockProviderProfile,
+      mockProviderServicesService.createServiceForUser.mockResolvedValue(
+        expectedService,
       );
-      mockProviderServicesService.createService.mockResolvedValue(expectedService);
 
       const result = await controller.createService(req, dto as any);
 
       expect(
-        mockProviderServicesService.getProviderProfileByUserId,
-      ).toHaveBeenCalledWith("user-1");
-      expect(mockProviderServicesService.createService).toHaveBeenCalledWith(
-        "provider-profile-1",
-        dto,
-        "127.0.0.1",
-      );
+        mockProviderServicesService.createServiceForUser,
+      ).toHaveBeenCalledWith("user-1", dto, "127.0.0.1");
       expect(result).toEqual(expectedService);
     });
   });
 
   describe("ProviderServicesController - getMyServices", () => {
-    it("should resolve profile and call service.getMyServices", async () => {
+    it("should delegate to service.getMyServicesForUser", async () => {
       const req = mockRequest();
       const expectedServices = [{ id: "service-1", title: "Instalação" }];
 
-      mockProviderServicesService.getProviderProfileByUserId.mockResolvedValue(
-        mockProviderProfile,
+      mockProviderServicesService.getMyServicesForUser.mockResolvedValue(
+        expectedServices,
       );
-      mockProviderServicesService.getMyServices.mockResolvedValue(expectedServices);
 
       const result = await controller.getMyServices(req);
 
       expect(
-        mockProviderServicesService.getProviderProfileByUserId,
+        mockProviderServicesService.getMyServicesForUser,
       ).toHaveBeenCalledWith("user-1");
-      expect(mockProviderServicesService.getMyServices).toHaveBeenCalledWith(
-        "provider-profile-1",
-      );
       expect(result).toEqual(expectedServices);
     });
   });
@@ -124,15 +108,14 @@ describe("ProviderServicesController", () => {
   });
 
   describe("ProviderServiceDetailController - updateService", () => {
-    it("should resolve profile and call service.updateService", async () => {
+    it("should delegate to service.updateServiceForUser", async () => {
       const req = mockRequest();
       const dto = { title: "Updated title", fixedPrice: 200.0 };
       const expectedService = { id: "service-1", title: "Updated title" };
 
-      mockProviderServicesService.getProviderProfileByUserId.mockResolvedValue(
-        mockProviderProfile,
+      mockProviderServicesService.updateServiceForUser.mockResolvedValue(
+        expectedService,
       );
-      mockProviderServicesService.updateService.mockResolvedValue(expectedService);
 
       const result = await detailController.updateService(
         req,
@@ -141,38 +124,26 @@ describe("ProviderServicesController", () => {
       );
 
       expect(
-        mockProviderServicesService.getProviderProfileByUserId,
-      ).toHaveBeenCalledWith("user-1");
-      expect(mockProviderServicesService.updateService).toHaveBeenCalledWith(
-        "provider-profile-1",
-        "service-1",
-        dto,
-        "127.0.0.1",
-      );
+        mockProviderServicesService.updateServiceForUser,
+      ).toHaveBeenCalledWith("user-1", "service-1", dto, "127.0.0.1");
       expect(result).toEqual(expectedService);
     });
   });
 
   describe("ProviderServiceDetailController - deleteService", () => {
-    it("should resolve profile and call service.deleteService", async () => {
+    it("should delegate to service.deleteServiceForUser", async () => {
       const req = mockRequest();
       const expectedService = { id: "service-1", is_active: false };
 
-      mockProviderServicesService.getProviderProfileByUserId.mockResolvedValue(
-        mockProviderProfile,
+      mockProviderServicesService.deleteServiceForUser.mockResolvedValue(
+        expectedService,
       );
-      mockProviderServicesService.deleteService.mockResolvedValue(expectedService);
 
       const result = await detailController.deleteService(req, "service-1");
 
       expect(
-        mockProviderServicesService.getProviderProfileByUserId,
-      ).toHaveBeenCalledWith("user-1");
-      expect(mockProviderServicesService.deleteService).toHaveBeenCalledWith(
-        "provider-profile-1",
-        "service-1",
-        "127.0.0.1",
-      );
+        mockProviderServicesService.deleteServiceForUser,
+      ).toHaveBeenCalledWith("user-1", "service-1", "127.0.0.1");
       expect(result).toEqual(expectedService);
     });
   });

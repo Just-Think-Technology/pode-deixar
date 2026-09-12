@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CategoriesService } from "./categories.service";
+import { CategoriesRepository } from "./categories.repository";
 import {
   CategoriesController,
   AdminCategoriesController,
@@ -10,7 +11,7 @@ import { SharedModule } from "../shared/shared.module";
 @Module({
   imports: [PrismaModule, SharedModule],
   controllers: [CategoriesController, AdminCategoriesController],
-  providers: [CategoriesService],
+  providers: [CategoriesService, CategoriesRepository],
   exports: [CategoriesService],
 })
 export class CategoriesModule {}

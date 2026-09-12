@@ -1,28 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import { createLogger, LoggerWithEvent } from "@pode-deixar/logger";
+import { BaseDomainLogger } from "@pode-deixar/logger";
 
 @Injectable()
-export class UsersLoggerService {
-  private readonly logger: LoggerWithEvent;
-
+export class UsersLoggerService extends BaseDomainLogger {
   constructor() {
-    this.logger = createLogger("users-service");
-  }
-
-  logInfo(event: string, message: string, meta?: Record<string, unknown>) {
-    this.logger.info(event, message, meta);
-  }
-
-  logWarn(event: string, message: string, meta?: Record<string, unknown>) {
-    this.logger.warn(event, message, meta);
-  }
-
-  logError(event: string, message: string, meta?: Record<string, unknown>) {
-    this.logger.error(event, message, meta);
-  }
-
-  logDebug(event: string, message: string, meta?: Record<string, unknown>) {
-    this.logger.debug(event, message, meta);
+    super("users-service");
   }
 
   logProfileCreated(userId: string, role: string, ip?: string) {
@@ -55,10 +37,6 @@ export class UsersLoggerService {
       role,
       ip,
     });
-  }
-
-  logSecurityEvent(event: string, meta: Record<string, unknown>) {
-    this.logger.warn(event, `Security event: ${event}`, meta);
   }
 
   logServiceCreated(providerProfileId: string, serviceId: string, ip?: string) {

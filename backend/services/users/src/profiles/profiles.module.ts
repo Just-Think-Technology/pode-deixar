@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ProfilesService } from "./profiles.service";
+import { ProfilesRepository } from "./profiles.repository";
 import { ProfilesController } from "./profiles.controller";
 import { PublicProviderProfileController } from "./public-provider-profile.controller";
 import { PrismaModule } from "@pode-deixar/prisma";
@@ -8,7 +9,7 @@ import { SharedModule } from "../shared/shared.module";
 @Module({
   imports: [PrismaModule, SharedModule],
   controllers: [ProfilesController, PublicProviderProfileController],
-  providers: [ProfilesService],
+  providers: [ProfilesService, ProfilesRepository],
   exports: [ProfilesService],
 })
 export class ProfilesModule {}

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ProposalsService } from "./proposals.service";
+import { ProposalsRepository } from "./proposals.repository";
 import {
   ProposalsController,
   ProposalDetailController,
@@ -15,7 +16,7 @@ import { SharedModule } from "../shared/shared.module";
     ProposalDetailController,
     AcceptRejectController,
   ],
-  providers: [ProposalsService],
+  providers: [ProposalsService, ProposalsRepository],
   exports: [ProposalsService],
 })
 export class ProposalsModule {}

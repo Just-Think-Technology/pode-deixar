@@ -1,20 +1,30 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as Minio from "minio";
+
+export const MINIO_STORAGE_OPTIONS = "MINIO_STORAGE_OPTIONS";
+
+export interface MinioStorageOptions {
+  bucketEnvVar: string;
+  defaultBucket: string;
+}
 
 @Injectable()
 export class MinioService implements OnModuleInit {
   private client: Minio.Client;
   private presignClient?: Minio.Client;
-  private bucket: string;
-  private publicUrl: string;
+  private readonly bucket: string;
+  private readonly publicUrl: string;
   private accessKey: string;
   private secretKey: string;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @Inject(MINIO_STORAGE_OPTIONS) options: MinioStorageOptions,
+  ) {
     this.bucket =
-      this.configService.get<string>("MINIO_ORDER_PHOTOS_BUCKET") ||
-      "order-photos";
+      this.configService.get<string>(options.bucketEnvVar) ||
+      options.defaultBucket;
     this.publicUrl =
       this.configService.get<string>("MINIO_PUBLIC_URL") ||
       "http://localhost:8080/api/storage";

@@ -105,6 +105,7 @@ services:
       - ./backend/shared/security:/app/shared/security
       - ./backend/shared/validation:/app/shared/validation
       - ./backend/shared/prisma:/app/shared/prisma
+      - ./backend/shared/storage:/app/shared/storage
       - ./backend/prisma:/app/prisma
 
   # -- Service Orders Service (dev, hot-reload) --
@@ -134,6 +135,7 @@ services:
       - ./backend/shared/security:/app/shared/security
       - ./backend/shared/validation:/app/shared/validation
       - ./backend/shared/prisma:/app/shared/prisma
+      - ./backend/shared/storage:/app/shared/storage
       - ./backend/prisma:/app/prisma
 
   # -- Payments Service (dev, hot-reload) --

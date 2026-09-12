@@ -1,25 +1,24 @@
 import { Injectable, Logger, BadRequestException } from "@nestjs/common";
-import { PrismaService } from "@pode-deixar/prisma";
+import { NotificationsRepository } from "./notifications.repository";
 import { CreateNotificationDto } from "./dto/create-notification.dto";
+import { toSkipTake } from "@pode-deixar/validation";
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private repository: NotificationsRepository) {}
 
   // Recipient is always the authenticated user; ignore the client-supplied
   // recipient to prevent forged notifications to third parties.
   async create(userId: string, dto: CreateNotificationDto) {
-    const notification = await this.prisma.notification.create({
-      data: {
-        recipient: userId,
-        type: dto.type,
-        title: dto.title,
-        message: dto.message,
-        relatedId: dto.relatedId,
-        relatedType: dto.relatedType,
-      },
+    const notification = await this.repository.createNotification({
+      recipient: userId,
+      type: dto.type,
+      title: dto.title,
+      message: dto.message,
+      relatedId: dto.relatedId,
+      relatedType: dto.relatedType,
     });
     this.logger.log(`Notification created: ${notification.id} for ${userId}`);
     return notification;
@@ -35,23 +34,20 @@ export class NotificationsService {
     if (isRead !== undefined) {
       where.read = isRead;
     }
+    const { skip } = toSkipTake({ page, limit });
     const [items, total] = await Promise.all([
-      this.prisma.notification.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.notification.count({ where }),
+      this.repository.findNotificationsByRecipient(where, skip, limit),
+      this.repository.countNotificationsByRecipient(where),
     ]);
     return { items, total, page, totalPages: Math.ceil(total / limit) };
   }
 
   async markAsRead(notificationId: string, userId: string) {
     // Only the recipient may mark the notification as read.
-    const notification = await this.prisma.notification.findFirst({
-      where: { id: notificationId, recipient: userId },
-    });
+    const notification = await this.repository.findNotificationForRecipient(
+      notificationId,
+      userId,
+    );
 
     if (!notification) {
       throw new BadRequestException(
@@ -59,9 +55,6 @@ export class NotificationsService {
       );
     }
 
-    return this.prisma.notification.update({
-      where: { id: notificationId },
-      data: { read: true },
-    });
+    return this.repository.markNotificationAsRead(notificationId);
   }
 }

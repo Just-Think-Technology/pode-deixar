@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ServiceOrdersService } from "./service-orders.service";
+import { ServiceOrdersRepository } from "./service-orders.repository";
 import {
   ServiceOrdersController,
   MyServiceOrdersController,
@@ -19,7 +20,7 @@ import { SharedModule } from "../shared/shared.module";
     ProviderReceivedOrdersController,
     ProviderOrderActionsController,
   ],
-  providers: [ServiceOrdersService],
+  providers: [ServiceOrdersService, ServiceOrdersRepository],
   exports: [ServiceOrdersService],
 })
 export class ServiceOrdersModule {}

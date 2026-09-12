@@ -258,7 +258,7 @@ describe("PaymentsController", () => {
 
       const response = await controller.gatewayWebhook(
         req,
-        "mercadopago",
+        { gateway: "mercadopago" },
         headers,
         dto,
       );
@@ -276,7 +276,7 @@ describe("PaymentsController", () => {
       gateways.getByName.mockReturnValue(undefined);
 
       await expect(
-        controller.gatewayWebhook({} as any, "asaas", {}, dto),
+        controller.gatewayWebhook({} as any, { gateway: "asaas" }, {}, dto),
       ).rejects.toThrow("Gateway de pagamento desconhecido: asaas");
       expect(service.handleGatewayWebhook).not.toHaveBeenCalled();
     });
@@ -287,7 +287,7 @@ describe("PaymentsController", () => {
       await expect(
         controller.gatewayWebhook(
           { headers: { "x-forwarded-proto": "http" } } as any,
-          "mercadopago",
+          { gateway: "mercadopago" },
           {},
           dto,
         ),

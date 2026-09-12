@@ -19,13 +19,13 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateValidationCore,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Rótulos dos campos do users (user-facing, em português); as mensagens de
 // restrição vivem no núcleo compartilhado.
-const ROTULOS_USERS: RotulosCampos = {
+const USERS_FIELD_LABELS: FieldLabels = {
   title: "Título",
   description: "Descrição",
   fixedPrice: "Preço fixo",
@@ -43,7 +43,7 @@ const ROTULOS_USERS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string {
-  return traduzirErrosNucleo(errors, ROTULOS_USERS).join("; ");
+  return translateValidationCore(errors, USERS_FIELD_LABELS).join("; ");
 }
 
 @Module({

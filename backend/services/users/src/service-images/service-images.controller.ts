@@ -19,30 +19,9 @@ import {
   ApiConsumes,
   ApiBody,
 } from "@nestjs/swagger";
-import { FileInterceptor } from "@nestjs/platform-express";
 import { ServiceImagesService } from "./service-images.service";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { memoryStorage } from "multer";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-
-function fileFilter(
-  _req: any,
-  _file: Express.Multer.File,
-  cb: (error: Error | null, accept: boolean) => void,
-) {
-  if (ALLOWED_MIMES.includes(_file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(
-      new BadRequestException(
-        "Formato de imagem inválido. Permitidos: JPEG, PNG, WebP, GIF",
-      ),
-      false,
-    );
-  }
-}
+import { createImageFileInterceptor } from "@pode-deixar/storage";
 
 @ApiTags("Service Images")
 @Controller("providers/me/services/:serviceId/images")
@@ -53,13 +32,7 @@ export class ServiceImagesController {
   constructor(private readonly serviceImagesService: ServiceImagesService) {}
 
   @Post()
-  @UseInterceptors(
-    FileInterceptor("file", {
-      storage: memoryStorage(),
-      limits: { fileSize: MAX_FILE_SIZE },
-      fileFilter,
-    }),
-  )
+  @UseInterceptors(createImageFileInterceptor())
   @ApiOperation({ summary: "Upload an image for a service" })
   @ApiConsumes("multipart/form-data")
   @ApiBody({

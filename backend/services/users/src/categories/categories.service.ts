@@ -3,7 +3,7 @@ import {
   NotFoundException,
   ConflictException,
 } from "@nestjs/common";
-import { PrismaService } from "@pode-deixar/prisma";
+import { CategoriesRepository } from "./categories.repository";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
@@ -11,22 +11,12 @@ import { UpdateCategoryDto } from "./dto/update-category.dto";
 @Injectable()
 export class CategoriesService {
   constructor(
-    private prisma: PrismaService,
+    private repository: CategoriesRepository,
     private usersLogger: UsersLoggerService,
   ) {}
 
   async findAll() {
-    const categories = await this.prisma.category.findMany({
-      orderBy: { serviceOrders: { _count: "desc" } },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        icon: true,
-        order: true,
-      },
-    });
+    const categories = await this.repository.findAllCategories();
     return categories.map((c) => ({
       id: c.id,
       name: c.name,
@@ -38,9 +28,10 @@ export class CategoriesService {
   }
 
   async create(dto: CreateCategoryDto, ip: string) {
-    const existing = await this.prisma.category.findFirst({
-      where: { OR: [{ name: dto.name }, { slug: dto.slug }] },
-    });
+    const existing = await this.repository.findConflictingCategory(
+      dto.name,
+      dto.slug,
+    );
     if (existing) {
       throw new ConflictException(
         existing.name === dto.name
@@ -49,49 +40,48 @@ export class CategoriesService {
       );
     }
 
-    const category = await this.prisma.category.create({ data: dto });
+    const category = await this.repository.createCategory(dto);
     this.usersLogger.logCategoryCreated(category.name, ip);
     return category;
   }
 
   async update(id: string, dto: UpdateCategoryDto, ip: string) {
-    const category = await this.prisma.category.findUnique({ where: { id } });
+    const category = await this.repository.findCategoryById(id);
     if (!category) {
       throw new NotFoundException("Categoria não encontrada");
     }
 
     if (dto.name) {
-      const conflict = await this.prisma.category.findFirst({
-        where: { name: dto.name, id: { not: id } },
-      });
+      const conflict = await this.repository.findCategoryByNameExcludingId(
+        dto.name,
+        id,
+      );
       if (conflict) {
         throw new ConflictException("Já existe uma categoria com este nome");
       }
     }
     if (dto.slug) {
-      const conflict = await this.prisma.category.findFirst({
-        where: { slug: dto.slug, id: { not: id } },
-      });
+      const conflict = await this.repository.findCategoryBySlugExcludingId(
+        dto.slug,
+        id,
+      );
       if (conflict) {
         throw new ConflictException("Já existe uma categoria com este slug");
       }
     }
 
-    const updated = await this.prisma.category.update({
-      where: { id },
-      data: dto,
-    });
+    const updated = await this.repository.updateCategory(id, dto);
     this.usersLogger.logCategoryUpdated(updated.name, ip);
     return updated;
   }
 
   async remove(id: string, ip: string) {
-    const category = await this.prisma.category.findUnique({ where: { id } });
+    const category = await this.repository.findCategoryById(id);
     if (!category) {
       throw new NotFoundException("Categoria não encontrada");
     }
 
-    await this.prisma.category.delete({ where: { id } });
+    await this.repository.deleteCategory(id);
     this.usersLogger.logCategoryDeleted(category.name, ip);
   }
 }

@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -20,7 +21,7 @@ import {
 import { ProposalsService } from "./proposals.service";
 import { CreateProposalDto } from "./dto/create-proposal.dto";
 import { UpdateProposalDto } from "./dto/update-proposal.dto";
-import { PaginationQueryDto } from "../shared/pagination-query.dto";
+import { PaginationQueryDto } from "@pode-deixar/validation";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 
 @ApiTags("Propostas (Prestador)")
@@ -79,7 +80,10 @@ export class ProposalDetailController {
     description: "Proposal detail returned successfully",
   })
   @ApiResponse({ status: 404, description: "Proposal not found" })
-  async findOne(@Request() req: any, @Param("proposalId") proposalId: string) {
+  async findOne(
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
+  ) {
     const userId = req.user.sub;
     return this.proposalsService.findByIdForProvider(proposalId, userId);
   }
@@ -94,7 +98,7 @@ export class ProposalDetailController {
   @ApiResponse({ status: 404, description: "Proposal not found" })
   async update(
     @Request() req: any,
-    @Param("proposalId") proposalId: string,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
     @Body() dto: UpdateProposalDto,
   ) {
     const userId = req.user.sub;
@@ -108,7 +112,10 @@ export class ProposalDetailController {
   @ApiParam({ name: "proposalId", description: "Proposal ID" })
   @ApiResponse({ status: 200, description: "Proposal withdrawn successfully" })
   @ApiResponse({ status: 404, description: "Proposal not found" })
-  async withdraw(@Request() req: any, @Param("proposalId") proposalId: string) {
+  async withdraw(
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.proposalsService.withdraw(userId, proposalId, ip);
@@ -132,7 +139,10 @@ export class AcceptRejectController {
     status: 400,
     description: "Order is not open or proposal is not pending",
   })
-  async accept(@Request() req: any, @Param("proposalId") proposalId: string) {
+  async accept(
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.proposalsService.accept(userId, proposalId, ip);
@@ -144,7 +154,10 @@ export class AcceptRejectController {
   @ApiParam({ name: "proposalId", description: "Proposal ID" })
   @ApiResponse({ status: 200, description: "Proposal rejected successfully" })
   @ApiResponse({ status: 404, description: "Proposal not found" })
-  async reject(@Request() req: any, @Param("proposalId") proposalId: string) {
+  async reject(
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.proposalsService.reject(userId, proposalId, ip);

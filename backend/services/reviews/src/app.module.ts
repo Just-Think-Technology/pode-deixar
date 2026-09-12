@@ -13,13 +13,13 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateValidationCore,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Rótulos dos campos do reviews (user-facing, em português); as mensagens de
 // restrição vivem no núcleo compartilhado.
-const ROTULOS_REVIEWS: RotulosCampos = {
+const REVIEWS_FIELD_LABELS: FieldLabels = {
   rating: "Nota",
   comment: "Comentário",
   serviceOrderId: "Pedido de serviço",
@@ -27,7 +27,7 @@ const ROTULOS_REVIEWS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string {
-  return traduzirErrosNucleo(errors, ROTULOS_REVIEWS).join("; ");
+  return translateValidationCore(errors, REVIEWS_FIELD_LABELS).join("; ");
 }
 
 @Module({

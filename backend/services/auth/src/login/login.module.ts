@@ -2,13 +2,14 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { LoginService } from './login.service';
+import { LoginRepository } from './login.repository';
 import { LoginController } from './login.controller';
 
-import { PrismaService } from '@pode-deixar/prisma';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { PasswordService } from '../password/password.service';
 import { JwtStrategy } from '../jwt/jwt.strategy';
+import { TokenBlacklistRepository } from '../jwt/token-blacklist.repository';
 import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
 @Module({
@@ -27,7 +28,8 @@ import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
   controllers: [LoginController],
   providers: [
     LoginService,
-    PrismaService,
+    LoginRepository,
+    TokenBlacklistRepository,
     AuthLoggerService,
     PasswordService,
     JwtStrategy,

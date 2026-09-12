@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '@pode-deixar/prisma';
+import { TokenBlacklistRepository } from './token-blacklist.repository';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import getLogger from '../shared/shared-logger';
 import { JWT_ALGORITHMS, JWT_AUDIENCE, JWT_ISSUER } from './jwt.constants';
@@ -13,7 +13,7 @@ const logger = getLogger('jwt');
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private configService: ConfigService,
-    private prisma: PrismaService,
+    private repository: TokenBlacklistRepository,
     private authLogger: AuthLoggerService,
   ) {
     super({
@@ -34,9 +34,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (payload.jti) {
       try {
-        const blacklisted = await this.prisma.tokenBlacklist.findUnique({
-          where: { jti: payload.jti },
-        });
+        const blacklisted = await this.repository.findBlacklistedToken(
+          payload.jti,
+        );
 
         if (blacklisted) {
           throw new UnauthorizedException('Token revogado');
@@ -51,16 +51,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: {
-        id: true,
-        completeName: true,
-        email: true,
-        role: true,
-        emailVerified: true,
-      },
-    });
+    const user = await this.repository.findUserById(payload.sub);
 
     if (!user) {
       logger.error('auth.validate', `User not found for id ${payload.sub}`);

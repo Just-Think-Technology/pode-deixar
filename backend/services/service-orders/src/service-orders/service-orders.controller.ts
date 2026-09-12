@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -23,7 +24,7 @@ import { CreateServiceOrderDto } from "./dto/create-service-order.dto";
 import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
 import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import { AgendaQueryDto } from "./dto/agenda-query.dto";
-import { PaginationQueryDto } from "../shared/pagination-query.dto";
+import { PaginationQueryDto } from "@pode-deixar/validation";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 
 @ApiTags("Service Orders (Client)")
@@ -132,7 +133,10 @@ export class MyServiceOrdersController {
     status: 403,
     description: "Order does not belong to the client",
   })
-  async findOne(@Request() req: any, @Param("orderId") orderId: string) {
+  async findOne(
+    @Request() req: any,
+    @Param("orderId", ParseUUIDPipe) orderId: string,
+  ) {
     const userId = req.user.sub;
     return this.serviceOrdersService.findByIdForClient(orderId, userId);
   }
@@ -149,7 +153,7 @@ export class MyServiceOrdersController {
   })
   async update(
     @Request() req: any,
-    @Param("orderId") orderId: string,
+    @Param("orderId", ParseUUIDPipe) orderId: string,
     @Body() dto: UpdateServiceOrderDto,
   ) {
     const userId = req.user.sub;
@@ -167,7 +171,10 @@ export class MyServiceOrdersController {
     status: 400,
     description: "Order does not belong to the client",
   })
-  async cancel(@Request() req: any, @Param("orderId") orderId: string) {
+  async cancel(
+    @Request() req: any,
+    @Param("orderId", ParseUUIDPipe) orderId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.serviceOrdersService.cancel(userId, orderId, ip);
@@ -213,7 +220,10 @@ export class PublicServiceOrdersController {
   })
   @ApiResponse({ status: 404, description: "Order not found" })
   @ApiResponse({ status: 403, description: "Access denied to this order" })
-  async findOnePublic(@Request() req: any, @Param("orderId") orderId: string) {
+  async findOnePublic(
+    @Request() req: any,
+    @Param("orderId", ParseUUIDPipe) orderId: string,
+  ) {
     const userId = req.user.sub;
     const role = req.user.role;
     return this.serviceOrdersService.findByIdWithAccess(orderId, userId, role);
@@ -270,7 +280,10 @@ export class ProviderOrderActionsController {
     status: 400,
     description: "Order is not in progress or is already completed",
   })
-  async complete(@Request() req: any, @Param("orderId") orderId: string) {
+  async complete(
+    @Request() req: any,
+    @Param("orderId", ParseUUIDPipe) orderId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.serviceOrdersService.complete(userId, orderId, ip);
