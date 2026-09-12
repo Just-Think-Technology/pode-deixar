@@ -1,3 +1,4 @@
+// purpose — database health check for Terminus
 import { Injectable } from '@nestjs/common';
 import {
   HealthIndicator,

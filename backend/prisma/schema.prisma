@@ -1,3 +1,5 @@
+// Prisma schema — core domain models for all services
+
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
@@ -9,6 +11,51 @@ datasource db {
   directUrl  = env("DIRECT_DATABASE_URL")
   extensions = [unaccent]
 }
+
+# --- Enums ---
+
+enum Role {
+  CLIENT
+  ADMIN
+  PROVIDER
+}
+
+enum ServiceOrderStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum CounterProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+}
+
+# --- User & Profile Models ---
+
+model User {
 
 enum Role {
   CLIENT

@@ -14,6 +14,7 @@ export class VerifyService {
     private authLogger: AuthLoggerService,
   ) {}
 
+  // --- Public API ---
   async verify(accessToken: string | null) {
     if (!accessToken) {
       this.authLogger.logTokenVerification('none', false, 'no_token');

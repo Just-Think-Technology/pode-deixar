@@ -1,14 +1,17 @@
-# ============================================================
-# Pode Deixar - Staging com hot-reload (comando único)
-# ============================================================
+# purpose: Pode Deixal staging stack with hot-reload (single command).
+# Same services as docker-compose.production.yml (no frontend — Vercel;
+# no Mailpit — real SMTP; no Postgres — Neon staging), but running in dev mode:
+# Dockerfile.dev + code mounted + start:dev, same as docker-compose.dev.yml.
+# Volume lists: keep mirrored with dev.yml. No `ports:` (access only via Caddy,
+# as in production).
+#
 #   docker compose -f docker-compose.staging.yml up -d --build
 #
-# Mesmos serviços do docker-compose.production.yml (sem frontend — Vercel;
-# sem Mailpit — SMTP real; sem Postgres — Neon staging), mas rodando
-# em modo dev: Dockerfile.dev + código montado + start:dev, igual ao
-# docker-compose.dev.yml. Listas de volumes: manter espelhadas com o
-# dev.yml. Sem `ports:` (acesso só via Caddy, como em prod).
-# ============================================================
+# Same services as docker-compose.production.yml (without frontend — Vercel;
+# without Mailpit — real SMTP; without Postgres — Neon staging), but running
+# in dev mode: Dockerfile.dev + code mounted + start:dev, same as
+# docker-compose.dev.yml. Volume lists: keep mirrored with dev.yml. No `ports:`
+# (access only via Caddy, as in prod).
 
 include:
   - path: docker-compose.production.yml
@@ -16,6 +19,7 @@ include:
 name: pode-deixar-staging
 
 services:
+
   auth:
     env_file: ./.env.staging
     build:

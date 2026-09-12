@@ -29,7 +29,7 @@ describe('useIsMobile Hook', () => {
   })
 
   it('should return false exactly at the tablet breakpoint', () => {
-    setViewport(768, 1024) // iPad width = breakpoint (768), não é mobile
+    setViewport(768, 1024) // iPad width = breakpoint (768), not mobile
 
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(false)
@@ -48,7 +48,7 @@ describe('useIsMobile Hook', () => {
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(true)
 
-    // Simular resize para desktop
+    // Simulate resize to desktop
     setViewport(1440, 900)
     window.dispatchEvent(new Event('resize'))
 

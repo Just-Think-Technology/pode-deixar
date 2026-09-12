@@ -3,13 +3,16 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CreateNotificationDto } from "./dto/create-notification.dto";
 
 @Injectable()
+// --- Public API ---
+// Methods callable from the notifications controller.
+
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(private prisma: PrismaService) {}
 
-  // Recipient is always the authenticated user; ignore the client-supplied
-  // recipient to prevent forged notifications to third parties.
+  // Recipient is always the authenticated user; client-supplied recipient is
+  // ignored to prevent forged notifications to third parties.
   async create(userId: string, dto: CreateNotificationDto) {
     const notification = await this.prisma.notification.create({
       data: {

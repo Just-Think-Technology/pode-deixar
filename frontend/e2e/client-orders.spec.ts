@@ -53,7 +53,7 @@ test.describe("Client requests (JTT-79)", () => {
   test("declines a pending proposal", async ({ page }) => {
     await page.goto("/client/orders/mock-client-order-001");
 
-    // Segunda proposta (R$ 220,00)
+    // Second proposal (R$ 220,00)
     await page.getByRole("button", { name: "Recusar" }).nth(1).click();
     await page.getByRole("button", { name: "Confirmar recusa" }).click();
 

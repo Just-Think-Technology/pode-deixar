@@ -1,3 +1,4 @@
+// purpose — role decorator and key for Nest guard/controllers
 import { SetMetadata } from '@nestjs/common';
 import { Role } from '@prisma/client';
 

@@ -1,3 +1,5 @@
+// purpose — service-orders ProposalsService
+
 import {
   Injectable,
   NotFoundException,
@@ -34,6 +36,9 @@ export class ProposalsService {
     };
   }
 
+// --- Public API ---
+// --- Private Helpers ---
+
   private formatProposalWithOrder(proposal: any) {
     return {
       ...this.formatProposal(proposal),
@@ -54,6 +59,9 @@ export class ProposalsService {
         : null,
     };
   }
+
+// --- Public API ---
+// --- Private Helpers ---
 
   async create(providerId: string, dto: CreateProposalDto, ip?: string) {
     const order = await this.prisma.serviceOrder.findUnique({
@@ -111,6 +119,9 @@ export class ProposalsService {
     return this.formatProposal(proposal);
   }
 
+// --- Public API ---
+// --- Private Helpers ---
+
   async findByIdForProvider(proposalId: string, providerId: string) {
     const proposal = await this.prisma.proposal.findUnique({
       where: { id: proposalId },
@@ -129,6 +140,9 @@ export class ProposalsService {
 
     return this.formatProposalWithOrder(proposal);
   }
+
+// --- Public API ---
+// --- Private Helpers ---
 
   async findByProvider(providerId: string, pagination?: PaginationQuery) {
     const { skip, take } = normalizePagination(pagination);
@@ -149,6 +163,9 @@ export class ProposalsService {
     return proposals.map((p) => this.formatProposalWithOrder(p));
   }
 
+// --- Public API ---
+// --- Private Helpers ---
+
   async findByServiceOrder(serviceOrderId: string) {
     const order = await this.prisma.serviceOrder.findUnique({
       where: { id: serviceOrderId },
@@ -165,6 +182,9 @@ export class ProposalsService {
 
     return proposals.map((p) => this.formatProposal(p));
   }
+
+// --- Public API ---
+// --- Private Helpers ---
 
   async update(
     providerId: string,
@@ -205,6 +225,9 @@ export class ProposalsService {
     return this.formatProposal(proposal);
   }
 
+// --- Public API ---
+// --- Private Helpers ---
+
   async withdraw(providerId: string, proposalId: string, ip?: string) {
     const existing = await this.prisma.proposal.findUnique({
       where: { id: proposalId },
@@ -233,6 +256,9 @@ export class ProposalsService {
 
     return this.formatProposal(proposal);
   }
+
+// --- Public API ---
+// --- Private Helpers ---
 
   async accept(clientId: string, proposalId: string, ip?: string) {
     const proposal = await this.prisma.proposal.findUnique({
@@ -284,6 +310,9 @@ export class ProposalsService {
     return this.formatProposal(updatedProposal);
   }
 
+// --- Public API ---
+// --- Private Helpers ---
+
   async reject(clientId: string, proposalId: string, ip?: string) {
     const proposal = await this.prisma.proposal.findUnique({
       where: { id: proposalId },
@@ -320,3 +349,6 @@ export class ProposalsService {
     return this.formatProposal(updated);
   }
 }
+
+// --- Public API ---
+// --- Private Helpers ---

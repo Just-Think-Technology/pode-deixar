@@ -18,8 +18,7 @@ import {
   RotulosCampos,
 } from "@pode-deixar/validation";
 
-// Rótulos dos campos do reviews (user-facing, em português); as mensagens de
-// restrição vivem no núcleo compartilhado.
+// purpose — reviews service field labels for validation error translation
 const ROTULOS_REVIEWS: RotulosCampos = {
   rating: "Nota",
   comment: "Comentário",
@@ -32,7 +31,9 @@ function translateValidationErrors(errors: ValidationError[]): string {
 }
 
 @Module({
+  // --- Imports ---
   imports: [
+    // --- Controllers ---
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [`../../.env.${process.env.NODE_ENV || "development"}`],
@@ -49,12 +50,15 @@ function translateValidationErrors(errors: ValidationError[]): string {
         ];
       },
     }),
+    // --- Providers ---
     PrismaModule,
     HealthModule,
     SharedModule,
     ReviewsModule,
   ],
+  // --- Controllers ---
   controllers: [AppController],
+  // --- Providers ---
   providers: [
     AppService,
     {

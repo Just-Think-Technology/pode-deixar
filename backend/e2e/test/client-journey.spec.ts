@@ -12,11 +12,11 @@ import {
   E2EApps,
 } from './apps';
 
-// ─── E2E: jornada completa do cliente ───────────────────────────────────────
-// Signup (auth) → verification → login → profile (users) → order → proposal
-// → acceptance → completion (orders) → payment + webhook (payments) → review
-// (reviews). The token issued by the auth-service is accepted by the other 4
-// services for real (same secret), as in production.
+// --- Client Journey ---
+// Complete client cross-service journey: signup (auth) → verification → login
+// → profile (users) → order → proposal → acceptance → completion (orders)
+// → payment + webhook (payments) → review (reviews). Auth service token is
+// accepted by the other 4 services for real (same secret), as in production.
 
 describe('Client journey (cross-service e2e)', () => {
   let apps: E2EApps;
@@ -178,7 +178,7 @@ describe('Client journey (cross-service e2e)', () => {
     expect(completed.status).toBe('COMPLETED');
   });
 
-  it('5. client pays via PIX and confirms (payments)', async () => {
+  it '5. client pays via PIX and confirms (payments)', async () => {
     const payment = (
       await request(apps.paymentsApp.getHttpServer())
         .post('/payments')
@@ -208,9 +208,9 @@ describe('Client journey (cross-service e2e)', () => {
         .expect(201)
     ).body;
     expect(confirmed.payment.status).toBe('PAID');
-  });
+  };
 
-  it('6. client reviews the service (reviews)', async () => {
+  it '6. client reviews the service (reviews)', async () => {
     const review = (
       await request(apps.reviewsApp.getHttpServer())
         .post('/reviews')

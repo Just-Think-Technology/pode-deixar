@@ -1,13 +1,14 @@
-# ============================================================
-# Pode Deixar - Stack local com hot-reload (comando único)
-# ============================================================
+# purpose: Pode Deixal local stack with hot-reload (single command).
+# Includes docker-compose.yml and applies dev overrides. Postgres is local
+# (host port 15432, since host system Postgres uses 5432); storage is local
+# MinIO (fixed dev credentials overridden below).
+#
 #   docker compose -f docker-compose.dev.yml up -d --build
 #
 # Inclui o docker-compose.yml e aplica os overrides de dev. Banco é o
 # Postgres local (porta do host 15432, pois o Postgres do sistema usa a
 # 5432); storage é o MinIO local (credencial fixa de dev, sobreposta por
 # serviço abaixo).
-# ============================================================
 
 include:
   - path: docker-compose.yml
@@ -15,20 +16,21 @@ include:
 name: pode-deixar-dev
 
 services:
-  # -- Postgres local: porta do host diferente da do sistema --
+
+  # -- Postgres local: host port different from system --
   postgres:
     ports: !override
       - "15432:5432"
 
-  # -- MinIO local (credenciais fixas de dev) --
+  # -- MinIO local (dev fixed credentials) --
   minio:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
 
   # -- Frontend (dev, hot-reload) --
-  # Imagem de produção no compose base NÃO monta código; sem este override,
-  # alterações no host não aparecem até rebuild.
+  # Production image in base compose does not mount code; without this override,
+  # changes on host do not appear until rebuild.
   frontend:
     build:
       context: ./frontend
@@ -37,7 +39,7 @@ services:
         NEXT_PUBLIC_BACKEND_URL: http://localhost:8080/api
     environment:
       NEXT_PUBLIC_BACKEND_URL: http://localhost:8080/api
-      # SSR dentro da rede Docker (localhost:8080 falha no container)
+      # SSR inside Docker network (localhost:8080 fails in container)
       BACKEND_INTERNAL_URL: http://caddy:8080/api
       WATCHPACK_POLLING: "true"
       CI: "true"
@@ -119,7 +121,7 @@ services:
       MINIO_SECRET_KEY: minioadmin
     ports: !override
       - "3003:3003"
-    # tsbuildinfo incremental + deleteOutDir pode apagar dist e não reemitir
+    # tsbuildinfo incremental + deleteOutDir can delete dist and not re-emit
     command: >
       sh -c "rm -f /app/services/service-orders/tsconfig.build.tsbuildinfo &&
              pnpm run --filter @pode-deixar/service-orders start:dev"

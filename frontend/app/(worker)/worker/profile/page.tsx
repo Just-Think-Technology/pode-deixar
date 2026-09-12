@@ -1,3 +1,4 @@
+// purpose: Worker profile route — renders profile page with auth integration
 import { redirect } from "next/navigation";
 
 import WorkerProfilePage from "@/components/pages/worker-profile-page";

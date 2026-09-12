@@ -7,6 +7,7 @@ import {
 import { DatabaseHealthIndicator } from './database.health';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
+// --- Public API ---
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {

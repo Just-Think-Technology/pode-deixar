@@ -14,6 +14,8 @@ jest.mock("crypto", () => ({
   randomUUID: jest.fn(() => "mocked-uuid"),
 }));
 
+// --- Helpers ---
+
 function mockFile(): Express.Multer.File {
   return {
     fieldname: "file",

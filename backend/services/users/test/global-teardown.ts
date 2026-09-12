@@ -11,6 +11,8 @@ dotenv.config({
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pode_deixar_test_users?schema=public';
 
+// --- Teardown ---
+// Order respects foreign key children-before-parents.
 export default async function globalTeardown() {
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   try {

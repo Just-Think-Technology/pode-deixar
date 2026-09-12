@@ -20,6 +20,7 @@ import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
 
 const logger = getLogger('password');
 
+// --- Public API ---
 @Controller('auth')
 @ApiTags('Password')
 export class PasswordController {

@@ -1,3 +1,4 @@
+// purpose: Worker services route — lists worker services with action integration
 import WorkerServicesPage from "@/components/pages/worker-services-page";
 import { getWorkerServicesAction } from "@/lib/auth/actions";
 

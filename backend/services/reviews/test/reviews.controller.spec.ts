@@ -5,6 +5,8 @@ import {
 } from "../src/reviews/reviews.controller";
 import { ReviewsService } from "../src/reviews/reviews.service";
 
+// --- Tests ---
+
 describe("ReviewsController", () => {
   let controller: ReviewsController;
   let publicController: PublicReviewsController;

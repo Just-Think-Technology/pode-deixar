@@ -1,3 +1,5 @@
+// purpose: Landing page — UI with Navbar, Hero, features, CTA, newsletter and footer
+
 "use client";
 
 import Link from "next/link";
@@ -25,7 +27,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 
-// ─── Navbar ──────────────────────────────────────────────────────────────────
+// --- Navbar ---
 
 function Navbar() {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -113,7 +115,7 @@ function Navbar() {
     );
 }
 
-// ─── Hero ─────────────────────────────────────────────────────────────────────
+// --- Hero ---
 
 function HeroSection() {
     return (
@@ -208,7 +210,7 @@ function HeroSection() {
     );
 }
 
-// ─── Como Funciona ────────────────────────────────────────────────────────────
+// --- Como Funciona ---
 
 const steps = [
     {
@@ -277,7 +279,7 @@ function HowItWorks() {
     );
 }
 
-// ─── Por que Pode-Deixar ──────────────────────────────────────────────────────
+// --- Por que Pode-Deixar ---
 
 const clientFeatures = [
     {
@@ -382,7 +384,7 @@ function WhyPodeDeixer() {
     );
 }
 
-// ─── CTA Section ──────────────────────────────────────────────────────────────
+// --- CTA Section ---
 
 function CtaSection() {
     return (
@@ -411,7 +413,7 @@ function CtaSection() {
     );
 }
 
-// ─── Newsletter ───────────────────────────────────────────────────────────────
+// --- Newsletter ---
 
 function Newsletter() {
     return (
@@ -443,7 +445,7 @@ function Newsletter() {
     );
 }
 
-// ─── Footer ───────────────────────────────────────────────────────────────────
+// --- Footer ---
 
 const socialIcons = [
     {
@@ -590,7 +592,7 @@ function Footer() {
     );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---
 
 export default function LandingPage() {
     return (

@@ -1,3 +1,4 @@
+// purpose: Client provider profile route — shows public professional profile
 import { notFound } from "next/navigation";
 
 import ClientProviderProfilePage from "@/components/pages/client-provider-profile-page";

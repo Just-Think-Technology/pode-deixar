@@ -26,6 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
+  // --- Public API ---
   async validate(payload: any) {
     // Only access tokens authenticate here; refresh tokens are rejected.
     if (payload.type !== 'access') {

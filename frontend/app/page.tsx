@@ -1,3 +1,4 @@
+// purpose: Client home page — server route wiring with role redirect
 import { redirect } from "next/navigation";
 
 import LandingPage from "@/components/pages/landing-page";

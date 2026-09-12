@@ -1,3 +1,4 @@
+// --- Setup ---
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -7,7 +8,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { MinioService } from '../src/storage/minio.service';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
-// --- Types ---
+// --- Setup ---
 
 export type TestRole = 'CLIENT' | 'PROVIDER' | 'ADMIN';
 

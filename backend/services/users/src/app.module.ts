@@ -23,8 +23,7 @@ import {
   RotulosCampos,
 } from "@pode-deixar/validation";
 
-// Rótulos dos campos do users (user-facing, em português); as mensagens de
-// restrição vivem no núcleo compartilhado.
+// purpose — users service field labels for validation error translation
 const ROTULOS_USERS: RotulosCampos = {
   title: "Título",
   description: "Descrição",
@@ -47,7 +46,9 @@ function translateValidationErrors(errors: ValidationError[]): string {
 }
 
 @Module({
+  // --- Imports ---
   imports: [
+    // --- Controllers ---
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [`../../.env.${process.env.NODE_ENV || "development"}`],
@@ -64,6 +65,7 @@ function translateValidationErrors(errors: ValidationError[]): string {
         ];
       },
     }),
+    // --- Providers ---
     PrismaModule,
     ProfilesModule,
     NotificationsModule,
@@ -75,6 +77,7 @@ function translateValidationErrors(errors: ValidationError[]): string {
     MinioModule,
   ],
   controllers: [AppController],
+  // --- Providers ---
   providers: [
     AppService,
     {

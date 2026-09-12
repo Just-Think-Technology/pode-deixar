@@ -34,7 +34,8 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
     const ttlSecs = Math.ceil(ttl / 1000);
 
     try {
-      // SET NX EX creates the key with its TTL atomically and only increments when the key already exists, avoiding a race on the first hit.
+      // SET NX EX creates the key with its TTL atomically and only increments
+      // when the key already exists, avoiding a race on the first hit.
       const created = await this.client.set(prefixedKey, '1', {
         EX: ttlSecs,
         NX: true,
@@ -65,7 +66,8 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
         timeToBlockExpire,
       };
     } catch (error) {
-      // Fail closed: without Redis there is no hit counting, so block instead of admitting the request without a limit.
+      // Fail closed: without Redis there is no hit counting, so block instead
+      // of admitting the request without a limit.
       console.error('Redis throttler storage error:', error);
       return {
         totalHits: limit + 1,

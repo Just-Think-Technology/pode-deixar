@@ -88,7 +88,7 @@ export async function getMyOrderByIdAction(
       getMyServiceOrderById(token, orderId),
     );
   } catch (err) {
-    // 400 = ownership (API.md / fix futuro); 403/404 = sem acesso / inexistente
+    // 400 = ownership (API.md / future fix); 403/404 = no access / not found
     if (
       err instanceof ApiError &&
       (err.status === 400 || err.status === 403 || err.status === 404)

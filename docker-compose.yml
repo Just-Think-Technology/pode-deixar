@@ -1,17 +1,13 @@
-# ============================================================
-# Pode Deixar - Stack local (PostgreSQL próprio)
-# ============================================================
-# Tudo roda local: serviços, frontend, Postgres, MinIO, Redis, Mailpit,
-# Caddy (+ backup diário do banco local). O .env.dev (versionado) fornece
-# as configs de dev; DATABASE_URL é montada para o Postgres local mesmo
-# que outro --env-file seja passado. Staging/prod usam os arquivos
+# purpose: Pode Deixal local stack (PostgreSQL own, MinIO, Redis, Mailpit, Caddy).
+# Development: all services, frontend, databases, object storage, SMTP testing,
+# and daily local backup. .env.dev provides configs; DATABASE_URL mounts to local
+# Postgres even when another --env-file is passed. Staging/production use
 # docker-compose.staging.yml / docker-compose.production.yml (Neon).
 #
 #   docker compose up -d --build
 #
-# Para hot-reload use o docker-compose.dev.yml (comando único):
+# For hot-reload use docker-compose.dev.yml (single command):
 #   docker compose -f docker-compose.dev.yml up -d --build
-# ============================================================
 
 services:
 
@@ -48,8 +44,6 @@ services:
       FRONTEND_URL: http://localhost:8080
       SMTP_HOST: mailpit
       TZ: America/Sao_Paulo
-      # Banco local (montada para o Postgres do compose, mesmo que
-      # outro --env-file seja passado)
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
       DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
@@ -73,8 +67,6 @@ services:
     env_file: ./.env.dev
     environment:
       TZ: America/Sao_Paulo
-      # Banco local (montada para o Postgres do compose, mesmo que
-      # outro --env-file seja passado)
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
       DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
@@ -98,8 +90,6 @@ services:
     env_file: ./.env.dev
     environment:
       TZ: America/Sao_Paulo
-      # Banco local (montada para o Postgres do compose, mesmo que
-      # outro --env-file seja passado)
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
       DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
@@ -123,8 +113,6 @@ services:
     env_file: ./.env.dev
     environment:
       TZ: America/Sao_Paulo
-      # Banco local (montada para o Postgres do compose, mesmo que
-      # outro --env-file seja passado)
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
       DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
@@ -148,8 +136,6 @@ services:
     env_file: ./.env.dev
     environment:
       TZ: America/Sao_Paulo
-      # Banco local (montada para o Postgres do compose, mesmo que
-      # outro --env-file seja passado)
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
       DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-pode_deixar}?schema=public
     ports:
@@ -176,6 +162,9 @@ services:
     depends_on:
       - auth
       - users
+      - service-orders
+      - payments
+      - reviews
 
   # -- MinIO --
   minio:
@@ -203,7 +192,7 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-    # dev-only: credenciais padrão minioadmin por conveniência local; nunca usar em staging/produção
+    # dev-only: default minioadmin credentials for local convenience; never use in staging/production
     entrypoint: >
       /bin/sh -c "
       mc alias set local http://minio:$${MINIO_PORT:-9000} $${MINIO_ACCESS_KEY:-minioadmin} $${MINIO_SECRET_KEY:-minioadmin} &&
@@ -222,7 +211,7 @@ services:
       - "127.0.0.1:1025:1025"
       - "127.0.0.1:8025:8025"
 
-  # -- Redis (Rate Limiting Distribuído) --
+  # -- Redis (Distributed Rate Limiting) --
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
@@ -236,7 +225,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # -- PostgreSQL Backup (pg_dump cron, banco local) --
+  # -- PostgreSQL Backup (pg_dump cron, local database) --
   postgres-backup:
     image: postgres:16-alpine
     env_file: ./.env.dev
@@ -245,7 +234,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-pode_deixar}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      BACKUP_SCHEDULE: "0 3 * * *"  # Diário às 03:00 UTC
+      BACKUP_SCHEDULE: "0 3 * * *"  # Daily at 03:00 UTC
       BACKUP_RETENTION_DAYS: "7"
       BACKUP_DIR: /backups
     volumes:
@@ -255,29 +244,28 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      # crond/crontab já vêm no BusyBox da imagem (não instalar nada);
-      # o pipe para `crontab -` grava no spool que o crond realmente lê
-      echo \"$${BACKUP_SCHEDULE} /usr/local/bin/backup.sh >> /var/log/cron.log 2>&1\" | crontab - &&
+      # BusyBox crontab already available; no need to install cron
+      echo \"$$BACKUP_SCHEDULE /usr/local/bin/backup.sh >> /var/log/cron.log 2>&1\" | crontab - &&
       cat > /usr/local/bin/backup.sh << 'EOF'
       #!/bin/sh
       set -e
-      TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
-      FILE=\"$${BACKUP_DIR}/pode_deixar_$${TIMESTAMP}.sql.gz\"
-      echo \"[$$(date)] Iniciando backup para $${FILE}\"
-      pg_dump -h $${POSTGRES_HOST} -U $${POSTGRES_USER} -d $${POSTGRES_DB} | gzip > $${FILE}
-      echo \"[$$(date)] Backup concluído: $${FILE}\"
-      # Limpeza de backups antigos
-      find $${BACKUP_DIR} -name 'pode_deixar_*.sql.gz' -mtime +$${BACKUP_RETENTION_DAYS} -delete
-      echo \"[$$(date)] Limpeza de backups antigos (> $${BACKUP_RETENTION_DAYS} dias) concluída\"
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      FILE="${BACKUP_DIR}/pode_deixar_$TIMESTAMP.sql.gz"
+      echo "[$(date)] Starting backup to ${FILE}"
+      pg_dump -h $POSTGRES_HOST -U $POSTGRES_USER -d $POSTGRES_DB | gzip > ${FILE}
+      echo "[$(date)] Backup completed: ${FILE}"
+      # Cleanup old backups
+      find ${BACKUP_DIR} -name 'pode_deixar_*.sql.gz' -mtime +$BACKUP_RETENTION_DAYS -delete
+      echo "[$(date)] Old backup cleanup (> $BACKUP_RETENTION_DAYS days) completed"
       EOF
       chmod +x /usr/local/bin/backup.sh &&
-      # Executa backup inicial imediatamente
+      # Run immediate initial backup
       /usr/local/bin/backup.sh &&
-      # Inicia cron em foreground
+      # Start cron in foreground
       crond -f -l 2
       "
 
-  # -- Proxy Reverso (Caddy) --
+  # -- Reverse Proxy (Caddy) --
   caddy:
     image: caddy:2-alpine
     ports:

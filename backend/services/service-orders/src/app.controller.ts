@@ -1,3 +1,5 @@
+// purpose — service-orders AppController
+
 import { Controller, Get } from "@nestjs/common";
 import { AppService } from "./app.service";
 
@@ -10,3 +12,6 @@ export class AppController {
     return this.appService.getHello();
   }
 }
+
+// --- Public API ---
+// --- Private Helpers ---

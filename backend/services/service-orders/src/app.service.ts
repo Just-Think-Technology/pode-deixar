@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+// purpose — service-orders AppService
 
 @Injectable()
 export class AppService {
@@ -6,3 +6,6 @@ export class AppService {
     return "Pode Deixar - Service Orders Service";
   }
 }
+
+// --- Public API ---
+// --- Private Helpers ---

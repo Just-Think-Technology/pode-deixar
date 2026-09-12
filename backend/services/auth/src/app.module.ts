@@ -20,8 +20,7 @@ import {
   MensagensRestricao,
 } from '@pode-deixar/validation';
 
-// Rótulos dos campos do auth (user-facing, em português); as mensagens de
-// restrição vivem no núcleo compartilhado, com as divergências do auth abaixo.
+// purpose — auth field labels (user-facing, in Portuguese); restriction messages live in shared core, with auth divergences below.
 const ROTULOS_AUTH: RotulosCampos = {
   email: 'Email',
   password: 'Senha',

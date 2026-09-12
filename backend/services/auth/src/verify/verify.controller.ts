@@ -2,6 +2,7 @@ import { Controller, Get, Headers, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
 import { VerifyService } from './verify.service';
 
+// --- Public API ---
 @Controller('auth')
 @ApiTags('Access')
 export class VerifyController {

@@ -1,3 +1,5 @@
+# purpose: CI pipeline for backend services (matrix build, lint, test, e2e, security, build, image, codeql, dependency-review).
+
 name: ci-backend
 
 on:
@@ -89,7 +91,7 @@ jobs:
     if: needs.changes.outputs.services != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -127,9 +129,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # Cada job de matrix já roda em runner isolado com seu próprio container
-      # `services.postgres`, então um único banco por job é suficiente.
-      # Mantido com nome por serviço apenas para deixar os logs mais legíveis.
+      # Each matrix job runs in an isolated runner with its own Postgres container,
+      # so a single database per job is sufficient. Named by service only for
+      # more readable logs.
       - name: Create test database for ${{ matrix.service }}
         run: |
           PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE \"pode_deixar_test_${{ matrix.service }}\";"
@@ -145,8 +147,8 @@ jobs:
 
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
 
-  # Jornada e2e cross-service (users → orders → payments → reviews no mesmo
-  # banco, como em produção). Job próprio com Postgres, sem matriz.
+  # Cross-service e2e journey (users → orders → payments → reviews in the
+  # same database, as in production). Standalone job without matrix.
   e2e:
     needs: changes
     if: needs.changes.outputs.services != '[]' || needs.changes.outputs.e2e == 'true'
@@ -190,9 +192,8 @@ jobs:
 
       - run: pnpm run test:e2e
 
-  # Testes de regressão dos pacotes compartilhados (logger/email/security).
-  # Job separado (sem matriz e sem Postgres): esses testes são unitários
-  # puros e o job `quick` é por serviço. Roda `backend/test:shared`.
+  # Regression tests for shared packages (logger/email/security).
+  # Unit-only tests; no Postgres. The `quick` job runs per service.
   shared:
     needs: changes
     if: needs.changes.outputs.services != '[]'
@@ -220,9 +221,9 @@ jobs:
 
       - run: pnpm run test:shared
 
-  # `security` agora depende só de `quick`, igual `build` — os dois rodam em
-  # paralelo em vez de security bloquear o início do build. Quem depende de
-  # ambos é o job `image`, que é o que realmente precisa do gate completo.
+  # Security now depends only on `quick`, same as `build` — they run in
+  # parallel instead of security blocking the start of the build. Who depends
+  # on both is the `image` job, which is the one that actually needs the full gate.
   security:
     needs: [changes, quick]
     runs-on: ubuntu-latest
@@ -252,20 +253,15 @@ jobs:
 
       - run: pnpm audit --prod --audit-level=high
 
+      # TruffleHog Secret Scanning
       - name: TruffleHog Secret Scanning
         uses: trufflesecurity/trufflehog@d411fff7b8879a62509f3fa98c07f247ac089a51
         with:
           extra_args: --only-verified
 
-      # NOTA: a checagem do eslint-plugin-security roda no job `quick`
-      # (lint por serviço) — cada serviço já aplica
-      # `securityPlugin.configs.recommended` no próprio eslint.config.mjs
-      # (flat config, ESLint 9). O step antigo foi removido porque:
-      # 1) `pnpm exec eslint` na raiz não encontra o binário (só existe
-      #    nos serviços);
-      # 2) `--plugin`/`--rulesdir` são flags do eslintrc removidas no ESLint 9;
-      # 3) `pnpm add -D -w` mutava package.json/lockfile durante o CI.
-
+  # `build` now depends only on `quick`, same as `security` — both run in
+  # parallel instead of security blocking the start of the build. Who depends
+  # on both is the `image` job, which is the one that actually needs the full gate.
   build:
     needs: [changes, quick]
     if: needs.changes.outputs.services != '[]'
@@ -293,8 +289,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Prisma Generate Cache
-        uses: actions/cache@v4
+      # Prisma Generate Cache
+      - uses: actions/cache@v4
         with:
           path: backend/node_modules/.prisma
           key: prisma-generate-${{ runner.os }}-${{ hashFiles('backend/prisma/schema.prisma') }}
@@ -331,11 +327,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # O metadata-action publica tags sempre em minúsculas, mas
-      # IMAGE_PREFIX preserva a caixa do nome da org (Just-Think-Technology).
-      # Normaliza a referência usada na leitura (sbom/cosign) para a forma
-      # canônica minúscula — igual ao que foi efetivamente publicado.
-      # (Mesmo fix já aplicado no ci-frontend.)
+      # The metadata-action publishes tags always in lowercase, but
+      # IMAGE_PREFIX preserves the org name (Just-Think-Technology).
+      # Normalizes the reference used in read (sbom/cosign) to the canonical
+      # lowercase form — same as what was effectively published.
+      # (Already fixed in ci-frontend.)
       - name: Normalize image reference to lowercase
         run: echo "IMAGE_REF=${{ env.REGISTRY }}/$(echo '${{ env.IMAGE_PREFIX }}-${{ matrix.service }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 

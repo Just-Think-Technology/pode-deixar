@@ -6,7 +6,7 @@ import {
   ApiError,
 } from '@/api/client'
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// --- Helpers ---
 
 const fetchMock = vi.fn()
 

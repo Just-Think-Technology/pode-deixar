@@ -4,6 +4,7 @@ import { AppModule } from "./app.module";
 import { getHelmetConfig } from "@pode-deixar/security";
 import createLogger from "@pode-deixar/logger";
 
+// purpose — bootstrap and configure the users service HTTP server
 const logger = createLogger("users-service");
 
 async function bootstrap() {

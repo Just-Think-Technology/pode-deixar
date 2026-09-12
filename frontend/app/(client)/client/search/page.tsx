@@ -1,3 +1,4 @@
+// purpose: Client search route — renders search page with categories
 import { getCategories } from "@/api/client/categories";
 import { ApiError } from "@/api/client";
 import ClientSearchPage from "@/components/pages/client-search-page";

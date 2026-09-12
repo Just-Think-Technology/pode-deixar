@@ -15,9 +15,9 @@ export class EmailService {
     const port = Number(this.configService.get<string>('SMTP_PORT')) || 587;
     const user = this.configService.get<string>('SMTP_USER');
     const pass = this.configService.get<string>('SMTP_PASS');
-    // TLS obrigatório por padrão (fail-closed: protege contra downgrade
-    // MITM em produção). Desligar só com SMTP_REQUIRE_TLS=false explícito
-    // (Mailpit local responde 502 a STARTTLS, pois não o implementa).
+    // TLS required by default (fail-closed: protects against MITM downgrade
+    // in production). Disable only with SMTP_REQUIRE_TLS=false explicit
+    // (Mailpit local returns 502 to STARTTLS, as it is not implemented).
     const tlsObrigatorio =
       (this.configService.get<string>('SMTP_REQUIRE_TLS') ?? 'true').toLowerCase() !==
       'false';

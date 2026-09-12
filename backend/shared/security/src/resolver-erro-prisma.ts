@@ -5,9 +5,9 @@ export interface ErroPrismaResolvido {
   message: string;
 }
 
-// Mapeia códigos conhecidos do Prisma para respostas genéricas (sem vazar
-// detalhes internos). Retorna undefined para códigos desconhecidos — o
-// chamador decide o fallback (em geral, 500 genérico com detalhe só no log).
+// Maps known Prisma error codes to generic responses (without leaking
+// internal details). Returns undefined for unknown codes — the caller
+// decides the fallback (generally generic 500 with detail only in log).
 export function resolverErroPrisma(code: unknown): ErroPrismaResolvido | undefined {
   if (code === 'P2002') {
     return { status: HttpStatus.CONFLICT, message: 'Registro já existe' };

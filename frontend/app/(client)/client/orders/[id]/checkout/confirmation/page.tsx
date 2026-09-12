@@ -1,3 +1,4 @@
+// purpose: Client checkout confirmation route — shows payment confirmation page
 import { notFound, redirect } from "next/navigation";
 
 import ClientCheckoutConfirmationPage from "@/components/pages/client-checkout-confirmation-page";

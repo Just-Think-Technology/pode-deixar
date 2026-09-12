@@ -3,6 +3,7 @@ import { HealthController } from "../src/health/health.controller";
 import { HealthCheckService, HealthCheckResult } from "@nestjs/terminus";
 import { DatabaseHealthIndicator } from "../src/health/database.health";
 
+// --- Tests ---
 describe("HealthController", () => {
   let controller: HealthController;
 
