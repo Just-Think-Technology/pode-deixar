@@ -12,6 +12,8 @@ import {
 import { PrismaModule } from "@pode-deixar/prisma";
 import { SharedModule } from "../shared/shared.module";
 
+import { ServiceOrdersRepository } from "./service-orders.repository";
+
 @Module({
 
   // --- Imports ---
@@ -30,7 +32,7 @@ import { SharedModule } from "../shared/shared.module";
 
   // --- Providers ---
 
-  providers: [ServiceOrdersService],
+  providers: [ServiceOrdersService, ServiceOrdersRepository],
   exports: [ServiceOrdersService],
 })
 export class ServiceOrdersModule {}

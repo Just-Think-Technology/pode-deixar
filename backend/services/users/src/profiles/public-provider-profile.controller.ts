@@ -1,6 +1,6 @@
 // Public provider profile controller — unauthenticated profile view
 
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, ParseUUIDPipe } from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
@@ -15,8 +15,6 @@ import { ProfilesService } from "./profiles.service";
 export class PublicProviderProfileController {
   constructor(private readonly profilesService: ProfilesService) {}
 
-  // --- Public API ---
-
   @Get()
   @ApiOperation({ summary: "View public profile of a provider" })
   @ApiParam({
@@ -29,7 +27,7 @@ export class PublicProviderProfileController {
   })
   @ApiNotFoundResponse({ description: "Provider profile not found" })
   async getPublicProviderProfile(
-    @Param("providerId") providerProfileId: string,
+    @Param("providerId", ParseUUIDPipe) providerProfileId: string,
   ) {
     return this.profilesService.getPublicProviderProfile(providerProfileId);
   }

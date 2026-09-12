@@ -11,6 +11,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -22,9 +23,8 @@ import {
 import { ProposalsService } from "./proposals.service";
 import { CreateProposalDto } from "./dto/create-proposal.dto";
 import { UpdateProposalDto } from "./dto/update-proposal.dto";
-import { PaginationQueryDto } from "../shared/pagination-query.dto";
+import { PaginationQueryDto } from "@pode-deixar/validation";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Propostas (Prestador)")
 @Controller("proposals")
@@ -32,8 +32,6 @@ import { AuthenticatedRequest } from "@pode-deixar/security";
 @ApiBearerAuth()
 export class ProposalsController {
   constructor(private readonly proposalsService: ProposalsService) {}
-
-  // --- Public API ---
 
   @Post()
   @Roles("PROVIDER")
@@ -46,7 +44,7 @@ export class ProposalsController {
     status: 400,
     description: "Order is not open or already has a proposal",
   })
-  async create(@Request() req: AuthenticatedRequest, @Body() dto: CreateProposalDto) {
+  async create(@Request() req: any, @Body() dto: CreateProposalDto) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.proposalsService.create(userId, dto, ip);
@@ -60,7 +58,7 @@ export class ProposalsController {
     description: "Proposals list returned successfully",
   })
   async findMyProposals(
-    @Request() req: AuthenticatedRequest,
+    @Request() req: any,
     @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
@@ -75,8 +73,6 @@ export class ProposalsController {
 export class ProposalDetailController {
   constructor(private readonly proposalsService: ProposalsService) {}
 
-  // --- Public API ---
-
   @Get()
   @Roles("PROVIDER")
   @ApiOperation({ summary: "Get proposal detail (owner only)" })
@@ -86,7 +82,10 @@ export class ProposalDetailController {
     description: "Proposal detail returned successfully",
   })
   @ApiResponse({ status: 404, description: "Proposal not found" })
-  async findOne(@Request() req: AuthenticatedRequest, @Param("proposalId") proposalId: string) {
+  async findOne(
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
+  ) {
     const userId = req.user.sub;
     return this.proposalsService.findByIdForProvider(proposalId, userId);
   }
@@ -100,8 +99,8 @@ export class ProposalDetailController {
   @ApiResponse({ status: 200, description: "Proposal updated successfully" })
   @ApiResponse({ status: 404, description: "Proposal not found" })
   async update(
-    @Request() req: AuthenticatedRequest,
-    @Param("proposalId") proposalId: string,
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
     @Body() dto: UpdateProposalDto,
   ) {
     const userId = req.user.sub;
@@ -115,7 +114,10 @@ export class ProposalDetailController {
   @ApiParam({ name: "proposalId", description: "Proposal ID" })
   @ApiResponse({ status: 200, description: "Proposal withdrawn successfully" })
   @ApiResponse({ status: 404, description: "Proposal not found" })
-  async withdraw(@Request() req: AuthenticatedRequest, @Param("proposalId") proposalId: string) {
+  async withdraw(
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.proposalsService.withdraw(userId, proposalId, ip);
@@ -129,8 +131,6 @@ export class ProposalDetailController {
 export class AcceptRejectController {
   constructor(private readonly proposalsService: ProposalsService) {}
 
-  // --- Public API ---
-
   @Post("accept")
   @Roles("CLIENT")
   @ApiOperation({ summary: "Accept proposal (order owner only)" })
@@ -141,7 +141,10 @@ export class AcceptRejectController {
     status: 400,
     description: "Order is not open or proposal is not pending",
   })
-  async accept(@Request() req: AuthenticatedRequest, @Param("proposalId") proposalId: string) {
+  async accept(
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.proposalsService.accept(userId, proposalId, ip);
@@ -153,7 +156,10 @@ export class AcceptRejectController {
   @ApiParam({ name: "proposalId", description: "Proposal ID" })
   @ApiResponse({ status: 200, description: "Proposal rejected successfully" })
   @ApiResponse({ status: 404, description: "Proposal not found" })
-  async reject(@Request() req: AuthenticatedRequest, @Param("proposalId") proposalId: string) {
+  async reject(
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.proposalsService.reject(userId, proposalId, ip);

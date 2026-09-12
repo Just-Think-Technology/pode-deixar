@@ -2,7 +2,7 @@
 
 import { Test, TestingModule } from "@nestjs/testing";
 import { ServiceOrdersService } from "../src/service-orders/service-orders.service";
-import { PrismaService } from "@pode-deixar/prisma";
+import { ServiceOrdersRepository } from "../src/service-orders/service-orders.repository";
 import { ServicesLoggerService } from "../src/shared/services-logger.service";
 import {
   NotFoundException,
@@ -31,19 +31,21 @@ describe("ServiceOrdersService", () => {
     category: { id: "cat-1", name: "Test", slug: "test" },
   };
 
-  const mockPrisma = {
-    serviceOrder: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-    providerService: {
-      findUnique: jest.fn(),
-    },
+  const mockRepository = {
+    findProviderUserById: jest.fn(),
+    createOrder: jest.fn(),
+    findReceivedByProvider: jest.fn(),
+    findByClient: jest.fn(),
+    findOrderWithProposalsById: jest.fn(),
+    findOrderWithAccessById: jest.fn(),
+    findOpenOrders: jest.fn(),
+    findOrderById: jest.fn(),
+    updateOrder: jest.fn(),
+    cancelOrder: jest.fn(),
+    completeOrder: jest.fn(),
+    findProviderServiceById: jest.fn(),
+    createHiredOrder: jest.fn(),
+    findProviderAgenda: jest.fn(),
   };
 
   const mockLogger = {
@@ -58,7 +60,7 @@ describe("ServiceOrdersService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ServiceOrdersService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ServiceOrdersRepository, useValue: mockRepository },
         { provide: ServicesLoggerService, useValue: mockLogger },
       ],
     }).compile();
@@ -75,24 +77,21 @@ describe("ServiceOrdersService", () => {
     };
 
     it("should create a service order", async () => {
-      mockPrisma.serviceOrder.create.mockResolvedValue(mockOrder);
+      mockRepository.createOrder.mockResolvedValue(mockOrder);
 
       const result = await service.create("client-1", dto, "127.0.0.1");
 
       expect(result.client_id).toBe("client-1");
       expect(result.title).toBe("Test Order");
       expect(result.provider_id).toBeNull();
-      expect(mockPrisma.serviceOrder.create).toHaveBeenCalledWith({
-        data: {
-          clientId: "client-1",
-          providerId: null,
-          title: "Test Order",
-          description: "Test Description",
-          categoryId: "cat-1",
-          budgetMin: null,
-          budgetMax: null,
-        },
-        include: { category: { select: { id: true, name: true, slug: true } } },
+      expect(mockRepository.createOrder).toHaveBeenCalledWith({
+        clientId: "client-1",
+        providerId: null,
+        title: "Test Order",
+        description: "Test Description",
+        categoryId: "cat-1",
+        budgetMin: null,
+        budgetMax: null,
       });
       expect(mockLogger.logServiceOrderCreated).toHaveBeenCalledWith(
         "client-1",
@@ -103,11 +102,11 @@ describe("ServiceOrdersService", () => {
 
     it("should create a service order with providerId when targeting a specific provider", async () => {
       const dtoWithProvider = { ...dto, providerId: "provider-1" };
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockRepository.findProviderUserById.mockResolvedValue({
         id: "provider-1",
         role: "PROVIDER",
       });
-      mockPrisma.serviceOrder.create.mockResolvedValue({
+      mockRepository.createOrder.mockResolvedValue({
         ...mockOrder,
         providerId: "provider-1",
       });
@@ -115,21 +114,17 @@ describe("ServiceOrdersService", () => {
       const result = await service.create("client-1", dtoWithProvider);
 
       expect(result.provider_id).toBe("provider-1");
-      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: "provider-1" },
-        select: { id: true, role: true },
-      });
-      expect(mockPrisma.serviceOrder.create).toHaveBeenCalledWith({
-        data: {
-          clientId: "client-1",
-          providerId: "provider-1",
-          title: "Test Order",
-          description: "Test Description",
-          categoryId: "cat-1",
-          budgetMin: null,
-          budgetMax: null,
-        },
-        include: { category: { select: { id: true, name: true, slug: true } } },
+      expect(mockRepository.findProviderUserById).toHaveBeenCalledWith(
+        "provider-1",
+      );
+      expect(mockRepository.createOrder).toHaveBeenCalledWith({
+        clientId: "client-1",
+        providerId: "provider-1",
+        title: "Test Order",
+        description: "Test Description",
+        categoryId: "cat-1",
+        budgetMin: null,
+        budgetMax: null,
       });
     });
 
@@ -145,22 +140,19 @@ describe("ServiceOrdersService", () => {
           postalCode: "01305-000",
         },
       };
-      mockPrisma.serviceOrder.create.mockResolvedValue(mockOrder);
+      mockRepository.createOrder.mockResolvedValue(mockOrder);
 
       await service.create("client-1", dtoWithAddress);
 
-      expect(mockPrisma.serviceOrder.create).toHaveBeenCalledWith({
-        data: {
-          clientId: "client-1",
-          providerId: null,
-          title: "Test Order",
-          description: "Test Description",
-          categoryId: "cat-1",
-          budgetMin: null,
-          budgetMax: null,
-          address: dtoWithAddress.address,
-        },
-        include: { category: { select: { id: true, name: true, slug: true } } },
+      expect(mockRepository.createOrder).toHaveBeenCalledWith({
+        clientId: "client-1",
+        providerId: null,
+        title: "Test Order",
+        description: "Test Description",
+        categoryId: "cat-1",
+        budgetMin: null,
+        budgetMax: null,
+        address: dtoWithAddress.address,
       });
     });
 
@@ -174,7 +166,7 @@ describe("ServiceOrdersService", () => {
 
     it("should throw BadRequestException when provider does not exist", async () => {
       const dtoWithProvider = { ...dto, providerId: "nonexistent" };
-      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockRepository.findProviderUserById.mockResolvedValue(null);
 
       await expect(
         service.create("client-1", dtoWithProvider),
@@ -183,7 +175,7 @@ describe("ServiceOrdersService", () => {
 
     it("should throw BadRequestException when user is not a provider", async () => {
       const dtoWithProvider = { ...dto, providerId: "client-2" };
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockRepository.findProviderUserById.mockResolvedValue({
         id: "client-2",
         role: "CLIENT",
       });
@@ -196,42 +188,38 @@ describe("ServiceOrdersService", () => {
 
   describe("findByClient", () => {
     it("should return orders for a client", async () => {
-      mockPrisma.serviceOrder.findMany.mockResolvedValue([mockOrder]);
+      mockRepository.findByClient.mockResolvedValue([mockOrder]);
 
       const result = await service.findByClient("client-1");
 
       expect(result).toHaveLength(1);
       expect(result[0].client_id).toBe("client-1");
-      expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith({
-        where: { clientId: "client-1" },
-        orderBy: { createdAt: "desc" },
-        skip: 0,
-        take: 20,
-        include: { category: { select: { id: true, name: true, slug: true } } },
-      });
+      expect(mockRepository.findByClient).toHaveBeenCalledWith(
+        "client-1",
+        0,
+        20,
+      );
     });
   });
 
   describe("findReceivedByProvider", () => {
     it("should return orders directed to a provider", async () => {
       const directedOrder = { ...mockOrder, providerId: "provider-1" };
-      mockPrisma.serviceOrder.findMany.mockResolvedValue([directedOrder]);
+      mockRepository.findReceivedByProvider.mockResolvedValue([directedOrder]);
 
       const result = await service.findReceivedByProvider("provider-1");
 
       expect(result).toHaveLength(1);
       expect(result[0].provider_id).toBe("provider-1");
-      expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith({
-        where: { providerId: "provider-1" },
-        orderBy: { createdAt: "desc" },
-        skip: 0,
-        take: 20,
-        include: { category: { select: { id: true, name: true, slug: true } } },
-      });
+      expect(mockRepository.findReceivedByProvider).toHaveBeenCalledWith(
+        "provider-1",
+        0,
+        20,
+      );
     });
 
     it("should return empty array when no orders directed", async () => {
-      mockPrisma.serviceOrder.findMany.mockResolvedValue([]);
+      mockRepository.findReceivedByProvider.mockResolvedValue([]);
 
       const result = await service.findReceivedByProvider("provider-1");
 
@@ -241,7 +229,7 @@ describe("ServiceOrdersService", () => {
 
   describe("findById", () => {
     it("should return an order by id", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderWithProposalsById.mockResolvedValue({
         ...mockOrder,
         proposals: [],
       });
@@ -253,7 +241,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw NotFoundException when order not found", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+      mockRepository.findOrderWithProposalsById.mockResolvedValue(null);
 
       await expect(service.findById("nonexistent")).rejects.toThrow(
         NotFoundException,
@@ -277,7 +265,7 @@ describe("ServiceOrdersService", () => {
         },
       ];
 
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderWithProposalsById.mockResolvedValue({
         ...mockOrder,
         clientId: "client-1",
         proposals: mockProposals,
@@ -293,7 +281,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw NotFoundException when order does not exist", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+      mockRepository.findOrderWithProposalsById.mockResolvedValue(null);
 
       await expect(
         service.findByIdForClient("invalid-id", "client-1"),
@@ -301,7 +289,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw ForbiddenException when client is not the owner", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderWithProposalsById.mockResolvedValue({
         ...mockOrder,
         clientId: "other-client",
         proposals: [],
@@ -340,7 +328,7 @@ describe("ServiceOrdersService", () => {
         },
       ];
 
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderWithAccessById.mockResolvedValue({
         ...mockOrder,
         clientId: "client-1",
         proposals: mockProposals,
@@ -358,7 +346,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should return order with own proposal when PROVIDER has a proposal", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderWithAccessById.mockResolvedValue({
         ...mockOrder,
         proposals: [
           {
@@ -387,7 +375,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should return order without proposals when PROVIDER is the target but has no proposal", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderWithAccessById.mockResolvedValue({
         ...mockOrder,
         providerId: "provider-1",
         proposals: [],
@@ -411,7 +399,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should return photos when CLIENT is the owner", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderWithAccessById.mockResolvedValue({
         ...mockOrder,
         clientId: "client-1",
         proposals: [],
@@ -432,7 +420,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw ForbiddenException when PROVIDER is not the target and has no proposal", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderWithAccessById.mockResolvedValue({
         ...mockOrder,
         providerId: "provider-2",
         proposals: [],
@@ -444,7 +432,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw ForbiddenException when CLIENT is not the owner", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderWithAccessById.mockResolvedValue({
         ...mockOrder,
         clientId: "other-client",
         proposals: [],
@@ -456,7 +444,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw NotFoundException when order does not exist", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+      mockRepository.findOrderWithAccessById.mockResolvedValue(null);
 
       await expect(
         service.findByIdWithAccess("invalid-id", "client-1", "CLIENT"),
@@ -466,25 +454,20 @@ describe("ServiceOrdersService", () => {
 
   describe("findOpenOrders", () => {
     it("should return only open orders excluding directed ones of other providers", async () => {
-      mockPrisma.serviceOrder.findMany.mockResolvedValue([mockOrder]);
+      mockRepository.findOpenOrders.mockResolvedValue([mockOrder]);
 
       const result = await service.findOpenOrders("provider-1");
 
       expect(result).toHaveLength(1);
-      expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith({
-        where: {
-          status: "OPEN",
-          OR: [{ providerId: null }, { providerId: "provider-1" }],
-        },
-        orderBy: { createdAt: "desc" },
-        skip: 0,
-        take: 20,
-        include: { category: { select: { id: true, name: true, slug: true } } },
-      });
+      expect(mockRepository.findOpenOrders).toHaveBeenCalledWith(
+        "provider-1",
+        0,
+        20,
+      );
     });
 
     it("should return list items with summarized address (city/state only)", async () => {
-      mockPrisma.serviceOrder.findMany.mockResolvedValue([
+      mockRepository.findOpenOrders.mockResolvedValue([
         {
           ...mockOrder,
           address: {
@@ -533,7 +516,7 @@ describe("ServiceOrdersService", () => {
     };
 
     it("should return only paid jobs of the provider in the window", async () => {
-      mockPrisma.serviceOrder.findMany.mockResolvedValue([agendaOrder]);
+      mockRepository.findProviderAgenda.mockResolvedValue([agendaOrder]);
 
       const result = await service.findProviderAgenda(
         "provider-1",
@@ -541,34 +524,11 @@ describe("ServiceOrdersService", () => {
         "2026-08-31",
       );
 
-      expect(mockPrisma.serviceOrder.findMany).toHaveBeenCalledWith({
-        where: {
-          status: { in: ["IN_PROGRESS", "COMPLETED"] },
-          scheduledAt: {
-            gte: new Date("2026-08-01T00:00:00.000Z"),
-            lte: new Date("2026-08-31T23:59:59.999Z"),
-          },
-          payments: { some: { status: "PAID" } },
-          OR: [
-            { providerId: "provider-1" },
-            {
-              proposals: { some: { providerId: "provider-1", status: "ACCEPTED" } },
-            },
-          ],
-        },
-        include: {
-          photos: {
-            select: { id: true, url: true },
-            orderBy: { createdAt: "asc" },
-          },
-          payments: {
-            where: { status: "PAID" },
-            orderBy: { paidAt: "desc" },
-            take: 1,
-          },
-        },
-        orderBy: { scheduledAt: "asc" },
-      });
+      expect(mockRepository.findProviderAgenda).toHaveBeenCalledWith(
+        "provider-1",
+        new Date("2026-08-01T00:00:00.000Z"),
+        new Date("2026-08-31T23:59:59.999Z"),
+      );
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
@@ -612,8 +572,8 @@ describe("ServiceOrdersService", () => {
   describe("update", () => {
     it("should update an order", async () => {
       const updateDto = { title: "Updated Title" };
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockOrder);
-      mockPrisma.serviceOrder.update.mockResolvedValue({
+      mockRepository.findOrderById.mockResolvedValue(mockOrder);
+      mockRepository.updateOrder.mockResolvedValue({
         ...mockOrder,
         title: "Updated Title",
       });
@@ -621,10 +581,17 @@ describe("ServiceOrdersService", () => {
       const result = await service.update("client-1", "order-1", updateDto);
 
       expect(result.title).toBe("Updated Title");
+      expect(mockRepository.updateOrder).toHaveBeenCalledWith("order-1", {
+        title: "Updated Title",
+        description: "Test Description",
+        categoryId: "cat-1",
+        budgetMin: null,
+        budgetMax: null,
+      });
     });
 
     it("should throw NotFoundException when order not found", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+      mockRepository.findOrderById.mockResolvedValue(null);
 
       await expect(
         service.update("client-1", "nonexistent", {}),
@@ -632,7 +599,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw ForbiddenException when client does not own order", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockOrder);
+      mockRepository.findOrderById.mockResolvedValue(mockOrder);
 
       await expect(
         service.update("other-client", "order-1", {}),
@@ -640,7 +607,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw BadRequestException when order is not OPEN", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
         status: "IN_PROGRESS",
       });
@@ -653,8 +620,8 @@ describe("ServiceOrdersService", () => {
 
   describe("cancel", () => {
     it("should cancel an order", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockOrder);
-      mockPrisma.serviceOrder.update.mockResolvedValue({
+      mockRepository.findOrderById.mockResolvedValue(mockOrder);
+      mockRepository.cancelOrder.mockResolvedValue({
         ...mockOrder,
         status: "CANCELLED",
       });
@@ -662,10 +629,11 @@ describe("ServiceOrdersService", () => {
       const result = await service.cancel("client-1", "order-1");
 
       expect(result.status).toBe("CANCELLED");
+      expect(mockRepository.cancelOrder).toHaveBeenCalledWith("order-1");
     });
 
     it("should throw BadRequestException when order already cancelled", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
         status: "CANCELLED",
       });
@@ -676,7 +644,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw BadRequestException when order is completed", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
         status: "COMPLETED",
       });
@@ -687,7 +655,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw NotFoundException when order not found", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+      mockRepository.findOrderById.mockResolvedValue(null);
 
       await expect(service.cancel("client-1", "nonexistent")).rejects.toThrow(
         NotFoundException,
@@ -695,7 +663,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw ForbiddenException when client does not own order", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockOrder);
+      mockRepository.findOrderById.mockResolvedValue(mockOrder);
 
       await expect(
         service.cancel("other-client", "order-1"),
@@ -711,8 +679,8 @@ describe("ServiceOrdersService", () => {
     };
 
     it("should complete an order in progress", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(inProgressOrder);
-      mockPrisma.serviceOrder.update.mockResolvedValue({
+      mockRepository.findOrderById.mockResolvedValue(inProgressOrder);
+      mockRepository.completeOrder.mockResolvedValue({
         ...inProgressOrder,
         status: "COMPLETED",
       });
@@ -720,6 +688,7 @@ describe("ServiceOrdersService", () => {
       const result = await service.complete("provider-1", "order-1");
 
       expect(result.status).toBe("COMPLETED");
+      expect(mockRepository.completeOrder).toHaveBeenCalledWith("order-1");
       expect(mockLogger.logServiceOrderCompleted).toHaveBeenCalledWith(
         "provider-1",
         "order-1",
@@ -728,7 +697,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw NotFoundException when order not found", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+      mockRepository.findOrderById.mockResolvedValue(null);
 
       await expect(
         service.complete("provider-1", "nonexistent"),
@@ -736,7 +705,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw ForbiddenException when provider is not the assigned provider", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(inProgressOrder);
+      mockRepository.findOrderById.mockResolvedValue(inProgressOrder);
 
       await expect(
         service.complete("other-provider", "order-1"),
@@ -744,7 +713,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw BadRequestException when order is already completed", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderById.mockResolvedValue({
         ...inProgressOrder,
         status: "COMPLETED",
       });
@@ -755,7 +724,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw BadRequestException when order is not in progress", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderById.mockResolvedValue({
         ...inProgressOrder,
         status: "OPEN",
       });
@@ -799,8 +768,8 @@ describe("ServiceOrdersService", () => {
     };
 
     it("should hire a provider service and create IN_PROGRESS order", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue(mockProviderService);
-      mockPrisma.serviceOrder.create.mockResolvedValue(hiredOrder);
+      mockRepository.findProviderServiceById.mockResolvedValue(mockProviderService);
+      mockRepository.createHiredOrder.mockResolvedValue(hiredOrder);
 
       const result = await service.hireFromProvider("client-1", hireDto, "127.0.0.1");
 
@@ -808,23 +777,19 @@ describe("ServiceOrdersService", () => {
       expect(result.provider_id).toBe("provider-1");
       expect(result.provider_service_id).toBe("service-1");
       expect(result.agreed_price).toBe(150.0);
-      expect(mockPrisma.serviceOrder.create).toHaveBeenCalledWith({
-        data: {
-          clientId: "client-1",
-          providerId: "provider-1",
-          providerServiceId: "service-1",
-          agreedPrice: 150.0,
-          title: "Instalação de chuveiro",
-          description: "Instalação de chuveiro elétrico",
-          categoryId: "cat-1",
-          status: "IN_PROGRESS",
-        },
-        include: { category: { select: { id: true, name: true, slug: true } } },
+      expect(mockRepository.createHiredOrder).toHaveBeenCalledWith({
+        clientId: "client-1",
+        providerId: "provider-1",
+        providerServiceId: "service-1",
+        agreedPrice: 150.0,
+        title: "Instalação de chuveiro",
+        description: "Instalação de chuveiro elétrico",
+        categoryId: "cat-1",
       });
     });
 
     it("should throw NotFoundException when provider service not found", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue(null);
+      mockRepository.findProviderServiceById.mockResolvedValue(null);
 
       await expect(
         service.hireFromProvider("client-1", hireDto),
@@ -832,7 +797,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw BadRequestException when service is not active", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue({
+      mockRepository.findProviderServiceById.mockResolvedValue({
         ...mockProviderService,
         isActive: false,
       });
@@ -843,7 +808,7 @@ describe("ServiceOrdersService", () => {
     });
 
     it("should throw BadRequestException when hiring own service", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue({
+      mockRepository.findProviderServiceById.mockResolvedValue({
         ...mockProviderService,
         providerProfile: { userId: "client-1" },
       });

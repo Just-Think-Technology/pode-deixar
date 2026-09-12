@@ -5,6 +5,8 @@ import { NotificationsService } from "./notifications.service";
 import { NotificationsController } from "./notifications.controller";
 import { PrismaModule } from "@pode-deixar/prisma";
 
+import { NotificationsRepository } from "./notifications.repository";
+
 @Module({
 
   // --- Imports ---
@@ -17,7 +19,7 @@ import { PrismaModule } from "@pode-deixar/prisma";
 
   // --- Providers ---
 
-  providers: [NotificationsService],
+  providers: [NotificationsService, NotificationsRepository],
   exports: [NotificationsService],
 })
 export class NotificationsModule {}

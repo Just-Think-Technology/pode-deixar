@@ -11,6 +11,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -25,7 +26,6 @@ import { CreateProviderServiceDto } from "./dto/create-provider-service.dto";
 import { UpdateProviderServiceDto } from "./dto/update-provider-service.dto";
 import { SearchProvidersQueryDto } from "./dto/search-providers-query.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Provider Services")
 @Controller("providers/me/services")
@@ -36,8 +36,6 @@ export class ProviderServicesController {
     private readonly providerServicesService: ProviderServicesService,
   ) {}
 
-  // --- Public API ---
-
   @Post()
   @Roles("PROVIDER")
   @ApiOperation({ summary: "Register a new service (providers only)" })
@@ -47,14 +45,12 @@ export class ProviderServicesController {
     description: "Provider profile not found",
   })
   async createService(
-    @Request() req: AuthenticatedRequest,
+    @Request() req: any,
     @Body() dto: CreateProviderServiceDto,
-  ) {
+  ): Promise<any> {
     const userId = req.user.sub;
     const ip = req.ip;
-    const profile =
-      await this.providerServicesService.getProviderProfileByUserId(userId);
-    return this.providerServicesService.createService(profile.id, dto, ip);
+    return this.providerServicesService.createServiceForUser(userId, dto, ip);
   }
 
   @Get()
@@ -68,11 +64,9 @@ export class ProviderServicesController {
     status: 404,
     description: "Provider profile not found",
   })
-  async getMyServices(@Request() req: AuthenticatedRequest) {
+  async getMyServices(@Request() req: any): Promise<any> {
     const userId = req.user.sub;
-    const profile =
-      await this.providerServicesService.getProviderProfileByUserId(userId);
-    return this.providerServicesService.getMyServices(profile.id);
+    return this.providerServicesService.getMyServicesForUser(userId);
   }
 }
 
@@ -85,8 +79,6 @@ export class ProviderSearchController {
   constructor(
     private readonly providerServicesService: ProviderServicesService,
   ) {}
-
-  // --- Public API ---
 
   @Get()
   @ApiOperation({ summary: "Search providers by category or text" })
@@ -119,8 +111,6 @@ export class PublicProviderServicesController {
     private readonly providerServicesService: ProviderServicesService,
   ) {}
 
-  // --- Public API ---
-
   @Get()
   @ApiOperation({ summary: "List public services of a provider" })
   @ApiParam({ name: "providerId", description: "Provider profile ID" })
@@ -133,8 +123,8 @@ export class PublicProviderServicesController {
     description: "Provider profile not found",
   })
   async getProviderServices(
-    @Param("providerId") providerProfileId: string,
-  ) {
+    @Param("providerId", ParseUUIDPipe) providerProfileId: string,
+  ): Promise<any> {
     return this.providerServicesService.getProviderServices(providerProfileId);
   }
 }
@@ -148,8 +138,6 @@ export class ProviderServiceDetailController {
     private readonly providerServicesService: ProviderServicesService,
   ) {}
 
-  // --- Public API ---
-
   @Patch()
   @Roles("PROVIDER")
   @ApiOperation({ summary: "Update service (owner only)" })
@@ -160,16 +148,14 @@ export class ProviderServiceDetailController {
     description: "Service does not belong to this provider",
   })
   async updateService(
-    @Request() req: AuthenticatedRequest,
-    @Param("serviceId") serviceId: string,
+    @Request() req: any,
+    @Param("serviceId", ParseUUIDPipe) serviceId: string,
     @Body() dto: UpdateProviderServiceDto,
   ) {
     const userId = req.user.sub;
     const ip = req.ip;
-    const profile =
-      await this.providerServicesService.getProviderProfileByUserId(userId);
-    return this.providerServicesService.updateService(
-      profile.id,
+    return this.providerServicesService.updateServiceForUser(
+      userId,
       serviceId,
       dto,
       ip,
@@ -186,15 +172,13 @@ export class ProviderServiceDetailController {
     description: "Service does not belong to this provider",
   })
   async deleteService(
-    @Request() req: AuthenticatedRequest,
-    @Param("serviceId") serviceId: string,
+    @Request() req: any,
+    @Param("serviceId", ParseUUIDPipe) serviceId: string,
   ) {
     const userId = req.user.sub;
     const ip = req.ip;
-    const profile =
-      await this.providerServicesService.getProviderProfileByUserId(userId);
-    return this.providerServicesService.deleteService(
-      profile.id,
+    return this.providerServicesService.deleteServiceForUser(
+      userId,
       serviceId,
       ip,
     );

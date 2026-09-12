@@ -9,6 +9,8 @@ import {
 import { PrismaModule } from "@pode-deixar/prisma";
 import { SharedModule } from "../shared/shared.module";
 
+import { CounterProposalsRepository } from "./counter-proposals.repository";
+
 @Module({
 
   // --- Imports ---
@@ -21,6 +23,6 @@ import { SharedModule } from "../shared/shared.module";
 
   // --- Providers ---
 
-  providers: [CounterProposalsService],
+  providers: [CounterProposalsService, CounterProposalsRepository],
 })
 export class CounterProposalsModule {}

@@ -9,6 +9,8 @@ import { PrismaService } from '@pode-deixar/prisma';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
+import { VerifyRepository } from './verify.repository';
+
 @Module({
 
   // --- Imports ---
@@ -31,7 +33,7 @@ import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
   // --- Providers ---
 
-  providers: [VerifyService, PrismaService, AuthLoggerService],
+  providers: [VerifyService, PrismaService, AuthLoggerService, VerifyRepository],
   exports: [VerifyService],
 })
 export class VerifyModule {}

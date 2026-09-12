@@ -5,6 +5,8 @@ import { ServiceImagesController } from "./service-images.controller";
 import { ServiceImagesService } from "./service-images.service";
 import { PrismaModule } from "@pode-deixar/prisma";
 
+import { ServiceImagesRepository } from "./service-images.repository";
+
 @Module({
 
   // --- Imports ---
@@ -17,7 +19,7 @@ import { PrismaModule } from "@pode-deixar/prisma";
 
   // --- Providers ---
 
-  providers: [ServiceImagesService],
+  providers: [ServiceImagesService, ServiceImagesRepository],
   exports: [ServiceImagesService],
 })
 export class ServiceImagesModule {}

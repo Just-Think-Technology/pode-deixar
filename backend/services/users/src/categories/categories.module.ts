@@ -9,6 +9,8 @@ import {
 import { PrismaModule } from "@pode-deixar/prisma";
 import { SharedModule } from "../shared/shared.module";
 
+import { CategoriesRepository } from "./categories.repository";
+
 @Module({
 
   // --- Imports ---
@@ -21,7 +23,7 @@ import { SharedModule } from "../shared/shared.module";
 
   // --- Providers ---
 
-  providers: [CategoriesService],
+  providers: [CategoriesService, CategoriesRepository],
   exports: [CategoriesService],
 })
 export class CategoriesModule {}

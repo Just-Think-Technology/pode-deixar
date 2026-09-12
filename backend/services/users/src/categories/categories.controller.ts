@@ -10,6 +10,7 @@ import {
   Param,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -21,14 +22,11 @@ import { CategoriesService } from "./categories.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Categories")
 @Controller("categories")
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
-
-  // --- Public API ---
 
   @Get()
   @ApiOperation({ summary: "List all categories" })
@@ -57,8 +55,6 @@ export class CategoriesController {
 export class AdminCategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
-  // --- Public API ---
-
   @Post()
   @Roles("ADMIN")
   @ApiOperation({ summary: "Create new category (admin only)" })
@@ -68,7 +64,7 @@ export class AdminCategoriesController {
     description: "A category with this name or slug already exists",
   })
   async create(
-    @Request() req: AuthenticatedRequest,
+    @Request() req: any,
     @Body() dto: CreateCategoryDto,
   ): Promise<{
     id: string;
@@ -88,8 +84,8 @@ export class AdminCategoriesController {
   @ApiResponse({ status: 404, description: "Category not found" })
   @ApiResponse({ status: 409, description: "Name or slug conflict" })
   async update(
-    @Request() req: AuthenticatedRequest,
-    @Param("id") id: string,
+    @Request() req: any,
+    @Param("id", ParseUUIDPipe) id: string,
     @Body() dto: UpdateCategoryDto,
   ): Promise<{
     id: string;
@@ -111,7 +107,7 @@ export class AdminCategoriesController {
     status: 409,
     description: "Category has linked services",
   })
-  async remove(@Request() req: AuthenticatedRequest, @Param("id") id: string) {
+  async remove(@Request() req: any, @Param("id", ParseUUIDPipe) id: string) {
     await this.categoriesService.remove(id, req.ip);
     return { message: "Categoria excluída com sucesso" };
   }

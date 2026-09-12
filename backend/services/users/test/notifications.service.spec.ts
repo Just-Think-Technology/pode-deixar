@@ -4,7 +4,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { NotificationsService } from "../src/notifications/notifications.service";
-import { PrismaService } from "@pode-deixar/prisma";
+import { NotificationsRepository } from "../src/notifications/notifications.repository";
 import { CreateNotificationDto } from "../src/notifications/dto/create-notification.dto";
 
 // --- Tests ---
@@ -13,21 +13,19 @@ import { CreateNotificationDto } from "../src/notifications/dto/create-notificat
 describe("NotificationsService", () => {
   let service: NotificationsService;
 
-  const mockPrisma = {
-    notification: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      count: jest.fn(),
-      findFirst: jest.fn(),
-      update: jest.fn(),
-    },
+  const mockRepository = {
+    createNotification: jest.fn(),
+    findNotificationsByRecipient: jest.fn(),
+    countNotificationsByRecipient: jest.fn(),
+    findNotificationForRecipient: jest.fn(),
+    markNotificationAsRead: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: NotificationsRepository, useValue: mockRepository },
       ],
     }).compile();
 
@@ -36,7 +34,7 @@ describe("NotificationsService", () => {
   });
 
   it("should force recipient to the authenticated user, ignoring dto value", async () => {
-    mockPrisma.notification.create.mockResolvedValue({ id: "notif-1" });
+    mockRepository.createNotification.mockResolvedValue({ id: "notif-1" });
 
     await service.create("user-autenticado", {
       recipient: "outra-vitima",
@@ -45,9 +43,9 @@ describe("NotificationsService", () => {
       message: "Teste",
     } as CreateNotificationDto);
 
-    expect(mockPrisma.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ recipient: "user-autenticado" }),
-    });
+    expect(mockRepository.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ recipient: "user-autenticado" }),
+    );
   });
 
   it("should reject invalid notification payload", async () => {

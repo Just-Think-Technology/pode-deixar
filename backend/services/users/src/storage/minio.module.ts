@@ -1,19 +1,9 @@
 // MinIO module — global object storage wiring
 
-import { Module, Global } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
-import { MinioService } from "./minio.service";
+import { MinioStorageModule } from "@pode-deixar/storage";
 
-@Global()
-@Module({
-
-  // --- Imports ---
-
-  imports: [ConfigModule],
-
-  // --- Providers ---
-
-  providers: [MinioService],
-  exports: [MinioService],
-})
-export class MinioModule {}
+export const MinioModule = MinioStorageModule.register({
+  bucketEnvVar: "MINIO_BUCKET",
+  defaultBucket: "service-images",
+  global: true,
+});

@@ -3,8 +3,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '@pode-deixar/prisma';
+import { VerifyRepository } from './verify.repository';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { JWT_ALGORITHMS, JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 import { AccessTokenPayload } from '../jwt/access-token-payload';
@@ -12,7 +11,7 @@ import { AccessTokenPayload } from '../jwt/access-token-payload';
 @Injectable()
 export class VerifyService {
   constructor(
-    private prisma: PrismaService,
+    private repository: VerifyRepository,
     private jwtService: JwtService,
     private configService: ConfigService,
     private authLogger: AuthLoggerService,
@@ -40,10 +39,7 @@ export class VerifyService {
       return this.deny('token_revoked', payload.sub, accessToken);
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, completeName: true, email: true, role: true },
-    });
+    const user = await this.repository.findUserById(payload.sub);
     if (!user) {
       return this.deny('user_not_found', payload.sub, accessToken);
     }
@@ -95,19 +91,10 @@ export class VerifyService {
       return false;
     }
     try {
-      const blacklisted = await this.prisma.tokenBlacklist.findUnique({
-        where: { jti },
-      });
+      const blacklisted = await this.repository.findBlacklistedToken(jti);
       return !!blacklisted;
-    } catch (e) {
-      // tolerate a missing table (migration not run yet); fail open here
-      // because logout still clears the refresh token server-side
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code !== 'P2021'
-      ) {
-        throw e;
-      }
+    } catch (e: any) {
+      if (e?.code !== 'P2021') throw e;
       return false;
     }
   }

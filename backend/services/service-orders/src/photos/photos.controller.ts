@@ -10,6 +10,7 @@ import {
   UploadedFiles,
   Request,
   BadRequestException,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -24,7 +25,6 @@ import { FilesInterceptor } from "@nestjs/platform-express";
 import { Throttle } from "@nestjs/throttler";
 import { PhotosService } from "./photos.service";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Order Photos")
 @Controller("services/me/:orderId/photos")
@@ -32,8 +32,6 @@ import { AuthenticatedRequest } from "@pode-deixar/security";
 @ApiBearerAuth()
 export class PhotosController {
   constructor(private readonly photosService: PhotosService) {}
-
-  // --- Public API ---
 
   @Post()
   @Roles("CLIENT")
@@ -58,8 +56,8 @@ export class PhotosController {
     },
   })
   async upload(
-    @Request() req: AuthenticatedRequest,
-    @Param("orderId") orderId: string,
+    @Request() req: any,
+    @Param("orderId", ParseUUIDPipe) orderId: string,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     if (!files || files.length === 0) {
@@ -77,8 +75,6 @@ export class PhotosController {
 export class PhotoViewController {
   constructor(private readonly photosService: PhotosService) {}
 
-  // --- Public API ---
-
   @Get(":photoId/view")
   @Roles("CLIENT", "PROVIDER", "ADMIN")
   @ApiOperation({
@@ -94,7 +90,10 @@ export class PhotoViewController {
   @ApiResponse({ status: 401, description: "Missing or invalid token" })
   @ApiResponse({ status: 403, description: "Access denied to this photo" })
   @ApiResponse({ status: 404, description: "Photo not found" })
-  async view(@Request() req: AuthenticatedRequest, @Param("photoId") photoId: string) {
+  async view(
+    @Request() req: any,
+    @Param("photoId", ParseUUIDPipe) photoId: string,
+  ) {
     return this.photosService.getViewUrl(photoId, req.user.sub, req.user.role);
   }
 }
