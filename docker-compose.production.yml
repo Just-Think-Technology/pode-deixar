@@ -1,19 +1,19 @@
 # ============================================================
-# Pode Deixar - Deploy de PRODUÇÃO (comando único)
+# Pode Deixar - Deploy de PRODUÇÃO
 # ============================================================
 #   docker compose -f docker-compose.production.yml up -d --build
 #
-# Arquivo production-only: env sempre do .env.production (nunca commitado).
-# O deploy de staging usa o docker-compose.staging.yml (mesma stack,
-# env do .env.staging). O `name` isola volumes/redes por ambiente.
-#
-# Diferenças para o docker-compose.yml de desenvolvimento:
-# - Sem Postgres local (banco é o Neon, via DATABASE_URL)
-# - Sem frontend (hospedado no Vercel)
-# - Sem Mailpit (SMTP real via env)
-# - Sem portas publicadas, exceto o Caddy (80/443) — tráfego interno
-#   usa a rede do compose (auth:3001, users:3002, ...)
-# - Backup via pg_dump direto no Neon
+# Production-only:
+# - Env: .env.production
+# - Banco: Neon via DATABASE_URL
+# - Frontend: Vercel
+# - SMTP: serviço externo
+# - Sem Postgres local
+# - Sem Mailpit
+# - Sem volumes de source code
+# - Sem portas públicas nos serviços internos
+# - Caddy: 80/443
+# - Backup: pg_dump periódico do Neon
 # ============================================================
 
 name: pode-deixar-production
@@ -24,12 +24,14 @@ services:
   auth:
     build:
       context: ./backend
+      dockerfile: Dockerfile.dev
       target: auth-build
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./.env.production
+    env_file:
+      - ./.env.production
     environment:
       NODE_ENV: production
       FRONTEND_URL: ${FRONTEND_URL:-https://app.pode-deixar.com}
@@ -42,12 +44,14 @@ services:
   users:
     build:
       context: ./backend
+      dockerfile: Dockerfile.dev
       target: users-build
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./.env.production
+    env_file:
+      - ./.env.production
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
@@ -59,12 +63,14 @@ services:
   service-orders:
     build:
       context: ./backend
+      dockerfile: Dockerfile.dev
       target: service-orders-build
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./.env.production
+    env_file:
+      - ./.env.production
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
@@ -76,12 +82,14 @@ services:
   payments:
     build:
       context: ./backend
+      dockerfile: Dockerfile.dev
       target: payments-build
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./.env.production
+    env_file:
+      - ./.env.production
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
@@ -90,24 +98,24 @@ services:
   reviews:
     build:
       context: ./backend
+      dockerfile: Dockerfile.dev
       target: reviews-build
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    env_file: ./.env.production
+    env_file:
+      - ./.env.production
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
 
-  # -- MinIO (Object Storage: fotos, avatares, imagens) --
+  # -- MinIO --
   minio:
     image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: server /data --console-address ":9001"
-    env_file: ./.env.production
-    # Credenciais root vindas do env (MINIO_ROOT_USER/PASSWORD, que
-    # espelham MINIO_ACCESS_KEY/SECRET_KEY) — sem interpolação, para o
-    # comando continuar sendo só `docker compose -f ... up -d`
+    env_file:
+      - ./.env.production
     volumes:
       - minio_data:/data
     healthcheck:
@@ -116,10 +124,11 @@ services:
       timeout: 5s
       retries: 5
 
-  # -- MinIO Client (criação dos buckets) --
+  # -- MinIO Client --
   minio-setup:
     image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
-    env_file: ./.env.production
+    env_file:
+      - ./.env.production
     depends_on:
       minio:
         condition: service_healthy
@@ -134,10 +143,17 @@ services:
       echo 'Buckets created successfully'
       "
 
-  # -- Redis (Rate Limiting Distribuído, um por stack) --
+  # -- Redis --
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
     volumes:
       - redis_data:/data
     healthcheck:
@@ -146,48 +162,54 @@ services:
       timeout: 5s
       retries: 5
 
-  # -- Backup do banco (pg_dump contra o Neon) --
+  # -- Database Backup --
   db-backup:
     image: postgres:16-alpine
-    env_file: ./.env.production
+    env_file:
+      - ./.env.production
     environment:
-      BACKUP_SCHEDULE: "0 3 * * *"  # Diário às 03:00 UTC
+      BACKUP_SCHEDULE: "0 3 * * *"
       BACKUP_RETENTION_DAYS: "7"
       BACKUP_DIR: /backups
     volumes:
       - backup_data:/backups
     entrypoint: >
       /bin/sh -c "
-      # crond/crontab já vêm no BusyBox da imagem (não instalar nada);
-      # o pipe para `crontab -` grava no spool que o crond realmente lê
       echo \"$${BACKUP_SCHEDULE} /usr/local/bin/backup.sh >> /var/log/cron.log 2>&1\" | crontab - &&
       cat > /usr/local/bin/backup.sh << 'EOF'
       #!/bin/sh
       set -e
+
       TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
       FILE=\"$${BACKUP_DIR}/pode_deixar_$${TIMESTAMP}.sql.gz\"
+
       echo \"[$$(date)] Iniciando backup para $${FILE}\"
-      pg_dump \"$${DATABASE_URL}\" | gzip > $${FILE}
+
+      pg_dump \"$${DATABASE_URL}\" | gzip > \"$${FILE}\"
+
       echo \"[$$(date)] Backup concluído: $${FILE}\"
-      # Limpeza de backups antigos
-      find $${BACKUP_DIR} -name 'pode_deixar_*.sql.gz' -mtime +$${BACKUP_RETENTION_DAYS} -delete
+
+      find \"$${BACKUP_DIR}\" \
+        -name 'pode_deixar_*.sql.gz' \
+        -mtime +$${BACKUP_RETENTION_DAYS} \
+        -delete
+
       echo \"[$$(date)] Limpeza de backups antigos (> $${BACKUP_RETENTION_DAYS} dias) concluída\"
       EOF
+
       chmod +x /usr/local/bin/backup.sh &&
-      # Executa backup inicial imediatamente
       /usr/local/bin/backup.sh &&
-      # Inicia cron em foreground
       crond -f -l 2
       "
 
-  # -- Proxy Reverso (Caddy, HTTPS automático) --
+  # -- Reverse Proxy --
   caddy:
     image: caddy:2-alpine
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile.production:/etc/caddy/Caddyfile
+      - ./Caddyfile.production:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
