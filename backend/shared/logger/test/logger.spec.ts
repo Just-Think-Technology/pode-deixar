@@ -1,6 +1,6 @@
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import fs = require('fs');
+import os = require('os');
+import path = require('path');
 import createLoggerDefault, { createLogger } from '../index';
 
 process.env.LOG_LEVEL = 'fatal';
