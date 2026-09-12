@@ -1,17 +1,24 @@
-# purpose: Pode Deixal staging stack with hot-reload (single command).
-# Same services as docker-compose.production.yml (no frontend — Vercel;
-# no Mailpit — real SMTP; no Postgres — Neon staging), but running in dev mode:
-# Dockerfile.dev + code mounted + start:dev, same as docker-compose.dev.yml.
-# Volume lists: keep mirrored with dev.yml. No `ports:` (access only via Caddy,
-# as in production).
-#
+# ============================================================
+# Pode Deixar - Staging com hot-reload
+# ============================================================
 #   docker compose -f docker-compose.staging.yml up -d --build
 #
-# Same services as docker-compose.production.yml (without frontend — Vercel;
-# without Mailpit — real SMTP; without Postgres — Neon staging), but running
-# in dev mode: Dockerfile.dev + code mounted + start:dev, same as
-# docker-compose.dev.yml. Volume lists: keep mirrored with dev.yml. No `ports:`
-# (access only via Caddy, as in prod).
+# Mesmos serviços do production, mas:
+# - Env: .env.staging
+# - Backend em modo dev / hot-reload
+# - Código fonte montado
+# - start:dev
+# - Banco: Neon staging
+# - Sem frontend
+# - Sem Mailpit
+# - Sem Postgres local
+# - Sem portas públicas nos serviços internos
+# - Caddy continua responsável pelo acesso externo
+#
+# IMPORTANTE:
+# Os diretórios dist/ dos shared packages NÃO são montados.
+# Eles permanecem os builds gerados pela imagem Docker.
+# ============================================================
 
 include:
   - path: docker-compose.production.yml
@@ -20,10 +27,14 @@ name: pode-deixar-staging
 
 services:
 
+  # -- Auth Service --
   auth:
-    env_file: ./.env.staging
+    env_file:
+      - ./.env.staging
     build:
+      context: ./backend
       dockerfile: Dockerfile.dev
+      target: auth-build
     command: >
       sh -c "pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
              pnpm run --filter @pode-deixar/auth start:dev"
@@ -32,31 +43,82 @@ services:
       - ./backend/services/auth/tsconfig.json:/app/services/auth/tsconfig.json
       - ./backend/services/auth/tsconfig.build.json:/app/services/auth/tsconfig.build.json
       - ./backend/services/auth/nest-cli.json:/app/services/auth/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/email:/app/shared/email
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+
+      # Logger
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+
+      # Email
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+
+      # Security
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+
+      # Validation
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+
+      # Prisma
       - ./backend/prisma:/app/prisma
 
+  # -- Users Service --
   users:
-    env_file: ./.env.staging
+    env_file:
+      - ./.env.staging
     build:
+      context: ./backend
       dockerfile: Dockerfile.dev
+      target: users-build
     command: pnpm run --filter @pode-deixar/users start:dev
     volumes:
       - ./backend/services/users/src:/app/services/users/src
       - ./backend/services/users/tsconfig.json:/app/services/users/tsconfig.json
       - ./backend/services/users/tsconfig.build.json:/app/services/users/tsconfig.build.json
       - ./backend/services/users/nest-cli.json:/app/services/users/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+
+      # Logger
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+
+      # Email
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+
+      # Security
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+
+      # Validation
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+
+      # Prisma
       - ./backend/prisma:/app/prisma
 
+  # -- Service Orders Service --
   service-orders:
-    env_file: ./.env.staging
+    env_file:
+      - ./.env.staging
     build:
+      context: ./backend
       dockerfile: Dockerfile.dev
+      target: service-orders-build
     command: >
       sh -c "rm -f /app/services/service-orders/tsconfig.build.tsbuildinfo &&
              pnpm run --filter @pode-deixar/service-orders start:dev"
@@ -65,15 +127,41 @@ services:
       - ./backend/services/service-orders/tsconfig.json:/app/services/service-orders/tsconfig.json
       - ./backend/services/service-orders/tsconfig.build.json:/app/services/service-orders/tsconfig.build.json
       - ./backend/services/service-orders/nest-cli.json:/app/services/service-orders/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+
+      # Logger
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+
+      # Email
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+
+      # Security
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+
+      # Validation
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+
+      # Prisma
       - ./backend/prisma:/app/prisma
 
+  # -- Payments Service --
   payments:
-    env_file: ./.env.staging
+    env_file:
+      - ./.env.staging
     build:
+      context: ./backend
       dockerfile: Dockerfile.dev
+      target: payments-build
     command: >
       sh -c "pnpm exec prisma generate --schema=prisma/schema.prisma &&
              pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
@@ -83,29 +171,85 @@ services:
       - ./backend/services/payments/tsconfig.json:/app/services/payments/tsconfig.json
       - ./backend/services/payments/tsconfig.build.json:/app/services/payments/tsconfig.build.json
       - ./backend/services/payments/nest-cli.json:/app/services/payments/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+
+      # Logger
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+
+      # Email
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+
+      # Security
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+
+      # Validation
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+
+      # Prisma
       - ./backend/prisma:/app/prisma
 
+  # -- Reviews Service --
   reviews:
-    env_file: ./.env.staging
+    env_file:
+      - ./.env.staging
     build:
+      context: ./backend
       dockerfile: Dockerfile.dev
+      target: reviews-build
     command: pnpm run --filter @pode-deixar/reviews start:dev
     volumes:
       - ./backend/services/reviews/src:/app/services/reviews/src
       - ./backend/services/reviews/tsconfig.json:/app/services/reviews/tsconfig.json
       - ./backend/services/reviews/tsconfig.build.json:/app/services/reviews/tsconfig.build.json
       - ./backend/services/reviews/nest-cli.json:/app/services/reviews/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+
+      # Logger
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+
+      # Email
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+
+      # Security
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+
+      # Validation
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+
+      # Prisma
       - ./backend/prisma:/app/prisma
 
+  # -- MinIO --
   minio:
-    env_file: ./.env.staging
+    env_file:
+      - ./.env.staging
+
+  # -- MinIO Setup --
   minio-setup:
-    env_file: ./.env.staging
+    env_file:
+      - ./.env.staging
+
+  # -- Database Backup --
   db-backup:
-    env_file: ./.env.staging
+    env_file:
+      - ./.env.staging

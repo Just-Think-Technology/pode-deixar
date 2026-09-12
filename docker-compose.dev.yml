@@ -1,14 +1,10 @@
-# purpose: Pode Deixal local stack with hot-reload (single command).
-# Includes docker-compose.yml and applies dev overrides. Postgres is local
-# (host port 15432, since host system Postgres uses 5432); storage is local
-# MinIO (fixed dev credentials overridden below).
-#
+# ============================================================
+# Pode Deixar - Stack local com hot-reload (comando único)
+# ============================================================
 #   docker compose -f docker-compose.dev.yml up -d --build
 #
-# Inclui o docker-compose.yml e aplica os overrides de dev. Banco é o
-# Postgres local (porta do host 15432, pois o Postgres do sistema usa a
-# 5432); storage é o MinIO local (credencial fixa de dev, sobreposta por
-# serviço abaixo).
+# Inclui o docker-compose.yml e aplica os overrides de dev.
+# ============================================================
 
 include:
   - path: docker-compose.yml
@@ -16,21 +12,18 @@ include:
 name: pode-deixar-dev
 
 services:
-
-  # -- Postgres local: host port different from system --
+  # -- Postgres local --
   postgres:
     ports: !override
       - "15432:5432"
 
-  # -- MinIO local (dev fixed credentials) --
+  # -- MinIO local --
   minio:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
 
-  # -- Frontend (dev, hot-reload) --
-  # Production image in base compose does not mount code; without this override,
-  # changes on host do not appear until rebuild.
+  # -- Frontend --
   frontend:
     build:
       context: ./frontend
@@ -39,7 +32,6 @@ services:
         NEXT_PUBLIC_BACKEND_URL: http://localhost:8080/api
     environment:
       NEXT_PUBLIC_BACKEND_URL: http://localhost:8080/api
-      # SSR inside Docker network (localhost:8080 fails in container)
       BACKEND_INTERNAL_URL: http://caddy:8080/api
       WATCHPACK_POLLING: "true"
       CI: "true"
@@ -48,7 +40,7 @@ services:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
 
-  # -- Auth Service (dev, hot-reload) --
+  # -- Auth Service --
   auth:
     build:
       context: ./backend
@@ -59,8 +51,6 @@ services:
       ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000,http://127.0.0.1:3000"
       SMTP_HOST: mailpit
       TZ: America/Sao_Paulo
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
     ports: !override
@@ -73,16 +63,34 @@ services:
       - ./backend/services/auth/tsconfig.json:/app/services/auth/tsconfig.json
       - ./backend/services/auth/tsconfig.build.json:/app/services/auth/tsconfig.build.json
       - ./backend/services/auth/nest-cli.json:/app/services/auth/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/email:/app/shared/email
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+    
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+    
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+    
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/dist:/app/shared/security/dist
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+    
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+      - ./backend/shared/validation/dist:/app/shared/validation/dist
+    
       - ./backend/prisma:/app/prisma
     depends_on:
       mailpit:
         condition: service_started
 
-  # -- Users Service (dev, hot-reload) --
+  # -- Users Service --
   users:
     build:
       context: ./backend
@@ -90,8 +98,6 @@ services:
     env_file: ./.env.dev
     environment:
       TZ: America/Sao_Paulo
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
     ports: !override
@@ -102,12 +108,29 @@ services:
       - ./backend/services/users/tsconfig.json:/app/services/users/tsconfig.json
       - ./backend/services/users/tsconfig.build.json:/app/services/users/tsconfig.build.json
       - ./backend/services/users/nest-cli.json:/app/services/users/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+
       - ./backend/prisma:/app/prisma
 
-  # -- Service Orders Service (dev, hot-reload) --
+  # -- Service Orders Service --
   service-orders:
     build:
       context: ./backend
@@ -115,13 +138,10 @@ services:
     env_file: ./.env.dev
     environment:
       TZ: America/Sao_Paulo
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
     ports: !override
       - "3003:3003"
-    # tsbuildinfo incremental + deleteOutDir can delete dist and not re-emit
     command: >
       sh -c "rm -f /app/services/service-orders/tsconfig.build.tsbuildinfo &&
              pnpm run --filter @pode-deixar/service-orders start:dev"
@@ -130,12 +150,29 @@ services:
       - ./backend/services/service-orders/tsconfig.json:/app/services/service-orders/tsconfig.json
       - ./backend/services/service-orders/tsconfig.build.json:/app/services/service-orders/tsconfig.build.json
       - ./backend/services/service-orders/nest-cli.json:/app/services/service-orders/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+
       - ./backend/prisma:/app/prisma
 
-  # -- Payments Service (dev, hot-reload) --
+  # -- Payments Service --
   payments:
     build:
       context: ./backend
@@ -143,8 +180,6 @@ services:
     env_file: ./.env.dev
     environment:
       TZ: America/Sao_Paulo
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
     ports: !override
@@ -158,12 +193,29 @@ services:
       - ./backend/services/payments/tsconfig.json:/app/services/payments/tsconfig.json
       - ./backend/services/payments/tsconfig.build.json:/app/services/payments/tsconfig.build.json
       - ./backend/services/payments/nest-cli.json:/app/services/payments/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+
       - ./backend/prisma:/app/prisma
 
-  # -- Reviews Service (dev, hot-reload) --
+  # -- Reviews Service --
   reviews:
     build:
       context: ./backend
@@ -171,11 +223,9 @@ services:
     env_file: ./.env.dev
     environment:
       TZ: America/Sao_Paulo
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-    ports: !override
+    ports: !override:
       - "3005:3005"
     command: pnpm run --filter @pode-deixar/reviews start:dev
     volumes:
@@ -183,9 +233,26 @@ services:
       - ./backend/services/reviews/tsconfig.json:/app/services/reviews/tsconfig.json
       - ./backend/services/reviews/tsconfig.build.json:/app/services/reviews/tsconfig.build.json
       - ./backend/services/reviews/nest-cli.json:/app/services/reviews/nest-cli.json
-      - ./backend/shared/logger:/app/shared/logger
-      - ./backend/shared/security:/app/shared/security
-      - ./backend/shared/validation:/app/shared/validation
+
+      - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
+      - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
+
+      - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
+      - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
+      - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
+      - ./backend/shared/email/index.ts:/app/shared/email/index.ts
+      - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
+
+      - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
+      - ./backend/shared/security/index.ts:/app/shared/security/index.ts
+      - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
+      - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
+
+      - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
+      - ./backend/shared/validation/src:/app/shared/validation/src
+      - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+
       - ./backend/prisma:/app/prisma
 
 volumes:
