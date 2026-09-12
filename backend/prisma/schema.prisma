@@ -12,8 +12,6 @@ datasource db {
   extensions = [unaccent]
 }
 
-# --- Enums ---
-
 enum Role {
   CLIENT
   ADMIN
@@ -52,8 +50,6 @@ enum PaymentMethod {
   PIX
   CREDIT_CARD
 }
-
-# --- User & Profile Models ---
 
 model User {
 
