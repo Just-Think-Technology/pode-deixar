@@ -133,7 +133,6 @@ function buildStreams(
   isTest: boolean,
   logsRoot: string,
   filePath: string,
-  retainDays: number,
 ): pino.StreamEntry[] {
   const streams: pino.StreamEntry[] = [];
 
@@ -148,7 +147,6 @@ function buildStreams(
       sync: true,
     });
     streams.push({ level: level as pino.Level, stream: prettyFile });
-    setImmediate(() => cleanupOldLogs(logsRoot, retainDays));
   }
 
   if (!isProd || isTest) {
@@ -208,14 +206,8 @@ export function createLogger(serviceName: string, featureName?: string, options:
     featureName,
     options.logsParentDir ?? 'logs',
   );
-  const streams = buildStreams(
-    level,
-    isProd,
-    isTest,
-    logsRoot,
-    filePath,
-    retainDays,
-  );
+  setImmediate(() => cleanupOldLogs(logsRoot, retainDays));
+  const streams = buildStreams(level, isProd, isTest, logsRoot, filePath);
 
   const baseLogger = pino(
     {
