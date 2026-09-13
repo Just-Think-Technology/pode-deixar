@@ -122,11 +122,13 @@ services:
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/dist:/app/shared/security/dist
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+      - ./backend/shared/validation/dist:/app/shared/validation/dist
 
       - ./backend/prisma:/app/prisma
 
@@ -164,11 +166,13 @@ services:
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/dist:/app/shared/security/dist
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+      - ./backend/shared/validation/dist:/app/shared/validation/dist
 
       - ./backend/prisma:/app/prisma
 
@@ -207,11 +211,13 @@ services:
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/dist:/app/shared/security/dist
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+      - ./backend/shared/validation/dist:/app/shared/validation/dist
 
       - ./backend/prisma:/app/prisma
 
@@ -247,11 +253,13 @@ services:
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/dist:/app/shared/security/dist
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+      - ./backend/shared/validation/dist:/app/shared/validation/dist
 
       - ./backend/prisma:/app/prisma
 
