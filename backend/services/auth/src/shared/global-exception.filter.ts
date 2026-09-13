@@ -103,8 +103,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     const { status, message, error } = this.resolveError(exception);
 
+    const logMessage = Array.isArray(message) ? message.join(', ') : message;
     this.logger.error(
-      `${request.method} ${request.url} - ${status} - ${message}`,
+      `${request.method} ${request.url} - ${status} - ${logMessage}`,
       exception instanceof Error ? exception.stack : String(exception),
     );
 
