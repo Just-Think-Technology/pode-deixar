@@ -26,6 +26,22 @@ import {
 
 const ACCEPTED_IMAGE_TYPES = "image/jpeg,image/png,image/webp,image/gif";
 
+function toSafeImageUrl(url: string): string {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (
+      parsed.protocol === "blob:" ||
+      parsed.protocol === "https:" ||
+      parsed.protocol === "http:"
+    ) {
+      return parsed.href;
+    }
+  } catch {
+    // ignora e retorna fallback seguro
+  }
+  return "about:blank";
+}
+
 type CompletionPhotoUploaderProps = {
   orderId: string;
   photos: CompletionPhoto[];
@@ -201,7 +217,7 @@ export function CompletionPhotoUploader({
                 {/* Fotos do mock usam object-URL: next/image não as otimiza. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={photo.url}
+                  src={toSafeImageUrl(photo.url)}
                   alt={`Evidência ${index + 1} do serviço`}
                   className="size-full object-cover"
                 />

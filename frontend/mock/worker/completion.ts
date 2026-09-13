@@ -21,6 +21,22 @@ const MOCK_CLIENT_NAMES: Record<string, string> = {
 
 const MOCK_PROVIDER_NAME = "Você";
 
+function toSafeImageUrl(url: string): string {
+  try {
+    const parsed = new URL(url, "http://localhost");
+    if (
+      parsed.protocol === "blob:" ||
+      parsed.protocol === "https:" ||
+      parsed.protocol === "http:"
+    ) {
+      return parsed.href;
+    }
+  } catch {
+    // ignora e retorna fallback seguro
+  }
+  return "about:blank";
+}
+
 function localIsoNow(): string {
   return format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
 }
@@ -111,7 +127,7 @@ export function mockUploadCompletionPhoto(
 
   const photo: CompletionPhoto = {
     id: mockPhotoId(),
-    url: previewUrl,
+    url: toSafeImageUrl(previewUrl),
     created_at: localIsoNow(),
   };
   photos.push(photo);
