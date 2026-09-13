@@ -38,6 +38,12 @@ export class PhotosService {
     files: Express.Multer.File[],
   ) {
     const order = await this.findOrderOrThrow(orderId);
+    // Boundary guard against parameter tampering: a forged non-array payload
+    // (e.g. a plain string field) must be rejected before any array access
+    // below, where `.length` and iteration would silently misbehave.
+    if (!Array.isArray(files) || files.length === 0) {
+      throw new BadRequestException("Nenhuma foto enviada");
+    }
     this.assertUploadAllowed(order, clientId, files);
     this.validateImageFiles(files);
     const webpBuffers = await this.convertToWebp(files);
@@ -69,12 +75,6 @@ export class PhotosService {
       throw new BadRequestException(
         "Só é possível enviar fotos para pedidos com status aberto",
       );
-    }
-
-    // Check Array.isArray first: a forged non-array with `length` would
-    // confuse the quota checks below.
-    if (!Array.isArray(files) || files.length === 0) {
-      throw new BadRequestException("Nenhuma foto enviada");
     }
 
     if (files.length > MAX_PHOTOS_PER_ORDER) {
