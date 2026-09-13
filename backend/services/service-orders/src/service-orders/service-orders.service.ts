@@ -21,6 +21,36 @@ import {
   PaginationQuery,
 } from "../shared/pagination-query.dto";
 
+type OrderDetail = Prisma.ServiceOrderGetPayload<{
+  include: {
+    proposals: true;
+    photos: { select: { id: true; url: true } };
+    category: { select: { id: true; name: true; slug: true } };
+  };
+}>;
+
+type OrderListView = Prisma.ServiceOrderGetPayload<{}> & {
+  category?: { id: string; name: string; slug: string } | null;
+};
+
+type OrderWithProposals = Prisma.ServiceOrderGetPayload<{
+  include: {
+    proposals: true;
+    category: { select: { id: true; name: true; slug: true } };
+  };
+}>;
+
+type AgendaOrder = Prisma.ServiceOrderGetPayload<{
+  include: {
+    photos: { select: { id: true; url: true } };
+    payments: {
+      where: { status: "PAID" };
+      orderBy: { paidAt: "desc" };
+      take: 1;
+    };
+  };
+}>;
+
 const MAX_AGENDA_WINDOW_DAYS = 92;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -33,7 +63,7 @@ export class ServiceOrdersService {
 
   // --- Private Helpers ---
 
-  private formatOrder(order: any) {
+  private formatOrder(order: OrderListView) {
     return {
       id: order.id,
       client_id: order.clientId,
@@ -60,25 +90,25 @@ export class ServiceOrdersService {
   }
 
   // Exposed `url` is the authenticated view endpoint since the bucket is not public.
-  private formatPhotos(photos: any[] | undefined) {
-    return (photos ?? []).map((p: any) => ({
+  private formatPhotos(photos: { id: string }[] | undefined) {
+    return (photos ?? []).map((p) => ({
       id: p.id,
       url: `/api/services/photos/${p.id}/view`,
     }));
   }
 
   // Showcase items use a brief address to avoid exposing street/number/ZIP.
-  private formatOpenOrderListItem(order: any) {
+  private formatOpenOrderListItem(order: OrderListView) {
     return {
       ...this.formatOrder(order),
       address: formatAddressSummary(order.address),
     };
   }
 
-  private formatOrderWithProposals(order: any) {
+  private formatOrderWithProposals(order: OrderWithProposals) {
     return {
       ...this.formatOrder(order),
-      proposals: order.proposals.map((p: any) => ({
+      proposals: order.proposals.map((p) => ({
         id: p.id,
         provider_id: p.providerId,
         price: p.price,
@@ -235,38 +265,47 @@ export class ServiceOrdersService {
     }
 
     if (role === "PROVIDER") {
-      if (order.providerId && order.providerId !== userId) {
-        throw new ForbiddenException("Acesso negado a este pedido");
-      }
-
-      const proposal = order.proposals.find((p) => p.providerId === userId);
-      if (proposal) {
-        return {
-          ...this.formatOrder(order),
-          proposals: [
-            {
-              id: proposal.id,
-              provider_id: proposal.providerId,
-              price: proposal.price,
-              description: proposal.description,
-              estimated_duration: proposal.estimatedDuration,
-              status: proposal.status,
-              created_at: proposal.createdAt,
-            },
-          ],
-          photos: this.formatPhotos(order.photos),
-        };
-      }
-
-      if (order.providerId === userId) {
-        return {
-          ...this.formatOrder(order),
-          photos: this.formatPhotos(order.photos),
-        };
+      const providerView = this.formatProviderOrderView(order, userId);
+      if (providerView) {
+        return providerView;
       }
     }
 
     throw new ForbiddenException("Acesso negado a este pedido");
+  }
+
+  private formatProviderOrderView(order: OrderDetail, userId: string) {
+    if (order.providerId && order.providerId !== userId) {
+      throw new ForbiddenException("Acesso negado a este pedido");
+    }
+
+    const proposal = order.proposals.find((p) => p.providerId === userId);
+    if (proposal) {
+      return {
+        ...this.formatOrder(order),
+        proposals: [
+          {
+            id: proposal.id,
+            provider_id: proposal.providerId,
+            price: proposal.price,
+            description: proposal.description,
+            estimated_duration: proposal.estimatedDuration,
+            status: proposal.status,
+            created_at: proposal.createdAt,
+          },
+        ],
+        photos: this.formatPhotos(order.photos),
+      };
+    }
+
+    if (order.providerId === userId) {
+      return {
+        ...this.formatOrder(order),
+        photos: this.formatPhotos(order.photos),
+      };
+    }
+
+    return null;
   }
 
   // Open-order showcase for authenticated providers only; excludes orders directed to another provider.
@@ -401,41 +440,25 @@ export class ServiceOrdersService {
     return this.formatOrder(order);
   }
 
+  /**
+   * Hires a provider service directly, creating an IN_PROGRESS order.
+   * Clients cannot hire their own services; inactive services are rejected.
+   */
   async hireFromProvider(
     clientId: string,
     dto: HireProviderServiceDto,
     ip?: string,
   ) {
-    const providerService = await this.prisma.providerService.findUnique({
-      where: { id: dto.providerServiceId },
-      include: {
-        providerProfile: true,
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
-
-    if (!providerService) {
-      throw new NotFoundException("Serviço do prestador não encontrado");
-    }
-
-    if (!providerService.isActive) {
-      throw new BadRequestException("Serviço não está disponível");
-    }
-
-    const providerUserId = providerService.providerProfile.userId;
-
-    if (providerUserId === clientId) {
-      throw new BadRequestException(
-        "Você não pode contratar seu próprio serviço",
-      );
-    }
+    const providerService = await this.findProviderServiceOrThrow(
+      dto.providerServiceId,
+    );
+    this.assertHireable(providerService, clientId);
 
     const address = sanitizeAddress(dto.address);
-
     const order = await this.prisma.serviceOrder.create({
       data: {
         clientId,
-        providerId: providerUserId,
+        providerId: providerService.providerProfile.userId,
         providerServiceId: providerService.id,
         agreedPrice: providerService.fixedPrice,
         title: providerService.title,
@@ -462,6 +485,34 @@ export class ServiceOrdersService {
     );
 
     return this.formatOrder(order);
+  }
+
+  private async findProviderServiceOrThrow(providerServiceId: string) {
+    const providerService = await this.prisma.providerService.findUnique({
+      where: { id: providerServiceId },
+      include: {
+        providerProfile: true,
+        category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+    if (!providerService) {
+      throw new NotFoundException("Serviço do prestador não encontrado");
+    }
+    return providerService;
+  }
+
+  private assertHireable(
+    providerService: { isActive: boolean; providerProfile: { userId: string } },
+    clientId: string,
+  ): void {
+    if (!providerService.isActive) {
+      throw new BadRequestException("Serviço não está disponível");
+    }
+    if (providerService.providerProfile.userId === clientId) {
+      throw new BadRequestException(
+        "Você não pode contratar seu próprio serviço",
+      );
+    }
   }
 
   async findProviderAgenda(providerId: string, from: string, to: string) {
@@ -515,7 +566,7 @@ export class ServiceOrdersService {
     return orders.map((o) => this.formatAgendaItem(o));
   }
 
-  private formatAgendaItem(order: any) {
+  private formatAgendaItem(order: AgendaOrder) {
     const payment = order.payments?.[0] ?? null;
 
     return {

@@ -14,6 +14,15 @@ import {
   normalizePagination,
   PaginationQuery,
 } from "../shared/pagination-query.dto";
+import { Prisma, Proposal } from "@prisma/client";
+
+type ProposalWithOrder = Prisma.ProposalGetPayload<{
+  include: {
+    serviceOrder: {
+      include: { category: { select: { id: true; name: true; slug: true } } };
+    };
+  };
+}>;
 
 @Injectable()
 export class ProposalsService {
@@ -24,7 +33,7 @@ export class ProposalsService {
 
   // --- Private Helpers ---
 
-  private formatProposal(proposal: any) {
+  private formatProposal(proposal: Proposal) {
     return {
       id: proposal.id,
       service_order_id: proposal.serviceOrderId,
@@ -38,7 +47,7 @@ export class ProposalsService {
     };
   }
 
-  private formatProposalWithOrder(proposal: any) {
+  private formatProposalWithOrder(proposal: ProposalWithOrder) {
     return {
       ...this.formatProposal(proposal),
       service_order: proposal.serviceOrder
@@ -61,46 +70,16 @@ export class ProposalsService {
 
   // --- Public API ---
 
+  /**
+   * Creates a proposal on an open order.
+   * The order owner cannot propose on their own order, directed orders accept
+   * only the invited provider, and each provider holds a single active
+   * proposal per order.
+   */
   async create(providerId: string, dto: CreateProposalDto, ip?: string) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: dto.serviceOrderId },
-    });
-
-    if (!order) {
-      throw new NotFoundException("Pedido de serviço não encontrado");
-    }
-
-    if (order.status !== "OPEN") {
-      throw new BadRequestException(
-        "Só é possível fazer proposta para pedidos abertos",
-      );
-    }
-
-    if (order.clientId === providerId) {
-      throw new BadRequestException(
-        "Você não pode fazer proposta para o seu próprio pedido",
-      );
-    }
-
-    if (order.providerId && order.providerId !== providerId) {
-      throw new ForbiddenException(
-        "Este pedido é direcionado a outro prestador",
-      );
-    }
-
-    const existing = await this.prisma.proposal.findFirst({
-      where: {
-        serviceOrderId: dto.serviceOrderId,
-        providerId,
-        status: { in: ["PENDING", "ACCEPTED"] },
-      },
-    });
-
-    if (existing) {
-      throw new BadRequestException(
-        "Você já possui uma proposta ativa para este pedido",
-      );
-    }
+    const order = await this.findOrderOrThrow(dto.serviceOrderId);
+    this.assertProposable(order, providerId);
+    await this.assertNoActiveProposal(dto.serviceOrderId, providerId);
 
     const proposal = await this.prisma.proposal.create({
       data: {
@@ -115,6 +94,55 @@ export class ProposalsService {
     this.logger.logProposalCreated(providerId, proposal.id, ip);
 
     return this.formatProposal(proposal);
+  }
+
+  private async findOrderOrThrow(serviceOrderId: string) {
+    const order = await this.prisma.serviceOrder.findUnique({
+      where: { id: serviceOrderId },
+    });
+    if (!order) {
+      throw new NotFoundException("Pedido de serviço não encontrado");
+    }
+    return order;
+  }
+
+  private assertProposable(
+    order: { status: string; clientId: string; providerId: string | null },
+    providerId: string,
+  ): void {
+    if (order.status !== "OPEN") {
+      throw new BadRequestException(
+        "Só é possível fazer proposta para pedidos abertos",
+      );
+    }
+    if (order.clientId === providerId) {
+      throw new BadRequestException(
+        "Você não pode fazer proposta para o seu próprio pedido",
+      );
+    }
+    if (order.providerId && order.providerId !== providerId) {
+      throw new ForbiddenException(
+        "Este pedido é direcionado a outro prestador",
+      );
+    }
+  }
+
+  private async assertNoActiveProposal(
+    serviceOrderId: string,
+    providerId: string,
+  ): Promise<void> {
+    const existing = await this.prisma.proposal.findFirst({
+      where: {
+        serviceOrderId,
+        providerId,
+        status: { in: ["PENDING", "ACCEPTED"] },
+      },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        "Você já possui uma proposta ativa para este pedido",
+      );
+    }
   }
 
   async findByIdForProvider(proposalId: string, providerId: string) {
