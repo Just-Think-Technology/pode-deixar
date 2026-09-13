@@ -1,8 +1,6 @@
-// Authenticated request — Express request with the JWT subject attached
+// Authenticated request — JWT subject attached by the JwtAuthGuard
 
-import { Request } from "express";
-
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest {
   user: {
     sub: string;
   };
