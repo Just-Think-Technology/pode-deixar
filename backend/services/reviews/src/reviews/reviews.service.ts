@@ -124,10 +124,13 @@ export class ReviewsService {
 
       return this.formatReview(review);
     } catch (e) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === "P2002"
-      ) {
+      // Duck-typed code check (same as payments attemptTransaction): Prisma
+      // throws instances, but callers may surface plain error objects.
+      const code =
+        e instanceof Prisma.PrismaClientKnownRequestError
+          ? e.code
+          : (e as { code?: unknown } | null)?.code;
+      if (code === "P2002") {
         throw new BadRequestException("Você já avaliou este pedido");
       }
       throw e;

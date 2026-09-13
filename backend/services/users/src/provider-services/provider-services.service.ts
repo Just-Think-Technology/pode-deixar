@@ -38,7 +38,7 @@ type SearchProfileResult = Prisma.ProviderProfileGetPayload<{
   };
 }>;
 
-interface FormattedProfileService {
+export interface FormattedProfileService {
   id: string;
   title: string;
   description: string;
@@ -51,7 +51,7 @@ interface FormattedProfileService {
   updated_at: Date;
 }
 
-interface FormattedProfileResult {
+export interface FormattedProfileResult {
   id: string;
   user: UserResponse;
   avatar_url?: string;
