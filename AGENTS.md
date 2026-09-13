@@ -125,6 +125,7 @@ databases (`docker compose up -d postgres` from the repo root).
 - No magic numbers; explicit error handling (never swallow exceptions)
 - Minimal changes: touch only what the task needs; suggest (don't implement) unrelated improvements
 - Reuse first: check for an existing equivalent before creating files, classes or services
+- Orthogonality: one authoritative home per logic (see [docs/architecture.md](docs/architecture.md)) — consume `@pode-deixar/*`, specialize instead of forking, never a third copy
 - No premature optimization, but no knowingly wasteful queries, loops or allocations
 - No new libraries without need and justification; check `package.json` first
 - Public API/contract/behavior changes must be announced beforehand
