@@ -1,6 +1,7 @@
 // Register service — signup with email verification
 
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
@@ -13,6 +14,7 @@ import * as crypto from 'crypto';
 
 const SIGNUP_RESPONSE_MESSAGE =
   'Usuário cadastrado com sucesso. Verifique seu email para ativar sua conta.';
+const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class RegisterService {
@@ -25,6 +27,11 @@ export class RegisterService {
 
   // --- Public API ---
 
+  /**
+   * Registers a new user and sends the verification email.
+   * Existing emails get the identical response so callers cannot probe
+   * for registered accounts (anti-enumeration).
+   */
   async register(dto: RegisterDto, ip?: string) {
     if (dto.password !== dto.confirm_password) {
       throw new BadRequestException('Senhas não conferem');
@@ -33,56 +40,69 @@ export class RegisterService {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    // same response for existing email prevents account-enumeration oracle
     if (existingUser) {
-      if (!existingUser.emailVerified) {
-        const emailVerificationToken = uuidv4();
-        const emailVerificationExpires = new Date(
-          Date.now() + 24 * 60 * 60 * 1000,
-        );
-        await this.prisma.user.update({
-          where: { id: existingUser.id },
-          data: {
-            emailVerificationToken: this.hashToken(emailVerificationToken),
-            emailVerificationExpires,
-          },
-        });
-        try {
-          await this.emailService.sendEmailVerification(
-            dto.email,
-            emailVerificationToken,
-          );
-        } catch (error) {
-          this.authLogger.logSecurityEvent('email_send_failed', {
-            email: dto.email,
-            type: 'verification',
-            error: error.message,
-          });
-        }
-      }
-      this.authLogger.logSecurityEvent('register_existing_email', {
-        email: dto.email,
-      });
-      return { message: SIGNUP_RESPONSE_MESSAGE };
+      return this.handleExistingUser(existingUser, dto.email);
     }
 
     const passwordHash = await this.passwordService.hash(dto.password);
     // Only hash is stored; raw token travels by email (non-prod echo only).
     const emailVerificationToken = uuidv4();
-    const emailVerificationTokenHash = this.hashToken(emailVerificationToken);
-    const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const user = await this.createUserWithProfile(dto, {
+      passwordHash,
+      emailVerificationTokenHash: this.hashToken(emailVerificationToken),
+      emailVerificationExpires: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+    });
 
+    await this.sendVerificationEmail(dto.email, emailVerificationToken);
+    this.authLogger.logRegistration(dto.email, dto.role, ip);
+
+    return {
+      message: SIGNUP_RESPONSE_MESSAGE,
+      user: {
+        id: user.id,
+        complete_name: user.completeName,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        postal_code: user.postalCode,
+        email_verified: user.emailVerified,
+        created_at: user.createdAt,
+      },
+      ...this.devOnlyVerificationToken(emailVerificationToken),
+    };
+  }
+
+  // same response for existing email prevents account-enumeration oracle
+  private async handleExistingUser(existingUser: User, email: string) {
+    if (!existingUser.emailVerified) {
+      const emailVerificationToken = await this.rotateVerificationToken(
+        existingUser.id,
+      );
+      await this.sendVerificationEmail(email, emailVerificationToken);
+    }
+    this.authLogger.logSecurityEvent('register_existing_email', { email });
+    return { message: SIGNUP_RESPONSE_MESSAGE };
+  }
+
+  private async createUserWithProfile(
+    dto: RegisterDto,
+    credentials: {
+      passwordHash: string;
+      emailVerificationTokenHash: string;
+      emailVerificationExpires: Date;
+    },
+  ) {
     const [user] = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           completeName: dto.complete_name,
           email: dto.email,
-          password: passwordHash,
+          password: credentials.passwordHash,
           role: dto.role,
           phone: dto.phone,
           postalCode: dto.postal_code,
-          emailVerificationToken: emailVerificationTokenHash,
-          emailVerificationExpires,
+          emailVerificationToken: credentials.emailVerificationTokenHash,
+          emailVerificationExpires: credentials.emailVerificationExpires,
         },
         select: {
           id: true,
@@ -114,40 +134,40 @@ export class RegisterService {
 
       return [user];
     });
-
-    try {
-      await this.emailService.sendEmailVerification(
-        dto.email,
-        emailVerificationToken,
-      );
-    } catch (error) {
-      this.authLogger.logSecurityEvent('email_send_failed', {
-        email: dto.email,
-        type: 'verification',
-        error: error.message,
-      });
-    }
-
-    this.authLogger.logRegistration(dto.email, dto.role, ip);
-
-    return {
-      message: SIGNUP_RESPONSE_MESSAGE,
-      user: {
-        id: user.id,
-        complete_name: user.completeName,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        postal_code: user.postalCode,
-        email_verified: user.emailVerified,
-        created_at: user.createdAt,
-      },
-      ...(process.env.NODE_ENV !== 'production' && {
-        email_verification_token: emailVerificationToken,
-      }),
-    };
+    return user;
   }
 
+  private async rotateVerificationToken(userId: string): Promise<string> {
+    const emailVerificationToken = uuidv4();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerificationToken: this.hashToken(emailVerificationToken),
+        emailVerificationExpires: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+      },
+    });
+    return emailVerificationToken;
+  }
+
+  private async sendVerificationEmail(
+    email: string,
+    token: string,
+  ): Promise<void> {
+    await this.trySendVerificationEmail(email, token);
+  }
+
+  private devOnlyVerificationToken(token: string) {
+    return (
+      process.env.NODE_ENV !== 'production' && {
+        email_verification_token: token,
+      }
+    );
+  }
+
+  /**
+   * Confirms a user's email from a verification token.
+   * Rejects unknown, already-used, and expired tokens with distinct messages.
+   */
   async verifyEmail(dto: VerifyEmailDto) {
     const user = await this.prisma.user.findFirst({
       where: { emailVerificationToken: this.hashToken(dto.token) },
@@ -189,55 +209,53 @@ export class RegisterService {
     return { message: 'Email verificado com sucesso' };
   }
 
+  /**
+   * Resends the verification email, rotating the token.
+   * Unknown and already-verified emails get the identical generic response
+   * so callers cannot probe for registered accounts (anti-enumeration).
+   */
   async resendVerificationEmail(dto: ResendVerificationDto) {
+    // Generic anti-enumeration response for unknown and verified emails.
+    const genericResponse = () => ({
+      message: 'Se o email existir, um novo link de verificação foi enviado',
+    });
+
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (!user) {
+    if (!user || user.emailVerified) {
       this.authLogger.logResendVerification(dto.email, false);
-      return {
-        message: 'Se o email existir, um novo link de verificação foi enviado',
-      };
-    }
-    if (user.emailVerified) {
-      this.authLogger.logResendVerification(dto.email, false);
-      // Generic anti-enumeration response for already-verified emails too.
-      return {
-        message: 'Se o email existir, um novo link de verificação foi enviado',
-      };
+      return genericResponse();
     }
 
-    const emailVerificationToken = uuidv4();
-    const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerificationToken: this.hashToken(emailVerificationToken),
-        emailVerificationExpires,
-      },
-    });
+    const emailVerificationToken = await this.rotateVerificationToken(user.id);
+    const sent = await this.trySendVerificationEmail(
+      dto.email,
+      emailVerificationToken,
+    );
+    this.authLogger.logResendVerification(dto.email, sent);
 
+    return {
+      ...genericResponse(),
+      ...this.devOnlyVerificationToken(emailVerificationToken),
+    };
+  }
+
+  private async trySendVerificationEmail(
+    email: string,
+    token: string,
+  ): Promise<boolean> {
     try {
-      await this.emailService.sendEmailVerification(
-        dto.email,
-        emailVerificationToken,
-      );
-      this.authLogger.logResendVerification(dto.email, true);
+      await this.emailService.sendEmailVerification(email, token);
+      return true;
     } catch (error) {
       this.authLogger.logSecurityEvent('email_send_failed', {
-        email: dto.email,
+        email,
         type: 'verification',
         error: error.message,
       });
-      this.authLogger.logResendVerification(dto.email, false);
+      return false;
     }
-
-    return {
-      message: 'Se o email existir, um novo link de verificação foi enviado',
-      ...(process.env.NODE_ENV !== 'production' && {
-        email_verification_token: emailVerificationToken,
-      }),
-    };
   }
 
   // --- Private Helpers ---

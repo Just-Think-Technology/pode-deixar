@@ -31,6 +31,50 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     return translations[msg] || msg;
   }
 
+  private resolveError(exception: unknown): {
+    status: number;
+    message: string | string[];
+    error: string;
+  } {
+    if (exception instanceof HttpException) {
+      const status = exception.getStatus();
+      const raw = exception.getResponse();
+      if (typeof raw === 'string') {
+        return {
+          status,
+          message: this.translateMessage(raw),
+          error: this.getDefaultErrorForStatus(status),
+        };
+      }
+      const body = raw as { message?: unknown; error?: string };
+      const message = this.resolveBodyMessage(body);
+      const error = body.error || this.getDefaultErrorForStatus(status);
+      return { status, message, error };
+    }
+    if (exception instanceof Error) {
+      return {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: exception.message,
+        error: exception.name,
+      };
+    }
+    return {
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+      message: 'Erro interno do servidor',
+      error: 'Erro Interno do Servidor',
+    };
+  }
+
+  private resolveBodyMessage(body: { message?: unknown }): string | string[] {
+    if (!body.message) {
+      return 'Erro interno do servidor';
+    }
+    if (Array.isArray(body.message)) {
+      return body.message.map((item) => this.translateMessage(String(item)));
+    }
+    return this.translateMessage(body.message as string);
+  }
+
   private getDefaultErrorForStatus(status: number): string {
     switch (status) {
       case HttpStatus.BAD_REQUEST:
@@ -57,32 +101,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = 'Erro interno do servidor';
-    let error = 'Erro Interno do Servidor';
-
-    if (exception instanceof HttpException) {
-      status = exception.getStatus();
-      const exceptionResponse = exception.getResponse();
-
-      if (typeof exceptionResponse === 'string') {
-        message = this.translateMessage(exceptionResponse);
-      } else if (
-        typeof exceptionResponse === 'object' &&
-        exceptionResponse !== null
-      ) {
-        const responseObj = exceptionResponse as any;
-        message = responseObj.message
-          ? Array.isArray(responseObj.message)
-            ? responseObj.message.map((m: string) => this.translateMessage(m))
-            : this.translateMessage(responseObj.message)
-          : message;
-        error = responseObj.error || this.getDefaultErrorForStatus(status);
-      }
-    } else if (exception instanceof Error) {
-      message = exception.message;
-      error = exception.name;
-    }
+    const { status, message, error } = this.resolveError(exception);
 
     this.logger.error(
       `${request.method} ${request.url} - ${status} - ${message}`,
