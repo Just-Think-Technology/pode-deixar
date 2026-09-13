@@ -1,7 +1,4 @@
 #!/bin/sh
-# Sobe uma stack e imprime onde cada coisa está rodando.
-# Uso: scripts/stack-up [dev|staging|production]
-#   STACK_UP_DRY_RUN=1 scripts/stack-up dev   # só imprime os endereços, sem subir
 set -eu
 
 ENV_KEY="${1:-dev}"
@@ -26,7 +23,6 @@ case "$ENV_KEY" in
     ;;
 esac
 
-# Lê uma chave simples do env file sem exportar segredos para o shell.
 ler_env() {
   sed -n "s/^$1=\"\{0,1\}\([^\"]*\)\".*/\1/p" "$ENV_FILE" | head -n 1
 }
