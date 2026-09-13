@@ -1,3 +1,5 @@
+// Counter proposal DTO — proposal negotiation input validation
+
 import {
   IsString,
   IsNumber,

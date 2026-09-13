@@ -1,3 +1,5 @@
+// Role selection page — client vs worker entry picker
+
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Briefcase, CheckCircle2, User } from "lucide-react";
 

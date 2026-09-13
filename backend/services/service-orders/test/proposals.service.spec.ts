@@ -1,3 +1,5 @@
+// Proposals tests — creation and provider lookup
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProposalsService } from "../src/proposals/proposals.service";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -7,6 +9,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
+
+// --- Tests ---
 
 describe("ProposalsService", () => {
   let service: ProposalsService;

@@ -1,3 +1,5 @@
+// Response logger interceptor — sanitized HTTP audit logs
+
 import {
   CallHandler,
   ExecutionContext,
@@ -14,6 +16,9 @@ const logger = createLogger('auth-service', 'http');
 
 @Injectable()
 export class ResponseLoggerInterceptor implements NestInterceptor {
+
+  // --- Public API ---
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const httpContext = context.switchToHttp();
     const request = httpContext.getRequest<Request>();

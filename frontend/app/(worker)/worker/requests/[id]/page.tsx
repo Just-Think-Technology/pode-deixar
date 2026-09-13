@@ -1,3 +1,4 @@
+// purpose: Worker request detail route — shows single request details
 import { notFound } from "next/navigation";
 
 import WorkerRequestDetailPage from "@/components/pages/worker-request-detail-page";

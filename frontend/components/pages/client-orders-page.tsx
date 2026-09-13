@@ -1,3 +1,5 @@
+// Client orders page — request list with proposal counts
+
 "use client";
 
 import Link from "next/link";

@@ -1,3 +1,5 @@
+// Test teardown — clears users test database
+
 import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
@@ -11,10 +13,12 @@ dotenv.config({
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pode_deixar_test_users?schema=public';
 
+// --- Teardown ---
+// Order respects foreign key children-before-parents.
 export default async function globalTeardown() {
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   try {
-    // Ordem respeita as FKs (filhos antes dos pais).
+    // Delete children before parents to respect foreign keys.
     await prisma.paymentStatusHistory.deleteMany().catch(() => {});
     await prisma.paymentWebhookEvent.deleteMany().catch(() => {});
     await prisma.payment.deleteMany().catch(() => {});

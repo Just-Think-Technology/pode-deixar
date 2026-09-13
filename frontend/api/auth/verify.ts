@@ -1,3 +1,5 @@
+// Auth API — session verification fetcher
+
 import { apiFetch, apiFetchAuth } from "@/api/client";
 import type { VerifySessionResponse } from "@/lib/auth/types";
 

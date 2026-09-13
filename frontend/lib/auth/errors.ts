@@ -1,3 +1,5 @@
+// Auth errors — API error mapping for auth forms
+
 import { ApiError } from "@/api/client";
 
 export function getApiErrorMessage(error: unknown): string {

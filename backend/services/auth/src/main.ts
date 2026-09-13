@@ -1,3 +1,4 @@
+// Auth bootstrap — CORS, helmet and validation setup
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -30,7 +31,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
-  // Global validation pipe (already handled in module, but keeping for compatibility)
+  // Kept for compatibility; the module pipe already covers this.
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

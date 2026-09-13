@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — textarea
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

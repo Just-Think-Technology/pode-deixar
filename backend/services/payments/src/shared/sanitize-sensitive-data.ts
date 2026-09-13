@@ -1,3 +1,5 @@
+// Sensitive data sanitizer — card and secret redaction for logs
+
 const SENSITIVE_FIELD =
   /(\b[a-z_]*(?:cvv|cvc|security_code|card_number|cardholder|expiration|expiry|pan|card_data|password|passwd|pwd|token|secret|api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|jwt|bearer|client[_-]?secret|private[_-]?key)\b[^=:]*[:=]\s*)([^;\s,{}]+)/gi;
 

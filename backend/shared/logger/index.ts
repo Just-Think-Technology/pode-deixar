@@ -1,3 +1,5 @@
+// Logger — pino factory with file output and retention
+
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
 import fs from 'fs';

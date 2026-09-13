@@ -1,3 +1,5 @@
+// E2E worker requests — request list and proposal submission
+
 import { expect, test } from "@playwright/test";
 
 import { loginAsWorkerMock } from "./helpers/auth";

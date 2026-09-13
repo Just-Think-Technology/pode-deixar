@@ -1,3 +1,5 @@
+// Auth router data — role-based redirect targets for auth flows
+
 import type { PublicRole } from "@/lib/auth/types";
 
 export type AuthRole = "client" | "worker";

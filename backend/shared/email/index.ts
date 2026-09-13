@@ -1,3 +1,5 @@
+// Email barrel — public email package exports
+
 export { EmailService } from './email.service';
 export { EmailModule } from './email.module';
 export {

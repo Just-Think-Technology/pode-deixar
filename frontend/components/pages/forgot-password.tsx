@@ -1,3 +1,5 @@
+// Forgot password form — recovery email request
+
 "use client";
 
 import Link from "next/link";

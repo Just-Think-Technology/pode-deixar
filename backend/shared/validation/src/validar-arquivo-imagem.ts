@@ -1,7 +1,9 @@
+// Image file validator — extension and magic-byte checks
+
 import { BadRequestException } from '@nestjs/common';
 import { extname } from 'path';
 
-// Extensões permitidas para upload de imagem (minúsculas, com ponto).
+// Allowed extensions for image upload (lowercase, with dot).
 const EXTENSOES_PERMITIDAS = new Set([
   '.jpg',
   '.jpeg',
@@ -10,7 +12,7 @@ const EXTENSOES_PERMITIDAS = new Set([
   '.gif',
 ]);
 
-// Extensões esperadas para cada tipo detectado pelos magic bytes.
+// Expected extensions for each type detected by magic bytes.
 const EXTENSOES_POR_TIPO: Record<string, string[]> = {
   jpeg: ['.jpg', '.jpeg'],
   png: ['.png'],
@@ -68,9 +70,9 @@ function detectarTipoPorMagicBytes(
   return null;
 }
 
-// Valida extensão (allowlist) e conteúdo real (magic bytes) do arquivo.
-// Rejeita quando a extensão não é permitida, o conteúdo não é uma imagem
-// suportada ou o conteúdo não corresponde à extensão informada.
+// Validate file extension (allowlist) and real content (magic bytes).
+// Rejects when the extension is not allowed, the content is not a supported
+// image, or the content does not match the informed extension.
 export function validarArquivoImagem(
   originalname: string,
   buffer: Buffer,
@@ -82,7 +84,7 @@ export function validarArquivoImagem(
     );
   }
   const tipo = detectarTipoPorMagicBytes(buffer);
-  // Seguro: chave é a união validada retornada pela detecção de magic bytes.
+  // Safe: the key is the validated union returned by magic bytes detection.
   // eslint-disable-next-line security/detect-object-injection
   if (!tipo || !EXTENSOES_POR_TIPO[tipo].includes(ext)) {
     throw new BadRequestException(

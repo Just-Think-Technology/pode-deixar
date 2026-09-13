@@ -1,3 +1,5 @@
+// Auth register tests — POST /auth/register flows
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -10,6 +12,8 @@ import {
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { EmailService } from '@pode-deixar/email';
+
+// --- Tests ---
 
 describe('POST /auth/register', () => {
   let app: INestApplication<App>;
@@ -127,7 +131,7 @@ describe('POST /auth/register', () => {
       expect(dbUser!.emailVerificationToken).toBe(expectedHash);
       expect(dbUser!.emailVerificationToken).not.toBe(oldToken);
 
-      // E o token rotacionado verifica de ponta a ponta.
+      // The rotated token verifies end to end.
       await request(app.getHttpServer())
         .post('/auth/verify-email')
         .send({ token: rawToken })

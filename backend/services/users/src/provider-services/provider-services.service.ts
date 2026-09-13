@@ -1,3 +1,5 @@
+// Provider services service — offered service catalog
+
 import {
   Injectable,
   NotFoundException,
@@ -16,6 +18,8 @@ export class ProviderServicesService {
     private usersLogger: UsersLoggerService,
   ) {}
 
+  // --- Public API ---
+
   async getProviderProfileByUserId(userId: string) {
     const profile = await this.prisma.providerProfile.findUnique({
       where: { userId },
@@ -25,6 +29,8 @@ export class ProviderServicesService {
     }
     return profile;
   }
+
+  // --- Private Helpers ---
 
   private async getProviderProfile(providerProfileId: string) {
     const profile = await this.prisma.providerProfile.findUnique({

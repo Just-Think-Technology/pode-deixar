@@ -1,3 +1,5 @@
+// Service card — service summary with rating display
+
 import { Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";

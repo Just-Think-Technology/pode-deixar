@@ -11,7 +11,8 @@
 | Language | Inline | Documentation | Section Header |
 |----------|--------|---------------|----------------|
 | TypeScript / TSX | `//` | `/** */` (JSDoc) | `// --- Name ---` |
-| Prisma / Docker / YAML / Shell | `#` | N/A | `# --- Name ---` |
+| Prisma | `//` | N/A | `// --- Name ---` |
+| Docker / YAML / Shell | `#` | N/A | `# --- Name ---` |
 | JSON / JSONC | `//` (if parser allows) | N/A | `// --- Name ---` |
 
 > **Generated files** (Prisma client, protobuf, etc.) are never edited — ignore them.
@@ -27,7 +28,7 @@ Every source file starts with a **single-line purpose comment**:
 ```
 
 ```prisma
-# Service order schema — core order and proposal models
+// Service order schema — core order and proposal models
 ```
 
 ```dockerfile
@@ -47,7 +48,7 @@ Major logical sections within a file use a consistent divider:
 ```
 
 ```prisma
-# --- Enums ---
+// --- Enums ---
 ```
 
 - Use `---` (three dashes) on both sides
@@ -179,9 +180,9 @@ export class ServiceOrderService {
 
 ### Prisma Schema
 ```prisma
-# Service order schema — core order and proposal models
+// Service order schema — core order and proposal models
 
-# --- Enums ---
+// --- Enums ---
 
 enum OrderStatus {
   PENDING
@@ -192,7 +193,7 @@ enum OrderStatus {
   DISPUTED
 }
 
-# --- Models ---
+// --- Models ---
 
 model ServiceOrder {
   id          String      @id @default(cuid())
@@ -200,8 +201,8 @@ model ServiceOrder {
   description String      @db.Text
   status      OrderStatus @default(PENDING)
   priceCents  Int         // Stored in cents to avoid float precision issues
-  
-  # Relations
+
+  // Relations
   clientId    String
   client      User        @relation(fields: [clientId], references: [id])
   providerId  String?
@@ -209,10 +210,10 @@ model ServiceOrder {
   categoryId  String
   category    Category    @relation(fields: [categoryId], references: [id])
 
-  # Timestamps
+  // Timestamps
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  expiresAt   DateTime?   # Nullable: only set for PENDING orders
+  expiresAt   DateTime?   // Nullable: only set for PENDING orders
   completedAt DateTime?
 
   @@index([clientId, status])

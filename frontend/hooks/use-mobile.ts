@@ -1,3 +1,5 @@
+// Mobile hook — viewport breakpoint detection
+
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768

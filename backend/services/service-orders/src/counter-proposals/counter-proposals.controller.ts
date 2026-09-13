@@ -1,3 +1,5 @@
+// Counter proposals controller — proposal negotiation endpoints
+
 import {
   Controller,
   Get,
@@ -28,6 +30,8 @@ export class CounterProposalsController {
   constructor(
     private readonly counterProposalsService: CounterProposalsService,
   ) {}
+
+  // --- Public API ---
 
   @Post()
   @Roles("CLIENT", "PROVIDER")
@@ -93,6 +97,8 @@ export class CounterProposalActionController {
   constructor(
     private readonly counterProposalsService: CounterProposalsService,
   ) {}
+
+  // --- Public API ---
 
   @Post("accept")
   @Roles("CLIENT", "PROVIDER")

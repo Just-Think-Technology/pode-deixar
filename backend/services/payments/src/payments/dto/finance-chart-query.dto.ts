@@ -1,3 +1,5 @@
+// Finance chart DTO — earnings chart query validation
+
 import { Type } from "class-transformer";
 import { IsInt, IsOptional, Max, Min } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";

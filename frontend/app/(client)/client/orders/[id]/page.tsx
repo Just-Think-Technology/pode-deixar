@@ -1,3 +1,4 @@
+// purpose: Client order detail route — shows single order details
 import { notFound } from "next/navigation";
 
 import ClientOrderDetailPage from "@/components/pages/client-order-detail-page";

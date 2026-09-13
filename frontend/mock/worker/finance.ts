@@ -1,3 +1,5 @@
+// Worker finance mocks — seeded dashboard items with a 10% mock fee
+
 import { calculateFeeAmounts } from "@/lib/worker/finance/labels";
 import type {
   WorkerFinanceChartPoint,
@@ -27,10 +29,7 @@ function buildItem(
   };
 }
 
-/**
- * Seeds financeiros do prestador (JTT-95).
- * Taxa mock 10%. Proposta mock-proposal-002 alinhada ao JTT-93.
- */
+// Provider finance seeds (JTT-95); 10% mock fee, proposal mock-proposal-002 aligns with JTT-93.
 const SEEDED_ITEMS: WorkerFinanceItem[] = [
   buildItem({
     paymentId: "mock-finance-002",

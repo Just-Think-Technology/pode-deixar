@@ -1,3 +1,5 @@
+// Auth logger — PII-safe authentication audit events
+
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
 import createLogger from '@pode-deixar/logger';
@@ -10,6 +12,8 @@ export function anonymizeEmailForLog(email: string): string {
 @Injectable()
 export class AuthLoggerService {
   private readonly logger = createLogger('auth-service');
+
+  // --- Public API ---
 
   logLoginAttempt(email: string, success: boolean, ip?: string) {
     const emailHash = anonymizeEmailForLog(email);

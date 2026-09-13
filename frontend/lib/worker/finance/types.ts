@@ -1,7 +1,9 @@
+// Worker finance types — dashboard, items, and fee rate
+
 import type { WorkerPaymentMethod } from "@/lib/worker/payments/types";
 import type { WorkerPaymentStatus } from "@/lib/worker/payments/types";
 
-/** Taxa usada apenas no mock. Em produção a fonte da verdade é o backend. */
+/** Mock-only fee rate; the backend is the source of truth in production. */
 export const PLATFORM_FEE_RATE = 0.1;
 
 export type WorkerFinancePayoutStatus = "AVAILABLE" | "CREDITED" | "NONE";

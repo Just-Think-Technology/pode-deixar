@@ -1,3 +1,5 @@
+// Navigation — sidebar links for client and worker areas
+
 import type { LucideIcon } from "lucide-react";
 import {
   Home,

@@ -1,3 +1,5 @@
+// Pagination DTO — shared page and size validation
+
 import { Type } from "class-transformer";
 import { IsInt, IsOptional, Max, Min } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";

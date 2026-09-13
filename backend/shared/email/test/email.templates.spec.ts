@@ -1,3 +1,5 @@
+// Email template tests — layout and component rendering
+
 import {
   baseLayout,
   button,
@@ -6,6 +8,8 @@ import {
   verificationTemplate,
   passwordResetTemplate,
 } from '../email.templates';
+
+// --- Tests ---
 
 describe('email.templates', () => {
   describe('baseLayout()', () => {

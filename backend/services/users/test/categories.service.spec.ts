@@ -1,8 +1,12 @@
+// Categories tests — listing and creation logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { CategoriesService } from "../src/categories/categories.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
 import { NotFoundException, ConflictException } from "@nestjs/common";
+
+// --- Tests ---
 
 describe("CategoriesService", () => {
   let service: CategoriesService;

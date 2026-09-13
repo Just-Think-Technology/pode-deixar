@@ -1,3 +1,5 @@
+// Roles guard — role-based access enforcement
+
 import {
   Injectable,
   CanActivate,

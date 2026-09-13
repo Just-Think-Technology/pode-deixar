@@ -1,3 +1,4 @@
+// Roles decorator — metadata key for role guards
 import { SetMetadata } from '@nestjs/common';
 import { Role } from '@prisma/client';
 

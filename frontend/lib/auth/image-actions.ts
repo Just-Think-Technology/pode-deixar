@@ -1,3 +1,5 @@
+// Auth image actions — avatar and service image server actions
+
 "use server";
 
 import { getAccessToken } from "@/lib/auth/session.server";

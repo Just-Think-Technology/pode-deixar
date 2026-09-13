@@ -1,3 +1,5 @@
+// Payments controller tests — creation and listing endpoints
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { ForbiddenException } from "@nestjs/common";
 import { PaymentMethod } from "@prisma/client";
@@ -5,6 +7,8 @@ import { PaymentsController } from "../src/payments/payments.controller";
 import { PaymentsService } from "../src/payments/payments.service";
 import { PaymentGatewayFactory } from "../src/gateway/payment-gateway.factory";
 import { PaymentLoggerService } from "../src/payments/payment-logger.service";
+
+// --- Tests ---
 
 describe("PaymentsController", () => {
   let controller: PaymentsController;

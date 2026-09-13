@@ -1,3 +1,5 @@
+// Agenda week view — seven-day grid for desktop
+
 "use client";
 
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";

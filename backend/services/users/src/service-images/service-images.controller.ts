@@ -1,3 +1,5 @@
+// Service images controller — provider service photo uploads
+
 import {
   Controller,
   Post,
@@ -51,6 +53,8 @@ function fileFilter(
 @Roles("PROVIDER")
 export class ServiceImagesController {
   constructor(private readonly serviceImagesService: ServiceImagesService) {}
+
+  // --- Public API ---
 
   @Post()
   @UseInterceptors(

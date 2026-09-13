@@ -1,3 +1,5 @@
+// Search category icons — icon mapping for categories
+
 "use client";
 
 import {

@@ -1,3 +1,5 @@
+// Auth email-verification tests — POST /auth/verify-email flows
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -8,6 +10,8 @@ import {
   teardownTestApp
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
+
+// --- Tests ---
 
 describe('POST /auth/verify-email', () => {
   let app: INestApplication<App>;
@@ -23,11 +27,9 @@ describe('POST /auth/verify-email', () => {
     await teardownTestApp(app, prisma);
   });
 
-  /**
-   * Registers a user and returns the raw verification token. The database
-   * stores only the token sha256, so the raw token comes from the non-prod
-   * signup echo (equivalent to the email link).
-   */
+  // Registers a user and returns the raw verification token. The database
+  // stores only the token sha256, so the raw token comes from the non-prod
+  // signup echo (equivalent to the email link).
   async function registerAndGetToken(): Promise<{ email: string; token: string }> {
     const user = createTestUser();
     const registration = await registerUser(app, user);

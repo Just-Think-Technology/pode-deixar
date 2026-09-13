@@ -1,3 +1,5 @@
+// Worker service mocks — seeded provider services
+
 import type { ProviderService } from "@/lib/auth/types";
 
 export const MOCK_SERVICES: ProviderService[] = [

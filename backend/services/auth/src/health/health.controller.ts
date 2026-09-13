@@ -1,3 +1,5 @@
+// Health controller — liveness and readiness endpoints
+
 import { Controller, Get } from '@nestjs/common';
 import {
   HealthCheck,
@@ -14,6 +16,8 @@ export class HealthController {
     private readonly health: HealthCheckService,
     private readonly db: DatabaseHealthIndicator,
   ) {}
+
+  // --- Public API ---
 
   @Get()
   @HealthCheck()

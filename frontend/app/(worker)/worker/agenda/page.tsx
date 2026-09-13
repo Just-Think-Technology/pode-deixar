@@ -1,3 +1,4 @@
+// purpose: Worker agenda route — renders agenda page with event fetching
 import WorkerAgendaPage from "@/components/pages/worker-agenda-page";
 import { getAgendaEventsAction } from "@/lib/worker/agenda/actions";
 import {

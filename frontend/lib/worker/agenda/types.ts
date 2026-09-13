@@ -1,3 +1,4 @@
+// Worker agenda types — event and filter shapes
 export type WorkerAgendaOrderStatus = "IN_PROGRESS" | "COMPLETED";
 
 export type WorkerAgendaAddress = {

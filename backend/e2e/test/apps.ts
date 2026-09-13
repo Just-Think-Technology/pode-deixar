@@ -1,3 +1,5 @@
+// E2E app boot — multi-service test harness and helpers
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -25,7 +27,7 @@ export interface E2EApps {
   prisma: PrismaClient;
 }
 
-// --- Email mock ---
+// --- Email Mock ---
 // The real EmailService would send SMTP — unfeasible without a mail server.
 
 export const mockEmail = {
@@ -65,9 +67,9 @@ async function bootApp(
   if (minioClass) {
     builder = builder.overrideProvider(minioClass).useValue(mockMinio);
   }
-  // Justificativa AppSec: @Throttle estrito nos endpoints (5 req/min);
-  // jornadas e2e compartilham um IP e estourariam 429. Storage fake que
-  // nunca bloqueia — o guard real continua executando.
+  // Sensitive endpoints carry strict @Throttle (5 req/min); e2e journeys share
+  // one IP and would hit 429. Fake storage that never blocks — the real
+  // guard still runs.
   builder = builder
     .overrideProvider(ThrottlerStorage)
     .useValue({
@@ -124,8 +126,8 @@ export async function bootApps(): Promise<E2EApps> {
  * public and don't depend on the active strategy.
  */
 export async function bootAuthApp(): Promise<INestApplication> {
-  // Justificativa AppSec: o boot do auth valida segredos JWT fail-closed
-  // (>=32 chars); garante segredos de teste sem depender do ambiente.
+  // Boot validates JWT secrets fail-closed (>=32 chars); ensure adequate test
+  // secrets without relying on .env contents.
   if (
     !process.env.JWT_ACCESS_SECRET ||
     process.env.JWT_ACCESS_SECRET.length < 32
@@ -148,7 +150,7 @@ export async function bootAuthApp(): Promise<INestApplication> {
   })
     .overrideProvider(EmailService)
     .useValue(mockEmail)
-    // Justificativa AppSec: ver bootApp acima — storage fake anti-429.
+    // See bootApp above — fake storage avoids 429.
     .overrideProvider(ThrottlerStorage)
     .useValue({
       increment: async () => ({

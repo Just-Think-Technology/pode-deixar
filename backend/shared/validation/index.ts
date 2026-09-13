@@ -1,3 +1,5 @@
+// Validation barrel — public validation package exports
+
 export {
   traduzirErrosValidacao,
   MENSAGENS_RESTRICAO_PADRAO,

@@ -1,3 +1,5 @@
+// Reviews root module — service wiring and validation setup
+
 import { Module, BadRequestException } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
@@ -18,8 +20,7 @@ import {
   RotulosCampos,
 } from "@pode-deixar/validation";
 
-// Rótulos dos campos do reviews (user-facing, em português); as mensagens de
-// restrição vivem no núcleo compartilhado.
+// Reviews field labels for validation error translation (user-facing, in Portuguese).
 const ROTULOS_REVIEWS: RotulosCampos = {
   rating: "Nota",
   comment: "Comentário",
@@ -32,6 +33,9 @@ function translateValidationErrors(errors: ValidationError[]): string {
 }
 
 @Module({
+
+  // --- Imports ---
+
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -54,7 +58,13 @@ function translateValidationErrors(errors: ValidationError[]): string {
     SharedModule,
     ReviewsModule,
   ],
+
+  // --- Controllers ---
+
   controllers: [AppController],
+
+  // --- Providers ---
+
   providers: [
     AppService,
     {

@@ -1,3 +1,5 @@
+// Client provider profile — public profile with quote entry point
+
 "use client";
 
 import { useRouter } from "next/navigation";

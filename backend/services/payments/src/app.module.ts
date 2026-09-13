@@ -1,3 +1,5 @@
+// Payments root module — service wiring and validation setup
+
 import { Module, BadRequestException } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
@@ -20,8 +22,7 @@ import {
   RotulosCampos,
 } from "@pode-deixar/validation";
 
-// Rótulos dos campos do payments (user-facing, em português); as mensagens
-// de restrição vivem no núcleo compartilhado.
+// Payments field labels (user-facing, in Portuguese); restriction messages live in the shared core.
 const ROTULOS_PAYMENTS: RotulosCampos = {
   serviceOrderId: "ID do pedido",
   amount: "Valor",
@@ -35,6 +36,9 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
 }
 
 @Module({
+
+  // --- Imports ---
+
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -59,7 +63,13 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
     CommonModule,
     SharedModule,
   ],
+
+  // --- Controllers ---
+
   controllers: [AppController],
+
+  // --- Providers ---
+
   providers: [
     AppService,
     {

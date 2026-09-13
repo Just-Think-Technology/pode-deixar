@@ -1,3 +1,5 @@
+// Photos service tests — upload and view URL logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { PhotosService } from "../src/photos/photos.service";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -20,6 +22,8 @@ const PNG_1X1 = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "base64",
 );
+
+// --- Tests ---
 
 describe("PhotosService", () => {
   let service: PhotosService;

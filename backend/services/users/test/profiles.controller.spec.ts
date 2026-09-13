@@ -1,7 +1,11 @@
+// Profiles controller tests — client and provider endpoints
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProfilesController } from "../src/profiles/profiles.controller";
 import { PublicProviderProfileController } from "../src/profiles/public-provider-profile.controller";
 import { ProfilesService } from "../src/profiles/profiles.service";
+
+// --- Tests ---
 
 describe("ProfilesController", () => {
   let controller: ProfilesController;

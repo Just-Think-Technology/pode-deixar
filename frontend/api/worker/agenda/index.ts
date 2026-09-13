@@ -1,3 +1,5 @@
+// Worker agenda API — scheduled event fetchers
+
 import { apiFetchAuth } from "@/api/client";
 import type {
   WorkerAgendaEvent,

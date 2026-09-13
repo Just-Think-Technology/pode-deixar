@@ -1,3 +1,5 @@
+// Session route — clears the auth cookie
+
 import { NextRequest, NextResponse } from "next/server";
 
 import {

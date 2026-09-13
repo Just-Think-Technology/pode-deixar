@@ -1,3 +1,5 @@
+// Mercado Pago gateway — PIX charges and webhook validation
+
 import {
   Injectable,
   BadGatewayException,
@@ -16,6 +18,8 @@ import {
 export class MercadoPagoGateway implements PaymentGateway {
   readonly name = "MERCADO_PAGO";
 
+  // --- Private Helpers ---
+
   private readonly apiBase = "https://api.mercadopago.com";
 
   private get accessToken(): string {
@@ -29,6 +33,8 @@ export class MercadoPagoGateway implements PaymentGateway {
   private get isSandboxToken(): boolean {
     return this.accessToken.startsWith("TEST-");
   }
+
+  // --- Public API ---
 
   get isConfigured(): boolean {
     if (!this.accessToken) {

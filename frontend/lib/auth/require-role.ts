@@ -1,3 +1,5 @@
+// Role guard — role-based access helper for pages
+
 import type { PublicRole } from "@/lib/auth/types";
 
 export type AppArea = "client" | "worker";

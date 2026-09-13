@@ -1,3 +1,5 @@
+// Worker profile API — profile fetch and update fetchers
+
 import { apiFetchAuth } from "@/api/client";
 import type {
   CreateProviderProfilePayload,

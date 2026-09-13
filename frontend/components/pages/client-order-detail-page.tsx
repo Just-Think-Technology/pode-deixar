@@ -1,3 +1,5 @@
+// Client order detail — order info with proposal accept/reject
+
 "use client";
 
 import Link from "next/link";
