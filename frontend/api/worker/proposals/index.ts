@@ -1,3 +1,5 @@
+// Worker proposals API — sent proposal fetchers
+
 import { apiFetchAuth } from "@/api/client";
 import type {
   WorkerProposal,

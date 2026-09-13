@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — toggle group
 "use client"
 
 import * as React from "react"

@@ -1,3 +1,5 @@
+// Client provider mocks — seeded public profiles for search and detail
+
 import type { ProviderPublicProfile } from "@/lib/client/provider/types";
 
 export const MOCK_PROVIDER_PROFILES: ProviderPublicProfile[] = [

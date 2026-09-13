@@ -1,3 +1,5 @@
+// Notification DTO — notification creation validation
+
 import { ApiPropertyOptional, ApiProperty } from "@nestjs/swagger";
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 

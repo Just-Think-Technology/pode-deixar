@@ -1,3 +1,5 @@
+// Worker proposal labels — proposal status display strings
+
 import type { ProposalStatus } from "@/lib/worker/proposal/types";
 
 export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {

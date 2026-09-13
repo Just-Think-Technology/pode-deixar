@@ -1,3 +1,2 @@
-// Filtro único canônico no @pode-deixar/security (mascara erros do Prisma;
-// mesmo envelope para os 4 serviços).
+// Exception filter re-export — canonical Prisma masking from shared core
 export { GlobalExceptionFilter } from "@pode-deixar/security";

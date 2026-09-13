@@ -1,26 +1,13 @@
-# ============================================================
-# Pode Deixar - Deploy de PRODUÇÃO
-# ============================================================
-#   docker compose -f docker-compose.production.yml up -d --build
-#
-# Production-only:
-# - Env: .env.production
-# - Banco: Neon via DATABASE_URL
-# - Frontend: Vercel
-# - SMTP: serviço externo
-# - Sem Postgres local
-# - Sem Mailpit
-# - Sem volumes de source code
-# - Sem portas públicas nos serviços internos
-# - Caddy: 80/443
-# - Backup: pg_dump periódico do Neon
-# ============================================================
+# purpose: Production deploy (Neon database, Vercel frontend, external SMTP)
+# Run: docker compose -f docker-compose.production.yml up -d --build
+# Env: .env.production; no local Postgres, Mailpit, source volumes, or public ports on internal services
+# Caddy on 80/443; periodic pg_dump backup of Neon
 
 name: pode-deixar-production
 
 services:
 
-  # -- Auth Service --
+  # --- Auth Service ---
   auth:
     build:
       context: ./backend
@@ -40,7 +27,7 @@ services:
       minio:
         condition: service_healthy
 
-  # -- Users Service --
+  # --- Users Service ---
   users:
     build:
       context: ./backend
@@ -59,7 +46,7 @@ services:
       minio:
         condition: service_healthy
 
-  # -- Service Orders Service --
+  # --- Service Orders Service ---
   service-orders:
     build:
       context: ./backend
@@ -78,7 +65,7 @@ services:
       minio:
         condition: service_healthy
 
-  # -- Payments Service --
+  # --- Payments Service ---
   payments:
     build:
       context: ./backend
@@ -94,7 +81,7 @@ services:
       NODE_ENV: production
       TZ: America/Sao_Paulo
 
-  # -- Reviews Service --
+  # --- Reviews Service ---
   reviews:
     build:
       context: ./backend
@@ -110,7 +97,7 @@ services:
       NODE_ENV: production
       TZ: America/Sao_Paulo
 
-  # -- MinIO --
+  # --- MinIO ---
   minio:
     image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: server /data --console-address ":9001"
@@ -124,7 +111,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # -- MinIO Client --
+  # --- MinIO Client ---
   minio-setup:
     image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     env_file:
@@ -143,7 +130,7 @@ services:
       echo 'Buckets created successfully'
       "
 
-  # -- Redis --
+  # --- Redis ---
   redis:
     image: redis:7-alpine
     command:
@@ -162,7 +149,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # -- Database Backup --
+  # --- Database Backup ---
   db-backup:
     image: postgres:16-alpine
     env_file:
@@ -202,7 +189,7 @@ services:
       crond -f -l 2
       "
 
-  # -- Reverse Proxy --
+  # --- Reverse Proxy ---
   caddy:
     image: caddy:2-alpine
     ports:

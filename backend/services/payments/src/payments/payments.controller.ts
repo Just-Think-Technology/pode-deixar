@@ -1,3 +1,5 @@
+// Payments controller — charges and webhook endpoints
+
 import {
   Controller,
   Get,
@@ -37,6 +39,8 @@ export class PaymentsController {
     private readonly gateways: PaymentGatewayFactory,
     private readonly logger: PaymentLoggerService,
   ) {}
+
+  // --- Public API ---
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -142,6 +146,8 @@ export class PaymentsController {
 
     return this.paymentsService.confirmPayment(dto);
   }
+
+  // --- Private Helpers ---
 
   private validateWebhookKey(webhookKey: string | undefined): boolean {
     const expected = process.env.MOCK_WEBHOOK_KEY || "";

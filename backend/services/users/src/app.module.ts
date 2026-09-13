@@ -1,3 +1,5 @@
+// Users root module — service wiring and validation setup
+
 import { Module, BadRequestException } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
@@ -23,8 +25,7 @@ import {
   RotulosCampos,
 } from "@pode-deixar/validation";
 
-// Rótulos dos campos do users (user-facing, em português); as mensagens de
-// restrição vivem no núcleo compartilhado.
+// Users field labels for validation error translation (user-facing, in Portuguese).
 const ROTULOS_USERS: RotulosCampos = {
   title: "Título",
   description: "Descrição",
@@ -47,6 +48,9 @@ function translateValidationErrors(errors: ValidationError[]): string {
 }
 
 @Module({
+
+  // --- Imports ---
+
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -74,7 +78,13 @@ function translateValidationErrors(errors: ValidationError[]): string {
     SharedModule,
     MinioModule,
   ],
+
+  // --- Controllers ---
+
   controllers: [AppController],
+
+  // --- Providers ---
+
   providers: [
     AppService,
     {

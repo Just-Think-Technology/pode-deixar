@@ -1,7 +1,4 @@
-/*
- * This file is picked up by Vitest automatically.
- * You can place global mocks or setup logic here.
- */
+// Vitest global setup — jest-dom matchers and browser API shims for jsdom
 
 // jest-dom custom matchers for Vitest (explicit entry: the bare import does
 // not register the matchers on jest-dom 6.10 + vitest 4)
@@ -11,7 +8,6 @@ import { vi } from 'vitest'
 // Mock jest functions for vitest compatibility
 (globalThis as any).jest = vi
 
-// Mock global This structure if needed
 global.ResizeObserver = global.ResizeObserver || function () {
   let callbacks: Array<{ observe: () => void }> = []
   return {
@@ -22,7 +18,6 @@ global.ResizeObserver = global.ResizeObserver || function () {
   }
 }
 
-// Mock matchMedia
 global.matchMedia = global.matchMedia || function (query: string) {
   return {
     matches: false,
@@ -36,12 +31,10 @@ global.matchMedia = global.matchMedia || function (query: string) {
   }
 }
 
-// Mock requestAnimationFrame
 global.requestAnimationFrame = global.requestAnimationFrame || function (cb: Function) {
   return setTimeout(cb, 0)
 }
 
-// Mock cancelAnimationFrame
 global.cancelAnimationFrame = global.cancelAnimationFrame || function (id: number) {
   clearTimeout(id)
 }

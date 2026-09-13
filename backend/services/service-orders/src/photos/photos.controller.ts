@@ -1,3 +1,5 @@
+// Photos controller — order photo upload and viewing
+
 import {
   Controller,
   Get,
@@ -29,6 +31,8 @@ import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 @ApiBearerAuth()
 export class PhotosController {
   constructor(private readonly photosService: PhotosService) {}
+
+  // --- Public API ---
 
   @Post()
   @Roles("CLIENT")
@@ -71,6 +75,8 @@ export class PhotosController {
 @ApiBearerAuth()
 export class PhotoViewController {
   constructor(private readonly photosService: PhotosService) {}
+
+  // --- Public API ---
 
   @Get(":photoId/view")
   @Roles("CLIENT", "PROVIDER", "ADMIN")

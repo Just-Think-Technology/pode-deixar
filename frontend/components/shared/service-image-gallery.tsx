@@ -1,3 +1,5 @@
+// Service image gallery — carousel with fullscreen viewer
+
 "use client";
 
 import { useState, useRef } from "react";

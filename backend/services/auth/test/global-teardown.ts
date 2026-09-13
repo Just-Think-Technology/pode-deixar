@@ -1,3 +1,5 @@
+// Test teardown — clears auth test database
+
 import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
@@ -10,6 +12,8 @@ dotenv.config({
 });
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pode_deixar_test?schema=public';
+
+// --- Teardown ---
 
 export default async function globalTeardown() {
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });

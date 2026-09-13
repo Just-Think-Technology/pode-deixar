@@ -1,3 +1,5 @@
+// Login DTO — credential and session input validation
+
 import {
   IsEmail,
   IsNotEmpty,

@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — field
 "use client"
 
 import { useMemo } from "react"

@@ -1,3 +1,5 @@
+// Payment webhook DTO — gateway notification validation
+
 import {
   IsString,
   IsNumber,

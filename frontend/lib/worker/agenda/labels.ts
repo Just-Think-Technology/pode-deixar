@@ -1,3 +1,5 @@
+// Worker agenda labels — date and status display strings
+
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 

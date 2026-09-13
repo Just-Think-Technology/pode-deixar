@@ -1,3 +1,5 @@
+// Change password DTO — authenticated password update validation
+
 import { IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 

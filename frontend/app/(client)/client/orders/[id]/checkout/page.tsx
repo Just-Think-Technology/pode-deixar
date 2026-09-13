@@ -1,3 +1,4 @@
+// purpose: Client order checkout route — renders checkout for a specific order
 import { notFound } from "next/navigation";
 
 import ClientCheckoutPage from "@/components/pages/client-checkout-page";

@@ -1,3 +1,4 @@
+// Client payment scheduling — schedule input and slot helpers
 export type ServiceScheduleInput = {
   date: Date | undefined;
   startTime: string;

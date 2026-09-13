@@ -1,3 +1,5 @@
+// Reset password form — token-based password update
+
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";

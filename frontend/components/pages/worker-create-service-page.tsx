@@ -1,3 +1,5 @@
+// Worker create service — service creation form with image upload
+
 "use client";
 
 import { useRouter } from "next/navigation";

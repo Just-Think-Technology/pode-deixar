@@ -1,3 +1,5 @@
+// Profiles tests — cross-endpoint integration flows
+
 import { INestApplication } from '@nestjs/common';
 // import-require: these services lack esModuleInterop (unlike auth),
 // so the default import compiles to a nonexistent `.default` at runtime.
@@ -14,7 +16,7 @@ import {
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-// ─── Integration: Perfis (HTTP + banco real, MinIO mockado) ────────────────
+// --- Integration: Profiles ---
 
 describe('Profiles (integration)', () => {
   let app: INestApplication<App>;

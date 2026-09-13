@@ -1,3 +1,5 @@
+// E2E auth helpers — mock session cookies for worker and client areas
+
 import type { BrowserContext, Page } from "@playwright/test";
 
 const E2E_ORIGIN = "http://localhost:3100";
@@ -28,7 +30,7 @@ const MOCK_CLIENT_SESSION = {
   },
 };
 
-/** Cookie de sessão mock para área do prestador (NEXT_PUBLIC_USE_MOCK=true). */
+// Mock session cookie for the worker area (NEXT_PUBLIC_USE_MOCK=true).
 export async function loginAsWorkerMock(
   page: Page,
   context: BrowserContext = page.context(),
@@ -44,7 +46,7 @@ export async function loginAsWorkerMock(
   ]);
 }
 
-/** Cookie de sessão mock para área do cliente (NEXT_PUBLIC_USE_MOCK=true). */
+// Mock session cookie for the client area (NEXT_PUBLIC_USE_MOCK=true).
 export async function loginAsClientMock(
   page: Page,
   context: BrowserContext = page.context(),

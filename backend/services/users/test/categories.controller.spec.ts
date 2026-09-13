@@ -1,6 +1,10 @@
+// Categories controller tests — listing and admin creation
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { CategoriesController, AdminCategoriesController } from "../src/categories/categories.controller";
 import { CategoriesService } from "../src/categories/categories.service";
+
+// --- Tests ---
 
 describe("CategoriesController", () => {
   let controller: CategoriesController;

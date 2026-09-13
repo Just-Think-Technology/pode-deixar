@@ -1,3 +1,5 @@
+// Auth logout tests — POST /auth/logout flow
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -9,6 +11,8 @@ import {
   teardownTestApp
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
+
+// --- Tests ---
 
 describe('POST /auth/logout', () => {
   let app: INestApplication<App>;

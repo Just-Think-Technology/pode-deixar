@@ -1,3 +1,5 @@
+// Worker request validation — proposal form validators
+
 import type { ValidationResult } from "@/lib/auth/types";
 import type { CreateProposalPayload } from "@/lib/worker/requests/types";
 

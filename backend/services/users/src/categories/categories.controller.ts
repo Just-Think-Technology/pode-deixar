@@ -1,3 +1,5 @@
+// Categories controller — public listing and admin management
+
 import {
   Controller,
   Get,
@@ -25,6 +27,8 @@ import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
+  // --- Public API ---
+
   @Get()
   @ApiOperation({ summary: "List all categories" })
   @ApiResponse({
@@ -51,6 +55,8 @@ export class CategoriesController {
 @ApiBearerAuth()
 export class AdminCategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
+
+  // --- Public API ---
 
   @Post()
   @Roles("ADMIN")

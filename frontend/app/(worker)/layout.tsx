@@ -1,3 +1,4 @@
+// purpose: Worker area layout — requires valid session, provides sidebar
 import AppShell from "@/components/layouts/app-shell";
 import WorkerSidebar from "@/components/sidebar/worker-sidebar";
 import { requireValidSession } from "@/lib/auth/require-valid-session";

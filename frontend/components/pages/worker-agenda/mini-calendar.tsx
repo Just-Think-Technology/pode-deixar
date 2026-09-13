@@ -1,3 +1,5 @@
+// Agenda mini calendar — month picker for agenda navigation
+
 "use client";
 
 import { ptBR } from "react-day-picker/locale";

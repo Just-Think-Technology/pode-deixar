@@ -1,3 +1,5 @@
+// E2E client checkout — payment flow with mock gateway link
+
 import { expect, test } from "@playwright/test";
 
 import { loginAsClientMock } from "./helpers/auth";
@@ -67,7 +69,7 @@ test.describe("Checkout / payment confirmation (JTT-92)", () => {
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Abrir checkout do cartão" }),
-      // Justificativa AppSec: mock usa URL realista do gateway (allowlist exige https + mercadopago.*).
+      // AppSec rationale: mock uses realistic gateway URL (allowlist requires https + mercadopago.*).
     ).toHaveAttribute("href", /mercadopago\.com\/mock-checkout\//);
   });
 });

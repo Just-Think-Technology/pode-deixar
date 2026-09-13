@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — kbd
 import { cn } from "@/lib/utils"
 
 function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {

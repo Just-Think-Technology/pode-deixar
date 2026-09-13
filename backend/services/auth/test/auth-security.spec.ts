@@ -1,3 +1,5 @@
+// Auth security tests — injection and edge cases
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -10,9 +12,9 @@ import {
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// --- Constants ---
 
-/** Passwords that must all fail the complexity policy. */
+// Passwords that must all fail the complexity policy.
 const WEAK_PASSWORDS = [
   '123456',    // numeric only
   'password',  // dictionary word
@@ -24,7 +26,7 @@ const WEAK_PASSWORDS = [
   'Pass1',     // too short
 ];
 
-/** JWT strings that are structurally invalid or carry bad signatures. */
+// JWT strings that are structurally invalid or carry bad signatures.
 const MALFORMED_TOKENS = [
   'not-a-jwt',
   'header.payload',                          // missing signature segment
@@ -33,7 +35,7 @@ const MALFORMED_TOKENS = [
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', // header only
 ];
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
+// --- Tests ---
 
 describe('Security and Edge Cases', () => {
   let app: INestApplication<App>;
@@ -49,7 +51,7 @@ describe('Security and Edge Cases', () => {
     await teardownTestApp(app, prisma);
   });
 
-  // ── SQL Injection Prevention ─────────────────────────────────────────────
+  // --- SQL Injection Prevention ---
 
   describe('SQL Injection Prevention', () => {
     it('should reject SQL injection payload in email during registration', async () => {
@@ -73,7 +75,7 @@ describe('Security and Edge Cases', () => {
     });
   });
 
-  // ── XSS Prevention ──────────────────────────────────────────────────────
+  // --- XSS Prevention ---
 
   describe('XSS Prevention', () => {
     it('should reject script tags in complete_name', async () => {
@@ -88,7 +90,7 @@ describe('Security and Edge Cases', () => {
     });
   });
 
-  // ── Password Security ────────────────────────────────────────────────────
+  // --- Password Security ---
 
   describe('Password Security', () => {
     it.each(WEAK_PASSWORDS)(
@@ -108,7 +110,7 @@ describe('Security and Edge Cases', () => {
 
   });
 
-  // ── Input Validation Edge Cases ──────────────────────────────────────────
+  // --- Input Validation Edge Cases ---
 
   describe('Input Validation Edge Cases', () => {
     it('should reject complete_name longer than 255 characters', async () => {
@@ -164,7 +166,7 @@ describe('Security and Edge Cases', () => {
     });
   });
 
-  // ── Token Security ───────────────────────────────────────────────────────
+  // --- Token Security ---
 
   describe('Token Security', () => {
     it.each(MALFORMED_TOKENS)(

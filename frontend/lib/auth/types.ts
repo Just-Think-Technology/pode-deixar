@@ -1,3 +1,4 @@
+// Auth types — roles, session, and form payload shapes
 export type PublicRole = "CLIENT" | "PROVIDER";
 
 export type AuthUser = {

@@ -1,3 +1,5 @@
+// Verify service — access token validation
+
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -13,6 +15,8 @@ export class VerifyService {
     private configService: ConfigService,
     private authLogger: AuthLoggerService,
   ) {}
+
+  // --- Public API ---
 
   async verify(accessToken: string | null) {
     if (!accessToken) {

@@ -1,3 +1,4 @@
+// Worker profile mocks — UI defaults for the profile page
 export const WORKER_PROFILE_UI_DEFAULTS = {
   rating: 0,
   reviewCount: 0,

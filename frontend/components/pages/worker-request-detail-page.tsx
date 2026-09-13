@@ -1,3 +1,5 @@
+// Worker request detail — request info with proposal composer
+
 "use client";
 
 import Link from "next/link";

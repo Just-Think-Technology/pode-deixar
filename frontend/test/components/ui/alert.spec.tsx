@@ -1,3 +1,5 @@
+// Alert spec — variants and accessibility of the UI alert
+
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Alert, AlertTitle, AlertDescription, AlertAction } from '@/components/ui/alert'

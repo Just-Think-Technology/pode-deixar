@@ -1,3 +1,5 @@
+// Finance items DTO — earnings listing query validation
+
 import { IsEnum, IsOptional } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { PaymentStatus } from "@prisma/client";

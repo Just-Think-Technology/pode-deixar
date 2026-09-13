@@ -1,3 +1,4 @@
+// purpose: Client area layout — requires valid session, provides sidebar
 import AppShell from "@/components/layouts/app-shell";
 import ClientSidebar from "@/components/sidebar/client-sidebar";
 import { requireValidSession } from "@/lib/auth/require-valid-session";

@@ -1,3 +1,5 @@
+// Profiles controller — own profile management endpoints
+
 import {
   Controller,
   Get,
@@ -33,6 +35,8 @@ import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 @ApiBearerAuth()
 export class ProfilesController {
   constructor(private readonly profilesService: ProfilesService) {}
+
+  // --- Public API ---
 
   @Get("me")
   @Roles("CLIENT", "PROVIDER")

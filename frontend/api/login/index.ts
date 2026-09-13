@@ -1,3 +1,5 @@
+// Login API — credential authentication fetcher
+
 import { apiFetch } from "@/api/client";
 import type { LoginPayload, LoginResponse } from "@/lib/auth/types";
 

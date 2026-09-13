@@ -1,3 +1,5 @@
+// Worker proposal mocks — seeded sent proposals
+
 import type { WorkerProposal } from "@/lib/worker/proposal/types";
 
 export const MOCK_PROPOSALS: WorkerProposal[] = [

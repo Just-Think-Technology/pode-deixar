@@ -1,10 +1,10 @@
+// Worker payment mocks — seeded provider receipts across statuses
+
 import { getMockProposalById } from "@/mock/worker/proposals";
 import type { WorkerPaymentStatusResponse } from "@/lib/worker/payments/types";
 
-/**
- * Seeded provider receipts (JTT-95 + JTT-93).
- * Covers several statuses for the panel listing.
- */
+// Seeded provider receipts (JTT-95 + JTT-93).
+// Covers several statuses for the panel listing.
 const SEEDED_PAYMENTS: WorkerPaymentStatusResponse[] = [
   {
     paymentId: "mock-worker-payment-002",

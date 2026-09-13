@@ -1,3 +1,5 @@
+// Service orders service — order lifecycle, proposals and photos
+
 import {
   Injectable,
   NotFoundException,
@@ -28,6 +30,8 @@ export class ServiceOrdersService {
     private prisma: PrismaService,
     private logger: ServicesLoggerService,
   ) {}
+
+  // --- Private Helpers ---
 
   private formatOrder(order: any) {
     return {
@@ -106,6 +110,8 @@ export class ServiceOrdersService {
       throw new BadRequestException("Usuário não é um prestador");
     }
   }
+
+  // --- Public API ---
 
   async create(clientId: string, dto: CreateServiceOrderDto, ip?: string) {
     if (dto.providerId) {

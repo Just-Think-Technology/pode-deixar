@@ -1,3 +1,5 @@
+// Notifications service — user notification delivery
+
 import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateNotificationDto } from "./dto/create-notification.dto";
@@ -8,8 +10,10 @@ export class NotificationsService {
 
   constructor(private prisma: PrismaService) {}
 
-  // Recipient is always the authenticated user; ignore the client-supplied
-  // recipient to prevent forged notifications to third parties.
+  // --- Public API ---
+
+  // Recipient is always the authenticated user; client-supplied recipient is
+  // ignored to prevent forged notifications to third parties.
   async create(userId: string, dto: CreateNotificationDto) {
     const notification = await this.prisma.notification.create({
       data: {

@@ -1,11 +1,14 @@
+// Validation error translator — Portuguese constraint messages
+
 import { ValidationError } from 'class-validator';
 
 export type RotulosCampos = Record<string, string>;
 export type MensagensRestricao = Record<string, (rotulo: string) => string>;
 
-// Tabela canônica de mensagens de restrição (class-validator). É a união das
-// tabelas antes duplicadas nos 5 app.modules: chaves ausentes num serviço
-// caem no fallback da mensagem original, como antes — sem mudar comportamento.
+// Canonical table of constraint messages (class-validator). It is the union
+// of the tables previously duplicated across the 5 app.modules: missing
+// keys in a service fall back to the original message, as before — without
+// changing behavior.
 export const MENSAGENS_RESTRICAO_PADRAO: MensagensRestricao = {
   isString: (r) => `${r} deve ser uma string`,
   isNotEmpty: (r) => `${r} não pode estar vazio`,
@@ -25,9 +28,9 @@ export const MENSAGENS_RESTRICAO_PADRAO: MensagensRestricao = {
   matches: (r) => `${r} contém caracteres inválidos`,
 };
 
-// Traduz erros do ValidationPipe para mensagens em português. `sobrescritas`
-// permite ao serviço manter mensagens divergentes (ex.: minLength do auth);
-// chaves sem tradutor mantêm a mensagem original do class-validator.
+// Translate ValidationPipe errors to Portuguese messages. `overrides` allows
+// the service to keep divergent messages (e.g.: minLength of auth);
+// keys without a translator keep the original class-validator message.
 export function traduzirErrosValidacao(
   errors: ValidationError[],
   rotulos: RotulosCampos,
@@ -39,7 +42,7 @@ export function traduzirErrosValidacao(
       return `${rotulos[error.property] || error.property} inválido`;
     return Object.entries(error.constraints)
       .map(([chave, msg]) => {
-        // Seguro: chaves vêm dos nomes fixos de restrição do class-validator.
+        // Safe: keys come from the fixed names of class-validator constraint.
         // eslint-disable-next-line security/detect-object-injection
         const tradutor = mensagens[chave];
         return tradutor

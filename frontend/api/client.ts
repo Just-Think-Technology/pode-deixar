@@ -1,9 +1,11 @@
+// Shared HTTP client — base URL, timeout fetch, and API error
+
 const FETCH_TIMEOUT = 10_000;
 
 export function getApiBaseUrl(): string {
   const internalUrl = process.env.BACKEND_INTERNAL_URL;
   const publicUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  // No servidor (RSC/actions), preferir URL interna da rede Docker.
+  // Prefer internal Docker network URL in RSC/actions (server-side)
   const baseUrl =
     typeof window === "undefined" && internalUrl ? internalUrl : publicUrl;
 

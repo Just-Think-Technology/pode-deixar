@@ -1,3 +1,5 @@
+// Payment logger — sanitized payment audit events
+
 import { Injectable } from "@nestjs/common";
 import createLogger from "@pode-deixar/logger";
 import { sanitizeSensitiveData } from "@pode-deixar/security";
@@ -5,6 +7,8 @@ import { sanitizeSensitiveData } from "@pode-deixar/security";
 @Injectable()
 export class PaymentLoggerService {
   private readonly logger = createLogger("payments", "payment-events");
+
+  // --- Public API ---
 
   logPaymentCreated(
     paymentId: string,

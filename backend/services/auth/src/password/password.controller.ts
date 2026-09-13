@@ -1,3 +1,5 @@
+// Password controller — reset and change endpoints
+
 import {
   Controller,
   Post,
@@ -24,6 +26,8 @@ const logger = getLogger('password');
 @ApiTags('Password')
 export class PasswordController {
   constructor(private readonly passwordService: PasswordManagementService) {}
+
+  // --- Public API ---
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)

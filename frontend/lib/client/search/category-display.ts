@@ -1,3 +1,5 @@
+// Search category display — category metadata for the search UI
+
 import type { Category } from "@/lib/client/quote/types";
 import type { PopularCategory } from "@/lib/client/search/types";
 

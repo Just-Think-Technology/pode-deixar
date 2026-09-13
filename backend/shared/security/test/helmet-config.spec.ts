@@ -1,3 +1,5 @@
+// Helmet config tests — header policy output
+
 import { getHelmetConfig } from '../helmet-config';
 
 function runMiddleware(middleware: any) {
@@ -16,6 +18,8 @@ function runMiddleware(middleware: any) {
   middleware(req, res, next);
   return { headers, next };
 }
+
+// --- Tests ---
 
 describe('getHelmetConfig (shared)', () => {
   const previousAllowedOrigins = process.env.ALLOWED_ORIGINS;

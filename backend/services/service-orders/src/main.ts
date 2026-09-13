@@ -1,3 +1,5 @@
+// Service orders bootstrap — CORS, helmet and docs setup
+
 import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
@@ -11,7 +13,6 @@ async function bootstrap() {
     logger: false,
   });
 
-  // Security headers with CSP
   app.use(getHelmetConfig());
 
   // CORS configuration (allowlist via env — never "*")

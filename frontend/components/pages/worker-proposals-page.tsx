@@ -1,3 +1,5 @@
+// Worker proposals page — sent proposals list
+
 "use client";
 
 import Link from "next/link";

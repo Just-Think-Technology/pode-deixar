@@ -1,3 +1,5 @@
+// Client payments API — charge, status, and mock webhook confirmation
+
 import { apiFetchAuth } from "@/api/client";
 import type {
   ChargeResponse,
@@ -58,7 +60,7 @@ export function getPaymentStatus(accessToken: string, paymentId: string) {
   );
 }
 
-/** Apenas mock/E2E — simula confirmação do webhook. */
+/** Mock/E2E only — simulates the webhook confirmation. */
 export function confirmPaymentMock(paymentId: string) {
   if (!USE_MOCK) {
     return Promise.reject(

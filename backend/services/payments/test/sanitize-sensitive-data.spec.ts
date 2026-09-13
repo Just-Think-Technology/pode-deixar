@@ -1,4 +1,8 @@
+// Payments sanitize tests — sensitive data redaction
+
 import { sanitizeSensitiveData } from "../src/shared/sanitize-sensitive-data";
+
+// --- Tests ---
 
 describe("sanitizeSensitiveData", () => {
   it("should redact the full card number, keeping only the last 4", () => {

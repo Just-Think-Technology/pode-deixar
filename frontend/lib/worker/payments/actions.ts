@@ -1,3 +1,5 @@
+// Worker payment actions — receipt server actions
+
 "use server";
 
 import {

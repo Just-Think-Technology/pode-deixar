@@ -1,3 +1,5 @@
+// Login service — authentication and token rotation
+
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
@@ -13,7 +15,6 @@ import { JWT_ALGORITHMS, JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
 const MIN_JWT_SECRET_LENGTH = 32;
 
-// Fail-closed JWT secret validation: requires present secrets with minimum length. Called at boot to prevent insecure operation.
 export function requireJwtSecrets(config: ConfigService): void {
   for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const) {
     const secret = config.get<string>(key);
@@ -35,8 +36,11 @@ export class LoginService {
     private passwordService: PasswordService,
     private emailService: EmailService,
   ) {
+    // Reject boot on weak secrets instead of operating insecurely.
     requireJwtSecrets(configService);
   }
+
+  // --- Public API ---
 
   async login(dto: LoginDto, ip?: string) {
     const user = await this.prisma.user.findUnique({
@@ -48,7 +52,7 @@ export class LoginService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Locked accounts return a generic 401 (anti-enumeration); lockout counters stay managed in the DB by password verification.
+    // anti-enumeration: generic 401 for locked accounts; lockout counters managed in DB
     if (user.lockoutUntil && user.lockoutUntil > new Date()) {
       this.authLogger.logSecurityEvent('account_locked_attempt', {
         email: dto.email,
@@ -100,7 +104,7 @@ export class LoginService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Unverified emails return a generic 401 (anti-enumeration); the verification hint is resent best-effort without leaking account state.
+    // anti-enumeration: generic 401 for unverified emails; verification hint resent best-effort
     if (!user.emailVerified) {
       this.authLogger.logLoginAttempt(dto.email, false, ip);
       this.authLogger.logSecurityEvent('email_not_verified', {
@@ -243,6 +247,8 @@ export class LoginService {
     return { message: 'Logout realizado com sucesso' };
   }
 
+  // --- Private Helpers ---
+
   private async generateAccessToken(user: any) {
     const payload = {
       sub: user.id,
@@ -275,7 +281,7 @@ export class LoginService {
     });
   }
 
-  // Resends a verification hint best-effort without leaking account state or breaking the uniform 401.
+  // best-effort verification hint resend without leaking account state
   private async resendVerificationHint(
     userId: string,
     email: string,

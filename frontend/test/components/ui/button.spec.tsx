@@ -1,10 +1,11 @@
+// Button spec — variants, behavior, and accessibility of the UI button
+
 import { describe, it, expect, vitest, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Button, buttonVariants } from '@/components/ui/button'
 
 describe('Button Component', () => {
   beforeEach(() => {
-    // Clean up any mocks between tests
     vitest.resetAllMocks()
   })
 
@@ -139,7 +140,7 @@ describe('Button Component', () => {
     expect(handleClick).toHaveBeenCalledTimes(1)
     const eventArg = handleClick.mock.calls[0][0]
     expect(eventArg).toBeDefined()
-    // React entrega SyntheticEvent (nunca MouseEvent nativo)
+    // React passes a SyntheticEvent, never a native MouseEvent
     expect(eventArg.type).toBe('click')
   })
 

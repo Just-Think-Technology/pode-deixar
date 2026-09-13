@@ -1,3 +1,5 @@
+// Email module — global NestJS email provider wiring
+
 import { Global, Module } from '@nestjs/common';
 import { EmailService } from './email.service';
 

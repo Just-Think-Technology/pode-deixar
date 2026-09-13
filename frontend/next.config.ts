@@ -1,3 +1,5 @@
+// Next.js config — CSP headers, image domains, and path aliases
+
 import path from "node:path";
 import type { NextConfig } from "next";
 

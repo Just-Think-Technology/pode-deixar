@@ -1,4 +1,8 @@
+// Sanitize tests — sensitive data redaction
+
 import { sanitizeSensitiveData } from '../src/sanitize-sensitive-data';
+
+// --- Tests ---
 
 // PCI-DSS: sensitive data must never leak into structured logs.
 

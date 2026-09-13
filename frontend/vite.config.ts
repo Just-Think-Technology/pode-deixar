@@ -1,3 +1,5 @@
+// Vite config — Vitest environment for unit tests
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 

@@ -1,3 +1,5 @@
+// Server session — auth cookie read, write, and refresh helpers
+
 import "server-only";
 
 import { cookies } from "next/headers";

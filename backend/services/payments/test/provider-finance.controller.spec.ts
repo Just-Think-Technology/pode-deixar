@@ -1,7 +1,11 @@
+// Provider finance tests — summary and items endpoints
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { PaymentStatus } from "@prisma/client";
 import { ProviderFinanceController } from "../src/payments/provider-finance.controller";
 import { PaymentsService } from "../src/payments/payments.service";
+
+// --- Tests ---
 
 describe("ProviderFinanceController", () => {
   let controller: ProviderFinanceController;

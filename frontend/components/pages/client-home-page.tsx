@@ -1,3 +1,5 @@
+// Client home page — categories and recommended professionals
+
 "use client";
 
 import { useMemo, useState } from "react";

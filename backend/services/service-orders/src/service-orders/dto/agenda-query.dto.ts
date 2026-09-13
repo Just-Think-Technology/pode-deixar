@@ -1,3 +1,5 @@
+// Agenda query DTO — provider calendar window validation
+
 import { IsDateString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 

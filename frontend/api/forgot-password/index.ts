@@ -1,3 +1,5 @@
+// Password recovery API — forgot-password fetcher
+
 import { apiFetch } from "@/api/client";
 import type { ForgotPasswordPayload, forgotPasswordResponse} from "@/lib/auth/types";
 

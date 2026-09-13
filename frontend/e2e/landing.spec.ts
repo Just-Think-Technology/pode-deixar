@@ -1,3 +1,5 @@
+// E2E landing page — public content visibility
+
 import { expect, test } from "@playwright/test";
 
 test.describe("Landing page", () => {

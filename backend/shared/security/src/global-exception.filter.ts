@@ -1,3 +1,5 @@
+// Global exception filter — unified HTTP error responses
+
 import {
   ExceptionFilter,
   Catch,
@@ -40,9 +42,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
-      // Erros conhecidos do Prisma viram respostas genéricas por código,
-      // sem expor detalhes internos (tabela, campo, constraint) ao cliente.
-      // Qualquer outro erro vira 500 genérico; o detalhe fica só no log.
+      // Known Prisma errors become generic responses by code, without
+      // leaking internal details (table, field, constraint) to the client.
+      // Any other error becomes generic 500; detail stays in the log only.
       const resolvido = resolverErroPrisma(
         (exception as { code?: unknown }).code,
       );
@@ -55,7 +57,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // Log server-side mantém o detalhe original (mensagem + stack).
+    // Server-side log keeps the original detail (message + stack).
     const detalhe =
       exception instanceof Error ? exception.message : String(exception);
 

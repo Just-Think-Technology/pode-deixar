@@ -1,3 +1,5 @@
+// Search results — professional list with empty state
+
 "use client";
 
 import EmptyState from "@/components/shared/empty-state";

@@ -1,3 +1,5 @@
+// Reviews tests — cross-endpoint integration flows
+
 import { INestApplication } from '@nestjs/common';
 // Require syntax is needed here: without esModuleInterop a default import
 // would be undefined at runtime.
@@ -13,6 +15,8 @@ import {
   TestAppSetup,
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
+
+// --- Integration: Reviews ---
 
 describe('Reviews (integration)', () => {
   let app: INestApplication<App>;

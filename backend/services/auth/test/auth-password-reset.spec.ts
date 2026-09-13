@@ -1,3 +1,5 @@
+// Auth password-reset tests — forgot and reset password flows
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -25,12 +27,10 @@ describe('Password Reset Flow', () => {
     await teardownTestApp(app, prisma);
   });
 
-  /**
-   * Registers + verifies a user, then triggers the forgot-password flow.
-   * The database stores only the reset-token sha256, so the raw token comes
-   * from the non-prod forgot-password echo (equivalent to the emailed link)
-   * instead of a direct database read.
-   */
+  // Registers + verifies a user, then triggers the forgot-password flow.
+  // The database stores only the reset-token sha256, so the raw token comes
+  // from the non-prod forgot-password echo (equivalent to the emailed link)
+  // instead of a direct database read.
   async function setupResetFlow() {
     const user = createTestUser();
     const registration = await registerUser(app, user);
@@ -53,7 +53,7 @@ describe('Password Reset Flow', () => {
     return { user, resetToken };
   }
 
-  // ─── POST /auth/forgot-password ────────────────────────────────────────────
+  // --- POST /auth/forgot-password ---
 
   describe('POST /auth/forgot-password', () => {
     it('should respond with a generic success message (no email enumeration)', async () => {
@@ -92,7 +92,7 @@ describe('Password Reset Flow', () => {
     });
   });
 
-  // ─── POST /auth/reset-password ─────────────────────────────────────────────
+  // --- POST /auth/reset-password ---
 
   describe('POST /auth/reset-password', () => {
     it('should reset password and allow login with the new password', async () => {

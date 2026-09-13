@@ -1,3 +1,5 @@
+// Proposal DTO — provider proposal input validation
+
 import {
   IsString,
   IsNumber,

@@ -1,3 +1,5 @@
+// Auth API — session token refresh fetcher
+
 import { apiFetch } from "@/api/client";
 
 export type RefreshTokenResponse = {

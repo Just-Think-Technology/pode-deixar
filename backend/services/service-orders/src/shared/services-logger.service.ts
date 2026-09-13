@@ -1,3 +1,5 @@
+// Services logger — scoped audit event helpers
+
 import { Injectable } from "@nestjs/common";
 import { createLogger, LoggerWithEvent } from "@pode-deixar/logger";
 
@@ -8,6 +10,8 @@ export class ServicesLoggerService {
   constructor() {
     this.logger = createLogger("services-service");
   }
+
+  // --- Public API ---
 
   logInfo(event: string, message: string, meta?: Record<string, unknown>) {
     this.logger.info(event, message, meta);

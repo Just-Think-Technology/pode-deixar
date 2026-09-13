@@ -1,3 +1,5 @@
+// JWT strategy — access-token validation and revocation check
+
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -25,6 +27,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       audience: JWT_AUDIENCE,
     });
   }
+
+  // --- Public API ---
 
   async validate(payload: any) {
     // Only access tokens authenticate here; refresh tokens are rejected.

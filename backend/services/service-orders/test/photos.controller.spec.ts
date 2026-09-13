@@ -1,7 +1,11 @@
+// Photos controller tests — order photo upload endpoints
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { PhotosController } from "../src/photos/photos.controller";
 import { PhotosService } from "../src/photos/photos.service";
 import { BadRequestException } from "@nestjs/common";
+
+// --- Tests ---
 
 describe("PhotosController", () => {
   let controller: PhotosController;

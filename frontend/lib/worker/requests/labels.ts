@@ -1,3 +1,5 @@
+// Worker request labels — order status display strings
+
 import type { ServiceOrderStatus } from "@/lib/worker/requests/types";
 
 export const REQUEST_STATUS_LABELS: Record<string, string> = {

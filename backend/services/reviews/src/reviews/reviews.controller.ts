@@ -1,3 +1,5 @@
+// Reviews controller — review management endpoints
+
 import {
   Controller,
   Get,
@@ -29,6 +31,8 @@ import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 @ApiBearerAuth()
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
+
+  // --- Public API ---
 
   @Post()
   @Roles("CLIENT", "PROVIDER")
@@ -167,6 +171,8 @@ export class ReviewsController {
 @Controller("reviews/provider/:providerId")
 export class PublicReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
+
+  // --- Public API ---
 
   @Get()
   @ApiOperation({ summary: "List provider reviews (public)" })

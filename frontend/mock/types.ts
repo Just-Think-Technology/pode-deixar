@@ -1,3 +1,4 @@
+// Mock types — shared dashboard and metric shapes
 export type StatMetric = {
   title: string;
   value: string;

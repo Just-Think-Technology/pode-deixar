@@ -1,3 +1,5 @@
+// Worker finance page — earnings, payouts, and receipt list
+
 "use client";
 
 import Link from "next/link";

@@ -1,3 +1,5 @@
+// JWT guard — access-token authentication with IP logging
+
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import getLogger from '../shared/shared-logger';
@@ -6,6 +8,9 @@ const logger = getLogger('jwt');
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
+
+  // --- Public API ---
+
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
     try {
       const result = super.handleRequest(err, user, info, context);

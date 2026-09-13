@@ -1,3 +1,5 @@
+// Provider services controller — catalog and discovery endpoints
+
 import {
   Controller,
   Get,
@@ -32,6 +34,8 @@ export class ProviderServicesController {
   constructor(
     private readonly providerServicesService: ProviderServicesService,
   ) {}
+
+  // --- Public API ---
 
   @Post()
   @Roles("PROVIDER")
@@ -81,6 +85,8 @@ export class ProviderSearchController {
     private readonly providerServicesService: ProviderServicesService,
   ) {}
 
+  // --- Public API ---
+
   @Get()
   @ApiOperation({ summary: "Search providers by category or text" })
   @ApiQuery({
@@ -112,6 +118,8 @@ export class PublicProviderServicesController {
     private readonly providerServicesService: ProviderServicesService,
   ) {}
 
+  // --- Public API ---
+
   @Get()
   @ApiOperation({ summary: "List public services of a provider" })
   @ApiParam({ name: "providerId", description: "Provider profile ID" })
@@ -138,6 +146,8 @@ export class ProviderServiceDetailController {
   constructor(
     private readonly providerServicesService: ProviderServicesService,
   ) {}
+
+  // --- Public API ---
 
   @Patch()
   @Roles("PROVIDER")

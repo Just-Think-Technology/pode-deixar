@@ -1,3 +1,5 @@
+// purpose: Landing page — UI with Navbar, Hero, features, CTA, newsletter and footer
+
 "use client";
 
 import Link from "next/link";
@@ -25,7 +27,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 
-// ─── Navbar ──────────────────────────────────────────────────────────────────
+// --- Navbar ---
 
 function Navbar() {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -33,7 +35,6 @@ function Navbar() {
     return (
         <header className="fixed inset-x-0 top-0 z-50 border-b border-gray-100 bg-white">
             <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-                {/* Logo */}
                 <Link href="/" className="flex items-center overflow-visible">
                     <Image
                         src="/logotipo-pode-deixar-sem-fundo.webp"
@@ -45,7 +46,6 @@ function Navbar() {
                     />
                 </Link>
 
-                {/* Desktop Nav */}
                 <nav className="hidden items-center gap-7 md:flex">
                     <Link href="#como-funciona" className="text-sm font-medium text-gray-500 transition-colors hover:text-[#2F80ED]">
                         Como Funciona
@@ -58,7 +58,6 @@ function Navbar() {
                     </Link>
                 </nav>
 
-                {/* Auth buttons */}
                 <div className="hidden items-center gap-2 md:flex">
                     <Link href="/select-user">
                         <Button variant="ghost" size="sm" className="font-medium text-gray-600">
@@ -72,7 +71,6 @@ function Navbar() {
                     </Link>
                 </div>
 
-                {/* Mobile menu toggle */}
                 <button
                     className="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 md:hidden"
                     onClick={() => setMenuOpen(!menuOpen)}
@@ -82,7 +80,6 @@ function Navbar() {
                 </button>
             </div>
 
-            {/* Mobile menu */}
             {menuOpen && (
                 <div className="border-t border-gray-100 bg-white px-4 pb-4 md:hidden">
                     <nav className="flex flex-col gap-3 pt-3">
@@ -113,14 +110,13 @@ function Navbar() {
     );
 }
 
-// ─── Hero ─────────────────────────────────────────────────────────────────────
+// --- Hero ---
 
 function HeroSection() {
     return (
         <section className="bg-[#EEF4FF] pt-28 pb-20">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col items-center gap-12 lg:flex-row lg:items-center lg:gap-16">
-                    {/* Left content */}
                     <div className="flex-1">
                         <h1
                             className="mb-5 text-4xl font-bold leading-tight text-[#333333] sm:text-5xl lg:text-[52px]"
@@ -154,7 +150,6 @@ function HeroSection() {
                             </Link>
                         </div>
 
-                        {/* Stats */}
                         <div className="flex items-center gap-8">
                             <div>
                                 <p className="text-2xl font-bold text-[#2F80ED]">
@@ -179,7 +174,6 @@ function HeroSection() {
                         </div>
                     </div>
 
-                    {/* Right image */}
                     <div className="relative flex-1">
                         <div className="relative overflow-hidden rounded-2xl shadow-xl">
                             <Image
@@ -191,7 +185,6 @@ function HeroSection() {
                                 priority
                             />
                         </div>
-                        {/* Floating badge */}
                         <div className="absolute bottom-6 right-6 flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-lg">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#27AE60]/15">
                                 <CheckCircle2 className="size-5 text-[#27AE60]" />
@@ -208,7 +201,7 @@ function HeroSection() {
     );
 }
 
-// ─── Como Funciona ────────────────────────────────────────────────────────────
+// --- How It Works ---
 
 const steps = [
     {
@@ -277,7 +270,7 @@ function HowItWorks() {
     );
 }
 
-// ─── Por que Pode-Deixar ──────────────────────────────────────────────────────
+// --- Why Pode-Deixar ---
 
 const clientFeatures = [
     {
@@ -331,7 +324,6 @@ function WhyPodeDeixer() {
                 </div>
 
                 <div className="grid gap-12 lg:grid-cols-2">
-                    {/* Para Clientes */}
                     <div>
                         <div className="mb-6 flex items-center gap-3">
                             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF4FF]">
@@ -354,7 +346,6 @@ function WhyPodeDeixer() {
                         </div>
                     </div>
 
-                    {/* Para Profissionais */}
                     <div>
                         <div className="mb-6 flex items-center gap-3">
                             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EDFBF3]">
@@ -382,7 +373,7 @@ function WhyPodeDeixer() {
     );
 }
 
-// ─── CTA Section ──────────────────────────────────────────────────────────────
+// --- CTA Section ---
 
 function CtaSection() {
     return (
@@ -411,7 +402,7 @@ function CtaSection() {
     );
 }
 
-// ─── Newsletter ───────────────────────────────────────────────────────────────
+// --- Newsletter ---
 
 function Newsletter() {
     return (
@@ -443,7 +434,7 @@ function Newsletter() {
     );
 }
 
-// ─── Footer ───────────────────────────────────────────────────────────────────
+// --- Footer ---
 
 const socialIcons = [
     {
@@ -493,7 +484,6 @@ function Footer() {
         <footer id="contato" className="border-t border-gray-100 bg-white">
             <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
                 <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-                    {/* Brand */}
                     <div>
                         <Link href="/" className="flex items-center overflow-visible">
                             <Image
@@ -510,7 +500,6 @@ function Footer() {
                         </p>
                     </div>
 
-                    {/* Contato */}
                     <div>
                         <h4 className="mb-4 font-bold text-[#333333]">
                             Contato
@@ -531,7 +520,6 @@ function Footer() {
                         </ul>
                     </div>
 
-                    {/* Links Rápidos */}
                     <div>
                         <h4 className="mb-4 font-bold text-[#333333]">
                             Links Rápidos
@@ -560,7 +548,6 @@ function Footer() {
                         </ul>
                     </div>
 
-                    {/* Redes Sociais */}
                     <div>
                         <h4 className="mb-4 font-bold text-[#333333]">
                             Redes Sociais
@@ -590,7 +577,7 @@ function Footer() {
     );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page ---
 
 export default function LandingPage() {
     return (

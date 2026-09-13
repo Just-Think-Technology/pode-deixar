@@ -1,3 +1,5 @@
+// Profiles tests — retrieval and update logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProfilesService } from "../src/profiles/profiles.service";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -13,6 +15,8 @@ import { randomUUID } from "crypto";
 jest.mock("crypto", () => ({
   randomUUID: jest.fn(() => "mocked-uuid"),
 }));
+
+// --- Helpers ---
 
 function mockFile(): Express.Multer.File {
   return {

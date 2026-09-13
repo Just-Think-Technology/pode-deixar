@@ -1,3 +1,5 @@
+// Public provider profile controller — unauthenticated profile view
+
 import { Controller, Get, Param } from "@nestjs/common";
 import {
   ApiTags,
@@ -12,6 +14,8 @@ import { ProfilesService } from "./profiles.service";
 @Controller("providers/:providerId/profile")
 export class PublicProviderProfileController {
   constructor(private readonly profilesService: ProfilesService) {}
+
+  // --- Public API ---
 
   @Get()
   @ApiOperation({ summary: "View public profile of a provider" })

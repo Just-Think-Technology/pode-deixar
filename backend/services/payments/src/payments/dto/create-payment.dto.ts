@@ -1,3 +1,5 @@
+// Payment DTO — charge creation input validation
+
 import {
   IsEnum,
   IsUUID,

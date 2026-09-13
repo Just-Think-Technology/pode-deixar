@@ -1,3 +1,5 @@
+// Client order mocks — seeded orders and proposals for UI and E2E
+
 import type {
   ClientOrder,
   ClientProposal,

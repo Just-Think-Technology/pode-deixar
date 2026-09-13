@@ -1,3 +1,4 @@
+// purpose: Client orders route — lists client orders with action integration
 import ClientOrdersPage from "@/components/pages/client-orders-page";
 import { getMyOrdersAction } from "@/lib/client/orders/actions";
 

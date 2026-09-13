@@ -1,3 +1,5 @@
+// Register service — signup with email verification
+
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
@@ -9,7 +11,6 @@ import { PasswordService } from '../password/password.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 
-// Identical response for new and existing emails to prevent an account-enumeration oracle (CWE-204).
 const SIGNUP_RESPONSE_MESSAGE =
   'Usuário cadastrado com sucesso. Verifique seu email para ativar sua conta.';
 
@@ -22,6 +23,8 @@ export class RegisterService {
     private passwordService: PasswordService,
   ) {}
 
+  // --- Public API ---
+
   async register(dto: RegisterDto, ip?: string) {
     if (dto.password !== dto.confirm_password) {
       throw new BadRequestException('Senhas não conferem');
@@ -30,7 +33,7 @@ export class RegisterService {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    // Existing email: same response as a new signup; unverified accounts get a rotated token and a best-effort resend without revealing anything.
+    // same response for existing email prevents account-enumeration oracle
     if (existingUser) {
       if (!existingUser.emailVerified) {
         const emailVerificationToken = uuidv4();
@@ -64,7 +67,7 @@ export class RegisterService {
     }
 
     const passwordHash = await this.passwordService.hash(dto.password);
-    // Only the hash is stored; the raw token travels by email (and non-prod echo) only.
+    // Only hash is stored; raw token travels by email (non-prod echo only).
     const emailVerificationToken = uuidv4();
     const emailVerificationTokenHash = this.hashToken(emailVerificationToken);
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -236,6 +239,8 @@ export class RegisterService {
       }),
     };
   }
+
+  // --- Private Helpers ---
 
   private hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
