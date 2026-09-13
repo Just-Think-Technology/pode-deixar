@@ -1,3 +1,5 @@
+// Mock payment gateway — offline charge simulation
+
 import { Injectable } from "@nestjs/common";
 import { PaymentMethod, PaymentStatus } from "@prisma/client";
 import {
@@ -11,6 +13,8 @@ import {
 export class MockPaymentGateway implements PaymentGateway {
   readonly name = "MOCK";
   readonly isConfigured = true;
+
+  // --- Public API ---
 
   async createCharge(params: CreateChargeParams): Promise<ChargeResult> {
     const chargeRef = `chg_mock_${params.externalReference
@@ -51,6 +55,8 @@ export class MockPaymentGateway implements PaymentGateway {
   translateStatus(_gatewayStatus: string): PaymentStatus {
     return "PENDING";
   }
+
+  // --- Private Helpers ---
 
   private buildMockDetails(
     method: PaymentMethod,

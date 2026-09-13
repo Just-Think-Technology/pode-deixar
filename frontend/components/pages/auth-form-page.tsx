@@ -1,3 +1,5 @@
+// Auth forms — login and registration forms for both roles
+
 "use client";
 
 import Link from "next/link";

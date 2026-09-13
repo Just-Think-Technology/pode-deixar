@@ -1,6 +1,8 @@
+// Client proposals API spec — mock mode and accept/reject fetchers
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// --- Helpers ---
 
 const fetchMock = vi.fn()
 

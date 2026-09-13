@@ -1,3 +1,4 @@
+// Client search types — professional result shapes
 export type ProviderSearchResult = {
   id: string;
   user: {

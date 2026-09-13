@@ -1,3 +1,5 @@
+// Worker profile page — editable professional profile
+
 "use client";
 
 import { useRouter } from "next/navigation";

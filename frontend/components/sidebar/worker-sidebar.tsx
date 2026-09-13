@@ -1,3 +1,5 @@
+// Worker sidebar — navigation for the worker area
+
 "use client";
 
 import Image from "next/image";

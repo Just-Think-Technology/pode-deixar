@@ -1,3 +1,5 @@
+// Client sidebar — navigation for the client area
+
 "use client";
 
 import Link from "next/link";

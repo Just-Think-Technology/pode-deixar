@@ -1,3 +1,5 @@
+// Sensitive data sanitizer — PII and secret redaction for logs
+
 const SENSITIVE_FIELD =
   /(\b[a-z_]*(?:token|password|senha|secret|cvv|cvc|card_number|pan|authorization|access_token|refresh_token)\b[^=:]*[:=]\s*)([^;\s,{}]+)/gi;
 

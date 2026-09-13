@@ -1,3 +1,5 @@
+// Worker agenda page — calendar views with event fetching
+
 "use client";
 
 import { useMemo, useState, useTransition } from "react";

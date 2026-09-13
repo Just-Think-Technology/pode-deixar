@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — aspect ratio
 import { cn } from "@/lib/utils"
 
 function AspectRatio({

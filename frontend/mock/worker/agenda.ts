@@ -1,3 +1,5 @@
+// Worker agenda mocks — seeded events with generated photos
+
 import { addMonths, format } from "date-fns";
 
 import type {

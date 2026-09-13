@@ -1,3 +1,5 @@
+// Worker finance actions — dashboard server actions
+
 "use server";
 
 import { ApiError } from "@/api/client";

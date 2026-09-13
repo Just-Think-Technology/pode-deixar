@@ -1,3 +1,5 @@
+// Service orders module — order lifecycle wiring
+
 import { Module } from "@nestjs/common";
 import { ServiceOrdersService } from "./service-orders.service";
 import {
@@ -11,7 +13,13 @@ import { PrismaModule } from "../prisma/prisma.module";
 import { SharedModule } from "../shared/shared.module";
 
 @Module({
+
+  // --- Imports ---
+
   imports: [PrismaModule, SharedModule],
+
+  // --- Controllers ---
+
   controllers: [
     ServiceOrdersController,
     MyServiceOrdersController,
@@ -19,6 +27,9 @@ import { SharedModule } from "../shared/shared.module";
     ProviderReceivedOrdersController,
     ProviderOrderActionsController,
   ],
+
+  // --- Providers ---
+
   providers: [ServiceOrdersService],
   exports: [ServiceOrdersService],
 })

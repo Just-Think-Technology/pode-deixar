@@ -1,3 +1,4 @@
+// Database health indicator — Terminus PostgreSQL check
 import { Injectable } from '@nestjs/common';
 import {
   HealthIndicator,
@@ -11,6 +12,8 @@ export class DatabaseHealthIndicator extends HealthIndicator {
   constructor(private readonly prisma: PrismaService) {
     super();
   }
+
+  // --- Public API ---
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
     try {

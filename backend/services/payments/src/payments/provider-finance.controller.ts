@@ -1,3 +1,5 @@
+// Provider finance controller — earnings summary endpoints
+
 import { Controller, Get, Query, UseGuards, Request } from "@nestjs/common";
 import {
   ApiTags,
@@ -17,6 +19,8 @@ import { FinanceChartQueryDto } from "./dto/finance-chart-query.dto";
 @ApiBearerAuth()
 export class ProviderFinanceController {
   constructor(private readonly paymentsService: PaymentsService) {}
+
+  // --- Public API ---
 
   @Get("summary")
   @Roles("PROVIDER")

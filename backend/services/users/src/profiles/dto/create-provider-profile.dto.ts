@@ -1,3 +1,5 @@
+// Provider profile DTO — provider profile creation validation
+
 import {
   IsOptional,
   IsString,

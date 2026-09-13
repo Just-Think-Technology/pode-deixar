@@ -1,3 +1,5 @@
+// Agenda photo lightbox — fullscreen viewer for order photos
+
 "use client";
 
 import { useEffect, useState } from "react";

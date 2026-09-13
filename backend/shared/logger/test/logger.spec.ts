@@ -1,3 +1,5 @@
+// Logger tests — creation and file handling
+
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -9,6 +11,8 @@ const flushImmediate = () =>
   new Promise<void>((resolve) => {
     setImmediate(() => setImmediate(() => resolve()));
   });
+
+// --- Tests ---
 
 describe('createLogger (shared)', () => {
   it('should expose the default export as createLogger', () => {

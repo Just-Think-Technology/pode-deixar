@@ -1,3 +1,5 @@
+// Exception filter tests — HTTP error mapping
+
 import { HttpException, HttpStatus } from "@nestjs/common";
 import { GlobalExceptionFilter } from "../src/global-exception.filter";
 
@@ -12,6 +14,8 @@ function montarHost(url = "/recurso", method = "GET") {
   } as never;
   return { host, status, json };
 }
+
+// --- Tests ---
 
 describe("GlobalExceptionFilter", () => {
   it("responde HttpException com mensagem string", () => {

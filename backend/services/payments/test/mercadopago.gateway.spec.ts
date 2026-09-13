@@ -1,7 +1,11 @@
+// MercadoPago gateway tests — charge creation and config
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { BadGatewayException } from "@nestjs/common";
 import { PaymentMethod } from "@prisma/client";
 import { MercadoPagoGateway } from "../src/gateway/mercadopago.gateway";
+
+// --- Tests ---
 
 describe("MercadoPagoGateway", () => {
   let gateway: MercadoPagoGateway;

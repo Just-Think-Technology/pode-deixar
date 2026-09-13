@@ -1,24 +1,10 @@
-# ============================================================
-# Pode Deixar - Stack local (PostgreSQL próprio)
-# ============================================================
-# Tudo roda local: serviços, frontend, Postgres, MinIO, Redis,
-# Mailpit, Caddy e backup diário do banco local.
-#
-# O .env.dev fornece as configurações de desenvolvimento.
-#
-#   docker compose up -d --build
-#
-# Para hot-reload:
-#   docker compose -f docker-compose.dev.yml up -d --build
-#
-# Staging/produção:
-#   docker-compose.staging.yml
-#   docker-compose.production.yml
-# ============================================================
+# purpose: Local stack with own PostgreSQL (services, frontend, Postgres, MinIO, Redis, Mailpit, Caddy, daily backup)
+# Config from .env.dev; run: docker compose up -d --build (hot-reload: docker compose -f docker-compose.dev.yml up -d --build)
+# Staging/production: docker-compose.staging.yml and docker-compose.production.yml
 
 services:
 
-  # -- PostgreSQL (local) --
+  # --- PostgreSQL ---
   postgres:
     image: postgres:16-alpine
     env_file:
@@ -41,7 +27,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # -- Auth Service --
+  # --- Auth Service ---
   auth:
     build:
       context: ./backend
@@ -68,7 +54,7 @@ services:
       mailpit:
         condition: service_started
 
-  # -- Users Service --
+  # --- Users Service ---
   users:
     build:
       context: ./backend
@@ -93,7 +79,7 @@ services:
       auth:
         condition: service_started
 
-  # -- Service Orders Service --
+  # --- Service Orders Service ---
   service-orders:
     build:
       context: ./backend
@@ -118,7 +104,7 @@ services:
       auth:
         condition: service_started
 
-  # -- Payments Service --
+  # --- Payments Service ---
   payments:
     build:
       context: ./backend
@@ -143,7 +129,7 @@ services:
       auth:
         condition: service_started
 
-  # -- Reviews Service --
+  # --- Reviews Service ---
   reviews:
     build:
       context: ./backend
@@ -166,7 +152,7 @@ services:
       auth:
         condition: service_started
 
-  # -- Frontend (Next.js) --
+  # --- Frontend ---
   frontend:
     build:
       context: ./frontend
@@ -184,7 +170,7 @@ services:
       - auth
       - users
 
-  # -- MinIO --
+  # --- MinIO ---
   minio:
     image: quay.io/minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: server /data --console-address ":9001"
@@ -204,7 +190,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # -- MinIO Client (Bucket Setup) --
+  # --- MinIO Setup ---
   minio-setup:
     image: quay.io/minio/aistor/mc:latest@sha256:b8a369454c7cffe3aab1cc6e6b3e7e1eb958415ea275315245d994d830299dbb
     env_file:
@@ -223,14 +209,14 @@ services:
       echo 'Buckets created successfully'
       "
 
-  # -- Mailpit (SMTP Testing) --
+  # --- Mailpit ---
   mailpit:
     image: axllent/mailpit:latest
     ports:
       - "127.0.0.1:1025:1025"
       - "127.0.0.1:8025:8025"
 
-  # -- Redis (Rate Limiting Distribuído) --
+  # --- Redis ---
   redis:
     image: redis:7-alpine
     command:
@@ -251,7 +237,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # -- PostgreSQL Backup --
+  # --- PostgreSQL Backup ---
   postgres-backup:
     image: postgres:16-alpine
     env_file:
@@ -300,7 +286,7 @@ services:
       crond -f -l 2
       "
 
-  # -- Proxy Reverso (Caddy) --
+  # --- Reverse Proxy ---
   caddy:
     image: caddy:2-alpine
     ports:

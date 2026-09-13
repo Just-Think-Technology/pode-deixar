@@ -1,3 +1,5 @@
+// Service orders root module — service wiring and validation setup
+
 import { Module, BadRequestException } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
@@ -21,8 +23,7 @@ import {
   RotulosCampos,
 } from "@pode-deixar/validation";
 
-// Rótulos dos campos do service-orders (user-facing, em português); as
-// mensagens de restrição vivem no núcleo compartilhado.
+// Service orders field labels (user-facing, in Portuguese); restriction messages live in the shared core.
 const ROTULOS_ORDERS: RotulosCampos = {
   title: "Título",
   description: "Descrição",
@@ -42,6 +43,9 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
 }
 
 @Module({
+
+  // --- Imports ---
+
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -67,7 +71,13 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
     HealthModule,
     SharedModule,
   ],
+
+  // --- Controllers ---
+
   controllers: [AppController],
+
+  // --- Providers ---
+
   providers: [
     AppService,
     {

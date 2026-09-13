@@ -1,3 +1,5 @@
+// Client search API — professional search with mock fallback
+
 import { apiFetchAuth, ApiError } from "@/api/client";
 import { mockSearchProfessionals } from "@/mock/client/search";
 import type {

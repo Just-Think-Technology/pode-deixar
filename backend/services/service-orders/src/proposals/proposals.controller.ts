@@ -1,3 +1,5 @@
+// Proposals controller — provider proposal endpoints
+
 import {
   Controller,
   Get,
@@ -29,6 +31,8 @@ import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 @ApiBearerAuth()
 export class ProposalsController {
   constructor(private readonly proposalsService: ProposalsService) {}
+
+  // --- Public API ---
 
   @Post()
   @Roles("PROVIDER")
@@ -69,6 +73,8 @@ export class ProposalsController {
 @ApiBearerAuth()
 export class ProposalDetailController {
   constructor(private readonly proposalsService: ProposalsService) {}
+
+  // --- Public API ---
 
   @Get()
   @Roles("PROVIDER")
@@ -121,6 +127,8 @@ export class ProposalDetailController {
 @ApiBearerAuth()
 export class AcceptRejectController {
   constructor(private readonly proposalsService: ProposalsService) {}
+
+  // --- Public API ---
 
   @Post("accept")
   @Roles("CLIENT")

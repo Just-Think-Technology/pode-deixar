@@ -1,3 +1,5 @@
+// Category DTO — category creation validation
+
 import { IsString, IsOptional, IsInt, Min, MaxLength } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 

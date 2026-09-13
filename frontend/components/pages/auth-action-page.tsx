@@ -1,3 +1,5 @@
+// Auth action page — post-action confirmation with navigation links
+
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, LogIn, UserPlus } from "lucide-react";
 

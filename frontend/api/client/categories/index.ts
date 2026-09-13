@@ -1,3 +1,5 @@
+// Client categories API — service category fetcher
+
 import { apiFetch } from "@/api/client";
 import type { Category } from "@/lib/client/quote/types";
 import { mockGetCategories } from "@/mock/client/categories";

@@ -1,3 +1,5 @@
+// Photos module — order photo upload wiring
+
 import { Module } from "@nestjs/common";
 import { MulterModule } from "@nestjs/platform-express";
 import { PhotosController, PhotoViewController } from "./photos.controller";
@@ -6,6 +8,9 @@ import { PrismaModule } from "../prisma/prisma.module";
 import { MinioModule } from "../storage/minio.module";
 
 @Module({
+
+  // --- Imports ---
+
   imports: [
     MulterModule.register({
       limits: {
@@ -16,7 +21,13 @@ import { MinioModule } from "../storage/minio.module";
     PrismaModule,
     MinioModule,
   ],
+
+  // --- Controllers ---
+
   controllers: [PhotosController, PhotoViewController],
+
+  // --- Providers ---
+
   providers: [PhotosService],
 })
 export class PhotosModule {}

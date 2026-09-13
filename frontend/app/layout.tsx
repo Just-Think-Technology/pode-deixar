@@ -1,3 +1,4 @@
+// purpose: Root layout — global metadata, ToProvider, font setup
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { Toaster } from "sonner";

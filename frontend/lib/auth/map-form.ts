@@ -1,3 +1,5 @@
+// Auth form mapping — form values to API payloads
+
 import type { LoginPayload, PublicRole, RegisterPayload } from "@/lib/auth/types";
 
 export function parseLoginForm(form: HTMLFormElement): LoginPayload {

@@ -1,9 +1,13 @@
+// Reviews controller tests — review endpoints
+
 import { Test, TestingModule } from "@nestjs/testing";
 import {
   ReviewsController,
   PublicReviewsController,
 } from "../src/reviews/reviews.controller";
 import { ReviewsService } from "../src/reviews/reviews.service";
+
+// --- Tests ---
 
 describe("ReviewsController", () => {
   let controller: ReviewsController;

@@ -1,3 +1,5 @@
+// Reviews tests — creation and lookup logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { ReviewsService } from "../src/reviews/reviews.service";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -7,6 +9,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
+
+// --- Tests ---
 
 describe("ReviewsService", () => {
   let service: ReviewsService;

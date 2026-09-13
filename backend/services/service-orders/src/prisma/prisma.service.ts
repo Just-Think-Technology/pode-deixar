@@ -1,3 +1,5 @@
+// Prisma service — Nest lifecycle for the database client
+
 import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
 
@@ -6,6 +8,9 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+
+  // --- Public API ---
+
   async onModuleInit() {
     await this.$connect();
   }

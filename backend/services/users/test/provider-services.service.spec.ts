@@ -1,3 +1,5 @@
+// Provider services tests — creation and listing logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProviderServicesService } from "../src/provider-services/provider-services.service";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -5,6 +7,7 @@ import { UsersLoggerService } from "../src/shared/users-logger.service";
 import { NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { SearchProvidersQueryDto } from "../src/provider-services/dto/search-providers-query.dto";
 
+// --- Tests ---
 describe("ProviderServicesService", () => {
   let service: ProviderServicesService;
 

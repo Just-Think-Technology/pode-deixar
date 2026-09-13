@@ -1,3 +1,5 @@
+// Resend verification DTO — verification email re-request validation
+
 import { IsEmail, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 

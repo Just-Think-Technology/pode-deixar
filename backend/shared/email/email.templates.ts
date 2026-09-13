@@ -1,3 +1,5 @@
+// Email templates — shared HTML layout and components
+
 const COLORS = {
   primary: '#2F80ED',
   secondary: '#27AE60',

@@ -1,3 +1,5 @@
+// Provider profile update DTO — provider profile change validation
+
 import {
   IsOptional,
   IsString,

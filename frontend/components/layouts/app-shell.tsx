@@ -1,3 +1,5 @@
+// App shell — sidebar layout wrapper for authenticated areas
+
 "use client";
 
 import type { ReactNode } from "react";

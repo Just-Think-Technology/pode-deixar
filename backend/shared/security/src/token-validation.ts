@@ -1,3 +1,5 @@
+// Token validation — payload checks and revocation lookup
+
 import { UnauthorizedException } from "@nestjs/common";
 
 export interface TokenPayload {
@@ -6,17 +8,17 @@ export interface TokenPayload {
   jti?: string;
 }
 
-// Rejeita tokens sem identidade: sem sub/role a requisição não tem
-// dono nem permissões (regra compartilhada pelas strategies dos serviços).
+// Reject tokens without identity: without sub/role the request has no owner
+// or permissions (shared rule across service strategies).
 export function assertTokenPayload(payload: TokenPayload | null | undefined) {
   if (!payload || !payload.sub || !payload.role) {
     throw new UnauthorizedException("Payload do token inválido");
   }
 }
 
-// Checagem de revogação contra a blacklist de tokens. Tabela ausente (P2021)
-// significa que o serviço roda sem armazenamento de revogação, então o token
-// é aceito; qualquer outra falha de lookup é relançada.
+// Token revocation check against blacklist. Absence of the blacklist table
+// (P2021) means the service runs without token revocation storage, so the
+// token is accepted; any other lookup failure is re-thrown.
 export async function checkTokenRevocation(
   findBlacklisted: (jti: string) => Promise<unknown>,
   jti: string | undefined,

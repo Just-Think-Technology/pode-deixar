@@ -1,3 +1,5 @@
+// Notifications tests — delivery logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
@@ -5,6 +7,7 @@ import { NotificationsService } from "../src/notifications/notifications.service
 import { PrismaService } from "../src/prisma/prisma.service";
 import { CreateNotificationDto } from "../src/notifications/dto/create-notification.dto";
 
+// --- Tests ---
 // Anti-forgery coverage: the recipient is always the authenticated user;
 // the client-supplied value is ignored.
 describe("NotificationsService", () => {

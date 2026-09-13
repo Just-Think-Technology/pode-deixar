@@ -1,3 +1,5 @@
+// Password management service — reset and change flows
+
 import {
   Injectable,
   BadRequestException,
@@ -23,6 +25,8 @@ export class PasswordManagementService {
     private passwordService: PasswordService,
   ) {}
 
+  // --- Public API ---
+
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -35,7 +39,7 @@ export class PasswordManagementService {
       };
     }
 
-    // Only the hash is stored; the raw token travels by email (and non-prod echo) only.
+    // Only hash is stored; raw token travels by email (non-prod echo only).
     const resetToken = uuidv4();
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
@@ -165,6 +169,8 @@ export class PasswordManagementService {
 
     return { message: 'Senha alterada com sucesso' };
   }
+
+  // --- Private Helpers ---
 
   private hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');

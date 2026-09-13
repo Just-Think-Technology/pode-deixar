@@ -1,3 +1,5 @@
+// Client payment mocks — seeded charges with sandbox gateway stand-ins
+
 import { getMockClientOrderById } from "@/mock/client/orders";
 import type {
   ChargeResponse,

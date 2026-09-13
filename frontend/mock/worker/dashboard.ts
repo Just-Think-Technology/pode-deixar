@@ -1,3 +1,5 @@
+// Worker dashboard mocks — seeded stats and chart data
+
 import type { MonthlyServiceData, StatMetric } from "@/mock/types";
 
 export const WORKER_DASHBOARD_STATS: StatMetric[] = [

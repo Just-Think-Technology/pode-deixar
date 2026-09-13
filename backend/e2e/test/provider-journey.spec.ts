@@ -1,3 +1,5 @@
+// Provider journey tests — cross-service provider flows
+
 import request from 'supertest';
 import {
   bootApps,
@@ -9,7 +11,8 @@ import {
   E2EApps,
 } from './apps';
 
-// ─── E2E: jornada completa do prestador ─────────────────────────────────────
+// --- Provider Journey ---
+
 // Profile (users) → service → order (orders) → proposal → acceptance → completion
 // → payment + webhook (payments) → review (reviews) → rating reflected
 // on the profile (users). All in the same database, as in production.

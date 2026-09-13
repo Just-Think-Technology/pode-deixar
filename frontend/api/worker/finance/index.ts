@@ -1,3 +1,5 @@
+// Worker finance API — finance dashboard fetcher
+
 import { apiFetchAuth } from "@/api/client";
 import { formatChartMonth } from "@/lib/worker/finance/labels";
 import type {

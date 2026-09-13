@@ -1,3 +1,5 @@
+// Client quote validation — quote form validators
+
 import type { ValidationResult } from "@/lib/auth/types";
 import type {
   CreateServiceOrderPayload,

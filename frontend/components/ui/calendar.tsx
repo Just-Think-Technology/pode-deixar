@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — calendar
 "use client"
 
 import * as React from "react"

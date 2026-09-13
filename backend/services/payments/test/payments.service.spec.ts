@@ -1,3 +1,5 @@
+// Payments tests — creation and listing logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import {
   NotFoundException,
@@ -10,6 +12,8 @@ import { PrismaService } from "../src/prisma/prisma.service";
 import { PaymentGatewayFactory } from "../src/gateway/payment-gateway.factory";
 import { PaymentGateway } from "../src/gateway/payment-gateway.interface";
 import { PaymentLoggerService } from "../src/payments/payment-logger.service";
+
+// --- Tests ---
 
 describe("PaymentsService", () => {
   let service: PaymentsService;

@@ -1,3 +1,5 @@
+// Client payment actions — checkout, charge, and mock confirmation
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -128,7 +130,7 @@ export async function getPaymentStatusAction(
   }
 }
 
-/** Simula webhook mock — só funciona com NEXT_PUBLIC_USE_MOCK=true. */
+/** Simulates the mock webhook — only works with NEXT_PUBLIC_USE_MOCK=true. */
 export async function confirmPaymentMockAction(
   paymentId: string,
   orderId: string,

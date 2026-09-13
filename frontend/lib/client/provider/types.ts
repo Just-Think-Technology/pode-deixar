@@ -1,3 +1,4 @@
+// Client provider types — public profile shapes
 export type ProviderPublicService = {
   id: string;
   title: string;

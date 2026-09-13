@@ -1,3 +1,4 @@
+// Client quote types — categories and quote payload shapes
 export type Category = {
   id: string;
   name: string;

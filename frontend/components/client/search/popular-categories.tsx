@@ -1,3 +1,5 @@
+// Popular categories — grid of category cards for the search page
+
 "use client";
 
 import CategoryCard from "@/components/client/search/category-card";

@@ -1,3 +1,5 @@
+// Input OTP spec — slot rendering and input behavior
+
 import { describe, it, expect, vitest } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp'

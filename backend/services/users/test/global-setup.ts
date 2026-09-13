@@ -1,6 +1,10 @@
+// Test setup — provisions users test database
+
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
+
+// --- Setup ---
 
 dotenv.config({
   path: path.resolve(

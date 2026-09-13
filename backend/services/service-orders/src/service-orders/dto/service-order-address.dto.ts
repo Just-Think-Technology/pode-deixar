@@ -1,3 +1,5 @@
+// Order address DTO — address validation and formatting helpers
+
 import { IsOptional, IsString, MaxLength } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 

@@ -1,3 +1,5 @@
+// Hire provider DTO — direct hire input validation
+
 import { IsString, IsOptional, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
