@@ -34,8 +34,8 @@ outside the task scope (see "Never do" 13 in AGENTS.md).
 - `backend/shared/` packages (`@pode-deixar/logger`, `@pode-deixar/email`,
   `@pode-deixar/security`, `@pode-deixar/validation`) hold cross-service
   concerns: logging, email, Helmet CSP (`getHelmetConfig()`), Redis throttler
-  storage, validation messages (`traduzirErrosValidacao`), image validation
-  (`validarArquivoImagem`), Prisma error mapping (`resolverErroPrisma`),
+  storage, validation messages (`translateValidationErrors`), image validation
+  (`validateImageFile`), Prisma error mapping (`resolvePrismaError`),
   auth guards (`JwtAuthGuard`, `RolesGuard`, `Roles`), token payload and
   revocation checks (`assertTokenPayload`, `checkTokenRevocation`) and the
   shared `GlobalExceptionFilter` (masks Prisma internals, generic 500)
@@ -45,3 +45,24 @@ outside the task scope (see "Never do" 13 in AGENTS.md).
   reviews use the shared guards, strategy helpers and exception filter
 - **Second-use rule:** code needed by a second service is extracted to
   `backend/shared/` by the task creating the second usage — no third copy
+
+## Orthogonality
+
+Every piece of knowledge has a single authoritative representation.
+Concretely, for this monorepo:
+
+- **One home per logic:** shared concerns live in exactly one
+  `backend/shared/` package; service-specific logic lives in exactly one
+  service. No copies, no forks, no parallel implementations.
+- **Consume, don't copy:** services import `@pode-deixar/*` instead of
+  re-implementing guards, filters, validation, logging, email or storage.
+- **Specialize, don't fork:** service-specific behavior extends or wraps
+  shared code (e.g. auth's specialized guards) instead of duplicating it
+  with tweaks.
+- **Independent changes:** a change in one service or package must not
+  require coordinated edits elsewhere. Shared API/contract changes are
+  announced beforehand (see "Code standards" in AGENTS.md).
+- **No cross-imports between services** — services integrate only via
+  `@pode-deixar/*` or the shared database (see "Service boundaries").
+- **Shared core in English** (identifiers, comments); user-facing
+  Portuguese copy stays at the edges (DTO messages, emails, UI text).
