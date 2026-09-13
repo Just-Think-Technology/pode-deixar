@@ -24,13 +24,14 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ServiceImagesService } from "./service-images.service";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
+import { AuthenticatedRequest } from "../auth/authenticated-request";
 import { memoryStorage } from "multer";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 function fileFilter(
-  _req: any,
+  _req: Express.Request,
   _file: Express.Multer.File,
   cb: (error: Error | null, accept: boolean) => void,
 ) {
@@ -82,7 +83,7 @@ export class ServiceImagesController {
   @ApiResponse({ status: 400, description: "Invalid file" })
   @ApiResponse({ status: 404, description: "Service not found" })
   async upload(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("serviceId", ParseUUIDPipe) serviceId: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<{ id: string; url: string; created_at: Date }> {
@@ -105,7 +106,7 @@ export class ServiceImagesController {
   @ApiResponse({ status: 200, description: "Image list returned" })
   @ApiResponse({ status: 404, description: "Service not found" })
   async list(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("serviceId", ParseUUIDPipe) serviceId: string,
   ): Promise<{ id: string; url: string; created_at: Date }[]> {
     const userId = req.user.sub;
@@ -117,7 +118,7 @@ export class ServiceImagesController {
   @ApiResponse({ status: 200, description: "Image removed successfully" })
   @ApiResponse({ status: 404, description: "Image or service not found" })
   async delete(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("serviceId", ParseUUIDPipe) serviceId: string,
     @Param("imageId", ParseUUIDPipe) imageId: string,
   ): Promise<{ message: string }> {

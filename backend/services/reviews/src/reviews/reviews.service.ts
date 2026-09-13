@@ -6,6 +6,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
+import { Prisma, ServiceOrder } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { ReviewsLoggerService } from "../shared/reviews-logger.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
@@ -13,6 +14,9 @@ import { UpdateReviewDto } from "./dto/update-review.dto";
 
 const EDIT_WINDOW_MINUTES = 5;
 const MS_PER_MINUTE = 60 * 1000;
+const DEFAULT_REVIEW_LIMIT = 50;
+const MAX_REVIEW_LIMIT = 50;
+const MIN_REVIEW_LIMIT = 1;
 
 interface OrderForReview {
   clientId: string;
@@ -50,7 +54,10 @@ export class ReviewsService {
     };
   }
 
-  private async recalculateRating(revieweeId: string, tx: any) {
+  private async recalculateRating(
+    revieweeId: string,
+    tx: Prisma.TransactionClient,
+  ) {
     const aggregate = await tx.review.aggregate({
       where: { revieweeId },
       _avg: { rating: true },
@@ -88,60 +95,24 @@ export class ReviewsService {
 
   // --- Public API ---
 
+  /**
+   * Creates a review for a completed, paid order.
+   * Each side reviews once; races on the unique constraint collapse into
+   * the same duplicate error.
+   */
   async create(reviewerId: string, dto: CreateReviewDto, ip?: string) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: dto.serviceOrderId },
-    });
-
-    if (!order) {
-      throw new NotFoundException("Pedido de serviço não encontrado");
-    }
-
-    if (order.status !== "COMPLETED") {
-      throw new BadRequestException("Só é possível avaliar pedidos concluídos");
-    }
-
-    const payment = await this.prisma.payment.findFirst({
-      where: { serviceOrderId: order.id, status: "PAID" },
-    });
-
-    if (!payment) {
-      throw new BadRequestException(
-        "A avaliação exige pagamento confirmado do pedido",
-      );
-    }
-
+    const order = await this.findCompletedOrderOrThrow(dto.serviceOrderId);
+    await this.assertPaidOrder(order.id);
     const revieweeId = this.resolveReviewee(order, reviewerId);
-
-    const existingReview = await this.prisma.review.findUnique({
-      where: {
-        serviceOrderId_reviewerId: {
-          serviceOrderId: order.id,
-          reviewerId,
-        },
-      },
-    });
-
-    if (existingReview) {
-      throw new BadRequestException("Você já avaliou este pedido");
-    }
+    await this.assertNoExistingReview(order.id, reviewerId);
 
     try {
-      const review = await this.prisma.$transaction(async (tx) => {
-        const created = await tx.review.create({
-          data: {
-            serviceOrderId: order.id,
-            reviewerId,
-            revieweeId,
-            rating: dto.rating,
-            comment: dto.comment ?? null,
-          },
-        });
-
-        await this.recalculateRating(revieweeId, tx);
-
-        return created;
-      });
+      const review = await this.persistReview(
+        order.id,
+        reviewerId,
+        revieweeId,
+        dto,
+      );
 
       this.logger.logReviewCreated(
         reviewerId,
@@ -152,12 +123,74 @@ export class ReviewsService {
       );
 
       return this.formatReview(review);
-    } catch (e: any) {
-      if (e?.code === "P2002") {
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === "P2002"
+      ) {
         throw new BadRequestException("Você já avaliou este pedido");
       }
       throw e;
     }
+  }
+
+  private async findCompletedOrderOrThrow(serviceOrderId: string) {
+    const order = await this.prisma.serviceOrder.findUnique({
+      where: { id: serviceOrderId },
+    });
+    if (!order) {
+      throw new NotFoundException("Pedido de serviço não encontrado");
+    }
+    if (order.status !== "COMPLETED") {
+      throw new BadRequestException("Só é possível avaliar pedidos concluídos");
+    }
+    return order;
+  }
+
+  private async assertPaidOrder(serviceOrderId: string): Promise<void> {
+    const payment = await this.prisma.payment.findFirst({
+      where: { serviceOrderId, status: "PAID" },
+    });
+    if (!payment) {
+      throw new BadRequestException(
+        "A avaliação exige pagamento confirmado do pedido",
+      );
+    }
+  }
+
+  private async assertNoExistingReview(
+    serviceOrderId: string,
+    reviewerId: string,
+  ): Promise<void> {
+    const existingReview = await this.prisma.review.findUnique({
+      where: { serviceOrderId_reviewerId: { serviceOrderId, reviewerId } },
+    });
+    if (existingReview) {
+      throw new BadRequestException("Você já avaliou este pedido");
+    }
+  }
+
+  private async persistReview(
+    serviceOrderId: string,
+    reviewerId: string,
+    revieweeId: string,
+    dto: CreateReviewDto,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.review.create({
+        data: {
+          serviceOrderId,
+          reviewerId,
+          revieweeId,
+          rating: dto.rating,
+          comment: dto.comment ?? null,
+        },
+      });
+
+      await this.recalculateRating(revieweeId, tx);
+
+      return created;
+    });
   }
 
   async findMine(reviewerId: string) {
@@ -171,7 +204,10 @@ export class ReviewsService {
 
   // Public listing is capped to deter scraping.
   async findByProvider(providerId: string, limit?: number) {
-    const take = Math.min(Math.max(limit ?? 50, 1), 50);
+    const take = Math.min(
+      Math.max(limit ?? DEFAULT_REVIEW_LIMIT, MIN_REVIEW_LIMIT),
+      MAX_REVIEW_LIMIT,
+    );
     const reviews = await this.prisma.review.findMany({
       where: { revieweeId: providerId },
       orderBy: { createdAt: "desc" },

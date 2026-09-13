@@ -25,6 +25,7 @@ import { CreateProviderServiceDto } from "./dto/create-provider-service.dto";
 import { UpdateProviderServiceDto } from "./dto/update-provider-service.dto";
 import { SearchProvidersQueryDto } from "./dto/search-providers-query.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
+import { AuthenticatedRequest } from "../auth/authenticated-request";
 
 @ApiTags("Provider Services")
 @Controller("providers/me/services")
@@ -46,9 +47,9 @@ export class ProviderServicesController {
     description: "Provider profile not found",
   })
   async createService(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Body() dto: CreateProviderServiceDto,
-  ): Promise<any> {
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     const profile =
@@ -67,7 +68,7 @@ export class ProviderServicesController {
     status: 404,
     description: "Provider profile not found",
   })
-  async getMyServices(@Request() req: any): Promise<any> {
+  async getMyServices(@Request() req: AuthenticatedRequest) {
     const userId = req.user.sub;
     const profile =
       await this.providerServicesService.getProviderProfileByUserId(userId);
@@ -133,7 +134,7 @@ export class PublicProviderServicesController {
   })
   async getProviderServices(
     @Param("providerId") providerProfileId: string,
-  ): Promise<any> {
+  ) {
     return this.providerServicesService.getProviderServices(providerProfileId);
   }
 }
@@ -159,7 +160,7 @@ export class ProviderServiceDetailController {
     description: "Service does not belong to this provider",
   })
   async updateService(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("serviceId") serviceId: string,
     @Body() dto: UpdateProviderServiceDto,
   ) {
@@ -185,7 +186,7 @@ export class ProviderServiceDetailController {
     description: "Service does not belong to this provider",
   })
   async deleteService(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("serviceId") serviceId: string,
   ) {
     const userId = req.user.sub;

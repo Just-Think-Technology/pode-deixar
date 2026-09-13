@@ -20,7 +20,10 @@ export class ResponseLoggerInterceptor implements NestInterceptor {
 
   // --- Public API ---
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<unknown> {
     const ctx = context.switchToHttp();
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
@@ -34,11 +37,14 @@ export class ResponseLoggerInterceptor implements NestInterceptor {
             `${request.method} ${request.url} - ${response.statusCode} - ${duration}ms`,
           );
         },
-        error: (error: any) => {
+        error: (error: unknown) => {
+          const err = error as { status?: unknown; stack?: unknown };
+          const status = typeof err.status === "number" ? err.status : 500;
+          const stack = typeof err.stack === "string" ? err.stack : "";
           const duration = Date.now() - now;
           this.logger.error(
-            `${request.method} ${request.url} - ${error.status || 500} - ${duration}ms`,
-            error.stack,
+            `${request.method} ${request.url} - ${status} - ${duration}ms`,
+            stack,
           );
         },
       }),

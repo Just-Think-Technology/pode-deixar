@@ -24,6 +24,7 @@ import { ReviewsService } from "./reviews.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
+import { AuthenticatedRequest } from "../auth/authenticated-request";
 
 @ApiTags("Reviews")
 @Controller("reviews")
@@ -48,7 +49,7 @@ export class ReviewsController {
     status: 403,
     description: "User is not a party to the order",
   })
-  async create(@Request() req: any, @Body() dto: CreateReviewDto) {
+  async create(@Request() req: AuthenticatedRequest, @Body() dto: CreateReviewDto) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.reviewsService.create(userId, dto, ip);
@@ -61,7 +62,7 @@ export class ReviewsController {
     status: 200,
     description: "Review list returned successfully",
   })
-  async findMine(@Request() req: any): Promise<
+  async findMine(@Request() req: AuthenticatedRequest): Promise<
     {
       id: string;
       service_order_id: string;
@@ -92,7 +93,7 @@ export class ReviewsController {
     description: "User is not a party to the order",
   })
   async findByOrder(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("orderId") orderId: string,
   ): Promise<
     {
@@ -129,7 +130,7 @@ export class ReviewsController {
     description: "Edit window expired or no field provided",
   })
   async update(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("reviewId") reviewId: string,
     @Body() dto: UpdateReviewDto,
   ): Promise<{
@@ -160,7 +161,7 @@ export class ReviewsController {
     status: 403,
     description: "User is not the review author",
   })
-  async remove(@Request() req: any, @Param("reviewId") reviewId: string) {
+  async remove(@Request() req: AuthenticatedRequest, @Param("reviewId") reviewId: string) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.reviewsService.remove(userId, reviewId, ip);
