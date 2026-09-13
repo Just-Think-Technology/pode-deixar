@@ -16,7 +16,7 @@ const EXTENSOES_POR_TIPO: Record<string, string[]> = {
   png: ['.png'],
   webp: ['.webp'],
   gif: ['.gif'],
-];
+};
 
 // Client-supplied mimetype/extension are forgeable, so sniff the real type.
 function detectarTipoPorMagicBytes(

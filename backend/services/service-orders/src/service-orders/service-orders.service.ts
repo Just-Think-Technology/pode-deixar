@@ -1,4 +1,4 @@
-// purpose — service-orders ServiceOrdersService
+// Service orders service — order lifecycle, proposals and photos
 
 import {
   Injectable,
@@ -31,7 +31,8 @@ export class ServiceOrdersService {
     private logger: ServicesLoggerService,
   ) {}
 
-  // Exposed `url` is the authenticated view endpoint since the bucket is not public.
+  // --- Private Helpers ---
+
   private formatOrder(order: any) {
     return {
       id: order.id,
@@ -58,19 +59,13 @@ export class ServiceOrdersService {
     };
   }
 
-// --- Public API ---
-// --- Private Helpers ---
-
-  // Showcase items use a brief address to avoid exposing street/number/ZIP.
+  // Exposed `url` is the authenticated view endpoint since the bucket is not public.
   private formatPhotos(photos: any[] | undefined) {
     return (photos ?? []).map((p: any) => ({
       id: p.id,
       url: `/api/services/photos/${p.id}/view`,
     }));
   }
-
-// --- Public API ---
-// --- Private Helpers ---
 
   // Showcase items use a brief address to avoid exposing street/number/ZIP.
   private formatOpenOrderListItem(order: any) {
@@ -79,9 +74,6 @@ export class ServiceOrdersService {
       address: formatAddressSummary(order.address),
     };
   }
-
-// --- Public API ---
-// --- Private Helpers ---
 
   private formatOrderWithProposals(order: any) {
     return {
@@ -97,9 +89,6 @@ export class ServiceOrdersService {
       })),
     };
   }
-
-// --- Public API ---
-// --- Private Helpers ---
 
   private async validateProvider(providerId: string, clientId: string) {
     if (providerId === clientId) {
@@ -122,8 +111,7 @@ export class ServiceOrdersService {
     }
   }
 
-// --- Public API ---
-// --- Private Helpers ---
+  // --- Public API ---
 
   async create(clientId: string, dto: CreateServiceOrderDto, ip?: string) {
     if (dto.providerId) {
@@ -153,9 +141,6 @@ export class ServiceOrdersService {
     return this.formatOrder(order);
   }
 
-// --- Public API ---
-// --- Private Helpers ---
-
   async findReceivedByProvider(
     providerId: string,
     pagination?: PaginationQuery,
@@ -174,9 +159,6 @@ export class ServiceOrdersService {
     return orders.map((o) => this.formatOrder(o));
   }
 
-// --- Public API ---
-// --- Private Helpers ---
-
   async findByClient(clientId: string, pagination?: PaginationQuery) {
     const { skip, take } = normalizePagination(pagination);
     const orders = await this.prisma.serviceOrder.findMany({
@@ -191,9 +173,6 @@ export class ServiceOrdersService {
 
     return orders.map((o) => this.formatOrder(o));
   }
-
-// --- Public API ---
-// --- Private Helpers ---
 
   async findById(id: string) {
     const order = await this.prisma.serviceOrder.findUnique({
@@ -210,9 +189,6 @@ export class ServiceOrdersService {
 
     return this.formatOrderWithProposals(order);
   }
-
-// --- Public API ---
-// --- Private Helpers ---
 
   async findByIdForClient(orderId: string, clientId: string) {
     const order = await this.prisma.serviceOrder.findUnique({
@@ -233,9 +209,6 @@ export class ServiceOrdersService {
 
     return this.formatOrderWithProposals(order);
   }
-
-// --- Public API ---
-// --- Private Helpers ---
 
   async findByIdWithAccess(orderId: string, userId: string, role: string) {
     const order = await this.prisma.serviceOrder.findUnique({
@@ -296,10 +269,7 @@ export class ServiceOrdersService {
     throw new ForbiddenException("Acesso negado a este pedido");
   }
 
-// --- Public API ---
-// --- Private Helpers ---
-
-// Open-order showcase for authenticated providers only; excludes orders directed to another provider.
+  // Open-order showcase for authenticated providers only; excludes orders directed to another provider.
   async findOpenOrders(callerUserId: string, pagination?: PaginationQuery) {
     const { skip, take } = normalizePagination(pagination);
     const orders = await this.prisma.serviceOrder.findMany({
@@ -317,9 +287,6 @@ export class ServiceOrdersService {
 
     return orders.map((o) => this.formatOpenOrderListItem(o));
   }
-
-// --- Public API ---
-// --- Private Helpers ---
 
   async update(
     clientId: string,
@@ -366,9 +333,6 @@ export class ServiceOrdersService {
     return this.formatOrder(order);
   }
 
-// --- Public API ---
-// --- Private Helpers ---
-
   async cancel(clientId: string, orderId: string, ip?: string) {
     const existing = await this.prisma.serviceOrder.findUnique({
       where: { id: orderId },
@@ -400,9 +364,6 @@ export class ServiceOrdersService {
 
     return this.formatOrder(order);
   }
-
-// --- Public API ---
-// --- Private Helpers ---
 
   async complete(providerId: string, orderId: string, ip?: string) {
     const existing = await this.prisma.serviceOrder.findUnique({
@@ -439,9 +400,6 @@ export class ServiceOrdersService {
 
     return this.formatOrder(order);
   }
-
-// --- Public API ---
-// --- Private Helpers ---
 
   async hireFromProvider(
     clientId: string,
@@ -506,9 +464,6 @@ export class ServiceOrdersService {
     return this.formatOrder(order);
   }
 
-// --- Public API ---
-// --- Private Helpers ---
-
   async findProviderAgenda(providerId: string, from: string, to: string) {
     const fromDate = new Date(`${from}T00:00:00.000Z`);
     const toDate = new Date(`${to}T23:59:59.999Z`);
@@ -560,9 +515,6 @@ export class ServiceOrdersService {
     return orders.map((o) => this.formatAgendaItem(o));
   }
 
-// --- Public API ---
-// --- Private Helpers ---
-
   private formatAgendaItem(order: any) {
     const payment = order.payments?.[0] ?? null;
 
@@ -585,6 +537,4 @@ export class ServiceOrdersService {
         : null,
     };
   }
-
-// --- Public API ---
-// --- Private Helpers ---
+}

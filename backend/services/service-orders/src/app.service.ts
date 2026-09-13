@@ -1,4 +1,6 @@
-// purpose — service-orders AppService
+// Service orders app service — root health endpoint
+
+import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class AppService {
@@ -6,6 +8,3 @@ export class AppService {
     return "Pode Deixar - Service Orders Service";
   }
 }
-
-// --- Public API ---
-// --- Private Helpers ---

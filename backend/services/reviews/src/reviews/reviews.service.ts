@@ -9,8 +9,13 @@ import { ReviewsLoggerService } from "../shared/reviews-logger.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
 
-// --- Public API ---
-// Methods exported and callable from controllers.
+const EDIT_WINDOW_MINUTES = 5;
+const MS_PER_MINUTE = 60 * 1000;
+
+interface OrderForReview {
+  clientId: string;
+  providerId: string | null;
+}
 
 @Injectable()
 export class ReviewsService {
@@ -18,9 +23,6 @@ export class ReviewsService {
     private prisma: PrismaService,
     private logger: ReviewsLoggerService,
   ) {}
-
-  // --- Private Helpers ---
-  // Formats a review entity to the response DTO shape.
 
   private formatReview(review: {
     id: string;
@@ -44,7 +46,7 @@ export class ReviewsService {
     };
   }
 
-  private recalculateRating(revieweeId: string, tx: any) {
+  private async recalculateRating(revieweeId: string, tx: any) {
     const aggregate = await tx.review.aggregate({
       where: { revieweeId },
       _avg: { rating: true },
@@ -79,9 +81,6 @@ export class ReviewsService {
 
     throw new ForbiddenException("Você não é parte deste pedido");
   }
-
-  // Cap at 50 to deter scraping; service caps at the DB level.
-  static MAX_PROVIDER_LIMIT = 50;
 
   async create(reviewerId: string, dto: CreateReviewDto, ip?: string) {
     const order = await this.prisma.serviceOrder.findUnique({
@@ -164,8 +163,9 @@ export class ReviewsService {
     return reviews.map((r) => this.formatReview(r));
   }
 
+  // Public listing is capped to deter scraping.
   async findByProvider(providerId: string, limit?: number) {
-    const take = Math.min(Math.max(limit ?? 50, 1), ReviewsService.MAX_PROVIDER_LIMIT);
+    const take = Math.min(Math.max(limit ?? 50, 1), 50);
     const reviews = await this.prisma.review.findMany({
       where: { revieweeId: providerId },
       orderBy: { createdAt: "desc" },
@@ -215,7 +215,7 @@ export class ReviewsService {
     }
 
     const editDeadline =
-      review.createdAt.getTime() + 5 * 60 * 1000;
+      review.createdAt.getTime() + EDIT_WINDOW_MINUTES * MS_PER_MINUTE;
 
     if (Date.now() > editDeadline) {
       throw new BadRequestException(
@@ -270,9 +270,6 @@ export class ReviewsService {
     return { message: "Avaliação excluída com sucesso" };
   }
 }
-
-// --- Public API ---
-// Exported interface for review response format.
 
 export interface ReviewFormat {
   id: string;

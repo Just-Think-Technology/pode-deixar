@@ -10,10 +10,10 @@ import {
 } from './apps';
 
 // --- Provider Journey ---
-// Provider cross-service journey: profile (users) → service → order (orders)
-// → proposal → acceptance → completion → payment + webhook (payments)
-// → review (reviews) → rating reflected on profile (users). All in the same
-// database, as in production.
+
+// Profile (users) → service → order (orders) → proposal → acceptance → completion
+// → payment + webhook (payments) → review (reviews) → rating reflected
+// on the profile (users). All in the same database, as in production.
 
 describe('Provider journey (cross-service e2e)', () => {
   let apps: E2EApps;
@@ -53,7 +53,7 @@ describe('Provider journey (cross-service e2e)', () => {
     await shutdownApps(apps);
   });
 
-  it '1. provider creates profile and registers a service (users)', async () => {
+  it('1. provider creates profile and registers a service (users)', async () => {
     const clientHeaders = bearerAuth(clientToken);
     const providerHeaders = bearerAuth(providerToken);
 
@@ -87,9 +87,9 @@ describe('Provider journey (cross-service e2e)', () => {
         .expect(201)
     ).body;
     expect(service.fixed_price).toBe(150);
-  };
+  });
 
-  it '2. client creates an order (orders)', async () => {
+  it('2. client creates an order (orders)', async () => {
     const order = (
       await request(apps.ordersApp.getHttpServer())
         .post('/services/me')
@@ -105,9 +105,9 @@ describe('Provider journey (cross-service e2e)', () => {
     orderId = order.id as string;
     expect(order.status).toBe('OPEN');
     expect(order.client_id).toBe(clientId);
-  };
+  });
 
-  it '3. provider sends a proposal (orders)', async () => {
+  it('3. provider sends a proposal (orders)', async () => {
     const proposal = (
       await request(apps.ordersApp.getHttpServer())
         .post('/proposals')
@@ -122,9 +122,9 @@ describe('Provider journey (cross-service e2e)', () => {
 
     proposalId = proposal.id as string;
     expect(proposal.status).toBe('PENDING');
-  };
+  });
 
-  it '4. client accepts the proposal (orders)', async () => {
+  it('4. client accepts the proposal (orders)', async () => {
     const accepted = (
       await request(apps.ordersApp.getHttpServer())
         .post(`/proposals/${proposalId}/accept`)
@@ -141,9 +141,9 @@ describe('Provider journey (cross-service e2e)', () => {
         .expect(200)
     ).body;
     expect(order.status).toBe('IN_PROGRESS');
-  };
+  });
 
-  it '5. provider completes the service (orders)', async () => {
+  it('5. provider completes the service (orders)', async () => {
     const order = (
       await request(apps.ordersApp.getHttpServer())
         .post(`/services/me/${orderId}/complete`)
@@ -152,9 +152,9 @@ describe('Provider journey (cross-service e2e)', () => {
     ).body;
 
     expect(order.status).toBe('COMPLETED');
-  };
+  });
 
-  it '6. client generates payment and confirms via webhook (payments)', async () => {
+  it('6. client generates payment and confirms via webhook (payments)', async () => {
     const payment = (
       await request(apps.paymentsApp.getHttpServer())
         .post('/payments')
@@ -184,9 +184,9 @@ describe('Provider journey (cross-service e2e)', () => {
         .expect(201)
     ).body;
     expect(confirmed.payment.status).toBe('PAID');
-  };
+  });
 
-  it '7. client reviews and the rating reflects on the profile (reviews → users)', async () => {
+  it('7. client reviews and the rating reflects on the profile (reviews → users)', async () => {
     const review = (
       await request(apps.reviewsApp.getHttpServer())
         .post('/reviews')

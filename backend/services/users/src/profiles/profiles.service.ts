@@ -329,7 +329,7 @@ export class ProfilesService {
         );
         await this.minio
           .deleteFile(oldFileName, this.minio.avatarBucket)
-          .catch(() -> {});
+          .catch(() => {});
       }
 
       const profile = await this.prisma.clientProfile.update({
