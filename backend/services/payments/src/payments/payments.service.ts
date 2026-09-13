@@ -508,7 +508,7 @@ export class PaymentsService {
   }
 
   private assertSupportedCurrency(currency: string): void {
-    if (!SUPPORTED_CURRENCIES.includes(currency)) {
+    if (!(SUPPORTED_CURRENCIES as readonly string[]).includes(currency)) {
       throw new BadRequestException(
         `Moeda não suportada. Use: ${SUPPORTED_CURRENCIES.join(", ")}`,
       );

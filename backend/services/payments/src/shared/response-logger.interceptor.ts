@@ -42,12 +42,15 @@ export class ResponseLoggerInterceptor implements NestInterceptor {
         },
         error: (error: unknown) => {
           const err = error as { status?: unknown; stack?: unknown };
+          const status =
+            typeof err.status === "number" ? err.status : 500;
+          const stack = typeof err.stack === "string" ? err.stack : "";
           const duration = Date.now() - now;
           this.logger.error(
             sanitizeSensitiveData(
-              `${request.method} ${request.url} - ${String(err.status || 500)} - ${duration}ms`,
+              `${request.method} ${request.url} - ${status} - ${duration}ms`,
             ),
-            sanitizeSensitiveData(String(err.stack ?? "")),
+            sanitizeSensitiveData(stack),
           );
         },
       }),
