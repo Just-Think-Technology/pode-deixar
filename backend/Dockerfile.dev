@@ -18,6 +18,11 @@ COPY prisma ./prisma
 RUN pnpm install --frozen-lockfile
 RUN pnpm exec prisma generate --schema=prisma/schema.prisma
 
+# Shared package dist is NOT built here: sources arrive via volume mounts at
+# runtime, so each service builds it on start (prestart:dev) and keeps it
+# fresh (watch:* scripts). Baking host dist into the image would reintroduce
+# the stale-dist MODULE_NOT_FOUND failures.
+
 # Arquivos como `node`: os serviços rodam com `user: "node"` e precisam
 # escrever em /app (prisma generate, tsbuildinfo). Sem isso, EACCES.
 RUN chown -R node:node /app && mkdir -p /home/node && chown node:node /home/node

@@ -31,8 +31,10 @@ pós-subida) — por isso o atalho existe.
 - Configs de dev vêm do `.env.dev` (versionado: só localhost e valores
   descartáveis); `DATABASE_URL` é montada para o Postgres local
 - O `auth` aplica `prisma migrate deploy` no startup contra o banco local
-- Mailpit (`:8025`) é local-only; edições em `backend/shared/*` exigem
-  rebuild do serviço (o watch cobre só o `src` de cada serviço)
+- Mailpit (`:8025`) é local-only; `dist` dos packages `shared` é gerado
+  dentro do container (`prestart:dev` + scripts `watch:*` de cada serviço)
+  — nunca monte `dist` do host, senão o volume sobrescreve o build e o
+  serviço quebra com `MODULE_NOT_FOUND`
 
 ## Deploy
 
