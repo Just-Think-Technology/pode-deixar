@@ -4,4 +4,5 @@ export interface AuthenticatedRequest {
   user: {
     sub: string;
   };
+  ip?: string;
 }
