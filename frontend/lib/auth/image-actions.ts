@@ -89,7 +89,7 @@ export async function uploadServiceImageAction(
   }
 
   const res = await fetch(
-    `${getApiBaseUrl()}/providers/me/services/${serviceId}/images`,
+    `${getApiBaseUrl()}/providers/me/services/${encodeURIComponent(serviceId)}/images`,
     {
       method: "POST",
       headers: {
@@ -124,7 +124,7 @@ export async function deleteServiceImageAction(
   assertResourceId(imageId, "Imagem inválida");
 
   const res = await fetch(
-    `${getApiBaseUrl()}/providers/me/services/${serviceId}/images/${imageId}`,
+    `${getApiBaseUrl()}/providers/me/services/${encodeURIComponent(serviceId)}/images/${encodeURIComponent(imageId)}`,
     {
       method: "DELETE",
       headers: {
