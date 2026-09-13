@@ -2,6 +2,7 @@
 
 "use client";
 
+import Link from "next/link";
 import { MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -106,6 +107,15 @@ function AgendaEventDetailContent({
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {event.order_status === "IN_PROGRESS" ? (
+        <Link
+          href={`/worker/orders/${event.order_id}/complete`}
+          className={cn(buttonVariants(), "w-full")}
+        >
+          Finalizar serviço
+        </Link>
       ) : null}
     </>
   );
