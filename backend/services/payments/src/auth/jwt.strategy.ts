@@ -7,6 +7,7 @@ import { ConfigService } from "@nestjs/config";
 import {
   assertTokenPayload,
   checkTokenRevocation,
+  TokenPayload,
 } from "@pode-deixar/security";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -25,7 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   // --- Public API ---
 
-  async validate(payload: any) {
+  async validate(payload: TokenPayload) {
     assertTokenPayload(payload);
     await checkTokenRevocation(
       (jti) => this.prisma.tokenBlacklist.findUnique({ where: { jti } }),

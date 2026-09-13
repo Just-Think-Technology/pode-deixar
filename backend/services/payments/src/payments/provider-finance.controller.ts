@@ -9,6 +9,7 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { PaymentsService } from "./payments.service";
+import { AuthenticatedRequest } from "../auth/authenticated-request";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 import { FinanceItemsQueryDto } from "./dto/finance-items-query.dto";
 import { FinanceChartQueryDto } from "./dto/finance-chart-query.dto";
@@ -33,7 +34,9 @@ export class ProviderFinanceController {
     status: 200,
     description: "Financial summary returned successfully",
   })
-  async summary(@Request() req: any): Promise<{
+  async summary(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<{
     currency: string;
     feeRate: number;
     pendingNet: number;
@@ -64,7 +67,7 @@ export class ProviderFinanceController {
     description: "Financial items list returned successfully",
   })
   async items(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Query() query: FinanceItemsQueryDto,
   ): Promise<
     {
@@ -106,7 +109,7 @@ export class ProviderFinanceController {
     description: "Monthly data returned successfully",
   })
   async chart(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Query() query: FinanceChartQueryDto,
   ): Promise<
     {
