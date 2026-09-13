@@ -78,12 +78,13 @@ export class VerifyService {
     accessToken: string,
   ): Promise<AccessTokenPayload | null> {
     try {
-      return (await this.jwtService.verifyAsync(accessToken, {
+      const decoded: unknown = await this.jwtService.verifyAsync(accessToken, {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
         algorithms: [...JWT_ALGORITHMS],
         issuer: JWT_ISSUER,
         audience: JWT_AUDIENCE,
-      })) as AccessTokenPayload;
+      });
+      return decoded as AccessTokenPayload;
     } catch {
       return null;
     }
