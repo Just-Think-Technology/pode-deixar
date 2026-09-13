@@ -1,8 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 import { extname } from 'path';
 
-// Extensões permitidas para upload de imagem (minúsculas, com ponto).
-const EXTENSOES_PERMITIDAS = new Set([
+// Allowed image upload extensions (lowercase, with dot).
+const ALLOWED_EXTENSIONS = new Set([
   '.jpg',
   '.jpeg',
   '.png',
@@ -10,8 +10,8 @@ const EXTENSOES_PERMITIDAS = new Set([
   '.gif',
 ]);
 
-// Extensões esperadas para cada tipo detectado pelos magic bytes.
-const EXTENSOES_POR_TIPO: Record<string, string[]> = {
+// Expected extensions for each magic-bytes-detected type.
+const EXTENSIONS_BY_TYPE: Record<string, string[]> = {
   jpeg: ['.jpg', '.jpeg'],
   png: ['.png'],
   webp: ['.webp'],
@@ -19,7 +19,7 @@ const EXTENSOES_POR_TIPO: Record<string, string[]> = {
 };
 
 // Client-supplied mimetype/extension are forgeable, so sniff the real type.
-function detectarTipoPorMagicBytes(
+function detectTypeFromMagicBytes(
   buffer: Buffer,
 ): 'jpeg' | 'png' | 'webp' | 'gif' | null {
   if (!buffer || buffer.length < 3) {
@@ -68,23 +68,23 @@ function detectarTipoPorMagicBytes(
   return null;
 }
 
-// Valida extensão (allowlist) e conteúdo real (magic bytes) do arquivo.
-// Rejeita quando a extensão não é permitida, o conteúdo não é uma imagem
-// suportada ou o conteúdo não corresponde à extensão informada.
-export function validarArquivoImagem(
+// Validates the extension (allowlist) and the real content (magic bytes).
+// Rejects disallowed extensions, non-image content, and content mismatching
+// the claimed extension.
+export function validateImageFile(
   originalname: string,
   buffer: Buffer,
 ): void {
   const ext = extname(originalname || '').toLowerCase();
-  if (!EXTENSOES_PERMITIDAS.has(ext)) {
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
     throw new BadRequestException(
       'Formato de imagem inválido. Permitidos: JPEG, PNG, WebP, GIF',
     );
   }
-  const tipo = detectarTipoPorMagicBytes(buffer);
-  // Seguro: chave é a união validada retornada pela detecção de magic bytes.
+  const fileType = detectTypeFromMagicBytes(buffer);
+  // Safe: key is the validated union returned by magic-bytes detection.
   // eslint-disable-next-line security/detect-object-injection
-  if (!tipo || !EXTENSOES_POR_TIPO[tipo].includes(ext)) {
+  if (!fileType || !EXTENSIONS_BY_TYPE[fileType].includes(ext)) {
     throw new BadRequestException(
       'Conteúdo do arquivo não corresponde a uma imagem válida',
     );

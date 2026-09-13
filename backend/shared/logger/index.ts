@@ -185,6 +185,7 @@ export function createLogger(serviceName: string, featureName?: string, options:
 }
 
 export { createResponseLoggerInterceptor } from './response-logger.interceptor';
+export { BaseDomainLogger } from './domain-logger';
 export { bootstrapService } from './bootstrap';
 export type { BootstrapServiceOptions } from './bootstrap';
 

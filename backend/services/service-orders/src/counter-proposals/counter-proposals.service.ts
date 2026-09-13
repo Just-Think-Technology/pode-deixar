@@ -4,18 +4,15 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { PrismaService } from "@pode-deixar/prisma";
+import { CounterProposalsRepository } from "./counter-proposals.repository";
 import { ServicesLoggerService } from "../shared/services-logger.service";
 import { CreateCounterProposalDto } from "./dto/create-counter-proposal.dto";
-import {
-  normalizePagination,
-  PaginationQuery,
-} from "../shared/pagination-query.dto";
+import { normalizePagination, PaginationQuery } from "@pode-deixar/validation";
 
 @Injectable()
 export class CounterProposalsService {
   constructor(
-    private prisma: PrismaService,
+    private repository: CounterProposalsRepository,
     private logger: ServicesLoggerService,
   ) {}
 
@@ -34,10 +31,9 @@ export class CounterProposalsService {
   }
 
   async create(senderId: string, dto: CreateCounterProposalDto, ip?: string) {
-    const proposal = await this.prisma.proposal.findUnique({
-      where: { id: dto.proposalId },
-      include: { serviceOrder: true },
-    });
+    const proposal = await this.repository.findProposalWithOrder(
+      dto.proposalId,
+    );
 
     if (!proposal) {
       throw new NotFoundException("Proposta não encontrada");
@@ -58,13 +54,11 @@ export class CounterProposalsService {
       );
     }
 
-    const existingPending = await this.prisma.counterProposal.findFirst({
-      where: {
-        proposalId: dto.proposalId,
+    const existingPending =
+      await this.repository.findPendingByProposalAndSender(
+        dto.proposalId,
         senderId,
-        status: "PENDING",
-      },
-    });
+      );
 
     if (existingPending) {
       throw new BadRequestException(
@@ -72,14 +66,12 @@ export class CounterProposalsService {
       );
     }
 
-    const counterProposal = await this.prisma.counterProposal.create({
-      data: {
-        proposalId: dto.proposalId,
-        senderId,
-        price: dto.price,
-        description: dto.description,
-        estimatedDuration: dto.estimatedDuration ?? null,
-      },
+    const counterProposal = await this.repository.createCounterProposal({
+      proposalId: dto.proposalId,
+      senderId,
+      price: dto.price,
+      description: dto.description,
+      estimatedDuration: dto.estimatedDuration ?? null,
     });
 
     this.logger.logInfo(
@@ -97,14 +89,8 @@ export class CounterProposalsService {
   }
 
   async accept(userId: string, counterProposalId: string, ip?: string) {
-    const cp = await this.prisma.counterProposal.findUnique({
-      where: { id: counterProposalId },
-      include: {
-        proposal: {
-          include: { serviceOrder: true },
-        },
-      },
-    });
+    const cp =
+      await this.repository.findCounterProposalWithRelations(counterProposalId);
 
     if (!cp) {
       throw new NotFoundException("Contraproposta não encontrada");
@@ -133,40 +119,13 @@ export class CounterProposalsService {
       throw new BadRequestException("O pedido não está mais aberto");
     }
 
-    const [updatedCp] = await this.prisma.$transaction([
-      this.prisma.counterProposal.update({
-        where: { id: counterProposalId },
-        data: { status: "ACCEPTED" },
-      }),
-      this.prisma.proposal.update({
-        where: { id: cp.proposalId },
-        data: { status: "ACCEPTED" },
-      }),
-      this.prisma.proposal.updateMany({
-        where: {
-          serviceOrderId: cp.proposal.serviceOrderId,
-          id: { not: cp.proposalId },
-          status: "PENDING",
-        },
-        data: { status: "REJECTED" },
-      }),
-      this.prisma.counterProposal.updateMany({
-        where: {
-          proposalId: cp.proposalId,
-          id: { not: counterProposalId },
-          status: "PENDING",
-        },
-        data: { status: "REJECTED" },
-      }),
-      this.prisma.serviceOrder.update({
-        where: { id: cp.proposal.serviceOrderId },
-        data: {
-          status: "IN_PROGRESS",
-          providerId: cp.proposal.providerId,
-          agreedPrice: cp.price,
-        },
-      }),
-    ]);
+    const [updatedCp] = await this.repository.acceptCounterProposal(
+      counterProposalId,
+      cp.proposalId,
+      cp.proposal.serviceOrderId,
+      cp.proposal.providerId,
+      cp.price,
+    );
 
     this.logger.logInfo(
       "counter_proposal_accepted",
@@ -178,14 +137,8 @@ export class CounterProposalsService {
   }
 
   async reject(userId: string, counterProposalId: string, ip?: string) {
-    const cp = await this.prisma.counterProposal.findUnique({
-      where: { id: counterProposalId },
-      include: {
-        proposal: {
-          include: { serviceOrder: true },
-        },
-      },
-    });
+    const cp =
+      await this.repository.findCounterProposalWithRelations(counterProposalId);
 
     if (!cp) {
       throw new NotFoundException("Contraproposta não encontrada");
@@ -210,10 +163,10 @@ export class CounterProposalsService {
       );
     }
 
-    const updated = await this.prisma.counterProposal.update({
-      where: { id: counterProposalId },
-      data: { status: "REJECTED" },
-    });
+    const updated = await this.repository.updateCounterProposalStatus(
+      counterProposalId,
+      "REJECTED",
+    );
 
     this.logger.logInfo(
       "counter_proposal_rejected",
@@ -229,10 +182,7 @@ export class CounterProposalsService {
     proposalId: string,
     pagination?: PaginationQuery,
   ) {
-    const proposal = await this.prisma.proposal.findUnique({
-      where: { id: proposalId },
-      include: { serviceOrder: true },
-    });
+    const proposal = await this.repository.findProposalWithOrder(proposalId);
 
     if (!proposal) {
       throw new NotFoundException("Proposta não encontrada");
@@ -248,29 +198,23 @@ export class CounterProposalsService {
     }
 
     const { skip, take } = normalizePagination(pagination);
-    const counterProposals = await this.prisma.counterProposal.findMany({
-      where: { proposalId },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take,
-    });
+    const counterProposals =
+      await this.repository.findCounterProposalsByProposal(
+        proposalId,
+        skip,
+        take,
+      );
 
     return counterProposals.map((cp) => this.formatCounterProposal(cp));
   }
 
   async findMySent(senderId: string, pagination?: PaginationQuery) {
     const { skip, take } = normalizePagination(pagination);
-    const counterProposals = await this.prisma.counterProposal.findMany({
-      where: { senderId },
-      orderBy: { createdAt: "desc" },
+    const counterProposals = await this.repository.findSentBySender(
+      senderId,
       skip,
       take,
-      include: {
-        proposal: {
-          select: { id: true, serviceOrderId: true, price: true, status: true },
-        },
-      },
-    });
+    );
 
     return counterProposals.map((cp) => ({
       ...this.formatCounterProposal(cp),

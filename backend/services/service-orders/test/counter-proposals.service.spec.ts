@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { CounterProposalsService } from "../src/counter-proposals/counter-proposals.service";
-import { PrismaService } from "@pode-deixar/prisma";
+import { CounterProposalsRepository } from "../src/counter-proposals/counter-proposals.repository";
 import { ServicesLoggerService } from "../src/shared/services-logger.service";
 import {
   NotFoundException,
@@ -37,24 +37,15 @@ describe("CounterProposalsService", () => {
     updatedAt: new Date(),
   };
 
-  const mockPrisma = {
-    counterProposal: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-    },
-    proposal: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-    },
-    serviceOrder: {
-      update: jest.fn(),
-    },
-    $transaction: jest.fn(),
+  const mockRepository = {
+    findProposalWithOrder: jest.fn(),
+    findPendingByProposalAndSender: jest.fn(),
+    createCounterProposal: jest.fn(),
+    findCounterProposalWithRelations: jest.fn(),
+    acceptCounterProposal: jest.fn(),
+    updateCounterProposalStatus: jest.fn(),
+    findCounterProposalsByProposal: jest.fn(),
+    findSentBySender: jest.fn(),
   };
 
   const mockLogger = {
@@ -65,7 +56,7 @@ describe("CounterProposalsService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CounterProposalsService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: CounterProposalsRepository, useValue: mockRepository },
         { provide: ServicesLoggerService, useValue: mockLogger },
       ],
     }).compile();
@@ -83,27 +74,34 @@ describe("CounterProposalsService", () => {
     };
 
     it("should create a counter-proposal as client", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder },
       });
-      mockPrisma.counterProposal.findFirst.mockResolvedValue(null);
-      mockPrisma.counterProposal.create.mockResolvedValue(mockCounterProposal);
+      mockRepository.findPendingByProposalAndSender.mockResolvedValue(null);
+      mockRepository.createCounterProposal.mockResolvedValue(mockCounterProposal);
 
       const result = await service.create("client-1", dto, "127.0.0.1");
 
       expect(result.proposal_id).toBe("proposal-1");
       expect(result.sender_id).toBe("client-1");
       expect(result.price).toBe(180.0);
+      expect(mockRepository.createCounterProposal).toHaveBeenCalledWith({
+        proposalId: "proposal-1",
+        senderId: "client-1",
+        price: 180.0,
+        description: "Contraproposta do cliente",
+        estimatedDuration: "3 dias",
+      });
     });
 
     it("should create a counter-proposal as provider", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder },
       });
-      mockPrisma.counterProposal.findFirst.mockResolvedValue(null);
-      mockPrisma.counterProposal.create.mockResolvedValue({
+      mockRepository.findPendingByProposalAndSender.mockResolvedValue(null);
+      mockRepository.createCounterProposal.mockResolvedValue({
         ...mockCounterProposal,
         senderId: "provider-1",
       });
@@ -114,7 +112,7 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw NotFoundException when proposal not found", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(null);
+      mockRepository.findProposalWithOrder.mockResolvedValue(null);
 
       await expect(service.create("client-1", dto)).rejects.toThrow(
         NotFoundException,
@@ -122,7 +120,7 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw BadRequestException when proposal is not PENDING", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithOrder.mockResolvedValue({
         ...mockProposal,
         status: "ACCEPTED",
         serviceOrder: { ...mockServiceOrder },
@@ -134,7 +132,7 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw ForbiddenException when sender is not related", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder },
       });
@@ -145,11 +143,11 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw BadRequestException when sender has pending counter-proposal", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder },
       });
-      mockPrisma.counterProposal.findFirst.mockResolvedValue(mockCounterProposal);
+      mockRepository.findPendingByProposalAndSender.mockResolvedValue(mockCounterProposal);
 
       await expect(service.create("client-1", dto)).rejects.toThrow(
         BadRequestException,
@@ -166,18 +164,25 @@ describe("CounterProposalsService", () => {
           serviceOrder: { ...mockServiceOrder, status: "OPEN" },
         },
       };
-      mockPrisma.counterProposal.findUnique.mockResolvedValue(fullCp);
-      mockPrisma.$transaction.mockResolvedValue([
+      mockRepository.findCounterProposalWithRelations.mockResolvedValue(fullCp);
+      mockRepository.acceptCounterProposal.mockResolvedValue([
         { ...mockCounterProposal, status: "ACCEPTED" },
       ]);
 
       const result = await service.accept("provider-1", "cp-1", "127.0.0.1");
 
       expect(result.status).toBe("ACCEPTED");
+      expect(mockRepository.acceptCounterProposal).toHaveBeenCalledWith(
+        "cp-1",
+        "proposal-1",
+        "order-1",
+        "provider-1",
+        180,
+      );
     });
 
     it("should throw NotFoundException when counter-proposal not found", async () => {
-      mockPrisma.counterProposal.findUnique.mockResolvedValue(null);
+      mockRepository.findCounterProposalWithRelations.mockResolvedValue(null);
 
       await expect(service.accept("provider-1", "nonexistent")).rejects.toThrow(
         NotFoundException,
@@ -185,7 +190,7 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw BadRequestException when counter-proposal is not PENDING", async () => {
-      mockPrisma.counterProposal.findUnique.mockResolvedValue({
+      mockRepository.findCounterProposalWithRelations.mockResolvedValue({
         ...mockCounterProposal,
         status: "REJECTED",
         proposal: { ...mockProposal, serviceOrder: { ...mockServiceOrder } },
@@ -197,7 +202,7 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw BadRequestException when accepting own counter-proposal", async () => {
-      mockPrisma.counterProposal.findUnique.mockResolvedValue({
+      mockRepository.findCounterProposalWithRelations.mockResolvedValue({
         ...mockCounterProposal,
         senderId: "client-1",
         proposal: { ...mockProposal, serviceOrder: { ...mockServiceOrder } },
@@ -209,7 +214,7 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw BadRequestException when order is not OPEN", async () => {
-      mockPrisma.counterProposal.findUnique.mockResolvedValue({
+      mockRepository.findCounterProposalWithRelations.mockResolvedValue({
         ...mockCounterProposal,
         proposal: {
           ...mockProposal,
@@ -223,50 +228,36 @@ describe("CounterProposalsService", () => {
     });
 
     it("should reject other pending counter-proposals in the same proposal", async () => {
-      mockPrisma.counterProposal.findUnique.mockResolvedValue({
+      mockRepository.findCounterProposalWithRelations.mockResolvedValue({
         ...mockCounterProposal,
         proposal: {
           ...mockProposal,
           serviceOrder: { ...mockServiceOrder, status: "OPEN" },
         },
       });
-      mockPrisma.counterProposal.update.mockReturnThis();
-      mockPrisma.proposal.update.mockReturnThis();
-      mockPrisma.proposal.updateMany.mockReturnThis();
-      mockPrisma.counterProposal.updateMany.mockReturnThis();
-      mockPrisma.serviceOrder.update.mockReturnThis();
-      mockPrisma.$transaction.mockResolvedValue([
+      mockRepository.acceptCounterProposal.mockResolvedValue([
         { ...mockCounterProposal, status: "ACCEPTED" },
       ]);
 
       await service.accept("provider-1", "cp-1");
 
-      expect(mockPrisma.counterProposal.update).toHaveBeenCalledWith({
-        where: { id: "cp-1" },
-        data: { status: "ACCEPTED" },
-      });
-      expect(mockPrisma.proposal.update).toHaveBeenCalledWith({
-        where: { id: "proposal-1" },
-        data: { status: "ACCEPTED" },
-      });
-      expect(mockPrisma.serviceOrder.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
-        data: {
-          status: "IN_PROGRESS",
-          providerId: "provider-1",
-          agreedPrice: 180,
-        },
-      });
+      expect(mockRepository.acceptCounterProposal).toHaveBeenCalledWith(
+        "cp-1",
+        "proposal-1",
+        "order-1",
+        "provider-1",
+        180,
+      );
     });
   });
 
   describe("reject", () => {
     it("should reject a counter-proposal", async () => {
-      mockPrisma.counterProposal.findUnique.mockResolvedValue({
+      mockRepository.findCounterProposalWithRelations.mockResolvedValue({
         ...mockCounterProposal,
         proposal: { ...mockProposal, serviceOrder: { ...mockServiceOrder } },
       });
-      mockPrisma.counterProposal.update.mockResolvedValue({
+      mockRepository.updateCounterProposalStatus.mockResolvedValue({
         ...mockCounterProposal,
         status: "REJECTED",
       });
@@ -274,10 +265,14 @@ describe("CounterProposalsService", () => {
       const result = await service.reject("provider-1", "cp-1");
 
       expect(result.status).toBe("REJECTED");
+      expect(mockRepository.updateCounterProposalStatus).toHaveBeenCalledWith(
+        "cp-1",
+        "REJECTED",
+      );
     });
 
     it("should throw NotFoundException when counter-proposal not found", async () => {
-      mockPrisma.counterProposal.findUnique.mockResolvedValue(null);
+      mockRepository.findCounterProposalWithRelations.mockResolvedValue(null);
 
       await expect(service.reject("provider-1", "nonexistent")).rejects.toThrow(
         NotFoundException,
@@ -285,7 +280,7 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw BadRequestException when rejecting own counter-proposal", async () => {
-      mockPrisma.counterProposal.findUnique.mockResolvedValue({
+      mockRepository.findCounterProposalWithRelations.mockResolvedValue({
         ...mockCounterProposal,
         proposal: { ...mockProposal, serviceOrder: { ...mockServiceOrder } },
       });
@@ -298,11 +293,11 @@ describe("CounterProposalsService", () => {
 
   describe("findByProposal", () => {
     it("should return counter-proposals for a proposal as client", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder },
       });
-      mockPrisma.counterProposal.findMany.mockResolvedValue([
+      mockRepository.findCounterProposalsByProposal.mockResolvedValue([
         mockCounterProposal,
       ]);
 
@@ -310,14 +305,19 @@ describe("CounterProposalsService", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].proposal_id).toBe("proposal-1");
+      expect(mockRepository.findCounterProposalsByProposal).toHaveBeenCalledWith(
+        "proposal-1",
+        0,
+        20,
+      );
     });
 
     it("should return counter-proposals for a proposal as provider", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder },
       });
-      mockPrisma.counterProposal.findMany.mockResolvedValue([
+      mockRepository.findCounterProposalsByProposal.mockResolvedValue([
         mockCounterProposal,
       ]);
 
@@ -327,7 +327,7 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw ForbiddenException when user is unrelated", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder },
       });
@@ -338,7 +338,7 @@ describe("CounterProposalsService", () => {
     });
 
     it("should throw NotFoundException when proposal not found", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(null);
+      mockRepository.findProposalWithOrder.mockResolvedValue(null);
 
       await expect(
         service.findByProposal("client-1", "nonexistent"),
@@ -348,7 +348,7 @@ describe("CounterProposalsService", () => {
 
   describe("findMySent", () => {
     it("should return counter-proposals sent by user", async () => {
-      mockPrisma.counterProposal.findMany.mockResolvedValue([
+      mockRepository.findSentBySender.mockResolvedValue([
         {
           ...mockCounterProposal,
           proposal: { id: "proposal-1", serviceOrderId: "order-1", price: 150.0, status: "PENDING" },
@@ -360,6 +360,11 @@ describe("CounterProposalsService", () => {
       expect(result).toHaveLength(1);
       expect(result[0].sender_id).toBe("client-1");
       expect(result[0].proposal).toBeDefined();
+      expect(mockRepository.findSentBySender).toHaveBeenCalledWith(
+        "client-1",
+        0,
+        20,
+      );
     });
   });
 });

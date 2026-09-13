@@ -3,33 +3,60 @@ import {
   NotFoundException,
   ForbiddenException,
 } from "@nestjs/common";
-import { PrismaService } from "@pode-deixar/prisma";
+import { ProviderServicesRepository } from "./provider-services.repository";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateProviderServiceDto } from "./dto/create-provider-service.dto";
 import { UpdateProviderServiceDto } from "./dto/update-provider-service.dto";
 import { SearchProvidersQueryDto } from "./dto/search-providers-query.dto";
+import { toSkipTake } from "@pode-deixar/validation";
 
 @Injectable()
 export class ProviderServicesService {
   constructor(
-    private prisma: PrismaService,
+    private repository: ProviderServicesRepository,
     private usersLogger: UsersLoggerService,
   ) {}
 
-  async getProviderProfileByUserId(userId: string) {
-    const profile = await this.prisma.providerProfile.findUnique({
-      where: { userId },
-    });
+  private async getProviderProfileByUserId(userId: string) {
+    const profile = await this.repository.findProviderProfileByUserId(userId);
     if (!profile) {
       throw new NotFoundException("Perfil de prestador não encontrado");
     }
     return profile;
   }
 
+  async createServiceForUser(
+    userId: string,
+    dto: CreateProviderServiceDto,
+    ip?: string,
+  ) {
+    const profile = await this.getProviderProfileByUserId(userId);
+    return this.createService(profile.id, dto, ip);
+  }
+
+  async getMyServicesForUser(userId: string) {
+    const profile = await this.getProviderProfileByUserId(userId);
+    return this.getMyServices(profile.id);
+  }
+
+  async updateServiceForUser(
+    userId: string,
+    serviceId: string,
+    dto: UpdateProviderServiceDto,
+    ip?: string,
+  ) {
+    const profile = await this.getProviderProfileByUserId(userId);
+    return this.updateService(profile.id, serviceId, dto, ip);
+  }
+
+  async deleteServiceForUser(userId: string, serviceId: string, ip?: string) {
+    const profile = await this.getProviderProfileByUserId(userId);
+    return this.deleteService(profile.id, serviceId, ip);
+  }
+
   private async getProviderProfile(providerProfileId: string) {
-    const profile = await this.prisma.providerProfile.findUnique({
-      where: { id: providerProfileId },
-    });
+    const profile =
+      await this.repository.findProviderProfileById(providerProfileId);
     if (!profile) {
       throw new NotFoundException("Perfil de prestador não encontrado");
     }
@@ -87,22 +114,12 @@ export class ProviderServicesService {
   ) {
     await this.getProviderProfile(providerProfileId);
 
-    const service = await this.prisma.providerService.create({
-      data: {
-        providerProfileId,
-        title: dto.title,
-        description: dto.description,
-        fixedPrice: dto.fixedPrice,
-        categoryId: dto.categoryId,
-        isActive: true,
-      },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: {
-          select: { id: true, url: true, createdAt: true },
-          orderBy: { createdAt: "desc" },
-        },
-      },
+    const service = await this.repository.createProviderService({
+      providerProfileId,
+      title: dto.title,
+      description: dto.description,
+      fixedPrice: dto.fixedPrice,
+      categoryId: dto.categoryId,
     });
 
     this.usersLogger.logServiceCreated(providerProfileId, service.id, ip);
@@ -113,17 +130,8 @@ export class ProviderServicesService {
   async getMyServices(providerProfileId: string) {
     await this.getProviderProfile(providerProfileId);
 
-    const services = await this.prisma.providerService.findMany({
-      where: { providerProfileId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: {
-          select: { id: true, url: true, createdAt: true },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
+    const services =
+      await this.repository.findServicesByProfileId(providerProfileId);
 
     return services.map((s) => this.formatService(s));
   }
@@ -131,17 +139,8 @@ export class ProviderServicesService {
   async getProviderServices(providerProfileId: string) {
     await this.getProviderProfile(providerProfileId);
 
-    const services = await this.prisma.providerService.findMany({
-      where: { providerProfileId, isActive: true },
-      orderBy: { createdAt: "desc" },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: {
-          select: { id: true, url: true, createdAt: true },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
+    const services =
+      await this.repository.findActiveServicesByProfileId(providerProfileId);
 
     return services.map((s) => this.formatService(s));
   }
@@ -152,9 +151,7 @@ export class ProviderServicesService {
     dto: UpdateProviderServiceDto,
     ip?: string,
   ) {
-    const existing = await this.prisma.providerService.findUnique({
-      where: { id: serviceId },
-    });
+    const existing = await this.repository.findProviderServiceById(serviceId);
 
     if (!existing) {
       throw new NotFoundException("Serviço não encontrado");
@@ -164,21 +161,11 @@ export class ProviderServicesService {
       throw new ForbiddenException("Serviço não pertence a este prestador");
     }
 
-    const service = await this.prisma.providerService.update({
-      where: { id: serviceId },
-      data: {
-        title: dto.title ?? existing.title,
-        description: dto.description ?? existing.description,
-        fixedPrice: dto.fixedPrice ?? existing.fixedPrice,
-        categoryId: dto.categoryId ?? existing.categoryId,
-      },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: {
-          select: { id: true, url: true, createdAt: true },
-          orderBy: { createdAt: "desc" },
-        },
-      },
+    const service = await this.repository.updateProviderService(serviceId, {
+      title: dto.title ?? existing.title,
+      description: dto.description ?? existing.description,
+      fixedPrice: dto.fixedPrice ?? existing.fixedPrice,
+      categoryId: dto.categoryId ?? existing.categoryId,
     });
 
     this.usersLogger.logServiceUpdated(providerProfileId, serviceId, ip);
@@ -191,9 +178,7 @@ export class ProviderServicesService {
     serviceId: string,
     ip?: string,
   ) {
-    const existing = await this.prisma.providerService.findUnique({
-      where: { id: serviceId },
-    });
+    const existing = await this.repository.findProviderServiceById(serviceId);
 
     if (!existing) {
       throw new NotFoundException("Serviço não encontrado");
@@ -203,17 +188,7 @@ export class ProviderServicesService {
       throw new ForbiddenException("Serviço não pertence a este prestador");
     }
 
-    const service = await this.prisma.providerService.update({
-      where: { id: serviceId },
-      data: { isActive: false },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-        images: {
-          select: { id: true, url: true, createdAt: true },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
+    const service = await this.repository.softDeleteProviderService(serviceId);
 
     this.usersLogger.logServiceDeleted(providerProfileId, serviceId, ip);
 
@@ -278,10 +253,9 @@ export class ProviderServicesService {
   }
 
   async searchProviders(query: SearchProvidersQueryDto) {
-    // Cap page size against abuse (the DTO also enforces @Max(50)).
+    // Shared caps (the DTO also enforces @Max(50)); default page size is 10.
+    const { skip, take: limit } = toSkipTake(query, 10);
     const page = query.page ?? 1;
-    const limit = Math.min(query.limit ?? 10, 50);
-    const skip = (page - 1) * limit;
 
     const serviceFilter: any = { isActive: true };
     if (query.categoryId) {
@@ -315,37 +289,14 @@ export class ProviderServicesService {
 
     const where = { AND: conditions };
 
-    // Public select excludes PII; postal-code proximity ordering was removed
-    // with the postal code.
-    const includeClause = {
-      user: {
-        select: {
-          id: true,
-          completeName: true,
-        },
-      },
-      services: {
-        where: serviceFilter,
-        orderBy: { createdAt: "desc" },
-        include: {
-          category: { select: { id: true, name: true, slug: true } },
-          images: {
-            select: { id: true, url: true, createdAt: true },
-            orderBy: { createdAt: "desc" },
-          },
-        },
-      },
-    } as const;
-
     const [total, profiles] = await Promise.all([
-      this.prisma.providerProfile.count({ where }),
-      this.prisma.providerProfile.findMany({
+      this.repository.countProviderProfiles(where),
+      this.repository.findProviderProfilesForSearch(
         where,
-        include: includeClause,
-        orderBy: { rating: "desc" },
+        serviceFilter,
         skip,
-        take: limit,
-      }),
+        limit,
+      ),
     ]);
 
     const results = profiles.map((p: any) => this.formatProfileResult(p));

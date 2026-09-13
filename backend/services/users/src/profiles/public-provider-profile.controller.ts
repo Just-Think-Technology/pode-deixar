@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, ParseUUIDPipe } from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
@@ -25,7 +25,7 @@ export class PublicProviderProfileController {
   })
   @ApiNotFoundResponse({ description: "Provider profile not found" })
   async getPublicProviderProfile(
-    @Param("providerId") providerProfileId: string,
+    @Param("providerId", ParseUUIDPipe) providerProfileId: string,
   ) {
     return this.profilesService.getPublicProviderProfile(providerProfileId);
   }

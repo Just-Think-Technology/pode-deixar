@@ -16,13 +16,13 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateValidationCore,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Rótulos dos campos do payments (user-facing, em português); as mensagens
 // de restrição vivem no núcleo compartilhado.
-const ROTULOS_PAYMENTS: RotulosCampos = {
+const PAYMENTS_FIELD_LABELS: FieldLabels = {
   serviceOrderId: "ID do pedido",
   amount: "Valor",
   method: "Método de pagamento",
@@ -31,7 +31,7 @@ const ROTULOS_PAYMENTS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string[] {
-  return traduzirErrosNucleo(errors, ROTULOS_PAYMENTS);
+  return translateValidationCore(errors, PAYMENTS_FIELD_LABELS);
 }
 
 @Module({

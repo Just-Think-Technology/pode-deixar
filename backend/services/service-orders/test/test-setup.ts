@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from "@pode-deixar/prisma";
-import { MinioService } from '../src/storage/minio.service';
+import { MinioService } from '@pode-deixar/storage';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
 // --- Types ---

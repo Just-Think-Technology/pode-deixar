@@ -18,8 +18,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from "@nestjs/swagger";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { memoryStorage } from "multer";
+import { createImageFileInterceptor } from "@pode-deixar/storage";
 import { ProfilesService } from "./profiles.service";
 import { CreateClientProfileDto } from "./dto/create-client-profile.dto";
 import { UpdateClientProfileDto } from "./dto/update-client-profile.dto";
@@ -116,23 +115,7 @@ export class ProfilesController {
   @Patch("avatar")
   @Roles("CLIENT", "PROVIDER")
   @UseInterceptors(
-    FileInterceptor("file", {
-      storage: memoryStorage(),
-      limits: { fileSize: 2 * 1024 * 1024 },
-      fileFilter: (_req, file, cb) => {
-        const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-        if (allowed.includes(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(
-            new BadRequestException(
-              "Formato de imagem inválido. Permitidos: JPEG, PNG, WebP, GIF",
-            ),
-            false,
-          );
-        }
-      },
-    }),
+    createImageFileInterceptor({ maxFileSizeBytes: 2 * 1024 * 1024 }),
   )
   @ApiOperation({ summary: "Upload avatar" })
   @ApiConsumes("multipart/form-data")

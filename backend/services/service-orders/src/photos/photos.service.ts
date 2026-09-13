@@ -4,11 +4,10 @@ import {
   ForbiddenException,
   NotFoundException,
 } from "@nestjs/common";
-import { PrismaService } from "@pode-deixar/prisma";
-import { MinioService } from "../storage/minio.service";
+import { PhotosRepository } from "./photos.repository";
+import { MinioService } from "@pode-deixar/storage";
 import sharp from "sharp";
-import * as crypto from "crypto";
-import { validarArquivoImagem } from "@pode-deixar/validation";
+import { validateImageFile } from "@pode-deixar/validation";
 
 // Pixel cap guards against decompression bombs while still covering phone
 // photos without exhausting worker memory.
@@ -17,7 +16,7 @@ const SHARP_PIXEL_LIMIT = 25_000_000;
 @Injectable()
 export class PhotosService {
   constructor(
-    private prisma: PrismaService,
+    private repository: PhotosRepository,
     private minio: MinioService,
   ) {}
 
@@ -26,9 +25,7 @@ export class PhotosService {
     clientId: string,
     files: Express.Multer.File[],
   ) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: orderId },
-    });
+    const order = await this.repository.findOrderById(orderId);
 
     if (!order) {
       throw new NotFoundException("Pedido não encontrado");
@@ -59,7 +56,7 @@ export class PhotosService {
     // Validação canônica de imagem (extensão + magic bytes) no pacote
     // compartilhado — mesma regra do upload de avatar/serviço do users.
     for (const file of files) {
-      validarArquivoImagem(file.originalname, file.buffer);
+      validateImageFile(file.originalname, file.buffer);
     }
 
     const webpBuffers: Buffer[] = [];
@@ -81,56 +78,16 @@ export class PhotosService {
 
     // Enforce the quota and create rows in one transaction to prevent overruns
     // under concurrent uploads.
-    return this.prisma.$transaction(async (tx) => {
-      const existingCount = await tx.orderPhoto.count({
-        where: { serviceOrderId: orderId },
-      });
-
-      if (existingCount + files.length > 10) {
-        throw new BadRequestException(
-          "O pedido pode ter no máximo 10 fotos no total",
-        );
-      }
-
-      const uploaded = [];
-
-      for (let i = 0; i < files.length; i++) {
-        // eslint-disable-next-line security/detect-object-injection -- numeric loop index, not a user-controlled key
-        const webpBuffer = webpBuffers[i];
-        const fileName = `${orderId}/${crypto.randomUUID()}.webp`;
-
-        const url = await this.minio.uploadFile(
-          fileName,
-          webpBuffer,
-          "image/webp",
-        );
-
-        const photo = await tx.orderPhoto.create({
-          data: {
-            serviceOrderId: orderId,
-            url,
-          },
-        });
-
-        uploaded.push({
-          id: photo.id,
-          // Private bucket, so expose the authenticated endpoint like the order detail does.
-          url: `/api/services/photos/${photo.id}/view`,
-          created_at: photo.createdAt,
-        });
-      }
-
-      return uploaded;
-    });
+    return this.repository.uploadPhotos(
+      orderId,
+      webpBuffers,
+      (fileName, buffer, mimeType) =>
+        this.minio.uploadFile(fileName, buffer, mimeType),
+    );
   }
 
   async getViewUrl(photoId: string, userId: string, role: string) {
-    const photo = await this.prisma.orderPhoto.findUnique({
-      where: { id: photoId },
-      include: {
-        serviceOrder: { select: { id: true, clientId: true } },
-      },
-    });
+    const photo = await this.repository.findPhotoWithOrderById(photoId);
 
     if (!photo || !photo.serviceOrder) {
       throw new NotFoundException("Foto não encontrada");
@@ -143,10 +100,10 @@ export class PhotosService {
     }
 
     if (role === "PROVIDER") {
-      const proposal = await this.prisma.proposal.findFirst({
-        where: { serviceOrderId: order.id, providerId: userId },
-        select: { id: true },
-      });
+      const proposal = await this.repository.findProposalForViewer(
+        order.id,
+        userId,
+      );
 
       if (proposal) {
         return this.buildViewResponse(photo.url);

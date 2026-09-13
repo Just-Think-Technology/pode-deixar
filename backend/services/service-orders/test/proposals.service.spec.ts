@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProposalsService } from "../src/proposals/proposals.service";
-import { PrismaService } from "@pode-deixar/prisma";
+import { ProposalsRepository } from "../src/proposals/proposals.repository";
 import { ServicesLoggerService } from "../src/shared/services-logger.service";
 import {
   NotFoundException,
@@ -46,20 +46,18 @@ describe("ProposalsService", () => {
     providerId: "provider-2",
   };
 
-  const mockPrisma = {
-    proposal: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-    },
-    serviceOrder: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
-    $transaction: jest.fn(),
+  const mockRepository = {
+    findOrderById: jest.fn(),
+    findActiveProposal: jest.fn(),
+    createProposal: jest.fn(),
+    findProposalWithOrderById: jest.fn(),
+    findProposalsByProvider: jest.fn(),
+    findProposalsByOrder: jest.fn(),
+    findProposalById: jest.fn(),
+    updateProposal: jest.fn(),
+    updateProposalStatus: jest.fn(),
+    findProposalWithServiceOrder: jest.fn(),
+    acceptProposal: jest.fn(),
   };
 
   const mockLogger = {
@@ -74,7 +72,7 @@ describe("ProposalsService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProposalsService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ProposalsRepository, useValue: mockRepository },
         { provide: ServicesLoggerService, useValue: mockLogger },
       ],
     }).compile();
@@ -92,14 +90,21 @@ describe("ProposalsService", () => {
     };
 
     it("should create a proposal", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockServiceOrder);
-      mockPrisma.proposal.findFirst.mockResolvedValue(null);
-      mockPrisma.proposal.create.mockResolvedValue(mockProposal);
+      mockRepository.findOrderById.mockResolvedValue(mockServiceOrder);
+      mockRepository.findActiveProposal.mockResolvedValue(null);
+      mockRepository.createProposal.mockResolvedValue(mockProposal);
 
       const result = await service.create("provider-1", dto, "127.0.0.1");
 
       expect(result.service_order_id).toBe("order-1");
       expect(result.provider_id).toBe("provider-1");
+      expect(mockRepository.createProposal).toHaveBeenCalledWith({
+        serviceOrderId: "order-1",
+        providerId: "provider-1",
+        price: 150.0,
+        description: "Posso realizar o serviço",
+        estimatedDuration: "2 horas",
+      });
       expect(mockLogger.logProposalCreated).toHaveBeenCalledWith(
         "provider-1",
         "proposal-1",
@@ -108,7 +113,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw NotFoundException when service order not found", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+      mockRepository.findOrderById.mockResolvedValue(null);
 
       await expect(service.create("provider-1", dto)).rejects.toThrow(
         NotFoundException,
@@ -116,7 +121,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw BadRequestException when order is not OPEN", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue({
+      mockRepository.findOrderById.mockResolvedValue({
         ...mockServiceOrder,
         status: "IN_PROGRESS",
       });
@@ -127,7 +132,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw BadRequestException when provider is the order owner", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockServiceOrder);
+      mockRepository.findOrderById.mockResolvedValue(mockServiceOrder);
 
       await expect(service.create("client-1", dto)).rejects.toThrow(
         BadRequestException,
@@ -135,8 +140,8 @@ describe("ProposalsService", () => {
     });
 
     it("should throw BadRequestException when provider already has active proposal", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockServiceOrder);
-      mockPrisma.proposal.findFirst.mockResolvedValue(mockProposal);
+      mockRepository.findOrderById.mockResolvedValue(mockServiceOrder);
+      mockRepository.findActiveProposal.mockResolvedValue(mockProposal);
 
       await expect(service.create("provider-1", dto)).rejects.toThrow(
         BadRequestException,
@@ -144,7 +149,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw ForbiddenException when order is directed to another provider", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(
+      mockRepository.findOrderById.mockResolvedValue(
         mockServiceOrderWithProvider,
       );
 
@@ -154,11 +159,11 @@ describe("ProposalsService", () => {
     });
 
     it("should create a proposal when order is directed to this provider", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(
+      mockRepository.findOrderById.mockResolvedValue(
         mockServiceOrderWithProvider,
       );
-      mockPrisma.proposal.findFirst.mockResolvedValue(null);
-      mockPrisma.proposal.create.mockResolvedValue({
+      mockRepository.findActiveProposal.mockResolvedValue(null);
+      mockRepository.createProposal.mockResolvedValue({
         ...mockProposal,
         providerId: "provider-2",
         serviceOrderId: "order-2",
@@ -176,7 +181,7 @@ describe("ProposalsService", () => {
 
   describe("findByIdForProvider", () => {
     it("should return proposal with service_order detail", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(mockProposalWithOrder);
+      mockRepository.findProposalWithOrderById.mockResolvedValue(mockProposalWithOrder);
 
       const result: any = await service.findByIdForProvider("proposal-1", "provider-1");
 
@@ -189,7 +194,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw NotFoundException when proposal does not exist", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(null);
+      mockRepository.findProposalWithOrderById.mockResolvedValue(null);
 
       await expect(
         service.findByIdForProvider("invalid-id", "provider-1"),
@@ -197,7 +202,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw NotFoundException when provider does not own the proposal", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithOrderById.mockResolvedValue({
         ...mockProposalWithOrder,
         providerId: "other-provider",
       });
@@ -210,7 +215,7 @@ describe("ProposalsService", () => {
 
   describe("findByProvider", () => {
     it("should return proposals with service_order summary", async () => {
-      mockPrisma.proposal.findMany.mockResolvedValue([mockProposalWithOrder]);
+      mockRepository.findProposalsByProvider.mockResolvedValue([mockProposalWithOrder]);
 
       const result: any[] = await service.findByProvider("provider-1");
 
@@ -218,22 +223,30 @@ describe("ProposalsService", () => {
       expect(result[0].provider_id).toBe("provider-1");
       expect(result[0].service_order).toBeDefined();
       expect(result[0].service_order.title).toBe("Test Order");
+      expect(mockRepository.findProposalsByProvider).toHaveBeenCalledWith(
+        "provider-1",
+        0,
+        20,
+      );
     });
   });
 
   describe("findByServiceOrder", () => {
     it("should return proposals for a service order", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(mockServiceOrder);
-      mockPrisma.proposal.findMany.mockResolvedValue([mockProposal]);
+      mockRepository.findOrderById.mockResolvedValue(mockServiceOrder);
+      mockRepository.findProposalsByOrder.mockResolvedValue([mockProposal]);
 
       const result = await service.findByServiceOrder("order-1");
 
       expect(result).toHaveLength(1);
       expect(result[0].service_order_id).toBe("order-1");
+      expect(mockRepository.findProposalsByOrder).toHaveBeenCalledWith(
+        "order-1",
+      );
     });
 
     it("should throw NotFoundException when order not found", async () => {
-      mockPrisma.serviceOrder.findUnique.mockResolvedValue(null);
+      mockRepository.findOrderById.mockResolvedValue(null);
 
       await expect(
         service.findByServiceOrder("nonexistent"),
@@ -244,8 +257,8 @@ describe("ProposalsService", () => {
   describe("update", () => {
     it("should update a proposal", async () => {
       const updateDto = { price: 200.0 };
-      mockPrisma.proposal.findUnique.mockResolvedValue(mockProposal);
-      mockPrisma.proposal.update.mockResolvedValue({
+      mockRepository.findProposalById.mockResolvedValue(mockProposal);
+      mockRepository.updateProposal.mockResolvedValue({
         ...mockProposal,
         price: 200.0,
       });
@@ -253,10 +266,18 @@ describe("ProposalsService", () => {
       const result = await service.update("provider-1", "proposal-1", updateDto);
 
       expect(result.price).toBe(200.0);
+      expect(mockRepository.updateProposal).toHaveBeenCalledWith(
+        "proposal-1",
+        {
+          price: 200.0,
+          description: "Posso realizar o serviço",
+          estimatedDuration: "2 horas",
+        },
+      );
     });
 
     it("should throw NotFoundException when proposal not found", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(null);
+      mockRepository.findProposalById.mockResolvedValue(null);
 
       await expect(
         service.update("provider-1", "nonexistent", {}),
@@ -264,7 +285,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw ForbiddenException when not the owner", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(mockProposal);
+      mockRepository.findProposalById.mockResolvedValue(mockProposal);
 
       await expect(
         service.update("other-provider", "proposal-1", {}),
@@ -272,7 +293,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw BadRequestException when proposal is not PENDING", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalById.mockResolvedValue({
         ...mockProposal,
         status: "ACCEPTED",
       });
@@ -285,8 +306,8 @@ describe("ProposalsService", () => {
 
   describe("withdraw", () => {
     it("should withdraw a proposal", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(mockProposal);
-      mockPrisma.proposal.update.mockResolvedValue({
+      mockRepository.findProposalById.mockResolvedValue(mockProposal);
+      mockRepository.updateProposalStatus.mockResolvedValue({
         ...mockProposal,
         status: "WITHDRAWN",
       });
@@ -294,10 +315,14 @@ describe("ProposalsService", () => {
       const result = await service.withdraw("provider-1", "proposal-1");
 
       expect(result.status).toBe("WITHDRAWN");
+      expect(mockRepository.updateProposalStatus).toHaveBeenCalledWith(
+        "proposal-1",
+        "WITHDRAWN",
+      );
     });
 
     it("should throw NotFoundException when proposal not found", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(null);
+      mockRepository.findProposalById.mockResolvedValue(null);
 
       await expect(
         service.withdraw("provider-1", "nonexistent"),
@@ -305,7 +330,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw ForbiddenException when not the owner", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(mockProposal);
+      mockRepository.findProposalById.mockResolvedValue(mockProposal);
 
       await expect(
         service.withdraw("other-provider", "proposal-1"),
@@ -313,7 +338,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw BadRequestException when proposal is not PENDING", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalById.mockResolvedValue({
         ...mockProposal,
         status: "ACCEPTED",
       });
@@ -331,13 +356,18 @@ describe("ProposalsService", () => {
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder, status: "OPEN" },
       };
-      mockPrisma.proposal.findUnique.mockResolvedValue(fullProposal);
-      mockPrisma.$transaction.mockResolvedValue([updatedProposal]);
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue(fullProposal);
+      mockRepository.acceptProposal.mockResolvedValue([updatedProposal]);
 
       const result = await service.accept("client-1", "proposal-1", "127.0.0.1");
 
       expect(result.status).toBe("ACCEPTED");
-      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(mockRepository.acceptProposal).toHaveBeenCalledWith(
+        "proposal-1",
+        "order-1",
+        "provider-1",
+        150,
+      );
       expect(mockLogger.logProposalAccepted).toHaveBeenCalledWith(
         "order-1",
         "proposal-1",
@@ -346,7 +376,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw NotFoundException when proposal not found", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(null);
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue(null);
 
       await expect(
         service.accept("client-1", "nonexistent"),
@@ -354,7 +384,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw ForbiddenException when client does not own the order", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder, clientId: "other-client" },
       });
@@ -365,7 +395,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw BadRequestException when order is not OPEN", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder, status: "IN_PROGRESS" },
       });
@@ -376,7 +406,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw BadRequestException when proposal is not PENDING", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue({
         ...mockProposal,
         status: "REJECTED",
         serviceOrder: { ...mockServiceOrder, status: "OPEN" },
@@ -392,46 +422,29 @@ describe("ProposalsService", () => {
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder, status: "OPEN" },
       };
-      mockPrisma.proposal.findUnique.mockResolvedValue(fullProposal);
-      mockPrisma.proposal.update.mockReturnThis();
-      mockPrisma.proposal.updateMany.mockReturnThis();
-      mockPrisma.serviceOrder.update.mockReturnThis();
-      mockPrisma.$transaction.mockResolvedValue([
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue(fullProposal);
+      mockRepository.acceptProposal.mockResolvedValue([
         { ...mockProposal, status: "ACCEPTED" },
       ]);
 
       await service.accept("client-1", "proposal-1");
 
-      expect(mockPrisma.proposal.update).toHaveBeenCalledWith({
-        where: { id: "proposal-1" },
-        data: { status: "ACCEPTED" },
-      });
-      expect(mockPrisma.proposal.updateMany).toHaveBeenCalledWith({
-        where: {
-          serviceOrderId: "order-1",
-          id: { not: "proposal-1" },
-          status: "PENDING",
-        },
-        data: { status: "REJECTED" },
-      });
-      expect(mockPrisma.serviceOrder.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
-        data: {
-          status: "IN_PROGRESS",
-          providerId: "provider-1",
-          agreedPrice: 150,
-        },
-      });
+      expect(mockRepository.acceptProposal).toHaveBeenCalledWith(
+        "proposal-1",
+        "order-1",
+        "provider-1",
+        150,
+      );
     });
   });
 
   describe("reject", () => {
     it("should reject a proposal", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder },
       });
-      mockPrisma.proposal.update.mockResolvedValue({
+      mockRepository.updateProposalStatus.mockResolvedValue({
         ...mockProposal,
         status: "REJECTED",
       });
@@ -439,10 +452,14 @@ describe("ProposalsService", () => {
       const result = await service.reject("client-1", "proposal-1");
 
       expect(result.status).toBe("REJECTED");
+      expect(mockRepository.updateProposalStatus).toHaveBeenCalledWith(
+        "proposal-1",
+        "REJECTED",
+      );
     });
 
     it("should throw NotFoundException when proposal not found", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue(null);
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue(null);
 
       await expect(
         service.reject("client-1", "nonexistent"),
@@ -450,7 +467,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw ForbiddenException when client does not own the order", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue({
         ...mockProposal,
         serviceOrder: { ...mockServiceOrder, clientId: "other-client" },
       });
@@ -461,7 +478,7 @@ describe("ProposalsService", () => {
     });
 
     it("should throw BadRequestException when proposal is not PENDING", async () => {
-      mockPrisma.proposal.findUnique.mockResolvedValue({
+      mockRepository.findProposalWithServiceOrder.mockResolvedValue({
         ...mockProposal,
         status: "ACCEPTED",
         serviceOrder: { ...mockServiceOrder },

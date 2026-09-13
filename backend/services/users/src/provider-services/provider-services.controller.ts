@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -47,9 +48,7 @@ export class ProviderServicesController {
   ): Promise<any> {
     const userId = req.user.sub;
     const ip = req.ip;
-    const profile =
-      await this.providerServicesService.getProviderProfileByUserId(userId);
-    return this.providerServicesService.createService(profile.id, dto, ip);
+    return this.providerServicesService.createServiceForUser(userId, dto, ip);
   }
 
   @Get()
@@ -65,9 +64,7 @@ export class ProviderServicesController {
   })
   async getMyServices(@Request() req: any): Promise<any> {
     const userId = req.user.sub;
-    const profile =
-      await this.providerServicesService.getProviderProfileByUserId(userId);
-    return this.providerServicesService.getMyServices(profile.id);
+    return this.providerServicesService.getMyServicesForUser(userId);
   }
 }
 
@@ -124,7 +121,7 @@ export class PublicProviderServicesController {
     description: "Provider profile not found",
   })
   async getProviderServices(
-    @Param("providerId") providerProfileId: string,
+    @Param("providerId", ParseUUIDPipe) providerProfileId: string,
   ): Promise<any> {
     return this.providerServicesService.getProviderServices(providerProfileId);
   }
@@ -150,15 +147,13 @@ export class ProviderServiceDetailController {
   })
   async updateService(
     @Request() req: any,
-    @Param("serviceId") serviceId: string,
+    @Param("serviceId", ParseUUIDPipe) serviceId: string,
     @Body() dto: UpdateProviderServiceDto,
   ) {
     const userId = req.user.sub;
     const ip = req.ip;
-    const profile =
-      await this.providerServicesService.getProviderProfileByUserId(userId);
-    return this.providerServicesService.updateService(
-      profile.id,
+    return this.providerServicesService.updateServiceForUser(
+      userId,
       serviceId,
       dto,
       ip,
@@ -176,14 +171,12 @@ export class ProviderServiceDetailController {
   })
   async deleteService(
     @Request() req: any,
-    @Param("serviceId") serviceId: string,
+    @Param("serviceId", ParseUUIDPipe) serviceId: string,
   ) {
     const userId = req.user.sub;
     const ip = req.ip;
-    const profile =
-      await this.providerServicesService.getProviderProfileByUserId(userId);
-    return this.providerServicesService.deleteService(
-      profile.id,
+    return this.providerServicesService.deleteServiceForUser(
+      userId,
       serviceId,
       ip,
     );

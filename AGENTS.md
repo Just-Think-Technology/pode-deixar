@@ -19,7 +19,7 @@ Single source of truth for product decisions, development rules and architecture
 ```
 backend/
 ├── prisma/          # Shared schema and migrations
-├── shared/          # Shared packages (logger, email, security, validation, prisma)
+├── shared/          # Shared packages (logger, email, security, validation, prisma, storage)
 └── services/
     ├── auth/            # :3001 — Authentication
     ├── users/           # :3002 — Profiles and categories
@@ -63,7 +63,7 @@ never from the repo root.
 pnpm dev              # Prisma generate + start the 5 services
 pnpm build            # Build shared + services
 pnpm test             # Unit tests of the 5 services (needs local Postgres)
-pnpm test:shared      # Tests of shared packages (logger, email, security, validation, prisma)
+pnpm test:shared      # Tests of shared packages (logger, email, security, validation, prisma, storage)
 pnpm test:e2e         # Cross-service journeys (needs local Postgres)
 pnpm lint             # ESLint on the 5 services
 pnpm prisma:migrate   # Apply migrations (deploy)
@@ -125,6 +125,7 @@ databases (`docker compose up -d postgres` from the repo root).
 - No magic numbers; explicit error handling (never swallow exceptions)
 - Minimal changes: touch only what the task needs; suggest (don't implement) unrelated improvements
 - Reuse first: check for an existing equivalent before creating files, classes or services
+- Orthogonality: one authoritative home per logic (see [docs/architecture.md](docs/architecture.md)) — consume `@pode-deixar/*`, specialize instead of forking, never a third copy
 - No premature optimization, but no knowingly wasteful queries, loops or allocations
 - No new libraries without need and justification; check `package.json` first
 - Public API/contract/behavior changes must be announced beforehand

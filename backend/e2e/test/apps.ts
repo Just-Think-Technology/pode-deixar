@@ -5,9 +5,8 @@ import { PrismaClient } from '@prisma/client';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 import request from 'supertest';
 import { AppModule as UsersAppModule } from '../../services/users/src/app.module';
-import { MinioService as UsersMinioService } from '../../services/users/src/storage/minio.service';
+import { MinioService as SharedMinioService } from '@pode-deixar/storage';
 import { AppModule as OrdersAppModule } from '../../services/service-orders/src/app.module';
-import { MinioService as OrdersMinioService } from '../../services/service-orders/src/storage/minio.service';
 import { AppModule as PaymentsAppModule } from '../../services/payments/src/app.module';
 import { AppModule as ReviewsAppModule } from '../../services/reviews/src/app.module';
 import { AppModule as AuthAppModule } from '../../services/auth/src/app.module';
@@ -98,8 +97,8 @@ async function bootApp(
  */
 export async function bootApps(): Promise<E2EApps> {
   const [usersApp, ordersApp, paymentsApp, reviewsApp] = await Promise.all([
-    bootApp(UsersAppModule, UsersMinioService),
-    bootApp(OrdersAppModule, OrdersMinioService),
+    bootApp(UsersAppModule, SharedMinioService),
+    bootApp(OrdersAppModule, SharedMinioService),
     bootApp(PaymentsAppModule),
     bootApp(ReviewsAppModule),
   ]);

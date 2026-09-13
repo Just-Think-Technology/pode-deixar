@@ -7,6 +7,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -17,7 +18,7 @@ import {
 } from "@nestjs/swagger";
 import { CounterProposalsService } from "./counter-proposals.service";
 import { CreateCounterProposalDto } from "./dto/create-counter-proposal.dto";
-import { PaginationQueryDto } from "../shared/pagination-query.dto";
+import { PaginationQueryDto } from "@pode-deixar/validation";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 
 @ApiTags("Contrapropostas")
@@ -73,7 +74,7 @@ export class CounterProposalsController {
   })
   async findByProposal(
     @Request() req: any,
-    @Param("proposalId") proposalId: string,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
     @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
@@ -109,7 +110,7 @@ export class CounterProposalActionController {
   })
   async accept(
     @Request() req: any,
-    @Param("counterProposalId") counterProposalId: string,
+    @Param("counterProposalId", ParseUUIDPipe) counterProposalId: string,
   ) {
     const userId = req.user.sub;
     const ip = req.ip;
@@ -127,7 +128,7 @@ export class CounterProposalActionController {
   @ApiResponse({ status: 404, description: "Counter-proposal not found" })
   async reject(
     @Request() req: any,
-    @Param("counterProposalId") counterProposalId: string,
+    @Param("counterProposalId", ParseUUIDPipe) counterProposalId: string,
   ) {
     const userId = req.user.sub;
     const ip = req.ip;

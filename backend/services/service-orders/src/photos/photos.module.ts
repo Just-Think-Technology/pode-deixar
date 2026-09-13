@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { MulterModule } from "@nestjs/platform-express";
 import { PhotosController, PhotoViewController } from "./photos.controller";
 import { PhotosService } from "./photos.service";
+import { PhotosRepository } from "./photos.repository";
 import { PrismaModule } from "@pode-deixar/prisma";
 import { MinioModule } from "../storage/minio.module";
 
@@ -17,6 +18,6 @@ import { MinioModule } from "../storage/minio.module";
     MinioModule,
   ],
   controllers: [PhotosController, PhotoViewController],
-  providers: [PhotosService],
+  providers: [PhotosService, PhotosRepository],
 })
 export class PhotosModule {}

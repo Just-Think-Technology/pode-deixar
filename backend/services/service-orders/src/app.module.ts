@@ -17,13 +17,13 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateValidationCore,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Rótulos dos campos do service-orders (user-facing, em português); as
 // mensagens de restrição vivem no núcleo compartilhado.
-const ROTULOS_ORDERS: RotulosCampos = {
+const ORDERS_FIELD_LABELS: FieldLabels = {
   title: "Título",
   description: "Descrição",
   categoryId: "Categoria",
@@ -38,7 +38,7 @@ const ROTULOS_ORDERS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string[] {
-  return traduzirErrosNucleo(errors, ROTULOS_ORDERS);
+  return translateValidationCore(errors, ORDERS_FIELD_LABELS);
 }
 
 @Module({

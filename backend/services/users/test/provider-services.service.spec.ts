@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProviderServicesService } from "../src/provider-services/provider-services.service";
-import { PrismaService } from "@pode-deixar/prisma";
+import { ProviderServicesRepository } from "../src/provider-services/provider-services.repository";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
 import { NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { SearchProvidersQueryDto } from "../src/provider-services/dto/search-providers-query.dto";
@@ -23,15 +23,6 @@ describe("ProviderServicesService", () => {
     updatedAt: new Date(),
   };
 
-  const mockUser = {
-    id: "user-1",
-    completeName: "Test Provider",
-    email: "provider@test.com",
-    phone: "123",
-    postalCode: "12345",
-    role: "PROVIDER",
-  };
-
   const mockCategory = {
     id: "cat-eletrica",
     name: "Elétrica",
@@ -51,23 +42,17 @@ describe("ProviderServicesService", () => {
     updatedAt: new Date(),
   };
 
-  const mockPrisma = {
-    providerProfile: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-    providerService: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-    $transaction: jest.fn(),
+  const mockRepository = {
+    findProviderProfileByUserId: jest.fn(),
+    findProviderProfileById: jest.fn(),
+    findProviderServiceById: jest.fn(),
+    createProviderService: jest.fn(),
+    findServicesByProfileId: jest.fn(),
+    findActiveServicesByProfileId: jest.fn(),
+    updateProviderService: jest.fn(),
+    softDeleteProviderService: jest.fn(),
+    countProviderProfiles: jest.fn(),
+    findProviderProfilesForSearch: jest.fn(),
   };
 
   const mockLogger = {
@@ -84,7 +69,7 @@ describe("ProviderServicesService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProviderServicesService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ProviderServicesRepository, useValue: mockRepository },
         { provide: UsersLoggerService, useValue: mockLogger },
       ],
     }).compile();
@@ -102,10 +87,10 @@ describe("ProviderServicesService", () => {
     };
 
      it("should create a service for provider", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(
+      mockRepository.findProviderProfileById.mockResolvedValue(
         mockProviderProfile,
       );
-      mockPrisma.providerService.create.mockResolvedValue(mockService);
+      mockRepository.createProviderService.mockResolvedValue(mockService);
 
       const result = await service.createService(
         "provider-profile-1",
@@ -124,7 +109,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should throw NotFoundException when provider profile not found", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
+      mockRepository.findProviderProfileById.mockResolvedValue(null);
 
       await expect(
         service.createService("invalid-id", createDto, "127.0.0.1"),
@@ -132,11 +117,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should throw BadRequestException when user is not a provider", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue({
-        ...mockUser,
-        role: "CLIENT",
-      });
+      mockRepository.findProviderProfileById.mockResolvedValue(null);
 
       await expect(
         service.createService("provider-profile-1", createDto, "127.0.0.1"),
@@ -146,10 +127,10 @@ describe("ProviderServicesService", () => {
 
   describe("getMyServices", () => {
     it("should return list of services for provider", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(
+      mockRepository.findProviderProfileById.mockResolvedValue(
         mockProviderProfile,
       );
-      mockPrisma.providerService.findMany.mockResolvedValue([mockService]);
+      mockRepository.findServicesByProfileId.mockResolvedValue([mockService]);
 
       const result = await service.getMyServices("provider-profile-1");
 
@@ -158,7 +139,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should throw NotFoundException when provider profile not found", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
+      mockRepository.findProviderProfileById.mockResolvedValue(null);
 
       await expect(service.getMyServices("invalid-id")).rejects.toThrow(
         NotFoundException,
@@ -168,33 +149,27 @@ describe("ProviderServicesService", () => {
 
   describe("getProviderServices", () => {
     it("should return public list of services for a provider", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(
+      mockRepository.findProviderProfileById.mockResolvedValue(
         mockProviderProfile,
       );
-      mockPrisma.providerService.findMany.mockResolvedValue([mockService]);
+      mockRepository.findActiveServicesByProfileId.mockResolvedValue([
+        mockService,
+      ]);
 
       const result = await service.getProviderServices("provider-profile-1");
 
       expect(result).toHaveLength(1);
       expect(result[0].title).toBe("Instalação de chuveiro elétrico");
-      expect(mockPrisma.providerService.findMany).toHaveBeenCalledWith({
-        where: { providerProfileId: "provider-profile-1", isActive: true },
-        orderBy: { createdAt: "desc" },
-        include: {
-          category: { select: { id: true, name: true, slug: true } },
-          images: {
-            select: { id: true, url: true, createdAt: true },
-            orderBy: { createdAt: "desc" },
-          },
-        },
-      });
+      expect(
+        mockRepository.findActiveServicesByProfileId,
+      ).toHaveBeenCalledWith("provider-profile-1");
     });
 
     it("should return empty array when provider has no services", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(
+      mockRepository.findProviderProfileById.mockResolvedValue(
         mockProviderProfile,
       );
-      mockPrisma.providerService.findMany.mockResolvedValue([]);
+      mockRepository.findActiveServicesByProfileId.mockResolvedValue([]);
 
       const result = await service.getProviderServices("provider-profile-1");
 
@@ -202,7 +177,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should throw NotFoundException when provider profile not found", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
+      mockRepository.findProviderProfileById.mockResolvedValue(null);
 
       await expect(service.getProviderServices("invalid-id")).rejects.toThrow(
         NotFoundException,
@@ -217,8 +192,8 @@ describe("ProviderServicesService", () => {
     };
 
     it("should update service", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue(mockService);
-      mockPrisma.providerService.update.mockResolvedValue({
+      mockRepository.findProviderServiceById.mockResolvedValue(mockService);
+      mockRepository.updateProviderService.mockResolvedValue({
         ...mockService,
         ...updateDto,
       });
@@ -240,7 +215,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should throw NotFoundException when service not found", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue(null);
+      mockRepository.findProviderServiceById.mockResolvedValue(null);
 
       await expect(
         service.updateService(
@@ -253,7 +228,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should throw ForbiddenException when service belongs to another provider", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue({
+      mockRepository.findProviderServiceById.mockResolvedValue({
         ...mockService,
         providerProfileId: "other-profile",
       });
@@ -271,8 +246,8 @@ describe("ProviderServicesService", () => {
 
   describe("deleteService", () => {
     it("should soft delete service (set isActive to false)", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue(mockService);
-      mockPrisma.providerService.update.mockResolvedValue({
+      mockRepository.findProviderServiceById.mockResolvedValue(mockService);
+      mockRepository.softDeleteProviderService.mockResolvedValue({
         ...mockService,
         isActive: false,
       });
@@ -292,7 +267,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should throw NotFoundException when service not found", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue(null);
+      mockRepository.findProviderServiceById.mockResolvedValue(null);
 
       await expect(
         service.deleteService("provider-profile-1", "invalid-id", "127.0.0.1"),
@@ -300,7 +275,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should throw ForbiddenException when service belongs to another provider", async () => {
-      mockPrisma.providerService.findUnique.mockResolvedValue({
+      mockRepository.findProviderServiceById.mockResolvedValue({
         ...mockService,
         providerProfileId: "other-profile",
       });
@@ -388,21 +363,23 @@ describe("ProviderServicesService", () => {
     };
 
     beforeEach(() => {
-      mockPrisma.providerProfile.findMany.mockReset();
+      mockRepository.findProviderProfilesForSearch.mockReset();
       // Search now paginates in the database (skip/take) and uses count for
       // the envelope total instead of loading everything into memory.
-      mockPrisma.providerProfile.count.mockResolvedValue(1);
+      mockRepository.countProviderProfiles.mockResolvedValue(1);
     });
 
     it("should return all active providers when no filters", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
+      mockRepository.findProviderProfilesForSearch.mockResolvedValue([
         mockProfileWithServices,
       ]);
 
       const query: SearchProvidersQueryDto = {};
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
+      expect(
+        mockRepository.findProviderProfilesForSearch,
+      ).toHaveBeenCalled();
       expect(result.data).toHaveLength(1);
       expect(result.data[0].user.complete_name).toBe("João Eletricista");
       // Public search result carries no PII.
@@ -414,32 +391,36 @@ describe("ProviderServicesService", () => {
     });
 
     it("should filter by category", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
+      mockRepository.findProviderProfilesForSearch.mockResolvedValue([
         mockProfileWithServices,
       ]);
 
       const query: SearchProvidersQueryDto = { categoryId: "cat-eletrica" };
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
+      expect(
+        mockRepository.findProviderProfilesForSearch,
+      ).toHaveBeenCalled();
       expect(result.data).toHaveLength(1);
       expect(result.meta.total).toBe(1);
     });
 
     it("should filter by text search on service title", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
+      mockRepository.findProviderProfilesForSearch.mockResolvedValue([
         mockProfileWithServices,
       ]);
 
       const query: SearchProvidersQueryDto = { q: "chuveiro" };
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
+      expect(
+        mockRepository.findProviderProfilesForSearch,
+      ).toHaveBeenCalled();
       expect(result.data).toHaveLength(1);
     });
 
     it("should filter by provider name", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
+      mockRepository.findProviderProfilesForSearch.mockResolvedValue([
         mockProfileWithNameMatch,
       ]);
 
@@ -458,7 +439,7 @@ describe("ProviderServicesService", () => {
           title: "Instalação elétrica",
         }],
       };
-      mockPrisma.providerProfile.findMany.mockResolvedValue([profileComAcento]);
+      mockRepository.findProviderProfilesForSearch.mockResolvedValue([profileComAcento]);
 
       const query: SearchProvidersQueryDto = { q: "eletrica" };
       const result = await service.searchProviders(query);
@@ -467,7 +448,7 @@ describe("ProviderServicesService", () => {
     });
 
     it("should group multiple services under the same provider", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
+      mockRepository.findProviderProfilesForSearch.mockResolvedValue([
         mockProfileWithMultipleServices,
       ]);
 
@@ -481,13 +462,15 @@ describe("ProviderServicesService", () => {
     });
 
     it("should return empty array when no matches", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([]);
-      mockPrisma.providerProfile.count.mockResolvedValue(0);
+      mockRepository.findProviderProfilesForSearch.mockResolvedValue([]);
+      mockRepository.countProviderProfiles.mockResolvedValue(0);
 
       const query: SearchProvidersQueryDto = { categoryId: "cat-hidraulica" };
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalled();
+      expect(
+        mockRepository.findProviderProfilesForSearch,
+      ).toHaveBeenCalled();
       expect(result.data).toHaveLength(0);
       expect(result.meta.total).toBe(0);
     });
@@ -496,42 +479,43 @@ describe("ProviderServicesService", () => {
     // public result; ordering is by rating in the database. These tests now
     // cover text filtering in the database and the pagination cap.
     it("should filter text in database with case-insensitive contains", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([
+      mockRepository.findProviderProfilesForSearch.mockResolvedValue([
         mockProfileWithServices,
       ]);
 
       const query: SearchProvidersQueryDto = { q: "chuveiro" };
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalledWith(
+      expect(
+        mockRepository.findProviderProfilesForSearch,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            AND: expect.arrayContaining([
-              expect.objectContaining({
-                OR: expect.arrayContaining([
-                  expect.objectContaining({
-                    services: expect.objectContaining({ some: expect.anything() }),
-                  }),
-                ]),
-              }),
-            ]),
-          }),
-          take: 10,
-          skip: 0,
+          AND: expect.arrayContaining([
+            expect.objectContaining({
+              OR: expect.arrayContaining([
+                expect.objectContaining({
+                  services: expect.objectContaining({ some: expect.anything() }),
+                }),
+              ]),
+            }),
+          ]),
         }),
+        expect.anything(),
+        0,
+        10,
       );
       expect(result.data).toHaveLength(1);
     });
 
     it("should cap limit at 50 and paginate with skip/take", async () => {
-      mockPrisma.providerProfile.findMany.mockResolvedValue([]);
+      mockRepository.findProviderProfilesForSearch.mockResolvedValue([]);
 
       const query: SearchProvidersQueryDto = { page: 2, limit: 100 };
       const result = await service.searchProviders(query);
 
-      expect(mockPrisma.providerProfile.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: 50, take: 50 }),
-      );
+      expect(
+        mockRepository.findProviderProfilesForSearch,
+      ).toHaveBeenCalledWith(expect.anything(), expect.anything(), 50, 50);
       expect(result.meta.limit).toBe(50);
       expect(result.meta.page).toBe(2);
     });

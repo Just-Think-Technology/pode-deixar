@@ -1,15 +1,8 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import {
-  IsOptional,
-  IsString,
-  MaxLength,
-  IsInt,
-  Min,
-  Max,
-} from "class-validator";
-import { Type } from "class-transformer";
+import { IsOptional, IsString, MaxLength } from "class-validator";
+import { PageQueryDto } from "@pode-deixar/validation";
 
-export class SearchProvidersQueryDto {
+export class SearchProvidersQueryDto extends PageQueryDto {
   @ApiPropertyOptional({
     description: "Filter by category ID",
     example: "uuid-da-categoria",
@@ -37,25 +30,9 @@ export class SearchProvidersQueryDto {
   postalCode?: string;
 
   @ApiPropertyOptional({
-    description: "Page number",
-    example: 1,
-    default: 1,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({
     description: "Items per page (max 50)",
     example: 10,
     default: 10,
   })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(50)
   limit?: number = 10;
 }

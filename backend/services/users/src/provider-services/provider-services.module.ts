@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ProviderServicesService } from "./provider-services.service";
+import { ProviderServicesRepository } from "./provider-services.repository";
 import {
   ProviderServicesController,
   PublicProviderServicesController,
@@ -17,7 +18,7 @@ import { SharedModule } from "../shared/shared.module";
     ProviderServiceDetailController,
     ProviderSearchController,
   ],
-  providers: [ProviderServicesService],
+  providers: [ProviderServicesService, ProviderServicesRepository],
   exports: [ProviderServicesService],
 })
 export class ProviderServicesModule {}

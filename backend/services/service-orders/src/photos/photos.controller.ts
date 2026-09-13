@@ -8,6 +8,7 @@ import {
   UploadedFiles,
   Request,
   BadRequestException,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -54,7 +55,7 @@ export class PhotosController {
   })
   async upload(
     @Request() req: any,
-    @Param("orderId") orderId: string,
+    @Param("orderId", ParseUUIDPipe) orderId: string,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     if (!files || files.length === 0) {
@@ -87,7 +88,10 @@ export class PhotoViewController {
   @ApiResponse({ status: 401, description: "Missing or invalid token" })
   @ApiResponse({ status: 403, description: "Access denied to this photo" })
   @ApiResponse({ status: 404, description: "Photo not found" })
-  async view(@Request() req: any, @Param("photoId") photoId: string) {
+  async view(
+    @Request() req: any,
+    @Param("photoId", ParseUUIDPipe) photoId: string,
+  ) {
     return this.photosService.getViewUrl(photoId, req.user.sub, req.user.role);
   }
 }

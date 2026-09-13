@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '@pode-deixar/prisma';
+import { VerifyRepository } from './verify.repository';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { JWT_ALGORITHMS, JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
 @Injectable()
 export class VerifyService {
   constructor(
-    private prisma: PrismaService,
+    private repository: VerifyRepository,
     private jwtService: JwtService,
     private configService: ConfigService,
     private authLogger: AuthLoggerService,
@@ -44,9 +44,9 @@ export class VerifyService {
 
     if (payload.jti) {
       try {
-        const blacklisted = await this.prisma.tokenBlacklist.findUnique({
-          where: { jti: payload.jti },
-        });
+        const blacklisted = await this.repository.findBlacklistedToken(
+          payload.jti,
+        );
 
         if (blacklisted) {
           this.authLogger.logTokenVerification(
@@ -61,15 +61,7 @@ export class VerifyService {
       }
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: {
-        id: true,
-        completeName: true,
-        email: true,
-        role: true,
-      },
-    });
+    const user = await this.repository.findUserById(payload.sub);
 
     if (!user) {
       this.authLogger.logTokenVerification(
