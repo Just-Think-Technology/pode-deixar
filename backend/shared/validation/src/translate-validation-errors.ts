@@ -2,14 +2,14 @@
 
 import { ValidationError } from 'class-validator';
 
-export type RotulosCampos = Record<string, string>;
-export type MensagensRestricao = Record<string, (rotulo: string) => string>;
+export type FieldLabels = Record<string, string>;
+export type ConstraintMessages = Record<string, (label: string) => string>;
 
 // Canonical table of constraint messages (class-validator). It is the union
 // of the tables previously duplicated across the 5 app.modules: missing
 // keys in a service fall back to the original message, as before — without
 // changing behavior.
-export const MENSAGENS_RESTRICAO_PADRAO: MensagensRestricao = {
+export const DEFAULT_CONSTRAINT_MESSAGES: ConstraintMessages = {
   isString: (r) => `${r} deve ser uma string`,
   isNotEmpty: (r) => `${r} não pode estar vazio`,
   isEmail: (r) => `${r} deve ser um email válido`,
@@ -31,22 +31,22 @@ export const MENSAGENS_RESTRICAO_PADRAO: MensagensRestricao = {
 // Translate ValidationPipe errors to Portuguese messages. `overrides` allows
 // the service to keep divergent messages (e.g.: minLength of auth);
 // keys without a translator keep the original class-validator message.
-export function traduzirErrosValidacao(
+export function translateValidationErrors(
   errors: ValidationError[],
-  rotulos: RotulosCampos,
-  sobrescritas: MensagensRestricao = {},
+  labels: FieldLabels,
+  overrides: ConstraintMessages = {},
 ): string[] {
-  const mensagens = { ...MENSAGENS_RESTRICAO_PADRAO, ...sobrescritas };
+  const messages = { ...DEFAULT_CONSTRAINT_MESSAGES, ...overrides };
   return errors.map((error) => {
     if (!error.constraints)
-      return `${rotulos[error.property] || error.property} inválido`;
+      return `${labels[error.property] || error.property} inválido`;
     return Object.entries(error.constraints)
-      .map(([chave, msg]) => {
+      .map(([key, msg]) => {
         // Safe: keys come from the fixed names of class-validator constraint.
         // eslint-disable-next-line security/detect-object-injection
-        const tradutor = mensagens[chave];
-        return tradutor
-          ? tradutor(rotulos[error.property] || error.property)
+        const translator = messages[key];
+        return translator
+          ? translator(labels[error.property] || error.property)
           : msg;
       })
       .join('; ');

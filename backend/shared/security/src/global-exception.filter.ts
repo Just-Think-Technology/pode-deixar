@@ -10,7 +10,7 @@ import {
 } from "@nestjs/common";
 import { Request, Response } from "express";
 import { sanitizeSensitiveData } from "./sanitize-sensitive-data";
-import { resolverErroPrisma } from "./resolver-erro-prisma";
+import { resolvePrismaError } from "./resolve-prisma-error";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -102,7 +102,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Known Prisma errors become generic responses by code, without
     // leaking internal details (table, field, constraint) to the client.
     // Any other error becomes generic 500; detail stays in the log only.
-    const resolved = resolverErroPrisma(
+    const resolved = resolvePrismaError(
       (exception as { code?: unknown }).code,
     );
     if (resolved) {

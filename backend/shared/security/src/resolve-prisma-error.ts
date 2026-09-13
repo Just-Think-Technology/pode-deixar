@@ -2,7 +2,7 @@
 
 import { HttpStatus } from '@nestjs/common';
 
-export interface ErroPrismaResolvido {
+export interface ResolvedPrismaError {
   status: number;
   message: string;
 }
@@ -10,7 +10,7 @@ export interface ErroPrismaResolvido {
 // Maps known Prisma error codes to generic responses (without leaking
 // internal details). Returns undefined for unknown codes — the caller
 // decides the fallback (generally generic 500 with detail only in log).
-export function resolverErroPrisma(code: unknown): ErroPrismaResolvido | undefined {
+export function resolvePrismaError(code: unknown): ResolvedPrismaError | undefined {
   if (code === 'P2002') {
     return { status: HttpStatus.CONFLICT, message: 'Registro já existe' };
   }

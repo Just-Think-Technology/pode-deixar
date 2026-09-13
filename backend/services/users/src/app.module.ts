@@ -21,12 +21,12 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateSharedErrors,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Users field labels for validation error translation (user-facing, in Portuguese).
-const ROTULOS_USERS: RotulosCampos = {
+const USERS_FIELD_LABELS: FieldLabels = {
   title: "Título",
   description: "Descrição",
   fixedPrice: "Preço fixo",
@@ -44,7 +44,7 @@ const ROTULOS_USERS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string {
-  return traduzirErrosNucleo(errors, ROTULOS_USERS).join("; ");
+  return translateSharedErrors(errors, USERS_FIELD_LABELS).join("; ");
 }
 
 @Module({

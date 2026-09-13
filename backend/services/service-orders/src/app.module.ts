@@ -19,12 +19,12 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateSharedErrors,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Service orders field labels (user-facing, in Portuguese); restriction messages live in the shared core.
-const ROTULOS_ORDERS: RotulosCampos = {
+const ORDERS_FIELD_LABELS: FieldLabels = {
   title: "Título",
   description: "Descrição",
   categoryId: "Categoria",
@@ -39,7 +39,7 @@ const ROTULOS_ORDERS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string[] {
-  return traduzirErrosNucleo(errors, ROTULOS_ORDERS);
+  return translateSharedErrors(errors, ORDERS_FIELD_LABELS);
 }
 
 @Module({

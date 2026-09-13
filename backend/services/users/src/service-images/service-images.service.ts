@@ -11,7 +11,7 @@ import { MinioService } from "../storage/minio.service";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { randomUUID } from "crypto";
 import { extname } from "path";
-import { validarArquivoImagem } from "@pode-deixar/validation";
+import { validateImageFile } from "@pode-deixar/validation";
 
 @Injectable()
 export class ServiceImagesService {
@@ -89,7 +89,7 @@ export class ServiceImagesService {
   ) {
     await this.getProviderService(providerProfileId, serviceId);
 
-    validarArquivoImagem(file.originalname, file.buffer);
+    validateImageFile(file.originalname, file.buffer);
     const ext = extname(file.originalname).toLowerCase();
     const fileName = `${providerProfileId}/${serviceId}/${randomUUID()}${ext}`;
 

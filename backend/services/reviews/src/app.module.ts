@@ -15,12 +15,12 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateSharedErrors,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Reviews field labels for validation error translation (user-facing, in Portuguese).
-const ROTULOS_REVIEWS: RotulosCampos = {
+const REVIEWS_FIELD_LABELS: FieldLabels = {
   rating: "Nota",
   comment: "Comentário",
   serviceOrderId: "Pedido de serviço",
@@ -28,7 +28,7 @@ const ROTULOS_REVIEWS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string {
-  return traduzirErrosNucleo(errors, ROTULOS_REVIEWS).join("; ");
+  return translateSharedErrors(errors, REVIEWS_FIELD_LABELS).join("; ");
 }
 
 @Module({

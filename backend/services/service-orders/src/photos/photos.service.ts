@@ -10,7 +10,7 @@ import { PrismaService } from "@pode-deixar/prisma";
 import { MinioService } from "../storage/minio.service";
 import sharp from "sharp";
 import * as crypto from "crypto";
-import { validarArquivoImagem } from "@pode-deixar/validation";
+import { validateImageFile } from "@pode-deixar/validation";
 
 // Pixel cap guards against decompression bombs while still covering phone
 // photos without exhausting worker memory.
@@ -88,7 +88,7 @@ export class PhotosService {
     // Canonical image validation (extension + magic bytes) in the shared
     // package — same rule as the users avatar/service upload.
     for (const file of files) {
-      validarArquivoImagem(file.originalname, file.buffer);
+      validateImageFile(file.originalname, file.buffer);
     }
   }
 
