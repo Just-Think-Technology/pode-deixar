@@ -39,6 +39,49 @@ function placeholderPhoto(
   };
 }
 
+function atSameDay(base: Date, hour: number, minute = 0): Date {
+  const day = new Date(base);
+  day.setHours(hour, minute, 0, 0);
+  return day;
+}
+
+function shiftedDay(base: Date, deltaDays: number): Date {
+  const day = new Date(base);
+  day.setDate(day.getDate() + deltaDays);
+  return day;
+}
+
+function mockEvent(input: {
+  id: string;
+  orderId: string;
+  title: string;
+  description: string;
+  start: Date;
+  end: Date;
+  status: "IN_PROGRESS" | "COMPLETED";
+  address: WorkerAgendaAddress;
+  photos: { id: string; url: string }[];
+  paidAmount: number;
+  paidAt: Date;
+}): WorkerAgendaEvent {
+  return {
+    id: input.id,
+    order_id: input.orderId,
+    title: input.title,
+    description: input.description,
+    scheduled_at: localIso(input.start),
+    scheduled_end_at: localIso(input.end),
+    order_status: input.status,
+    address: input.address,
+    photos: input.photos,
+    payment: {
+      status: "PAID",
+      amount: input.paidAmount,
+      paid_at: localIso(input.paidAt),
+    },
+  };
+}
+
 function buildMockAgendaEvents(): WorkerAgendaEvent[] {
   const todayMorning = atDaysFromToday(0, 10, 0);
   const todayAfternoon = atDaysFromToday(0, 14, 0);
@@ -55,34 +98,31 @@ function buildMockAgendaEvents(): WorkerAgendaEvent[] {
   nextMonth.setHours(15, 0, 0, 0);
 
   return [
-    {
+    mockEvent({
       id: "mock-agenda-001",
-      order_id: "mock-order-agenda-001",
+      orderId: "mock-order-agenda-001",
       title: "Instalação de torneira",
       description:
         "Troca da torneira da pia da cozinha e verificação de vazamentos na conexão.",
-      scheduled_at: localIso(todayMorning),
-      scheduled_end_at: localIso(atDaysFromToday(0, 11, 0)),
-      order_status: "IN_PROGRESS",
+      start: todayMorning,
+      end: atDaysFromToday(0, 11, 0),
+      status: "IN_PROGRESS",
       address: SAO_PAULO_ADDRESS,
       photos: [
         placeholderPhoto("mock-photo-001", "Foto 1"),
         placeholderPhoto("mock-photo-002", "Foto 2"),
       ],
-      payment: {
-        status: "PAID",
-        amount: 180,
-        paid_at: localIso(atDaysFromToday(-3, 12, 0)),
-      },
-    },
-    {
+      paidAmount: 180,
+      paidAt: atDaysFromToday(-3, 12, 0),
+    }),
+    mockEvent({
       id: "mock-agenda-002",
-      order_id: "mock-order-agenda-002",
+      orderId: "mock-order-agenda-002",
       title: "Reparo elétrico",
       description: "Substituição de disjuntor e revisão das tomadas da sala.",
-      scheduled_at: localIso(todayAfternoon),
-      scheduled_end_at: localIso(atDaysFromToday(0, 16, 0)),
-      order_status: "IN_PROGRESS",
+      start: todayAfternoon,
+      end: atDaysFromToday(0, 16, 0),
+      status: "IN_PROGRESS",
       address: {
         ...SAO_PAULO_ADDRESS,
         street: "Avenida Paulista",
@@ -91,21 +131,18 @@ function buildMockAgendaEvents(): WorkerAgendaEvent[] {
         postal_code: "01310-100",
       },
       photos: [placeholderPhoto("mock-photo-003", "Quadro elétrico")],
-      payment: {
-        status: "PAID",
-        amount: 250,
-        paid_at: localIso(atDaysFromToday(-2, 9, 0)),
-      },
-    },
-    {
+      paidAmount: 250,
+      paidAt: atDaysFromToday(-2, 9, 0),
+    }),
+    mockEvent({
       id: "mock-agenda-003",
-      order_id: "mock-order-agenda-003",
+      orderId: "mock-order-agenda-003",
       title: "Pintura de parede",
       description:
         "Pintura de duas paredes do quarto com tinta acrílica branca.",
-      scheduled_at: localIso(tomorrow),
-      scheduled_end_at: localIso(atDaysFromToday(1, 12, 0)),
-      order_status: "IN_PROGRESS",
+      start: tomorrow,
+      end: atDaysFromToday(1, 12, 0),
+      status: "IN_PROGRESS",
       address: {
         ...SAO_PAULO_ADDRESS,
         street: "Rua da Consolação",
@@ -113,26 +150,17 @@ function buildMockAgendaEvents(): WorkerAgendaEvent[] {
         postal_code: "01301-000",
       },
       photos: [],
-      payment: {
-        status: "PAID",
-        amount: 420,
-        paid_at: localIso(atDaysFromToday(-1, 18, 0)),
-      },
-    },
-    {
+      paidAmount: 420,
+      paidAt: atDaysFromToday(-1, 18, 0),
+    }),
+    mockEvent({
       id: "mock-agenda-004",
-      order_id: "mock-order-agenda-004",
+      orderId: "mock-order-agenda-004",
       title: "Montagem de móveis",
       description: "Montagem de guarda-roupa e cômoda no quarto do casal.",
-      scheduled_at: localIso(laterThisWeek),
-      scheduled_end_at: localIso(
-        (() => {
-          const end = new Date(laterThisWeek);
-          end.setHours(18, 0, 0, 0);
-          return end;
-        })(),
-      ),
-      order_status: "IN_PROGRESS",
+      start: laterThisWeek,
+      end: atSameDay(laterThisWeek, 18, 0),
+      status: "IN_PROGRESS",
       address: {
         ...SAO_PAULO_ADDRESS,
         street: "Rua Haddock Lobo",
@@ -141,20 +169,17 @@ function buildMockAgendaEvents(): WorkerAgendaEvent[] {
         postal_code: "01414-001",
       },
       photos: [placeholderPhoto("mock-photo-004", "Móveis")],
-      payment: {
-        status: "PAID",
-        amount: 310,
-        paid_at: localIso(atDaysFromToday(-4, 11, 0)),
-      },
-    },
-    {
+      paidAmount: 310,
+      paidAt: atDaysFromToday(-4, 11, 0),
+    }),
+    mockEvent({
       id: "mock-agenda-005",
-      order_id: "mock-order-agenda-005",
+      orderId: "mock-order-agenda-005",
       title: "Limpeza pós-obra",
       description: "Limpeza completa do apartamento após reforma da cozinha.",
-      scheduled_at: localIso(twoDaysAgo),
-      scheduled_end_at: localIso(atDaysFromToday(-2, 13, 0)),
-      order_status: "IN_PROGRESS",
+      start: twoDaysAgo,
+      end: atDaysFromToday(-2, 13, 0),
+      status: "IN_PROGRESS",
       address: {
         ...SAO_PAULO_ADDRESS,
         street: "Rua Oscar Freire",
@@ -163,26 +188,17 @@ function buildMockAgendaEvents(): WorkerAgendaEvent[] {
         postal_code: "01426-001",
       },
       photos: [placeholderPhoto("mock-photo-005", "Cozinha")],
-      payment: {
-        status: "PAID",
-        amount: 390,
-        paid_at: localIso(atDaysFromToday(-5, 10, 0)),
-      },
-    },
-    {
+      paidAmount: 390,
+      paidAt: atDaysFromToday(-5, 10, 0),
+    }),
+    mockEvent({
       id: "mock-agenda-006",
-      order_id: "mock-order-agenda-006",
+      orderId: "mock-order-agenda-006",
       title: "Conserto de vazamento",
       description: "Reparo no registro do chuveiro e troca da vedação.",
-      scheduled_at: localIso(lastMonth),
-      scheduled_end_at: localIso(
-        (() => {
-          const end = new Date(lastMonth);
-          end.setHours(11, 30, 0, 0);
-          return end;
-        })(),
-      ),
-      order_status: "COMPLETED",
+      start: lastMonth,
+      end: atSameDay(lastMonth, 11, 30),
+      status: "COMPLETED",
       address: {
         ...SAO_PAULO_ADDRESS,
         street: "Rua Bela Cintra",
@@ -194,33 +210,18 @@ function buildMockAgendaEvents(): WorkerAgendaEvent[] {
         placeholderPhoto("mock-photo-006", "Antes"),
         placeholderPhoto("mock-photo-007", "Depois"),
       ],
-      payment: {
-        status: "PAID",
-        amount: 160,
-        paid_at: localIso(
-          (() => {
-            const paid = new Date(lastMonth);
-            paid.setDate(paid.getDate() - 2);
-            return paid;
-          })(),
-        ),
-      },
-    },
-    {
+      paidAmount: 160,
+      paidAt: shiftedDay(lastMonth, -2),
+    }),
+    mockEvent({
       id: "mock-agenda-007",
-      order_id: "mock-order-agenda-007",
+      orderId: "mock-order-agenda-007",
       title: "Instalação de ar-condicionado",
       description:
         "Instalação de split 12.000 BTUs na sala, incluindo suporte e drenagem.",
-      scheduled_at: localIso(nextMonth),
-      scheduled_end_at: localIso(
-        (() => {
-          const end = new Date(nextMonth);
-          end.setHours(17, 30, 0, 0);
-          return end;
-        })(),
-      ),
-      order_status: "IN_PROGRESS",
+      start: nextMonth,
+      end: atSameDay(nextMonth, 17, 30),
+      status: "IN_PROGRESS",
       address: {
         ...SAO_PAULO_ADDRESS,
         street: "Alameda Santos",
@@ -229,12 +230,9 @@ function buildMockAgendaEvents(): WorkerAgendaEvent[] {
         postal_code: "01418-200",
       },
       photos: [placeholderPhoto("mock-photo-008", "Sala")],
-      payment: {
-        status: "PAID",
-        amount: 680,
-        paid_at: localIso(atDaysFromToday(-1, 8, 0)),
-      },
-    },
+      paidAmount: 680,
+      paidAt: atDaysFromToday(-1, 8, 0),
+    }),
   ];
 }
 

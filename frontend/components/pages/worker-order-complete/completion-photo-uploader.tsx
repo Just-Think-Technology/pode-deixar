@@ -49,6 +49,30 @@ type CompletionPhotoUploaderProps = {
   onPhotosChange: (photos: CompletionPhoto[]) => void;
 };
 
+async function uploadSinglePhoto(
+  orderId: string,
+  file: File,
+): Promise<CompletionPhoto | null> {
+  const validation = validateCompletionPhoto(file);
+  if (!validation.ok) {
+    const message =
+      Object.values(validation.errors)[0] ?? "Não foi possível enviar a foto.";
+    toast.error(message);
+    return null;
+  }
+
+  const previewUrl = URL.createObjectURL(file);
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    return await uploadCompletionPhotoAction(orderId, formData, previewUrl);
+  } catch (err) {
+    URL.revokeObjectURL(previewUrl);
+    toast.error(getUploadPhotoErrorMessage(err));
+    return null;
+  }
+}
+
 export function CompletionPhotoUploader({
   orderId,
   photos,
@@ -75,28 +99,9 @@ export function CompletionPhotoUploader({
     try {
       const uploaded: CompletionPhoto[] = [];
       for (const file of files) {
-        const validation = validateCompletionPhoto(file);
-        if (!validation.ok) {
-          const message =
-            Object.values(validation.errors)[0] ??
-            "Não foi possível enviar a foto.";
-          toast.error(message);
-          continue;
-        }
-
-        const previewUrl = URL.createObjectURL(file);
-        try {
-          const formData = new FormData();
-          formData.append("file", file);
-          const photo = await uploadCompletionPhotoAction(
-            orderId,
-            formData,
-            previewUrl,
-          );
+        const photo = await uploadSinglePhoto(orderId, file);
+        if (photo) {
           uploaded.push(photo);
-        } catch (err) {
-          URL.revokeObjectURL(previewUrl);
-          toast.error(getUploadPhotoErrorMessage(err));
         }
       }
       if (uploaded.length > 0) {
