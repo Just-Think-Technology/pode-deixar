@@ -74,6 +74,12 @@ jobs:
       - run: pnpm run build
       - run: pnpm run typecheck
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+
       # The cache above only restores — without this step, a cache miss
       # (e.g., any change in pnpm-lock.yaml) leaves the runner without browsers
       # and then the e2e fails. The install is idempotent when the cache hits.
