@@ -11,6 +11,18 @@ const ALLOWED_IMAGE_MIME = new Set([
   "image/gif",
 ]);
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Allowlist resource IDs to safe shapes before interpolating them into the
+// backend URL path, so traversal or alternate endpoints cannot be smuggled in.
+function assertResourceId(value: string, message: string): void {
+  const id = value?.trim() ?? "";
+  if (!id || (!UUID_REGEX.test(id) && !id.startsWith("mock-"))) {
+    throw new Error(message);
+  }
+}
+
 function hasAllowedMagicBytes(bytes: Uint8Array, mime: string): boolean {
   if (mime === "image/jpeg") {
     return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -57,6 +69,7 @@ export async function uploadServiceImageAction(
   if (!token) {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
+  assertResourceId(serviceId, "Serviço inválido");
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
@@ -105,6 +118,8 @@ export async function deleteServiceImageAction(
   if (!token) {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
+  assertResourceId(serviceId, "Serviço inválido");
+  assertResourceId(imageId, "Imagem inválida");
 
   const res = await fetch(
     `${getApiBaseUrl()}/providers/me/services/${serviceId}/images/${imageId}`,
