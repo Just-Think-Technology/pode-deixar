@@ -81,4 +81,11 @@ describe('Image actions resource-ID allowlist', () => {
     await deleteServiceImageAction('mock-svc-001', 'mock-img-001')
     expect(fetch).toHaveBeenCalledTimes(1)
   })
+
+  it('encodes special chars so mock- ids cannot smuggle path separators', async () => {
+    await deleteServiceImageAction('mock-svc-001', 'mock-a/b')
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
+      'https://api.test/providers/me/services/mock-svc-001/images/mock-a%2Fb',
+    )
+  })
 })
