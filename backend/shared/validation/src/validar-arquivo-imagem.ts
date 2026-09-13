@@ -1,3 +1,5 @@
+// Image file validator — extension and magic-byte checks
+
 import { BadRequestException } from '@nestjs/common';
 import { extname } from 'path';
 

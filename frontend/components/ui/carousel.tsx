@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — carousel
 "use client"
 
 import * as React from "react"

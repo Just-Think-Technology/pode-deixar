@@ -1,3 +1,5 @@
+// Password management service — reset and change flows
+
 import {
   Injectable,
   BadRequestException,
@@ -23,8 +25,9 @@ export class PasswordManagementService {
     private passwordService: PasswordService,
   ) {}
 
+  // --- Public API ---
+
   async forgotPassword(dto: ForgotPasswordDto) {
-    // --- Public API ---
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -168,6 +171,7 @@ export class PasswordManagementService {
   }
 
   // --- Private Helpers ---
+
   private hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
   }

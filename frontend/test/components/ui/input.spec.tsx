@@ -1,3 +1,5 @@
+// Input spec — rendering and behavior of the UI input
+
 import { describe, it, expect, vitest } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Input } from '@/components/ui/input'

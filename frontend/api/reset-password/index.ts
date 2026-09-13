@@ -1,3 +1,5 @@
+// Password recovery API — password reset fetcher
+
 import { apiFetch } from "@/api/client";
 import type {
   ResetPasswordPayload,

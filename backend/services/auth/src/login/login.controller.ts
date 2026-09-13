@@ -1,3 +1,5 @@
+// Login controller — authentication and token refresh endpoints
+
 import {
   Body,
   Controller,
@@ -31,6 +33,8 @@ const logger = getLogger('login');
 @ApiTags('Access')
 export class LoginController {
   constructor(private readonly loginService: LoginService) {}
+
+  // --- Public API ---
 
   @Post('login')
   @HttpCode(HttpStatus.OK)

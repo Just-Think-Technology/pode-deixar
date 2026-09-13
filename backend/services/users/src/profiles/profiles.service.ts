@@ -1,3 +1,5 @@
+// Profiles service — client and provider profile management
+
 import {
   Injectable,
   NotFoundException,
@@ -16,9 +18,6 @@ import { randomUUID } from "crypto";
 import { extname } from "path";
 import { validarArquivoImagem } from "@pode-deixar/validation";
 
-// --- Public API ---
-// Methods exported and callable from controllers.
-
 @Injectable()
 export class ProfilesService {
   constructor(
@@ -28,7 +27,7 @@ export class ProfilesService {
   ) {}
 
   // --- Private Helpers ---
-  // Returns user record; throws NotFoundException if missing.
+
   private async getUser(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -87,6 +86,8 @@ export class ProfilesService {
       updated_at: profile.updatedAt,
     };
   }
+
+  // --- Public API ---
 
   async getProfile(userId: string, role: string) {
     const user = await this.getUser(userId);
@@ -343,9 +344,7 @@ export class ProfilesService {
     throw new BadRequestException("Função inválida");
   }
 
-  // --- Public API ---
   // Returns a public profile view that never exposes PII (email, phone, postalCode).
-  // Only id, name, avatarUrl, bio, hourlyRate, skills, portfolio, rating, services are included.
   async getPublicProviderProfile(providerProfileId: string) {
     // Public profile must never expose PII, so select only id and name.
     const profile = await this.prisma.providerProfile.findUnique({

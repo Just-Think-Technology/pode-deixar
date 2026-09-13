@@ -1,3 +1,5 @@
+// Reviews service — order ratings and comments
+
 import {
   Injectable,
   NotFoundException,
@@ -23,6 +25,8 @@ export class ReviewsService {
     private prisma: PrismaService,
     private logger: ReviewsLoggerService,
   ) {}
+
+  // --- Private Helpers ---
 
   private formatReview(review: {
     id: string;
@@ -81,6 +85,8 @@ export class ReviewsService {
 
     throw new ForbiddenException("Você não é parte deste pedido");
   }
+
+  // --- Public API ---
 
   async create(reviewerId: string, dto: CreateReviewDto, ip?: string) {
     const order = await this.prisma.serviceOrder.findUnique({

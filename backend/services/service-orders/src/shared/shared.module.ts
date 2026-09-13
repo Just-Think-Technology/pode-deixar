@@ -1,3 +1,5 @@
+// Shared module — global auth and logging wiring
+
 import { Module, Global } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
@@ -8,6 +10,9 @@ import { ServicesLoggerService } from "./services-logger.service";
 
 @Global()
 @Module({
+
+  // --- Imports ---
+
   imports: [
     ConfigModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
@@ -19,6 +24,9 @@ import { ServicesLoggerService } from "./services-logger.service";
       inject: [ConfigService],
     }),
   ],
+
+  // --- Providers ---
+
   providers: [JwtStrategy, JwtAuthGuard, RolesGuard, ServicesLoggerService],
   exports: [
     JwtModule,

@@ -1,3 +1,4 @@
+// purpose: Role redirect route — validates the role and redirects
 import { notFound } from "next/navigation";
 
 import AuthActionPage from "@/components/pages/auth-action-page";

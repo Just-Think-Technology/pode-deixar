@@ -1,3 +1,5 @@
+// Test teardown — clears users test database
+
 import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
@@ -16,7 +18,7 @@ const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@
 export default async function globalTeardown() {
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   try {
-    // Ordem respeita as FKs (filhos antes dos pais).
+    // Delete children before parents to respect foreign keys.
     await prisma.paymentStatusHistory.deleteMany().catch(() => {});
     await prisma.paymentWebhookEvent.deleteMany().catch(() => {});
     await prisma.payment.deleteMany().catch(() => {});

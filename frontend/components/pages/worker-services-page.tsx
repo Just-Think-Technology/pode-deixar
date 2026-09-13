@@ -1,3 +1,5 @@
+// Worker services page — service catalog management
+
 "use client";
 
 import { useState } from "react";

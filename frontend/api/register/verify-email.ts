@@ -1,3 +1,5 @@
+// Registration API — email verification fetcher
+
 import { apiFetch } from "@/api/client";
 import type { VerifyEmailPayload, VerifyEmailResponse } from "@/lib/auth/types";
 

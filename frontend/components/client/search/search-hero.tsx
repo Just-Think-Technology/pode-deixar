@@ -1,3 +1,5 @@
+// Search hero — headline and query input for professional search
+
 "use client";
 
 import { Search } from "lucide-react";

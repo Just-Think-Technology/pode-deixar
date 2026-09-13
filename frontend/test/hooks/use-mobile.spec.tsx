@@ -1,3 +1,5 @@
+// useIsMobile spec — viewport breakpoints via the matchMedia mock
+
 import { describe, it, expect, vitest } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -21,7 +23,6 @@ describe('useIsMobile Hook', () => {
   })
 
   it('should detect mobile viewport', () => {
-    // Simular viewport mobile
     setViewport(375, 667) // iPhone
 
     const { result } = renderHook(() => useIsMobile())
@@ -48,7 +49,6 @@ describe('useIsMobile Hook', () => {
     const { result } = renderHook(() => useIsMobile())
     expect(result.current).toBe(true)
 
-    // Simulate resize to desktop
     setViewport(1440, 900)
     window.dispatchEvent(new Event('resize'))
 

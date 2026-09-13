@@ -1,3 +1,5 @@
+// Session guard — requires a valid session for protected areas
+
 import "server-only";
 
 import { redirect } from "next/navigation";

@@ -1,3 +1,4 @@
+// Client payment types — payloads and gateway charge shapes
 export type PaymentStatus =
   | "PENDING"
   | "PAID"
@@ -10,7 +11,7 @@ export type PaymentMethod = "PIX" | "CREDIT_CARD";
 export type CreatePaymentPayload = {
   serviceOrderId: string;
   method: PaymentMethod;
-  /** Required by the backend (400 if missing) — set at checkout. */
+  // Required by the backend (400 if missing) — set at checkout.
   scheduledAt: string;
   scheduledEndAt?: string;
 };

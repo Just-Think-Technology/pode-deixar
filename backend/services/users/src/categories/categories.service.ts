@@ -1,3 +1,5 @@
+// Categories service — service category catalog management
+
 import {
   Injectable,
   NotFoundException,
@@ -14,6 +16,8 @@ export class CategoriesService {
     private prisma: PrismaService,
     private usersLogger: UsersLoggerService,
   ) {}
+
+  // --- Public API ---
 
   async findAll() {
     const categories = await this.prisma.category.findMany({

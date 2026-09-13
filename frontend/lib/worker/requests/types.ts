@@ -1,3 +1,4 @@
+// Worker request types — order and proposal payload shapes
 export type ServiceOrderStatus =
   | "OPEN"
   | "IN_PROGRESS"

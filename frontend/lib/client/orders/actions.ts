@@ -1,3 +1,5 @@
+// Client order actions — order listing and detail with mock fallback
+
 "use server";
 
 import { revalidatePath } from "next/cache";

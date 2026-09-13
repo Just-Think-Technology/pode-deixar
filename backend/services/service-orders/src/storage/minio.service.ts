@@ -1,3 +1,5 @@
+// MinIO service — order photo storage and signed URLs
+
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as Minio from "minio";
@@ -19,6 +21,8 @@ export class MinioService implements OnModuleInit {
       this.configService.get<string>("MINIO_PUBLIC_URL") ||
       "http://localhost:8080/api/storage";
   }
+
+  // --- Public API ---
 
   async onModuleInit() {
     const endpoint =
@@ -86,6 +90,8 @@ export class MinioService implements OnModuleInit {
       return signed;
     }
   }
+
+  // --- Private Helpers ---
 
   // Dedicated presigning client addressed by the public host: the host is part
   // of the SigV4 signature, so signing with the internal host would invalidate

@@ -1,3 +1,5 @@
+// Auth change-password tests — PUT /auth/change-password flows
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -10,6 +12,8 @@ import {
   teardownTestApp
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
+
+// --- Tests ---
 
 describe('PUT /auth/change-password', () => {
   let app: INestApplication<App>;

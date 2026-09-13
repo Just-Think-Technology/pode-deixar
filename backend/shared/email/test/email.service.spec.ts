@@ -1,3 +1,5 @@
+// Email service tests — transporter and sending flows
+
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { EmailService } from '../email.service';
@@ -29,6 +31,8 @@ function buildConfigService(overrides: Partial<typeof CONFIG> = {}) {
 function buildService(overrides: Partial<typeof CONFIG> = {}) {
   return new EmailService(buildConfigService(overrides));
 }
+
+// --- Tests ---
 
 // sendMail must propagate transporter errors instead of returning false because callers in auth handle failure via try/catch.
 

@@ -1,3 +1,5 @@
+// Token validation — payload checks and revocation lookup
+
 import { UnauthorizedException } from "@nestjs/common";
 
 export interface TokenPayload {

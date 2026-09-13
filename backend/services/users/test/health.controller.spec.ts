@@ -1,3 +1,5 @@
+// Health controller tests — liveness and readiness probes
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { HealthController } from "../src/health/health.controller";
 import { HealthCheckService, HealthCheckResult } from "@nestjs/terminus";

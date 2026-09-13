@@ -1,3 +1,5 @@
+// Provider search DTO — provider discovery query validation
+
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsOptional,

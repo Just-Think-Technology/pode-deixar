@@ -1,3 +1,5 @@
+// Worker requests API — received request fetchers
+
 import { apiFetchAuth } from "@/api/client";
 import type {
   WorkerRequest,

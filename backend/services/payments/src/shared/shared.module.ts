@@ -1,3 +1,5 @@
+// Shared module — global auth wiring
+
 import { Module, Global } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
@@ -7,6 +9,9 @@ import { JwtAuthGuard, RolesGuard } from "@pode-deixar/security";
 
 @Global()
 @Module({
+
+  // --- Imports ---
+
   imports: [
     ConfigModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
@@ -18,6 +23,9 @@ import { JwtAuthGuard, RolesGuard } from "@pode-deixar/security";
       inject: [ConfigService],
     }),
   ],
+
+  // --- Providers ---
+
   providers: [JwtStrategy, JwtAuthGuard, RolesGuard],
   exports: [JwtModule, PassportModule, JwtStrategy, JwtAuthGuard, RolesGuard],
 })

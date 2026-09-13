@@ -1,3 +1,5 @@
+// Roles decorator — role metadata for guards
+
 import { SetMetadata } from "@nestjs/common";
 
 export const ROLES_KEY = "roles";

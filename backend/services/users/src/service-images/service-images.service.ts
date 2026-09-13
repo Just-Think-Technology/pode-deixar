@@ -1,3 +1,5 @@
+// Service images service — provider service photo management
+
 import {
   Injectable,
   NotFoundException,
@@ -18,6 +20,8 @@ export class ServiceImagesService {
     private minio: MinioService,
     private usersLogger: UsersLoggerService,
   ) {}
+
+  // --- Private Helpers ---
 
   private async getProviderProfileByUserId(userId: string) {
     const profile = await this.prisma.providerProfile.findUnique({
@@ -49,6 +53,8 @@ export class ServiceImagesService {
 
     return service;
   }
+
+  // --- Public API ---
 
   async uploadByUserId(
     userId: string,

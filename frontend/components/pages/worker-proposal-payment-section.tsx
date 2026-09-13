@@ -1,3 +1,5 @@
+// Worker proposal payment — receipt status and confirmation display
+
 "use client";
 
 import {

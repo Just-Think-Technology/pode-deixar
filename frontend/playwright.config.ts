@@ -1,3 +1,5 @@
+// Playwright config — E2E projects against the mock-backed dev server
+
 import { defineConfig, devices } from "@playwright/test";
 
 const E2E_PORT = 3100;

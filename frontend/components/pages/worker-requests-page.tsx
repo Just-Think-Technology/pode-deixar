@@ -1,3 +1,5 @@
+// Worker requests page — received requests list
+
 "use client";
 
 import Link from "next/link";

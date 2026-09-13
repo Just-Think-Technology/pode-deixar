@@ -1,3 +1,5 @@
+// Validation error translator — Portuguese constraint messages
+
 import { ValidationError } from 'class-validator';
 
 export type RotulosCampos = Record<string, string>;

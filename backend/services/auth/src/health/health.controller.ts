@@ -1,3 +1,5 @@
+// Health controller — liveness and readiness endpoints
+
 import { Controller, Get } from '@nestjs/common';
 import {
   HealthCheck,
@@ -7,7 +9,6 @@ import {
 import { DatabaseHealthIndicator } from './database.health';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-// --- Public API ---
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
@@ -15,6 +16,8 @@ export class HealthController {
     private readonly health: HealthCheckService,
     private readonly db: DatabaseHealthIndicator,
   ) {}
+
+  // --- Public API ---
 
   @Get()
   @HealthCheck()

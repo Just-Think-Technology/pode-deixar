@@ -1,3 +1,4 @@
+// Client order types — orders and proposals shapes
 export type ServiceOrderStatus =
   | "OPEN"
   | "IN_PROGRESS"

@@ -1,3 +1,5 @@
+// Client payment labels — method and status display strings
+
 import type { PaymentMethod, PaymentStatus } from "@/lib/client/payments/types";
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {

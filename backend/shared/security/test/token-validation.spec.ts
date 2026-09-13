@@ -1,8 +1,12 @@
+// Token validation tests — payload and revocation checks
+
 import { UnauthorizedException } from "@nestjs/common";
 import {
   assertTokenPayload,
   checkTokenRevocation,
 } from "../src/token-validation";
+
+// --- Tests ---
 
 describe("assertTokenPayload", () => {
   it("aceita payload com sub e role", () => {

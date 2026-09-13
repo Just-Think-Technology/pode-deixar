@@ -1,3 +1,5 @@
+// API client spec — fetch wrapper, timeout, and error mapping
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   apiFetch,

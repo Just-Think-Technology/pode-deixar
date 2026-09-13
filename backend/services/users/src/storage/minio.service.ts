@@ -1,3 +1,5 @@
+// MinIO service — object storage uploads
+
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as Minio from "minio";
@@ -18,6 +20,8 @@ export class MinioService implements OnModuleInit {
       this.configService.get<string>("MINIO_PUBLIC_URL") ||
       "http://localhost:8080/api/storage";
   }
+
+  // --- Public API ---
 
   async onModuleInit() {
     const endpoint =

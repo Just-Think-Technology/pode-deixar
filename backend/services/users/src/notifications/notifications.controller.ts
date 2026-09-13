@@ -1,3 +1,5 @@
+// Notifications controller — user notification endpoints
+
 import {
   Controller,
   Post,
@@ -18,6 +20,8 @@ import { ListNotificationsQueryDto } from "./dto/list-notifications-query.dto";
 @Controller("notifications")
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
+
+  // --- Public API ---
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)

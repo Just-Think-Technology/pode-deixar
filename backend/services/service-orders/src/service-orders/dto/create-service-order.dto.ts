@@ -1,3 +1,5 @@
+// Service order DTO — order creation input validation
+
 import {
   IsString,
   IsNumber,

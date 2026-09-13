@@ -1,3 +1,5 @@
+// Review DTO — review creation input validation
+
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsInt,

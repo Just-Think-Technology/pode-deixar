@@ -1,3 +1,5 @@
+// Profiles tests — retrieval and update logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProfilesService } from "../src/profiles/profiles.service";
 import { PrismaService } from "../src/prisma/prisma.service";

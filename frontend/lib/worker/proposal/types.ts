@@ -1,3 +1,4 @@
+// Worker proposal types — proposal shapes
 export type ProposalStatus =
   | "PENDING"
   | "ACCEPTED"

@@ -1,3 +1,5 @@
+// Test teardown — clears reviews test database
+
 import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as path from 'path';

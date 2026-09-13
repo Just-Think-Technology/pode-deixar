@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — avatar
 "use client"
 
 import * as React from "react"

@@ -1,3 +1,5 @@
+// Test setup — provisions reviews test database
+
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { PrismaClient } from '@prisma/client';

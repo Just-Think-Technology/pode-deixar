@@ -1,3 +1,5 @@
+// Auth logo — brand mark link for auth pages
+
 import Image from "next/image";
 import Link from "next/link";
 

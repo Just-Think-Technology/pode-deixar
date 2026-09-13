@@ -1,3 +1,5 @@
+// Notification query DTO — notification listing validation
+
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { IsBoolean, IsInt, IsOptional, Max, Min } from "class-validator";
 import { Transform, Type } from "class-transformer";

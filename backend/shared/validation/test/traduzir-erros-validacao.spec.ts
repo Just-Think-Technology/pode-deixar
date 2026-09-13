@@ -1,3 +1,5 @@
+// Error translation tests — Portuguese validation messages
+
 import { ValidationError } from 'class-validator';
 import {
   traduzirErrosValidacao,
@@ -13,6 +15,8 @@ function erro(
   e.constraints = constraints;
   return e;
 }
+
+// --- Tests ---
 
 describe('traduzirErrosValidacao', () => {
   it('retorna "<rótulo> inválido" quando não há constraints', () => {

@@ -1,3 +1,5 @@
+// Provider services tests — cross-endpoint integration flows
+
 import { INestApplication } from '@nestjs/common';
 // import-require: these services lack esModuleInterop (unlike auth),
 // so the default import compiles to a nonexistent `.default` at runtime.
@@ -12,6 +14,8 @@ import {
   TestAppSetup,
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
+
+// --- Integration: Provider Services ---
 
 describe('ProviderServices (integration)', () => {
   let app: INestApplication<App>;

@@ -1,3 +1,5 @@
+// Prisma error resolver — maps error codes to HTTP status
+
 import { HttpStatus } from '@nestjs/common';
 
 export interface ErroPrismaResolvido {

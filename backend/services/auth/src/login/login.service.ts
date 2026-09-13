@@ -1,3 +1,5 @@
+// Login service — authentication and token rotation
+
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
@@ -13,7 +15,6 @@ import { JWT_ALGORITHMS, JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
 const MIN_JWT_SECRET_LENGTH = 32;
 
-// purpose — validate JWT secrets length at boot to prevent insecure operation
 export function requireJwtSecrets(config: ConfigService): void {
   for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const) {
     const secret = config.get<string>(key);
@@ -35,10 +36,12 @@ export class LoginService {
     private passwordService: PasswordService,
     private emailService: EmailService,
   ) {
+    // Reject boot on weak secrets instead of operating insecurely.
     requireJwtSecrets(configService);
   }
 
   // --- Public API ---
+
   async login(dto: LoginDto, ip?: string) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -245,6 +248,7 @@ export class LoginService {
   }
 
   // --- Private Helpers ---
+
   private async generateAccessToken(user: any) {
     const payload = {
       sub: user.id,

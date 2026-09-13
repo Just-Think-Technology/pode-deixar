@@ -1,3 +1,5 @@
+// Login module — session, tokens and strategy wiring
+
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -12,6 +14,9 @@ import { JwtStrategy } from '../jwt/jwt.strategy';
 import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
 @Module({
+
+  // --- Imports ---
+
   imports: [
     ConfigModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -24,7 +29,13 @@ import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
       }),
     }),
   ],
+
+  // --- Controllers ---
+
   controllers: [LoginController],
+
+  // --- Providers ---
+
   providers: [
     LoginService,
     PrismaService,

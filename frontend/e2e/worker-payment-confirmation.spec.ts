@@ -1,3 +1,5 @@
+// E2E worker payment confirmation — receipt status flow
+
 import { expect, test } from "@playwright/test";
 
 import { loginAsWorkerMock } from "./helpers/auth";

@@ -1,3 +1,5 @@
+// Client search mocks — seeded results for the search flow
+
 import type {
   PopularCategory,
   SearchProfessionalsPayload,

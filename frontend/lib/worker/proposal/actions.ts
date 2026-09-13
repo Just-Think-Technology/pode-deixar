@@ -1,3 +1,5 @@
+// Worker proposal actions — proposal list and secure detail with mock fallback
+
 "use server";
 
 import { ApiError } from "@/api/client";

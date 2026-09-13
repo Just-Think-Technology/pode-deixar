@@ -1,3 +1,5 @@
+// Provider services tests — creation and listing logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { ProviderServicesService } from "../src/provider-services/provider-services.service";
 import { PrismaService } from "../src/prisma/prisma.service";

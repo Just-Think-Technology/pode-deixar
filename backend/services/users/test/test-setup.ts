@@ -8,7 +8,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { MinioService } from '../src/storage/minio.service';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
-// --- Setup ---
+// --- Types ---
 
 export type TestRole = 'CLIENT' | 'PROVIDER' | 'ADMIN';
 
@@ -19,7 +19,7 @@ export interface TestAppSetup {
 
 // --- MinIO stub ---
 // The real MinioService connects on onModuleInit — unfeasible without MinIO.
-// Substitui o comportamento de rede, mantendo o contrato usado pelos services.
+// Mocks network behavior while keeping the service contract.
 
 export const mockMinio = {
   avatarBucket: 'avatars',

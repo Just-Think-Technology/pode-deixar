@@ -1,12 +1,15 @@
+// Verify controller — access token validation endpoint
+
 import { Controller, Get, Headers, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
 import { VerifyService } from './verify.service';
 
-// --- Public API ---
 @Controller('auth')
 @ApiTags('Access')
 export class VerifyController {
   constructor(private readonly verifyService: VerifyService) {}
+
+  // --- Public API ---
 
   @Get('verify')
   @HttpCode(HttpStatus.OK)

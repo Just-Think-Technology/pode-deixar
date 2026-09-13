@@ -1,3 +1,5 @@
+// Client checkout confirmation — payment result display
+
 "use client";
 
 import Link from "next/link";

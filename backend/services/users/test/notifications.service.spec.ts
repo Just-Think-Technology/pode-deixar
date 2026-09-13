@@ -1,3 +1,5 @@
+// Notifications tests — delivery logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";

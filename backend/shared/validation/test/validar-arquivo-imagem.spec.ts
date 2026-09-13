@@ -1,10 +1,14 @@
+// Image validation tests — file type and content checks
+
 import { BadRequestException } from '@nestjs/common';
 import { validarArquivoImagem } from '../index';
 
-// PNG 1x1 válido (magic bytes reais).
+// Valid 1x1 PNG (real magic bytes).
 const PNG_REAL = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 ]);
+
+// --- Tests ---
 
 describe('validarArquivoImagem', () => {
   it('aceita imagem com extensão permitida e magic bytes correspondentes', () => {

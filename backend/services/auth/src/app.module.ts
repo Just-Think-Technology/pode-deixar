@@ -1,3 +1,5 @@
+// Auth root module — service wiring and validation setup
+
 import { Module, ValidationPipe, BadRequestException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
@@ -20,7 +22,7 @@ import {
   MensagensRestricao,
 } from '@pode-deixar/validation';
 
-// purpose — auth field labels (user-facing, in Portuguese); restriction messages live in shared core, with auth divergences below.
+// Auth field labels (user-facing, in Portuguese); restriction messages live in shared core, with auth divergences below.
 const ROTULOS_AUTH: RotulosCampos = {
   email: 'Email',
   password: 'Senha',
@@ -44,6 +46,9 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
 }
 
 @Module({
+
+  // --- Imports ---
+
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -68,7 +73,13 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
     CommonModule,
     HealthModule,
   ],
+
+  // --- Controllers ---
+
   controllers: [AppController],
+
+  // --- Providers ---
+
   providers: [
     AppService,
     {

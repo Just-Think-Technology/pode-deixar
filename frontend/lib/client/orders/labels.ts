@@ -1,3 +1,5 @@
+// Client order labels — status and proposal display strings
+
 import type { ProposalStatus } from "@/lib/client/orders/types";
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {

@@ -1,6 +1,6 @@
+// Format utils spec — coverage for the cn class-name helper
 import { describe, it, expect } from 'vitest'
 
-// Test functions that exist in the lib/utils or lib/auth
 import { cn } from '@/lib/utils'
 
 describe('Format Utils', () => {

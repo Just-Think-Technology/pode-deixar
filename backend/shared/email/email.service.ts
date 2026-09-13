@@ -1,3 +1,5 @@
+// Email service — SMTP verification and reset delivery
+
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';

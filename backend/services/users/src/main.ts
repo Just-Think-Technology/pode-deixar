@@ -1,10 +1,11 @@
+// Users bootstrap — CORS, helmet and docs setup
+
 import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { getHelmetConfig } from "@pode-deixar/security";
 import createLogger from "@pode-deixar/logger";
 
-// purpose — bootstrap and configure the users service HTTP server
 const logger = createLogger("users-service");
 
 async function bootstrap() {

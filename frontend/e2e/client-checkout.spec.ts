@@ -1,3 +1,5 @@
+// E2E client checkout — payment flow with mock gateway link
+
 import { expect, test } from "@playwright/test";
 
 import { loginAsClientMock } from "./helpers/auth";

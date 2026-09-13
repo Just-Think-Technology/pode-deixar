@@ -1,3 +1,5 @@
+// Client proposals API — accept and reject fetchers
+
 import { apiFetchAuth } from "@/api/client";
 import type { ClientProposal } from "@/lib/client/orders/types";
 import {

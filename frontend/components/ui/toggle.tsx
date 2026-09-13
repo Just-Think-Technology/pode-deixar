@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — toggle
 "use client"
 
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle"

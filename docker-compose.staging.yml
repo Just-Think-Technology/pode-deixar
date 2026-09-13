@@ -1,24 +1,8 @@
-# ============================================================
-# Pode Deixar - Staging com hot-reload
-# ============================================================
-#   docker compose -f docker-compose.staging.yml up -d --build
-#
-# Mesmos serviços do production, mas:
-# - Env: .env.staging
-# - Backend em modo dev / hot-reload
-# - Código fonte montado
-# - start:dev
-# - Banco: Neon staging
-# - Sem frontend
-# - Sem Mailpit
-# - Sem Postgres local
-# - Sem portas públicas nos serviços internos
-# - Caddy continua responsável pelo acesso externo
-#
-# IMPORTANTE:
-# Os diretórios dist/ dos shared packages NÃO são montados.
-# Eles permanecem os builds gerados pela imagem Docker.
-# ============================================================
+# purpose: Staging stack with hot-reload (same services as production)
+# Run: docker compose -f docker-compose.staging.yml up -d --build
+# Env: .env.staging; backend in dev mode with mounted source and start:dev; Neon staging database
+# No frontend, Mailpit, local Postgres, or public ports on internal services; Caddy handles external access
+# Shared package dist/ dirs are not mounted — the Docker image builds remain in place
 
 include:
   - path: docker-compose.production.yml
@@ -27,7 +11,7 @@ name: pode-deixar-staging
 
 services:
 
-  # -- Auth Service --
+  # --- Auth Service ---
   auth:
     env_file:
       - ./.env.staging
@@ -44,33 +28,33 @@ services:
       - ./backend/services/auth/tsconfig.build.json:/app/services/auth/tsconfig.build.json
       - ./backend/services/auth/nest-cli.json:/app/services/auth/nest-cli.json
 
-      # Logger
+      # --- Logger ---
       - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
       - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
 
-      # Email
+      # --- Email ---
       - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
       - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
       - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
       - ./backend/shared/email/index.ts:/app/shared/email/index.ts
       - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
 
-      # Security
+      # --- Security ---
       - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
-      # Validation
+      # --- Validation ---
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
 
-      # Prisma
+      # --- Prisma ---
       - ./backend/prisma:/app/prisma
 
-  # -- Users Service --
+  # --- Users Service ---
   users:
     env_file:
       - ./.env.staging
@@ -85,33 +69,33 @@ services:
       - ./backend/services/users/tsconfig.build.json:/app/services/users/tsconfig.build.json
       - ./backend/services/users/nest-cli.json:/app/services/users/nest-cli.json
 
-      # Logger
+      # --- Logger ---
       - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
       - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
 
-      # Email
+      # --- Email ---
       - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
       - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
       - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
       - ./backend/shared/email/index.ts:/app/shared/email/index.ts
       - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
 
-      # Security
+      # --- Security ---
       - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
-      # Validation
+      # --- Validation ---
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
 
-      # Prisma
+      # --- Prisma ---
       - ./backend/prisma:/app/prisma
 
-  # -- Service Orders Service --
+  # --- Service Orders Service ---
   service-orders:
     env_file:
       - ./.env.staging
@@ -128,33 +112,33 @@ services:
       - ./backend/services/service-orders/tsconfig.build.json:/app/services/service-orders/tsconfig.build.json
       - ./backend/services/service-orders/nest-cli.json:/app/services/service-orders/nest-cli.json
 
-      # Logger
+      # --- Logger ---
       - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
       - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
 
-      # Email
+      # --- Email ---
       - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
       - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
       - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
       - ./backend/shared/email/index.ts:/app/shared/email/index.ts
       - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
 
-      # Security
+      # --- Security ---
       - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
-      # Validation
+      # --- Validation ---
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
 
-      # Prisma
+      # --- Prisma ---
       - ./backend/prisma:/app/prisma
 
-  # -- Payments Service --
+  # --- Payments Service ---
   payments:
     env_file:
       - ./.env.staging
@@ -172,33 +156,33 @@ services:
       - ./backend/services/payments/tsconfig.build.json:/app/services/payments/tsconfig.build.json
       - ./backend/services/payments/nest-cli.json:/app/services/payments/nest-cli.json
 
-      # Logger
+      # --- Logger ---
       - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
       - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
 
-      # Email
+      # --- Email ---
       - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
       - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
       - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
       - ./backend/shared/email/index.ts:/app/shared/email/index.ts
       - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
 
-      # Security
+      # --- Security ---
       - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
-      # Validation
+      # --- Validation ---
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
 
-      # Prisma
+      # --- Prisma ---
       - ./backend/prisma:/app/prisma
 
-  # -- Reviews Service --
+  # --- Reviews Service ---
   reviews:
     env_file:
       - ./.env.staging
@@ -213,43 +197,43 @@ services:
       - ./backend/services/reviews/tsconfig.build.json:/app/services/reviews/tsconfig.build.json
       - ./backend/services/reviews/nest-cli.json:/app/services/reviews/nest-cli.json
 
-      # Logger
+      # --- Logger ---
       - ./backend/shared/logger/index.ts:/app/shared/logger/index.ts
       - ./backend/shared/logger/tsconfig.json:/app/shared/logger/tsconfig.json
 
-      # Email
+      # --- Email ---
       - ./backend/shared/email/email.module.ts:/app/shared/email/email.module.ts
       - ./backend/shared/email/email.service.ts:/app/shared/email/email.service.ts
       - ./backend/shared/email/email.templates.ts:/app/shared/email/email.templates.ts
       - ./backend/shared/email/index.ts:/app/shared/email/index.ts
       - ./backend/shared/email/tsconfig.json:/app/shared/email/tsconfig.json
 
-      # Security
+      # --- Security ---
       - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
-      # Validation
+      # --- Validation ---
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
 
-      # Prisma
+      # --- Prisma ---
       - ./backend/prisma:/app/prisma
 
-  # -- MinIO --
+  # --- MinIO ---
   minio:
     env_file:
       - ./.env.staging
 
-  # -- MinIO Setup --
+  # --- MinIO Setup ---
   minio-setup:
     env_file:
       - ./.env.staging
 
-  # -- Database Backup --
+  # --- Database Backup ---
   db-backup:
     env_file:
       - ./.env.staging

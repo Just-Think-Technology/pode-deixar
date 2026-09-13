@@ -1,3 +1,5 @@
+// Service orders controller — order lifecycle endpoints
+
 import {
   Controller,
   Get,
@@ -32,6 +34,8 @@ import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 @ApiBearerAuth()
 export class ServiceOrdersController {
   constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
+
+  // --- Public API ---
 
   @Get("agenda")
   @Roles("PROVIDER")
@@ -119,6 +123,8 @@ export class ServiceOrdersController {
 export class MyServiceOrdersController {
   constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
 
+  // --- Public API ---
+
   @Get()
   @Roles("CLIENT")
   @ApiOperation({ summary: "Get order detail (owner only)" })
@@ -179,6 +185,8 @@ export class MyServiceOrdersController {
 export class PublicServiceOrdersController {
   constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
 
+  // --- Public API ---
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("PROVIDER")
@@ -227,6 +235,8 @@ export class PublicServiceOrdersController {
 export class ProviderReceivedOrdersController {
   constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
 
+  // --- Public API ---
+
   @Get()
   @Roles("PROVIDER")
   @ApiOperation({
@@ -251,6 +261,8 @@ export class ProviderReceivedOrdersController {
 @ApiBearerAuth()
 export class ProviderOrderActionsController {
   constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
+
+  // --- Public API ---
 
   @Post("complete")
   @Roles("PROVIDER")

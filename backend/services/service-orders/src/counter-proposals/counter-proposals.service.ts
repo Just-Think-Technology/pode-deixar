@@ -1,3 +1,5 @@
+// Counter proposals service — proposal price negotiation
+
 import {
   Injectable,
   NotFoundException,
@@ -19,6 +21,8 @@ export class CounterProposalsService {
     private logger: ServicesLoggerService,
   ) {}
 
+  // --- Private Helpers ---
+
   private formatCounterProposal(cp: any) {
     return {
       id: cp.id,
@@ -32,6 +36,8 @@ export class CounterProposalsService {
       updated_at: cp.updatedAt,
     };
   }
+
+  // --- Public API ---
 
   async create(senderId: string, dto: CreateCounterProposalDto, ip?: string) {
     const proposal = await this.prisma.proposal.findUnique({

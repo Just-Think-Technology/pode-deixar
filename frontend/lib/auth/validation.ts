@@ -1,3 +1,5 @@
+// Auth validation — form validators for login, register, and services
+
 import type {
     CreateServicePayload,
     LoginPayload,

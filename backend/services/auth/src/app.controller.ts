@@ -1,4 +1,4 @@
-// purpose — root endpoint status
+// Auth root controller — service status endpoint
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 
@@ -7,6 +7,7 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   // --- Public API ---
+
   @Get()
   getHello(): string {
     return this.appService.getHello();

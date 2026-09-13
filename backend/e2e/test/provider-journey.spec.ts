@@ -1,3 +1,5 @@
+// Provider journey tests — cross-service provider flows
+
 import request from 'supertest';
 import {
   bootApps,

@@ -1,3 +1,5 @@
+// E2E client orders — request list, detail, and proposal decisions
+
 import { expect, test } from "@playwright/test";
 
 import { loginAsClientMock } from "./helpers/auth";

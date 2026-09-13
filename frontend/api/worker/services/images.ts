@@ -1,3 +1,5 @@
+// Worker service images API — image upload fetcher
+
 import { apiFetchAuth } from "@/api/client";
 import type { ServiceImage } from "@/lib/auth/types";
 

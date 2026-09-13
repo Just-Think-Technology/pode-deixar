@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — input OTP
 "use client"
 
 import * as React from "react"

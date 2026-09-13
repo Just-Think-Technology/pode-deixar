@@ -1,3 +1,2 @@
-// purpose — canonical exception filter shared across all services,
-// masking Prisma errors with a consistent envelope.
+// Exception filter re-export — canonical Prisma masking from shared core
 export { GlobalExceptionFilter } from "@pode-deixar/security";

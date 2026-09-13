@@ -1,3 +1,5 @@
+// Provider service DTO — offered service creation validation
+
 import { IsString, IsNumber, MaxLength, IsPositive } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 

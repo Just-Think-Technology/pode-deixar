@@ -1,3 +1,5 @@
+// Helmet config — CSP and header policy builder
+
 import helmet from 'helmet';
 
 export function getHelmetConfig() {

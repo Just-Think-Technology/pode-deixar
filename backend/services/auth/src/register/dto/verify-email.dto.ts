@@ -1,3 +1,5 @@
+// Verify email DTO — email confirmation token validation
+
 import { IsNotEmpty, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 

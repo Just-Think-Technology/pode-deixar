@@ -1,15 +1,16 @@
+// Notifications service — user notification delivery
+
 import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateNotificationDto } from "./dto/create-notification.dto";
 
 @Injectable()
-// --- Public API ---
-// Methods callable from the notifications controller.
-
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  // --- Public API ---
 
   // Recipient is always the authenticated user; client-supplied recipient is
   // ignored to prevent forged notifications to third parties.

@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — select
 "use client"
 
 import * as React from "react"

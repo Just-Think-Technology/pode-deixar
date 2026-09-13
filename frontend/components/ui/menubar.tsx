@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — menubar
 "use client"
 
 import * as React from "react"

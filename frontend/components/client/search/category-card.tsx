@@ -1,3 +1,5 @@
+// Search category card — clickable category tile with icon
+
 "use client";
 
 import { CategoryIcon } from "@/lib/client/search/category-icons";

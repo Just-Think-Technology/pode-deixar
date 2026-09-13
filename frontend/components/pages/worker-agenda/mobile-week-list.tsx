@@ -1,3 +1,5 @@
+// Agenda mobile week list — stacked day view for small screens
+
 "use client";
 
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";

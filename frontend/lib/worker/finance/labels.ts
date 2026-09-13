@@ -1,3 +1,5 @@
+// Worker finance labels — formatting and fee math for the finance panel
+
 import { PLATFORM_FEE_RATE } from "@/lib/worker/finance/types";
 import type { WorkerPaymentStatus } from "@/lib/worker/payments/types";
 
@@ -35,7 +37,7 @@ export function formatFeeRate(rate: number): string {
 
 const CHART_MONTH_ISO = /^(\d{4})-(\d{2})$/;
 
-/** Converte `YYYY-MM` em `mar/26`. Rótulos curtos do mock (`Mar`) ficam inalterados. */
+// Converts YYYY-MM to mar/26; short mock labels (Mar) pass through unchanged.
 export function formatChartMonth(month: string): string {
   const match = CHART_MONTH_ISO.exec(month);
   if (!match) {

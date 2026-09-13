@@ -1,3 +1,5 @@
+// Redis throttler tests — rate-limit storage behavior
+
 import { createClient } from 'redis';
 import { RedisThrottlerStorage } from '../redis-throttler-storage';
 
@@ -17,6 +19,8 @@ function buildFakeClient(overrides: Record<string, jest.Mock> = {}) {
     ...overrides,
   };
 }
+
+// --- Tests ---
 
 describe('RedisThrottlerStorage (shared)', () => {
   let fakeClient: ReturnType<typeof buildFakeClient>;

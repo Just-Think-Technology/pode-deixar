@@ -1,3 +1,5 @@
+// Provider services controller tests — CRUD endpoints
+
 import { Test, TestingModule } from "@nestjs/testing";
 import {
   ProviderServicesController,
@@ -6,6 +8,8 @@ import {
   ProviderSearchController,
 } from "../src/provider-services/provider-services.controller";
 import { ProviderServicesService } from "../src/provider-services/provider-services.service";
+
+// --- Tests ---
 
 describe("ProviderServicesController", () => {
   let controller: ProviderServicesController;

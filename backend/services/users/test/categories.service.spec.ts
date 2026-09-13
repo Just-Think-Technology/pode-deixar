@@ -1,3 +1,5 @@
+// Categories tests — listing and creation logic
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { CategoriesService } from "../src/categories/categories.service";
 import { PrismaService } from "../src/prisma/prisma.service";

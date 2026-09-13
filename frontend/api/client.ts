@@ -1,3 +1,5 @@
+// Shared HTTP client — base URL, timeout fetch, and API error
+
 const FETCH_TIMEOUT = 10_000;
 
 export function getApiBaseUrl(): string {

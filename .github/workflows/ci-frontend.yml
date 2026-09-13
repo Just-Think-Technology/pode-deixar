@@ -76,7 +76,7 @@ jobs:
 
       # The cache above only restores — without this step, a cache miss
       # (e.g., any change in pnpm-lock.yaml) leaves the runner without browsers
-      # and todo the e2e fails. The install is idempotent when the cache hits.
+      # and then the e2e fails. The install is idempotent when the cache hits.
       - run: pnpm exec playwright install --with-deps chromium
 
       - run: pnpm run test:e2e

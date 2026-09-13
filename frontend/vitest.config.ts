@@ -1,3 +1,5 @@
+// Vitest config — unit test projects with path aliases
+
 import path from 'node:path'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react-swc'

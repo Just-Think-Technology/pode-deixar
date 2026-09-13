@@ -1,3 +1,5 @@
+// Verify module — token validation endpoint wiring
+
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -8,6 +10,9 @@ import { AuthLoggerService } from '../shared/auth-logger.service';
 import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
 @Module({
+
+  // --- Imports ---
+
   imports: [
     ConfigModule,
     JwtModule.registerAsync({
@@ -19,7 +24,13 @@ import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
       }),
     }),
   ],
+
+  // --- Controllers ---
+
   controllers: [VerifyController],
+
+  // --- Providers ---
+
   providers: [VerifyService, PrismaService, AuthLoggerService],
   exports: [VerifyService],
 })

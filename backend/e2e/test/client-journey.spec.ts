@@ -1,3 +1,5 @@
+// Client journey tests — cross-service client flows
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import {

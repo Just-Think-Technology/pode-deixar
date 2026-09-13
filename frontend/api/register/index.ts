@@ -1,3 +1,5 @@
+// Registration API — account creation fetcher
+
 import { apiFetch } from "@/api/client";
 import type { RegisterPayload, RegisterResponse } from "@/lib/auth/types";
 

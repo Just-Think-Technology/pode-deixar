@@ -1,3 +1,5 @@
+// Register controller — signup and email verification endpoints
+
 import {
   Body,
   Controller,
@@ -24,6 +26,8 @@ const logger = getLogger('register');
 @ApiTags('Signup')
 export class RegisterController {
   constructor(private readonly registerService: RegisterService) {}
+
+  // --- Public API ---
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)

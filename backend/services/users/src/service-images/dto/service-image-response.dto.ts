@@ -1,3 +1,5 @@
+// Service image DTO — service photo response shape
+
 import { ApiProperty } from "@nestjs/swagger";
 
 export class ServiceImageResponseDto {

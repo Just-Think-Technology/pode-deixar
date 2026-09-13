@@ -1,3 +1,4 @@
+// Worker payment types — provider-facing receipt shapes
 export type WorkerPaymentStatus =
   | "PENDING"
   | "PAID"
@@ -7,7 +8,7 @@ export type WorkerPaymentStatus =
 
 export type WorkerPaymentMethod = "PIX" | "CREDIT_CARD";
 
-/** Status de pagamento visto pelo prestador (espelha shape de API.md). */
+// Provider-facing payment status (mirrors the API.md shape).
 export type WorkerPaymentStatusResponse = {
   paymentId: string;
   serviceOrderId: string;

@@ -1,3 +1,5 @@
+// Registration API — verification email resend fetcher
+
 import { apiFetch } from "@/api/client";
 import type {
   ResendVerificationPayload,

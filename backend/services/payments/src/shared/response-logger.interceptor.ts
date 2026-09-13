@@ -1,3 +1,5 @@
+// Response logger interceptor — sanitized HTTP audit logs
+
 import {
   Injectable,
   NestInterceptor,
@@ -12,7 +14,12 @@ import { sanitizeSensitiveData } from "./sanitize-sensitive-data";
 
 @Injectable()
 export class ResponseLoggerInterceptor implements NestInterceptor {
+
+  // --- Private Helpers ---
+
   private readonly logger = new Logger(ResponseLoggerInterceptor.name);
+
+  // --- Public API ---
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp();

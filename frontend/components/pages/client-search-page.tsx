@@ -1,3 +1,5 @@
+// Client search page — query, categories, and results wiring
+
 "use client";
 
 import { useState } from "react";

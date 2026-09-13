@@ -1,6 +1,7 @@
+// Safe IP extraction — spoofing-resistant x-forwarded-for parsing
+
 import { isIP } from 'net';
 
-// purpose — safe IP extraction from x-forwarded-for header, blocking spoofing/injection
 export function extractSafeIp(value?: string): string {
   if (!value) return 'unknown';
   const first = value

@@ -1,3 +1,5 @@
+// Auth verify tests — GET /auth/verify flows
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -15,6 +17,8 @@ import {
 } from './test-setup';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+
+// --- Tests ---
 
 describe('GET /auth/verify', () => {
   let app: INestApplication<App>;

@@ -1,3 +1,5 @@
+// Test teardown — truncates shared e2e tables
+
 import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
@@ -10,6 +12,8 @@ dotenv.config({
 });
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/pode_deixar_test_e2e?schema=public';
+
+// --- Teardown ---
 
 const TABELAS = [
   'payment_status_history',

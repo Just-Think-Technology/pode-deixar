@@ -1,3 +1,5 @@
+// Agenda event dialog — order details with photo gallery entry point
+
 "use client";
 
 import { MapPin } from "lucide-react";

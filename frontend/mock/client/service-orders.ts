@@ -1,3 +1,5 @@
+// Client service order mocks — seeded orders for checkout and E2E
+
 import type {
   CreateServiceOrderPayload,
   ServiceOrder,

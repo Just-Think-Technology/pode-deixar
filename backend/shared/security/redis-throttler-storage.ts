@@ -1,3 +1,5 @@
+// Redis throttler storage — distributed rate-limit backend
+
 import { Injectable } from '@nestjs/common';
 import { ThrottlerStorage } from '@nestjs/throttler';
 import { createClient, RedisClientType } from 'redis';
