@@ -20,6 +20,7 @@ import {
   normalizePagination,
   PaginationQuery,
 } from "../shared/pagination-query.dto";
+import { Prisma } from "@prisma/client";
 
 type OrderDetail = Prisma.ServiceOrderGetPayload<{
   include: {
@@ -29,8 +30,8 @@ type OrderDetail = Prisma.ServiceOrderGetPayload<{
   };
 }>;
 
-type OrderListView = Prisma.ServiceOrderGetPayload<{}> & {
-  category?: { id: string; name: string; slug: string } | null;
+type OrderListView = Omit<OrderDetail, "proposals" | "photos"> & {
+  category?: OrderDetail["category"] | null;
 };
 
 type OrderWithProposals = Prisma.ServiceOrderGetPayload<{
