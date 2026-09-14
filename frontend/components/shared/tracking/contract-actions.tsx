@@ -8,6 +8,16 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -24,11 +34,14 @@ import {
   submitReviewAction,
 } from "@/lib/tracking/actions";
 import { getAvailableActions } from "@/lib/tracking/timeline-builder";
+import {
+  formatTrackingDateTime,
+  getReviewRatingLabel,
+} from "@/lib/tracking/labels";
 import { MAX_REVIEW_COMMENT_LENGTH } from "@/lib/tracking/validation";
 import type { ContractTracking } from "@/lib/tracking/types";
+import { ReviewStars } from "@/components/shared/tracking/review-stars";
 import { cn } from "@/lib/utils";
-
-const STAR_VALUES = [1, 2, 3, 4, 5];
 
 type ContractActionsProps = {
   tracking: ContractTracking;
@@ -41,6 +54,7 @@ export function ContractActions({ tracking }: ContractActionsProps) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isReviewing, setIsReviewing] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function handleStart() {
     setIsStarting(true);
@@ -60,6 +74,7 @@ export function ContractActions({ tracking }: ContractActionsProps) {
       toast.error("Escolha uma nota de 1 a 5 para avaliar.");
       return;
     }
+    setConfirmOpen(false);
     setIsReviewing(true);
     try {
       await submitReviewAction(tracking.orderId, {
@@ -142,43 +157,29 @@ export function ContractActions({ tracking }: ContractActionsProps) {
       {actions.canReview ? (
         <Card id="avaliacao" className="scroll-mt-4">
           <CardHeader>
-            <CardTitle className="text-base">Avalie o prestador</CardTitle>
+            <CardTitle className="text-base">
+              Avalie {tracking.counterpart.completeName}
+            </CardTitle>
             <CardDescription>
-              Conte como foi o serviço. Sua avaliação constrói a reputação do
-              profissional.
+              Serviço concluído
+              {tracking.evidence
+                ? ` em ${formatTrackingDateTime(tracking.evidence.completedAt)}`
+                : ""}
+              . Conte como foi sua experiência com o prestador.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div
-              className="flex gap-1"
-              role="radiogroup"
-              aria-label="Nota da avaliação"
-            >
-              {STAR_VALUES.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={rating === value}
-                  aria-label={`${value} de 5`}
-                  disabled={isReviewing}
-                  onClick={() => setRating(value)}
-                  className={cn(
-                    "rounded-md px-2 py-1 text-2xl transition",
-                    value <= rating ? "text-[#F2C94C]" : "text-muted-foreground/40",
-                    "hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring",
-                  )}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
+            <ReviewStars
+              rating={rating}
+              disabled={isReviewing}
+              onChange={setRating}
+            />
             <Textarea
               value={comment}
               maxLength={MAX_REVIEW_COMMENT_LENGTH}
               rows={3}
               disabled={isReviewing}
-              placeholder="Comentário opcional sobre o serviço."
+              placeholder="Conte como foi sua experiência com o prestador."
               aria-label="Comentário da avaliação"
               onChange={(event) => setComment(event.target.value)}
             />
@@ -186,17 +187,16 @@ export function ContractActions({ tracking }: ContractActionsProps) {
               {comment.length}/{MAX_REVIEW_COMMENT_LENGTH} caracteres
             </p>
             <Button
-              onClick={() => void handleReview()}
+              onClick={() => {
+                if (rating < 1) {
+                  toast.error("Escolha uma nota de 1 a 5 para avaliar.");
+                  return;
+                }
+                setConfirmOpen(true);
+              }}
               disabled={isReviewing || rating < 1}
             >
-              {isReviewing ? (
-                <>
-                  <Spinner className="size-4" />
-                  Enviando...
-                </>
-              ) : (
-                "Enviar avaliação"
-              )}
+              Enviar avaliação
             </Button>
           </CardContent>
         </Card>
@@ -206,12 +206,22 @@ export function ContractActions({ tracking }: ContractActionsProps) {
         <Card id="avaliacao" className="scroll-mt-4">
           <CardHeader>
             <CardTitle className="text-base">Avaliação realizada</CardTitle>
+            <CardDescription>
+              Enviada em {formatTrackingDateTime(tracking.review.createdAt)}{" "}
+              para {tracking.counterpart.completeName}.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p className="text-lg text-[#F2C94C]" aria-label={`Nota ${tracking.review.rating} de 5`}>
+            <p
+              className="text-lg text-[#F2C94C]"
+              aria-label={`Nota ${tracking.review.rating} de 5 — ${getReviewRatingLabel(tracking.review.rating)}`}
+            >
               {"★".repeat(tracking.review.rating)}
               <span className="text-muted-foreground/40">
                 {"★".repeat(5 - tracking.review.rating)}
+              </span>
+              <span className="ml-2 align-middle text-sm text-muted-foreground">
+                {getReviewRatingLabel(tracking.review.rating)}
               </span>
             </p>
             {tracking.review.comment ? (
@@ -224,6 +234,58 @@ export function ContractActions({ tracking }: ContractActionsProps) {
       <p className="text-center text-xs text-muted-foreground">
         Mensagens e suporte estarão disponíveis em breve.
       </p>
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!isReviewing) {
+            setConfirmOpen(open);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar avaliação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja enviar esta avaliação? Confira a nota e o comentário
+              antes de confirmar. Após o envio, talvez não seja possível
+              alterar a avaliação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <dl className="space-y-2 text-sm">
+            <div>
+              <dt className="text-muted-foreground">Nota</dt>
+              <dd className="font-medium text-foreground">
+                {rating} de 5 — {getReviewRatingLabel(rating)}
+              </dd>
+            </div>
+            {comment.trim() ? (
+              <div>
+                <dt className="text-muted-foreground">Comentário</dt>
+                <dd className="font-medium text-foreground">{comment.trim()}</dd>
+              </div>
+            ) : null}
+          </dl>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isReviewing}>
+              Voltar e editar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isReviewing}
+              onClick={() => void handleReview()}
+            >
+              {isReviewing ? (
+                <>
+                  <Spinner className="size-4" />
+                  Enviando...
+                </>
+              ) : (
+                "Confirmar avaliação"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -42,6 +42,18 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelado",
 };
 
+export const REVIEW_RATING_LABELS: Record<number, string> = {
+  1: "Muito ruim",
+  2: "Ruim",
+  3: "Regular",
+  4: "Bom",
+  5: "Excelente",
+};
+
+export function getReviewRatingLabel(rating: number): string {
+  return REVIEW_RATING_LABELS[rating] ?? `${rating} de 5`;
+}
+
 export function getContractStatusLabel(status: ContractStatus): string {
   return CONTRACT_STATUS_LABELS[status];
 }
