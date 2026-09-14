@@ -78,8 +78,15 @@ Notas:
 
 - `feeAmount`/`netAmount` seguem `docs/decisions/payments.md` (calculados no
   backend, nunca no frontend).
+- **Recorte por papel (AppSec JTT-105):** serializar `feeAmount`/`netAmount`
+  apenas para `PROVIDER`; a resposta para `CLIENT` deve omiti-los. O frontend
+  oculta o líquido por papel, mas ocultar na UI não é controle de acesso —
+  o enforcement real é não enviar os campos.
 - `evidence.photos` usa URLs públicas/presigned como em
-  `docs/decisions/order-photos.md`.
+  `docs/decisions/order-photos.md` — aceitar apenas esquemas `https` (ou
+  presigned do MinIO); o frontend renderiza com allowlist
+  (`https|blob|data:image`) e `referrerPolicy="no-referrer"`, mas a validação
+  de upload no `POST .../finish` é obrigatória.
 - `review` pode ser `null` (ainda não avaliada); o frontend lê
   `GET /reviews/service-order/:orderId` como fallback — esse endpoint já
   existe.

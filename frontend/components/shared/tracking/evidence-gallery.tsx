@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatTrackingDateTime } from "@/lib/tracking/labels";
+import { toSafeImageUrl } from "@/lib/tracking/image";
 import type {
   ContractTracking,
   TrackingEvidence,
@@ -72,8 +73,9 @@ export function EvidenceGallery({ tracking, evidence }: EvidenceGalleryProps) {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={photo.url}
+                    src={toSafeImageUrl(photo.url)}
                     alt=""
+                    referrerPolicy="no-referrer"
                     className="size-16 object-cover"
                   />
                 </button>
