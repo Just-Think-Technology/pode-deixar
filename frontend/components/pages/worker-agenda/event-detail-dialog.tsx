@@ -109,6 +109,12 @@ function AgendaEventDetailContent({
         </div>
       ) : null}
 
+      <Link
+        href={`/worker/orders/${event.order_id}/tracking`}
+        className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+      >
+        Acompanhar contratação
+      </Link>
       {event.order_status === "IN_PROGRESS" ? (
         <Link
           href={`/worker/orders/${event.order_id}/complete`}
