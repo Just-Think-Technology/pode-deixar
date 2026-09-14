@@ -13,6 +13,7 @@ import {
 } from "@/api/tracking";
 import {
   getAccessToken,
+  getAuthSession,
   refreshAuthSession,
 } from "@/lib/auth/session.server";
 import type {
@@ -58,6 +59,22 @@ function revalidateTracking(orderId: string): void {
   revalidatePath(`/worker/orders/${orderId}/tracking`);
 }
 
+// Fail-fast role assertion — the backend remains the real enforcement,
+// this only surfaces a clear message before the round trip.
+async function requireTrackingRole(role: TrackingRole): Promise<void> {
+  const session = await getAuthSession();
+  if (!session) {
+    throw new Error("Sessão expirada. Faça login novamente.");
+  }
+  if (session.user.role !== role) {
+    throw new Error(
+      role === "PROVIDER"
+        ? "Apenas o prestador pode executar esta ação."
+        : "Apenas o cliente pode executar esta ação.",
+    );
+  }
+}
+
 export async function getContractTrackingAction(
   orderId: string,
   role: TrackingRole,
@@ -84,6 +101,8 @@ export async function getContractTrackingAction(
 export async function startServiceAction(
   orderId: string,
 ): Promise<ContractTracking> {
+  await requireTrackingRole("PROVIDER");
+
   if (USE_MOCK) {
     const tracking = mockStartService(orderId);
     revalidateTracking(orderId);
@@ -102,6 +121,8 @@ export async function finishServiceAction(
   photoCount: number,
   observations: string,
 ): Promise<ContractTracking> {
+  await requireTrackingRole("PROVIDER");
+
   const normalized = observations.trim() ? observations.trim() : null;
 
   if (USE_MOCK) {
@@ -124,6 +145,8 @@ export async function submitReviewAction(
   orderId: string,
   input: SubmitReviewInput,
 ): Promise<SubmitReviewResult> {
+  await requireTrackingRole("CLIENT");
+
   const validation = validateReviewInput(input);
   if (!validation.ok) {
     const firstError = Object.values(validation.errors)[0];
