@@ -192,6 +192,13 @@ export function mockFindPendingPaymentByOrder(
   return null;
 }
 
+export function mockFindPaymentsByOrder(serviceOrderId: string): Payment[] {
+  return [...getStore().values()]
+    .filter((stored) => stored.serviceOrderId === serviceOrderId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map(toPublicPayment);
+}
+
 export function mockConfirmPayment(paymentId: string): PaymentStatusResponse {
   const stored = getStore().get(paymentId);
   if (!stored) {

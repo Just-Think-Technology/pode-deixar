@@ -13,7 +13,7 @@ case "$ENV_KEY" in
     FILE=docker-compose.staging.yml
     ENV_FILE=.env.staging
     ;;
-  production
+  production)
     FILE=docker-compose.production.yml
     ENV_FILE=.env.production
     ;;
