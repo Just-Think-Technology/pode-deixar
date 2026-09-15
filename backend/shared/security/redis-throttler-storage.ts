@@ -11,6 +11,12 @@ interface ThrottlerStorageRecord {
   timeToBlockExpire: number;
 }
 
+const MS_PER_SECOND = 1000;
+
+function toSeconds(ms: number): number {
+  return Math.ceil(ms / MS_PER_SECOND);
+}
+
 @Injectable()
 export class RedisThrottlerStorage implements ThrottlerStorage {
   private client: RedisClientType;
@@ -33,38 +39,23 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
     throttlerName: string,
   ): Promise<ThrottlerStorageRecord> {
     const prefixedKey = `${this.prefix}${key}:${throttlerName}`;
-    const ttlSecs = Math.ceil(ttl / 1000);
+    const ttlSecs = toSeconds(ttl);
 
     try {
-      // SET NX EX creates the key with its TTL atomically and only increments
-      // when the key already exists, avoiding a race on the first hit.
-      const created = await this.client.set(prefixedKey, '1', {
-        EX: ttlSecs,
-        NX: true,
-      });
-      const current =
-        created === 'OK' ? 1 : await this.client.incr(prefixedKey);
-
-      const isBlocked = current > limit;
-      let timeToBlockExpire = 0;
-      if (isBlocked) {
-        timeToBlockExpire = blockDuration;
-        if (blockDuration > 0) {
-          const blockSecs = Math.ceil(blockDuration / 1000);
-          await this.client.expire(
-            prefixedKey,
-            Math.max(ttlSecs, blockSecs),
-          );
-        }
-      }
-
-      const ttlMs = await this.client.ttl(prefixedKey);
-      const timeToExpire = ttlMs > 0 ? ttlMs * 1000 : ttl;
+      const current = await this.recordHit(prefixedKey, ttlSecs);
+      const timeToBlockExpire = await this.applyBlock(
+        prefixedKey,
+        current,
+        limit,
+        ttlSecs,
+        blockDuration,
+      );
+      const timeToExpire = await this.readExpiry(prefixedKey, ttl);
 
       return {
         totalHits: current,
         timeToExpire,
-        isBlocked,
+        isBlocked: current > limit,
         timeToBlockExpire,
       };
     } catch (error) {
@@ -78,5 +69,43 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
         timeToBlockExpire: blockDuration,
       };
     }
+  }
+
+  // SET NX EX creates the key with its TTL atomically and only increments
+  // when the key already exists, avoiding a race on the first hit.
+  private async recordHit(
+    prefixedKey: string,
+    ttlSecs: number,
+  ): Promise<number> {
+    const created = await this.client.set(prefixedKey, '1', {
+      EX: ttlSecs,
+      NX: true,
+    });
+    return created === 'OK' ? 1 : this.client.incr(prefixedKey);
+  }
+
+  private async applyBlock(
+    prefixedKey: string,
+    current: number,
+    limit: number,
+    ttlSecs: number,
+    blockDuration: number,
+  ): Promise<number> {
+    if (current <= limit) {
+      return 0;
+    }
+    if (blockDuration > 0) {
+      const blockSecs = toSeconds(blockDuration);
+      await this.client.expire(prefixedKey, Math.max(ttlSecs, blockSecs));
+    }
+    return blockDuration;
+  }
+
+  private async readExpiry(
+    prefixedKey: string,
+    ttl: number,
+  ): Promise<number> {
+    const ttlMs = await this.client.ttl(prefixedKey);
+    return ttlMs > 0 ? ttlMs * MS_PER_SECOND : ttl;
   }
 }
