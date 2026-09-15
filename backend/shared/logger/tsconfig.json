@@ -14,5 +14,5 @@
     "resolvePackageJsonExports": false,
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
-  "include": ["index.ts"]
+  "include": ["index.ts", "response-logger.interceptor.ts", "bootstrap.ts"]
 }
