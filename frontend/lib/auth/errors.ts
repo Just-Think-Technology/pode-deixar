@@ -12,16 +12,50 @@ export function getApiErrorMessage(error: unknown): string {
   return "Ocorreu um erro inesperado. Tente novamente.";
 }
 
+// Message keywords mapping backend field names to form fields.
+// The message is lowercased before matching; keep both compact and
+// snake_case spellings where the backend varies.
+const FIELD_MATCHERS: ReadonlyArray<{ field: string; keywords: string[] }> = [
+  { field: "complete_name", keywords: ["complete_name"] },
+  { field: "password", keywords: ["password", "weak password"] },
+  { field: "email", keywords: ["email"] },
+  { field: "phone", keywords: ["phone"] },
+  { field: "postal_code", keywords: ["postal_code"] },
+  { field: "bio", keywords: ["bio"] },
+  { field: "hourlyRate", keywords: ["hourly", "hourlyrate"] },
+  { field: "skills", keywords: ["skills"] },
+  { field: "portfolio", keywords: ["portfolio"] },
+  { field: "title", keywords: ["title"] },
+  { field: "description", keywords: ["description"] },
+  { field: "categoryId", keywords: ["categoryid", "category_id"] },
+  { field: "budgetMin", keywords: ["budgetmin", "budget_min"] },
+  { field: "budgetMax", keywords: ["budgetmax", "budget_max"] },
+  {
+    field: "isAvailable",
+    keywords: ["isavailable", "is_available", "available"],
+  },
+];
+
+function matchBadRequestFields(
+  msg: string,
+  message: string,
+): Record<string, string> {
+  const fieldErrors: Record<string, string> = {};
+  for (const { field, keywords } of FIELD_MATCHERS) {
+    if (keywords.some((keyword) => msg.includes(keyword))) {
+      fieldErrors[field] = message;
+    }
+  }
+  return fieldErrors;
+}
+
 export function mapApiErrorToFieldErrors(
   error: unknown,
 ): Record<string, string> | null {
   if (!(error instanceof ApiError)) return null;
 
-  const fieldErrors: Record<string, string> = {};
-
   if (error.status === 409) {
-    fieldErrors.email = error.message;
-    return fieldErrors;
+    return { email: error.message };
   }
 
   const msg = error.message.toLowerCase();
@@ -31,51 +65,7 @@ export function mapApiErrorToFieldErrors(
   }
 
   if (error.status === 400) {
-    if (msg.includes("complete_name")) {
-      fieldErrors.complete_name = error.message;
-    }
-    if (msg.includes("password") || msg.includes("weak password")) {
-      fieldErrors.password = error.message;
-    }
-    if (msg.includes("email")) {
-      fieldErrors.email = error.message;
-    }
-    if (msg.includes("phone")) {
-      fieldErrors.phone = error.message;
-    }
-    if (msg.includes("postal_code")) {
-      fieldErrors.postal_code = error.message;
-    }
-    if (msg.includes("bio")) {
-      fieldErrors.bio = error.message;
-    }
-    if (msg.includes("hourly") || msg.includes("hourlyrate")) {
-      fieldErrors.hourlyRate = error.message;
-    }
-    if (msg.includes("skills")) {
-      fieldErrors.skills = error.message;
-    }
-    if (msg.includes("portfolio")) {
-      fieldErrors.portfolio = error.message;
-    }
-    if (msg.includes("title")) {
-      fieldErrors.title = error.message;
-    }
-    if (msg.includes("description")) {
-      fieldErrors.description = error.message;
-    }
-    if (msg.includes("categoryid") || msg.includes("category_id")) {
-      fieldErrors.categoryId = error.message;
-    }
-    if (msg.includes("budgetmin") || msg.includes("budget_min")) {
-      fieldErrors.budgetMin = error.message;
-    }
-    if (msg.includes("budgetmax") || msg.includes("budget_max")) {
-      fieldErrors.budgetMax = error.message;
-    }
-    if (msg.includes("isavailable") || msg.includes("is_available") || msg.includes("available")) {
-      fieldErrors.isAvailable = error.message;
-    }
+    const fieldErrors = matchBadRequestFields(msg, error.message);
     if (Object.keys(fieldErrors).length > 0) {
       return fieldErrors;
     }

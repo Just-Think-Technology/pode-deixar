@@ -9,6 +9,12 @@ import type {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const TITLE_MIN_LENGTH = 3;
+const TITLE_MAX_LENGTH = 200;
+const DESCRIPTION_MIN_LENGTH = 10;
+const DESCRIPTION_MAX_LENGTH = 2000;
+const STATE_LENGTH = 2;
+
 function fail(errors: Record<string, string>): ValidationResult {
   return { ok: false, errors };
 }
@@ -51,29 +57,40 @@ export function parseCreateServiceOrderForm(
   };
 }
 
-export function validateCreateServiceOrder(
-  payload: CreateServiceOrderPayload,
-): ValidationResult {
+function validateTitle(title: string | undefined): string | undefined {
+  const value = title?.trim() ?? "";
+  if (value.length < TITLE_MIN_LENGTH || value.length > TITLE_MAX_LENGTH) {
+    return "Título deve ter entre 3 e 200 caracteres";
+  }
+  return undefined;
+}
+
+function validateDescription(description: string | undefined): string | undefined {
+  const value = description?.trim() ?? "";
+  if (
+    value.length < DESCRIPTION_MIN_LENGTH ||
+    value.length > DESCRIPTION_MAX_LENGTH
+  ) {
+    return "Descrição deve ter entre 10 e 2000 caracteres";
+  }
+  return undefined;
+}
+
+function validateCategoryId(categoryId: string | undefined): string | undefined {
+  const value = categoryId?.trim() ?? "";
+  if (!value) {
+    return "Selecione uma categoria";
+  }
+  if (!UUID_REGEX.test(value)) {
+    return "Categoria inválida";
+  }
+  return undefined;
+}
+
+function validateAddress(
+  address: CreateServiceOrderPayload["address"],
+): Record<string, string> {
   const errors: Record<string, string> = {};
-
-  const title = payload.title?.trim() ?? "";
-  if (title.length < 3 || title.length > 200) {
-    errors.title = "Título deve ter entre 3 e 200 caracteres";
-  }
-
-  const description = payload.description?.trim() ?? "";
-  if (description.length < 10 || description.length > 2000) {
-    errors.description = "Descrição deve ter entre 10 e 2000 caracteres";
-  }
-
-  const categoryId = payload.categoryId?.trim() ?? "";
-  if (!categoryId) {
-    errors.categoryId = "Selecione uma categoria";
-  } else if (!UUID_REGEX.test(categoryId)) {
-    errors.categoryId = "Categoria inválida";
-  }
-
-  const address = payload.address;
   if (!address?.street?.trim()) {
     errors.street = "Informe o logradouro";
   }
@@ -85,22 +102,22 @@ export function validateCreateServiceOrder(
   }
   if (!address?.state?.trim()) {
     errors.state = "Informe a UF";
-  } else if (address.state.trim().length !== 2) {
+  } else if (address.state.trim().length !== STATE_LENGTH) {
     errors.state = "UF deve ter 2 letras";
   }
+  return errors;
+}
 
-  if (payload.budgetMin != null) {
-    if (payload.budgetMin < 0) {
-      errors.budgetMin = "Orçamento mínimo deve ser maior ou igual a zero";
-    }
+function validateBudgets(
+  payload: CreateServiceOrderPayload,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (payload.budgetMin != null && payload.budgetMin < 0) {
+    errors.budgetMin = "Orçamento mínimo deve ser maior ou igual a zero";
   }
-
-  if (payload.budgetMax != null) {
-    if (payload.budgetMax <= 0) {
-      errors.budgetMax = "Orçamento máximo deve ser maior que zero";
-    }
+  if (payload.budgetMax != null && payload.budgetMax <= 0) {
+    errors.budgetMax = "Orçamento máximo deve ser maior que zero";
   }
-
   if (
     payload.budgetMin != null &&
     payload.budgetMax != null &&
@@ -108,6 +125,29 @@ export function validateCreateServiceOrder(
   ) {
     errors.budgetMax =
       "Orçamento máximo deve ser maior ou igual ao orçamento mínimo";
+  }
+  return errors;
+}
+
+export function validateCreateServiceOrder(
+  payload: CreateServiceOrderPayload,
+): ValidationResult {
+  const errors: Record<string, string> = {
+    ...validateAddress(payload.address),
+    ...validateBudgets(payload),
+  };
+
+  const titleError = validateTitle(payload.title);
+  if (titleError) {
+    errors.title = titleError;
+  }
+  const descriptionError = validateDescription(payload.description);
+  if (descriptionError) {
+    errors.description = descriptionError;
+  }
+  const categoryError = validateCategoryId(payload.categoryId);
+  if (categoryError) {
+    errors.categoryId = categoryError;
   }
 
   return Object.keys(errors).length > 0 ? fail(errors) : { ok: true };

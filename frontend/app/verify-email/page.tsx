@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState, type FormEvent } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { resendVerification } from "@/api/register/resend-verification";
@@ -17,6 +17,81 @@ import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/auth/errors";
 
 type VerifyStatus = "idle" | "loading" | "success" | "error";
+
+function VerificationStatus({
+  status,
+  message,
+}: {
+  status: VerifyStatus;
+  message: string | null;
+}) {
+  if (status === "loading") {
+    return (
+      <p className="text-center text-sm text-muted-foreground">Verificando...</p>
+    );
+  }
+  if (status === "success" && message) {
+    return <p className="text-center text-sm text-primary">{message}</p>;
+  }
+  if (status === "error" && message) {
+    return (
+      <p className="text-center text-sm text-destructive" role="alert">
+        {message}
+      </p>
+    );
+  }
+  return null;
+}
+
+function ResendVerificationForm({
+  loading,
+  onResend,
+}: {
+  loading: boolean;
+  onResend: (email: string) => void;
+}) {
+  return (
+    <div className="border-t pt-6">
+      <p className="mb-4 text-center text-sm text-muted-foreground">
+        Não recebeu o e-mail? Reenvie o link:
+      </p>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const email = String(
+            new FormData(event.currentTarget).get("email") ?? "",
+          ).trim();
+          if (!email) {
+            toast.error("Informe seu e-mail");
+            return;
+          }
+          onResend(email);
+        }}
+      >
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="email">E-mail</FieldLabel>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="seu@email.com"
+            />
+          </Field>
+          <Button
+            type="submit"
+            variant="secondary"
+            className="w-full"
+            disabled={loading}
+          >
+            {loading ? "Enviando..." : "Reenviar verificação"}
+          </Button>
+        </FieldGroup>
+      </form>
+    </div>
+  );
+}
 
 function VerifyEmailContent() {
     const router = useRouter();
@@ -50,16 +125,7 @@ function VerifyEmailContent() {
         }
     }, [token, runVerify]);
 
-    async function handleResend(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        const fd = new FormData(event.currentTarget);
-        const email = String(fd.get("email") ?? "").trim();
-
-        if (!email) {
-            toast.error("Informe seu e-mail");
-            return;
-        }
-
+    async function handleResendEmail(email: string) {
         setResendLoading(true);
         try {
             const data = await resendVerification({ email });
@@ -90,21 +156,7 @@ function VerifyEmailContent() {
                     </CardHeader>
 
                     <CardContent className="space-y-6 px-6 pb-6 sm:px-8 sm:pb-8">
-                        {status === "loading" && (
-                            <p className="text-center text-sm text-muted-foreground">
-                                Verificando...
-                            </p>
-                        )}
-
-                        {status === "success" && message && (
-                            <p className="text-center text-sm text-primary">{message}</p>
-                        )}
-
-                        {status === "error" && message && (
-                            <p className="text-center text-sm text-destructive" role="alert">
-                                {message}
-                            </p>
-                        )}
+                        <VerificationStatus status={status} message={message} />
 
                         {!token && (
                             <form
@@ -143,33 +195,10 @@ function VerifyEmailContent() {
                             </Button>
                         )}
 
-                        <div className="border-t pt-6">
-                            <p className="mb-4 text-center text-sm text-muted-foreground">
-                                Não recebeu o e-mail? Reenvie o link:
-                            </p>
-                            <form onSubmit={handleResend}>
-                                <FieldGroup>
-                                    <Field>
-                                        <FieldLabel htmlFor="email">E-mail</FieldLabel>
-                                        <Input
-                                            id="email"
-                                            name="email"
-                                            type="email"
-                                            required
-                                            placeholder="seu@email.com"
-                                        />
-                                    </Field>
-                                    <Button
-                                        type="submit"
-                                        variant="secondary"
-                                        className="w-full"
-                                        disabled={resendLoading}
-                                    >
-                                        {resendLoading ? "Enviando..." : "Reenviar verificação"}
-                                    </Button>
-                                </FieldGroup>
-                            </form>
-                        </div>
+                        <ResendVerificationForm
+                            loading={resendLoading}
+                            onResend={handleResendEmail}
+                        />
 
                         <p className="text-center text-sm text-muted-foreground">
                             <Link href="/login/client" className="font-semibold text-primary hover:underline">
