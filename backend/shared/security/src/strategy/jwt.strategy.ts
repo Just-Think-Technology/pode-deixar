@@ -8,7 +8,12 @@ import { PrismaService } from "@pode-deixar/prisma";
 import {
   assertTokenPayload,
   checkTokenRevocation,
+  TokenPayload,
 } from "../token-validation";
+
+interface StrategyPayload extends TokenPayload {
+  email?: unknown;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -25,7 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   // --- Public API ---
 
-  async validate(payload: any) {
+  async validate(payload: StrategyPayload) {
     assertTokenPayload(payload);
     await checkTokenRevocation(
       (jti) => this.prisma.tokenBlacklist.findUnique({ where: { jti } }),

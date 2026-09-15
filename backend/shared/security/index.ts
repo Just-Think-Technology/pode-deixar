@@ -8,6 +8,7 @@ export { resolverErroPrisma } from './src/resolver-erro-prisma';
 export type { ErroPrismaResolvido } from './src/resolver-erro-prisma';
 export { JwtAuthGuard } from './src/guards/jwt-auth.guard';
 export { JwtStrategy } from './src/strategy/jwt.strategy';
+export type { AuthenticatedRequest } from './src/strategy/authenticated-request';
 export { AuthSharedModule } from './src/modules/auth-shared.module';
 export type { AuthSharedModuleOptions } from './src/modules/auth-shared.module';
 export { RolesGuard } from './src/guards/roles.guard';

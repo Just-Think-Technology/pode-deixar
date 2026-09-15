@@ -10,7 +10,10 @@ import { randomUUID } from "crypto";
 import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { PrismaService } from "@pode-deixar/prisma";
 import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
-import { PaymentGateway } from "../gateway/payment-gateway.interface";
+import {
+  GatewayPayment,
+  PaymentGateway,
+} from "../gateway/payment-gateway.interface";
 import { PaymentLoggerService } from "./payment-logger.service";
 import {
   CreatePaymentDto,
@@ -31,6 +34,16 @@ const MOCK_GATEWAY = "MOCK";
 const DEFAULT_PLATFORM_FEE_RATE = 0.1;
 
 const BRL_CURRENCY = "BRL";
+
+export const WEBHOOK_REJECTED = "Webhook rejeitado";
+
+type OrderForPayment = Prisma.ServiceOrderGetPayload<{
+  include: { proposals: true };
+}>;
+
+type PaymentForConfirmation = Prisma.PaymentGetPayload<{
+  include: { serviceOrder: { select: { scheduledAt: true } } };
+}>;
 
 interface WebhookEvent {
   gateway: string;
@@ -373,78 +386,26 @@ export class PaymentsService {
     return result;
   }
 
+  /**
+   * Creates a PENDING payment for an order owned by the client.
+   * Derives the amount from the agreed price (or latest accepted proposal),
+   * validates currency and schedule, and returns the existing payment when
+   * the idempotency key was already used.
+   */
   async create(userId: string, dto: CreatePaymentDto) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: dto.serviceOrderId },
-      include: {
-        proposals: {
-          where: { status: "ACCEPTED" },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
-    });
+    const order = await this.findOrderOrThrow(dto.serviceOrderId);
+    this.assertOrderBelongsToClient(order, userId);
+    this.assertOrderPayable(order);
 
-    if (!order) {
-      throw new NotFoundException(
-        `Pedido ${dto.serviceOrderId} não encontrado`,
-      );
-    }
-
-    if (order.clientId !== userId) {
-      throw new ForbiddenException("Este pedido não pertence a este cliente");
-    }
-
-    if (order.status === "CANCELLED") {
-      throw new BadRequestException(
-        "Não é possível criar pagamento para um pedido cancelado",
-      );
-    }
-
-    const amount = order.agreedPrice ?? order.proposals[0]?.price ?? null;
-
-    if (amount === null) {
-      throw new BadRequestException(
-        "Pedido não possui preço definido (proposta aceita não encontrada)",
-      );
-    }
-
-    const amountValue = Number(amount);
-    if (!Number.isFinite(amountValue) || amountValue <= 0) {
-      throw new BadRequestException("Valor do pagamento inválido");
-    }
-
-    const currency = dto.currency ?? "BRL";
-    if (!SUPPORTED_CURRENCIES.includes(currency)) {
-      throw new BadRequestException(
-        `Moeda não suportada. Use: ${SUPPORTED_CURRENCIES.join(", ")}`,
-      );
-    }
-
-    const scheduledAt = new Date(dto.scheduledAt);
-    const scheduledEndAt = dto.scheduledEndAt
-      ? new Date(dto.scheduledEndAt)
-      : null;
-
-    if (Number.isNaN(scheduledAt.getTime())) {
-      throw new BadRequestException("Data de agendamento inválida");
-    }
-
-    if (scheduledEndAt && Number.isNaN(scheduledEndAt.getTime())) {
-      throw new BadRequestException("Data de término do agendamento inválida");
-    }
-
-    if (scheduledEndAt && scheduledEndAt <= scheduledAt) {
-      throw new BadRequestException(
-        "O término do agendamento deve ser posterior ao início",
-      );
-    }
+    const amountValue = this.resolveOrderAmount(order);
+    const currency = dto.currency ?? BRL_CURRENCY;
+    this.assertSupportedCurrency(currency);
+    const { scheduledAt, scheduledEndAt } = this.parseSchedule(dto);
 
     const existing = await this.findPaymentByIdempotency(
       order.id,
       dto.idempotencyKey,
     );
-
     if (existing) {
       return existing;
     }
@@ -454,28 +415,16 @@ export class PaymentsService {
     // Always fill the idempotency key; the NOT NULL/unique migration is owned elsewhere.
     const idempotencyKey = dto.idempotencyKey ?? randomUUID();
 
-    const [payment] = await this.prisma.$transaction([
-      this.prisma.payment.create({
-        data: {
-          serviceOrderId: order.id,
-          amount: amountValue,
-          currency,
-          method: dto.method,
-          status: "PENDING",
-          feeRate: fees.feeRate,
-          feeAmount: fees.feeAmount,
-          netAmount: fees.netAmount,
-          idempotencyKey,
-        },
-      }),
-      this.prisma.serviceOrder.update({
-        where: { id: order.id },
-        data: {
-          scheduledAt,
-          scheduledEndAt,
-        },
-      }),
-    ]);
+    const payment = await this.persistPendingPayment({
+      order,
+      amountValue,
+      currency,
+      method: dto.method,
+      scheduledAt,
+      scheduledEndAt,
+      idempotencyKey,
+      fees,
+    });
 
     this.logger.logPaymentCreated(
       payment.id,
@@ -487,6 +436,120 @@ export class PaymentsService {
     );
 
     return payment;
+  }
+
+  private async persistPendingPayment(input: {
+    order: OrderForPayment;
+    amountValue: number;
+    currency: string;
+    method: PaymentMethod;
+    scheduledAt: Date;
+    scheduledEndAt: Date | null;
+    idempotencyKey: string;
+    fees: { feeRate: number; feeAmount: number; netAmount: number };
+  }) {
+    const [payment] = await this.prisma.$transaction([
+      this.prisma.payment.create({
+        data: {
+          serviceOrderId: input.order.id,
+          amount: input.amountValue,
+          currency: input.currency,
+          method: input.method,
+          status: "PENDING",
+          feeRate: input.fees.feeRate,
+          feeAmount: input.fees.feeAmount,
+          netAmount: input.fees.netAmount,
+          idempotencyKey: input.idempotencyKey,
+        },
+      }),
+      this.prisma.serviceOrder.update({
+        where: { id: input.order.id },
+        data: {
+          scheduledAt: input.scheduledAt,
+          scheduledEndAt: input.scheduledEndAt,
+        },
+      }),
+    ]);
+    return payment;
+  }
+
+  private async findOrderOrThrow(serviceOrderId: string) {
+    const order = await this.prisma.serviceOrder.findUnique({
+      where: { id: serviceOrderId },
+      include: {
+        proposals: {
+          where: { status: "ACCEPTED" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    });
+    if (!order) {
+      throw new NotFoundException(`Pedido ${serviceOrderId} não encontrado`);
+    }
+    return order;
+  }
+
+  private assertOrderBelongsToClient(
+    order: OrderForPayment,
+    userId: string,
+  ): void {
+    if (order.clientId !== userId) {
+      throw new ForbiddenException("Este pedido não pertence a este cliente");
+    }
+  }
+
+  private assertOrderPayable(order: OrderForPayment): void {
+    if (order.status === "CANCELLED") {
+      throw new BadRequestException(
+        "Não é possível criar pagamento para um pedido cancelado",
+      );
+    }
+  }
+
+  private assertSupportedCurrency(currency: string): void {
+    if (!(SUPPORTED_CURRENCIES as readonly string[]).includes(currency)) {
+      throw new BadRequestException(
+        `Moeda não suportada. Use: ${SUPPORTED_CURRENCIES.join(", ")}`,
+      );
+    }
+  }
+
+  private resolveOrderAmount(order: OrderForPayment): number {
+    const amount = order.agreedPrice ?? order.proposals[0]?.price ?? null;
+    if (amount === null) {
+      throw new BadRequestException(
+        "Pedido não possui preço definido (proposta aceita não encontrada)",
+      );
+    }
+    const amountValue = Number(amount);
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      throw new BadRequestException("Valor do pagamento inválido");
+    }
+    return amountValue;
+  }
+
+  private parseSchedule(dto: CreatePaymentDto): {
+    scheduledAt: Date;
+    scheduledEndAt: Date | null;
+  } {
+    const scheduledAt = new Date(dto.scheduledAt);
+    const scheduledEndAt = dto.scheduledEndAt
+      ? new Date(dto.scheduledEndAt)
+      : null;
+
+    if (Number.isNaN(scheduledAt.getTime())) {
+      throw new BadRequestException("Data de agendamento inválida");
+    }
+    if (scheduledEndAt && Number.isNaN(scheduledEndAt.getTime())) {
+      throw new BadRequestException("Data de término do agendamento inválida");
+    }
+    if (scheduledEndAt && scheduledEndAt <= scheduledAt) {
+      throw new BadRequestException(
+        "O término do agendamento deve ser posterior ao início",
+      );
+    }
+    return { scheduledAt, scheduledEndAt };
   }
 
   private async findPaymentByIdempotency(
@@ -563,34 +626,36 @@ export class PaymentsService {
     };
   }
 
+  /**
+   * Confirms a payment from the mock gateway webhook.
+   * Duplicate events return the current payment without mutating anything.
+   */
   async confirmPayment(dto: PaymentWebhookDto): Promise<WebhookResult> {
     const alreadyProcessed = await this.findProcessedEvent(
       MOCK_GATEWAY,
       dto.eventId,
     );
-
     if (alreadyProcessed) {
-      this.logger.logWebhookReceived(
+      return this.returnDuplicateWebhook(
         dto.paymentId,
-        null,
-        MOCK_GATEWAY,
         dto.eventId,
-        "duplicado",
         "Evento já processado anteriormente",
-      );
-      return this.returnIdempotentPayment(
-        dto.paymentId,
         "Pagamento confirmado anteriormente (evento duplicado)",
       );
     }
 
+    const payment = await this.findPaymentForWebhookOrThrow(dto);
+    this.validateMockWebhookTransition(payment, dto);
+    return this.confirmPaidTransaction(payment, dto);
+  }
+
+  private async findPaymentForWebhookOrThrow(dto: PaymentWebhookDto) {
     const payment = await this.prisma.payment.findUnique({
       where: { id: dto.paymentId },
       include: {
         serviceOrder: { select: { scheduledAt: true } },
       },
     });
-
     if (!payment) {
       this.logger.logPaymentError(
         dto.paymentId,
@@ -598,9 +663,15 @@ export class PaymentsService {
         "Pagamento não encontrado",
         { eventId: dto.eventId, gateway: MOCK_GATEWAY },
       );
-      throw new NotFoundException("Webhook rejeitado");
+      throw new NotFoundException(WEBHOOK_REJECTED);
     }
+    return payment;
+  }
 
+  private validateMockWebhookTransition(
+    payment: PaymentForConfirmation,
+    dto: PaymentWebhookDto,
+  ): void {
     try {
       this.verifyGatewayAmount(payment.amount, dto.amount);
 
@@ -620,11 +691,16 @@ export class PaymentsService {
         reason,
       );
       if (error instanceof BadRequestException) {
-        throw new BadRequestException("Webhook rejeitado");
+        throw new BadRequestException(WEBHOOK_REJECTED);
       }
       throw error;
     }
+  }
 
+  private async confirmPaidTransaction(
+    payment: PaymentForConfirmation,
+    dto: PaymentWebhookDto,
+  ): Promise<WebhookResult> {
     const transaction = await this.attemptTransaction(
       {
         gateway: MOCK_GATEWAY,
@@ -644,16 +720,10 @@ export class PaymentsService {
     );
 
     if (transaction.duplicate) {
-      this.logger.logWebhookReceived(
+      return this.returnDuplicateWebhook(
         dto.paymentId,
-        null,
-        MOCK_GATEWAY,
         dto.eventId,
-        "duplicado",
         "Evento duplicado processado concorrentemente",
-      );
-      return this.returnIdempotentPayment(
-        dto.paymentId,
         "Evento duplicado processado concorrentemente",
       );
     }
@@ -686,50 +756,119 @@ export class PaymentsService {
     return { payment: transaction.payment };
   }
 
+  private async returnDuplicateWebhook(
+    paymentId: string,
+    eventId: string,
+    logNotice: string,
+    returnNotice: string,
+  ): Promise<WebhookResult> {
+    this.logger.logWebhookReceived(
+      paymentId,
+      null,
+      MOCK_GATEWAY,
+      eventId,
+      "duplicado",
+      logNotice,
+    );
+    return this.returnIdempotentPayment(paymentId, returnNotice);
+  }
+
+  /**
+   * Applies a gateway webhook: verifies signature, resolves the local
+   * payment, validates the status transition, and persists it exactly once.
+   */
   async handleGatewayWebhook(
     gateway: PaymentGateway,
     headers: Record<string, string | undefined>,
     body: unknown,
   ): Promise<WebhookResult> {
-    if (!gateway.validateWebhook(headers, body)) {
-      let logEventId = "desconhecido";
-      try {
-        logEventId = gateway.extractEventId(headers, body);
-      } catch {
-        // Generic log fallback to avoid leaking details; the invalid ID is already the rejection reason.
-      }
-      this.logger.logAuthenticationFailure("assinatura", null, null, {
-        eventId: logEventId,
-        gateway: gateway.name.toLowerCase(),
-      });
-      throw new ForbiddenException("Webhook rejeitado");
-    }
-
+    this.assertValidSignature(gateway, headers, body);
     const eventId = gateway.extractEventId(headers, body);
 
     const alreadyProcessed = await this.findProcessedEvent(
       gateway.name,
       eventId,
     );
-
     if (alreadyProcessed) {
-      this.logger.logWebhookReceived(
-        alreadyProcessed.paymentId,
-        null,
-        gateway.name,
+      return this.returnProcessedDuplicate(
+        gateway,
         eventId,
-        "duplicado",
-        "Webhook já processado (idempotente)",
-      );
-      return this.returnIdempotentPayment(
         alreadyProcessed.paymentId,
         "Webhook já processado (idempotente)",
       );
     }
 
-    let gatewayPaymentId: string;
+    const gatewayPaymentId = this.extractGatewayPaymentIdOrThrow(
+      gateway,
+      body,
+      eventId,
+    );
+    const gatewayPayment = await gateway.getPayment(gatewayPaymentId);
+    const payment = await this.findLocalPaymentOrThrow(
+      gateway,
+      gatewayPayment,
+      eventId,
+    );
+    const status = this.resolveGatewayStatus(
+      payment,
+      gateway,
+      gatewayPayment,
+      eventId,
+    );
+    return this.applyGatewayTransaction(
+      payment,
+      gateway,
+      eventId,
+      gatewayPayment,
+      status,
+    );
+  }
+
+  private async returnProcessedDuplicate(
+    gateway: PaymentGateway,
+    eventId: string,
+    paymentId: string | null,
+    notice: string,
+  ): Promise<WebhookResult> {
+    this.logger.logWebhookReceived(
+      paymentId,
+      null,
+      gateway.name,
+      eventId,
+      "duplicado",
+      notice,
+    );
+    return this.returnIdempotentPayment(paymentId, notice);
+  }
+
+  private assertValidSignature(
+    gateway: PaymentGateway,
+    headers: Record<string, string | undefined>,
+    body: unknown,
+  ): void {
+    if (gateway.validateWebhook(headers, body)) {
+      return;
+    }
+    let logEventId = "desconhecido";
     try {
-      gatewayPaymentId = gateway.extractGatewayPaymentId(body);
+      logEventId = gateway.extractEventId(headers, body);
+    } catch {
+      // Generic log fallback to avoid leaking details; the invalid ID is already the rejection reason.
+    }
+    this.logger.logAuthenticationFailure("assinatura", null, null, {
+      eventId: logEventId,
+      gateway: gateway.name.toLowerCase(),
+    });
+    throw new ForbiddenException(WEBHOOK_REJECTED);
+  }
+
+  private extractGatewayPaymentIdOrThrow(
+    gateway: PaymentGateway,
+    body: unknown,
+    eventId: string,
+  ): string {
+    try {
+      return gateway.extractGatewayPaymentId(body);
     } catch (error) {
       this.logger.logWebhookReceived(
         null,
@@ -739,18 +878,21 @@ export class PaymentsService {
         "falha",
         error instanceof Error ? error.message : "ID do gateway inválido",
       );
-      throw new BadRequestException("Webhook rejeitado");
+      throw new BadRequestException(WEBHOOK_REJECTED);
     }
+  }
 
-    const gatewayPayment = await gateway.getPayment(gatewayPaymentId);
-
+  private async findLocalPaymentOrThrow(
+    gateway: PaymentGateway,
+    gatewayPayment: GatewayPayment,
+    eventId: string,
+  ) {
     const payment = await this.prisma.payment.findUnique({
       where: { id: gatewayPayment.externalReference || "" },
       include: {
         serviceOrder: { select: { scheduledAt: true } },
       },
     });
-
     if (!payment) {
       this.logger.logPaymentError(
         gatewayPayment.externalReference ?? null,
@@ -762,17 +904,24 @@ export class PaymentsService {
           eventId,
         },
       );
-      throw new NotFoundException("Webhook rejeitado");
+      throw new NotFoundException(WEBHOOK_REJECTED);
     }
+    return payment;
+  }
 
-    let status: PaymentStatus;
+  private resolveGatewayStatus(
+    payment: PaymentForConfirmation,
+    gateway: PaymentGateway,
+    gatewayPayment: GatewayPayment,
+    eventId: string,
+  ): PaymentStatus {
     try {
       this.verifyGatewayAmount(
         payment.amount,
         gatewayPayment.transactionAmount,
       );
 
-      status = gateway.translateStatus(gatewayPayment.status);
+      const status = gateway.translateStatus(gatewayPayment.status);
 
       if (payment.status !== status) {
         this.validateStatusTransition(payment.status, status);
@@ -780,6 +929,7 @@ export class PaymentsService {
           this.validateScheduleForPayment(payment.serviceOrder.scheduledAt);
         }
       }
+      return status;
     } catch (error) {
       if (error instanceof BadRequestException) {
         this.logger.logWebhookReceived(
@@ -790,11 +940,19 @@ export class PaymentsService {
           "falha",
           error.message,
         );
-        throw new BadRequestException("Webhook rejeitado");
+        throw new BadRequestException(WEBHOOK_REJECTED);
       }
       throw error;
     }
+  }
 
+  private async applyGatewayTransaction(
+    payment: PaymentForConfirmation,
+    gateway: PaymentGateway,
+    eventId: string,
+    gatewayPayment: GatewayPayment,
+    status: PaymentStatus,
+  ): Promise<WebhookResult> {
     const transaction = await this.attemptTransaction(
       {
         gateway: gateway.name,
@@ -893,7 +1051,7 @@ export class PaymentsService {
     });
 
     if (!payment) {
-      throw new NotFoundException("Webhook rejeitado");
+      throw new NotFoundException(WEBHOOK_REJECTED);
     }
 
     return { ...(notice ? { notice } : {}), payment };
@@ -907,17 +1065,19 @@ export class PaymentsService {
   ) {
     try {
       // Claim-first: insert the event inside the transaction before any mutation; concurrent callers fail with P2002 without changing the payment.
-      const payment = await this.prisma.$transaction(async (tx: any) => {
-        await tx.paymentWebhookEvent.create({
-          data: {
-            gateway: event.gateway,
-            eventId: event.eventId,
-            paymentId: event.paymentId,
-            payload: event.payload ?? undefined,
-          },
-        });
-        return update(tx);
-      });
+      const payment = await this.prisma.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          await tx.paymentWebhookEvent.create({
+            data: {
+              gateway: event.gateway,
+              eventId: event.eventId,
+              paymentId: event.paymentId,
+              payload: event.payload ?? undefined,
+            },
+          });
+          return update(tx);
+        },
+      );
       return { duplicate: false, payment };
     } catch (error) {
       const code =
