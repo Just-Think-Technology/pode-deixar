@@ -13,10 +13,27 @@ import { CreateClientProfileDto } from "./dto/create-client-profile.dto";
 import { UpdateClientProfileDto } from "./dto/update-client-profile.dto";
 import { CreateProviderProfileDto } from "./dto/create-provider-profile.dto";
 import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
-import { Prisma } from "@prisma/client";
+import {
+  ClientProfile,
+  Prisma,
+  ProviderProfile,
+} from "@prisma/client";
 import { randomUUID } from "crypto";
 import { extname } from "path";
 import { validarArquivoImagem } from "@pode-deixar/validation";
+
+type ProfileUser = Prisma.UserGetPayload<{
+  select: {
+    id: true;
+    completeName: true;
+    email: true;
+    phone: true;
+    postalCode: true;
+    role: true;
+  };
+}>;
+
+type ProfileRole = "PROVIDER" | "CLIENT";
 
 @Injectable()
 export class ProfilesService {
@@ -43,8 +60,16 @@ export class ProfilesService {
     return user;
   }
 
+  private async findUserOrThrow(userId: string): Promise<ProfileUser> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new NotFoundException("Usuário não encontrado");
+    }
+    return user;
+  }
+
   // Formats client profile response; excludes PII (email, phone, postalCode).
-  private formatClientProfile(profile: any, user: any) {
+  private formatClientProfile(profile: ClientProfile, user: ProfileUser) {
     return {
       id: profile.id,
       user: {
@@ -63,7 +88,7 @@ export class ProfilesService {
   }
 
   // Formats provider profile response; excludes PII (email, phone, postalCode).
-  private formatProviderProfile(profile: any, user: any) {
+  private formatProviderProfile(profile: ProviderProfile, user: ProfileUser) {
     return {
       id: profile.id,
       user: {
@@ -90,10 +115,7 @@ export class ProfilesService {
   // --- Public API ---
 
   async getProfile(userId: string, role: string) {
-    const user = await this.getUser(userId);
-    if (!user) {
-      throw new NotFoundException("Usuário não encontrado");
-    }
+    const user = await this.findUserOrThrow(userId);
 
     if (role === "PROVIDER") {
       const profile = await this.prisma.providerProfile.findUnique({
@@ -258,94 +280,108 @@ export class ProfilesService {
     return this.formatProviderProfile(profile, user);
   }
 
+  /**
+   * Replaces the avatar of a client or provider profile.
+   * Validates the image, uploads the new file, drops the previous one
+   * best-effort, and stores the new URL.
+   */
   async uploadAvatar(
     userId: string,
     role: string,
     file: Express.Multer.File,
     ip?: string,
   ) {
-    const user = await this.getUser(userId);
-    if (!user) {
-      throw new NotFoundException("Usuário não encontrado");
+    const user = await this.findUserOrThrow(userId);
+    if (role !== "PROVIDER" && role !== "CLIENT") {
+      throw new BadRequestException("Função inválida");
     }
+    return this.replaceAvatar(user, role, file, ip);
+  }
 
+  private async replaceAvatar(
+    user: ProfileUser,
+    role: ProfileRole,
+    file: Express.Multer.File,
+    ip?: string,
+  ) {
+    const existingProfile = await this.findProfileOrThrow(user.id, role);
+    const avatarUrl = await this.storeAvatar(file);
+    await this.deletePreviousAvatar(existingProfile.avatarUrl);
+    return this.saveAvatarUrl(user, role, avatarUrl, ip);
+  }
+
+  private async findProfileOrThrow(userId: string, role: ProfileRole) {
     if (role === "PROVIDER") {
-      const existingProfile = await this.prisma.providerProfile.findUnique({
+      const profile = await this.prisma.providerProfile.findUnique({
         where: { userId },
       });
-      if (!existingProfile) {
+      if (!profile) {
         throw new NotFoundException("Perfil de prestador não encontrado");
       }
+      return profile;
+    }
+    const profile = await this.prisma.clientProfile.findUnique({
+      where: { userId },
+    });
+    if (!profile) {
+      throw new NotFoundException("Perfil de cliente não encontrado");
+    }
+    return profile;
+  }
 
-      validarArquivoImagem(file.originalname, file.buffer);
-      const ext = extname(file.originalname).toLowerCase();
-      const fileName = `${randomUUID()}${ext}`;
-      const url = await this.minio.uploadFile(
-        fileName,
-        file.buffer,
-        file.mimetype,
-        this.minio.avatarBucket,
-      );
+  private async storeAvatar(file: Express.Multer.File): Promise<string> {
+    validarArquivoImagem(file.originalname, file.buffer);
+    const ext = extname(file.originalname).toLowerCase();
+    return this.minio.uploadFile(
+      `${randomUUID()}${ext}`,
+      file.buffer,
+      file.mimetype,
+      this.minio.avatarBucket,
+    );
+  }
 
-      if (existingProfile.avatarUrl) {
-        const oldFileName = this.minio.extractFileName(
-          existingProfile.avatarUrl,
-          this.minio.avatarBucket,
-        );
-        await this.minio
-          .deleteFile(oldFileName, this.minio.avatarBucket)
-          .catch(() => {});
-      }
+  private async deletePreviousAvatar(avatarUrl: string | null): Promise<void> {
+    if (!avatarUrl) {
+      return;
+    }
+    const oldFileName = this.minio.extractFileName(
+      avatarUrl,
+      this.minio.avatarBucket,
+    );
+    await this.minio.deleteFile(oldFileName, this.minio.avatarBucket).catch(
+      () => {},
+    );
+  }
 
+  private async saveAvatarUrl(
+    user: ProfileUser,
+    role: ProfileRole,
+    avatarUrl: string,
+    ip?: string,
+  ) {
+    if (role === "PROVIDER") {
       const profile = await this.prisma.providerProfile.update({
-        where: { userId },
-        data: { avatarUrl: url },
+        where: { userId: user.id },
+        data: { avatarUrl },
       });
-      this.usersLogger.logAvatarUploaded(userId, role, ip);
+      this.usersLogger.logAvatarUploaded(user.id, role, ip);
       return this.formatProviderProfile(profile, user);
     }
-
-    if (role === "CLIENT") {
-      const existingProfile = await this.prisma.clientProfile.findUnique({
-        where: { userId },
-      });
-      if (!existingProfile) {
-        throw new NotFoundException("Perfil de cliente não encontrado");
-      }
-
-      validarArquivoImagem(file.originalname, file.buffer);
-      const ext = extname(file.originalname).toLowerCase();
-      const fileName = `${randomUUID()}${ext}`;
-      const url = await this.minio.uploadFile(
-        fileName,
-        file.buffer,
-        file.mimetype,
-        this.minio.avatarBucket,
-      );
-
-      if (existingProfile.avatarUrl) {
-        const oldFileName = this.minio.extractFileName(
-          existingProfile.avatarUrl,
-          this.minio.avatarBucket,
-        );
-        await this.minio
-          .deleteFile(oldFileName, this.minio.avatarBucket)
-          .catch(() => {});
-      }
-
-      const profile = await this.prisma.clientProfile.update({
-        where: { userId },
-        data: { avatarUrl: url },
-      });
-      this.usersLogger.logAvatarUploaded(userId, role, ip);
-      return this.formatClientProfile(profile, user);
-    }
-
-    throw new BadRequestException("Função inválida");
+    const profile = await this.prisma.clientProfile.update({
+      where: { userId: user.id },
+      data: { avatarUrl },
+    });
+    this.usersLogger.logAvatarUploaded(user.id, role, ip);
+    return this.formatClientProfile(profile, user);
   }
 
   // Returns a public profile view that never exposes PII (email, phone, postalCode).
   async getPublicProviderProfile(providerProfileId: string) {
+    const profile = await this.findPublicProfileOrThrow(providerProfileId);
+    return this.formatPublicProviderProfile(profile);
+  }
+
+  private async findPublicProfileOrThrow(providerProfileId: string) {
     // Public profile must never expose PII, so select only id and name.
     const profile = await this.prisma.providerProfile.findUnique({
       where: { id: providerProfileId },
@@ -365,11 +401,26 @@ export class ProfilesService {
         },
       },
     });
-
     if (!profile) {
       throw new NotFoundException("Perfil de prestador não encontrado");
     }
+    return profile;
+  }
 
+  private formatPublicProviderProfile(
+    profile: Prisma.ProviderProfileGetPayload<{
+      include: {
+        user: { select: { id: true; completeName: true } };
+        services: {
+          where: { isActive: true };
+          orderBy: { createdAt: "desc" };
+          include: {
+            category: { select: { id: true; name: true; slug: true } };
+          };
+        };
+      };
+    }>,
+  ) {
     return {
       id: profile.id,
       user: {
@@ -384,7 +435,7 @@ export class ProfilesService {
       rating: profile.rating,
       total_reviews: profile.totalReviews,
       is_available: profile.isAvailable,
-      services: profile.services.map((s: any) => ({
+      services: profile.services.map((s) => ({
         id: s.id,
         title: s.title,
         description: s.description,

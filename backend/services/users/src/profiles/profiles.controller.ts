@@ -28,6 +28,7 @@ import { UpdateClientProfileDto } from "./dto/update-client-profile.dto";
 import { CreateProviderProfileDto } from "./dto/create-provider-profile.dto";
 import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Profiles")
 @Controller("profiles")
@@ -43,7 +44,7 @@ export class ProfilesController {
   @ApiOperation({ summary: "Get current user profile" })
   @ApiResponse({ status: 200, description: "Profile retrieved successfully" })
   @ApiResponse({ status: 404, description: "Profile not found" })
-  async getMyProfile(@Request() req: any) {
+  async getMyProfile(@Request() req: AuthenticatedRequest) {
     const userId = req.user.sub;
     const role = req.user.role;
     return this.profilesService.getProfile(userId, role);
@@ -58,7 +59,7 @@ export class ProfilesController {
   })
   @ApiResponse({ status: 409, description: "Profile already exists" })
   async createClientProfile(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Body() dto: CreateClientProfileDto,
   ) {
     const userId = req.user.sub;
@@ -75,7 +76,7 @@ export class ProfilesController {
   })
   @ApiResponse({ status: 404, description: "Profile not found" })
   async updateClientProfile(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Body() dto: UpdateClientProfileDto,
   ) {
     const userId = req.user.sub;
@@ -92,7 +93,7 @@ export class ProfilesController {
   })
   @ApiResponse({ status: 409, description: "Profile already exists" })
   async createProviderProfile(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Body() dto: CreateProviderProfileDto,
   ) {
     const userId = req.user.sub;
@@ -109,7 +110,7 @@ export class ProfilesController {
   })
   @ApiResponse({ status: 404, description: "Profile not found" })
   async updateProviderProfile(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Body() dto: UpdateProviderProfileDto,
   ) {
     const userId = req.user.sub;
@@ -156,7 +157,7 @@ export class ProfilesController {
   @ApiResponse({ status: 400, description: "Invalid file" })
   @ApiResponse({ status: 404, description: "Profile not found" })
   async uploadAvatar(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
