@@ -22,6 +22,7 @@ import { LoginService } from './login.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
+import { AuthenticatedRequest } from '../jwt/authenticated-request';
 import { extractSafeIp } from '../shared/extract-safe-ip';
 import { anonymizeEmailForLog } from '../shared/auth-logger.service';
 import getLogger from '../shared/shared-logger';
@@ -75,7 +76,7 @@ export class LoginController {
     description: 'Authentication token',
     required: true,
   })
-  async logout(@Request() req: any) {
+  async logout(@Request() req: AuthenticatedRequest) {
     try {
       logger.info('auth.endpoint', `Logout requested for user ${req.user?.id}`);
     } catch {}

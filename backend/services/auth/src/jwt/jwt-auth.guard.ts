@@ -11,18 +11,20 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   // --- Public API ---
 
-  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
+  handleRequest(
+    err: unknown,
+    user: unknown,
+    info: unknown,
+    context: ExecutionContext,
+  ) {
     try {
-      const result = super.handleRequest(err, user, info, context);
-      return result;
+      return super.handleRequest(err, user, info, context);
     } catch (e) {
       try {
         const req = context.switchToHttp().getRequest();
         const ip = req.headers?.['x-forwarded-for'] || req.ip;
-        logger.warn(
-          'auth.jwt',
-          `Unauthorized access attempt from ${ip} - ${e.message}`,
-        );
+        const reason = e instanceof Error ? e.message : String(e);
+        logger.warn('auth.jwt', `Unauthorized access attempt from ${ip} - ${reason}`);
       } catch {}
       throw e;
     }

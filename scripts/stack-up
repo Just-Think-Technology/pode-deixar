@@ -1,7 +1,4 @@
 #!/bin/sh
-# Sobe uma stack e imprime onde cada coisa está rodando.
-# Uso: scripts/stack-up [dev|staging|production]
-#   STACK_UP_DRY_RUN=1 scripts/stack-up dev   # só imprime os endereços, sem subir
 set -eu
 
 ENV_KEY="${1:-dev}"
@@ -26,7 +23,6 @@ case "$ENV_KEY" in
     ;;
 esac
 
-# Lê uma chave simples do env file sem exportar segredos para o shell.
 ler_env() {
   sed -n "s/^$1=\"\{0,1\}\([^\"]*\)\".*/\1/p" "$ENV_FILE" | head -n 1
 }
@@ -36,10 +32,10 @@ if [ "${STACK_UP_DRY_RUN:-0}" != "1" ]; then
 fi
 
 echo ""
-echo "=============================================="
+echo "--------------------------------------------------"
 if [ "$ENV_KEY" = "dev" ]; then
   echo " Stack dev no ar (projeto pode-deixar-dev)"
-  echo "=============================================="
+  echo "--------------------------------------------------"
   echo "  Frontend ......... http://localhost:3000"
   echo "  API (Caddy) ...... http://localhost:8080/api"
   echo "  Auth ............. http://localhost:3001"
@@ -54,7 +50,7 @@ else
   API_DOMAIN="$(ler_env API_DOMAIN || true)"
   FRONTEND_URL="$(ler_env FRONTEND_URL || true)"
   echo " Stack $ENV_KEY no ar (via Caddy 80/443)"
-  echo "=============================================="
+  echo "--------------------------------------------------"
   echo "  API .............. https://${API_DOMAIN:-<API_DOMAIN?>}/api"
   echo "  Frontend ......... ${FRONTEND_URL:-<FRONTEND_URL?>} (Vercel)"
   echo "  (serviços sem porta publicada — acesso só via Caddy;"

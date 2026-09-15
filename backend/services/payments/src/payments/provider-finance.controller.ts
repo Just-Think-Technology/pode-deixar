@@ -9,7 +9,7 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { PaymentsService } from "./payments.service";
-import { AuthenticatedRequest } from "../auth/authenticated-request";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 import { FinanceItemsQueryDto } from "./dto/finance-items-query.dto";
 import { FinanceChartQueryDto } from "./dto/finance-chart-query.dto";

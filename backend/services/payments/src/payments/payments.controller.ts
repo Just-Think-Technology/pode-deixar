@@ -25,7 +25,7 @@ import {
 } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import { PaymentsService, WEBHOOK_REJECTED } from "./payments.service";
-import { AuthenticatedRequest } from "../auth/authenticated-request";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
