@@ -27,6 +27,7 @@ import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import { AgendaQueryDto } from "./dto/agenda-query.dto";
 import { PaginationQueryDto } from "../shared/pagination-query.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Service Orders (Client)")
 @Controller("services/me")
@@ -64,7 +65,7 @@ export class ServiceOrdersController {
     status: 400,
     description: "Invalid period or window larger than 92 days",
   })
-  async agenda(@Request() req: any, @Query() query: AgendaQueryDto) {
+  async agenda(@Request() req: AuthenticatedRequest, @Query() query: AgendaQueryDto) {
     const userId = req.user.sub;
     return this.serviceOrdersService.findProviderAgenda(
       userId,
@@ -77,7 +78,7 @@ export class ServiceOrdersController {
   @Roles("CLIENT")
   @ApiOperation({ summary: "Create a new service order (clients only)" })
   @ApiResponse({ status: 201, description: "Order created successfully" })
-  async create(@Request() req: any, @Body() dto: CreateServiceOrderDto) {
+  async create(@Request() req: AuthenticatedRequest, @Body() dto: CreateServiceOrderDto) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.serviceOrdersService.create(userId, dto, ip);
@@ -91,7 +92,7 @@ export class ServiceOrdersController {
     description: "Order list returned successfully",
   })
   async findMyOrders(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
@@ -109,7 +110,7 @@ export class ServiceOrdersController {
     description: "Provider service not found",
   })
   @ApiResponse({ status: 400, description: "Service not available" })
-  async hire(@Request() req: any, @Body() dto: HireProviderServiceDto) {
+  async hire(@Request() req: AuthenticatedRequest, @Body() dto: HireProviderServiceDto) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.serviceOrdersService.hireFromProvider(userId, dto, ip);
@@ -138,7 +139,7 @@ export class MyServiceOrdersController {
     status: 403,
     description: "Order does not belong to the client",
   })
-  async findOne(@Request() req: any, @Param("orderId") orderId: string) {
+  async findOne(@Request() req: AuthenticatedRequest, @Param("orderId") orderId: string) {
     const userId = req.user.sub;
     return this.serviceOrdersService.findByIdForClient(orderId, userId);
   }
@@ -154,7 +155,7 @@ export class MyServiceOrdersController {
     description: "Order does not belong to the client or is not open",
   })
   async update(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("orderId") orderId: string,
     @Body() dto: UpdateServiceOrderDto,
   ) {
@@ -173,7 +174,7 @@ export class MyServiceOrdersController {
     status: 400,
     description: "Order does not belong to the client",
   })
-  async cancel(@Request() req: any, @Param("orderId") orderId: string) {
+  async cancel(@Request() req: AuthenticatedRequest, @Param("orderId") orderId: string) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.serviceOrdersService.cancel(userId, orderId, ip);
@@ -203,7 +204,7 @@ export class PublicServiceOrdersController {
   @ApiResponse({ status: 401, description: "Missing or invalid token" })
   @ApiResponse({ status: 403, description: "Restricted to providers" })
   async findOpenOrders(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Query() pagination: PaginationQueryDto,
   ) {
     return this.serviceOrdersService.findOpenOrders(req.user.sub, pagination);
@@ -221,7 +222,7 @@ export class PublicServiceOrdersController {
   })
   @ApiResponse({ status: 404, description: "Order not found" })
   @ApiResponse({ status: 403, description: "Access denied to this order" })
-  async findOnePublic(@Request() req: any, @Param("orderId") orderId: string) {
+  async findOnePublic(@Request() req: AuthenticatedRequest, @Param("orderId") orderId: string) {
     const userId = req.user.sub;
     const role = req.user.role;
     return this.serviceOrdersService.findByIdWithAccess(orderId, userId, role);
@@ -247,7 +248,7 @@ export class ProviderReceivedOrdersController {
     description: "Received orders list returned successfully",
   })
   async findReceived(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
@@ -282,7 +283,7 @@ export class ProviderOrderActionsController {
     status: 400,
     description: "Order is not in progress or is already completed",
   })
-  async complete(@Request() req: any, @Param("orderId") orderId: string) {
+  async complete(@Request() req: AuthenticatedRequest, @Param("orderId") orderId: string) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.serviceOrdersService.complete(userId, orderId, ip);
