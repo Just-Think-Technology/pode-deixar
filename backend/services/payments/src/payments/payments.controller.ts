@@ -24,7 +24,8 @@ import {
   ApiBearerAuth,
 } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
-import { PaymentsService } from "./payments.service";
+import { PaymentsService, WEBHOOK_REJECTED } from "./payments.service";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 import { PaymentGatewayFactory } from "../gateway/payment-gateway.factory";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
@@ -48,7 +49,7 @@ export class PaymentsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "List payments of the authenticated client" })
   @ApiResponse({ status: 200, description: "Payments list returned" })
-  findAll(@Request() req: any) {
+  findAll(@Request() req: AuthenticatedRequest) {
     return this.paymentsService.findAll(req.user.sub);
   }
 
@@ -60,7 +61,10 @@ export class PaymentsController {
   @ApiResponse({ status: 201, description: "Payment registered (PENDING)" })
   @ApiResponse({ status: 400, description: "Invalid data" })
   @ApiResponse({ status: 403, description: "Order does not belong to client" })
-  create(@Request() req: any, @Body() dto: CreatePaymentDto) {
+  create(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: CreatePaymentDto,
+  ) {
     return this.paymentsService.create(req.user.sub, dto);
   }
 
@@ -79,7 +83,7 @@ export class PaymentsController {
   @ApiResponse({ status: 404, description: "Payment not found" })
   @ApiResponse({ status: 400, description: "Payment is not pending" })
   generateCharge(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("paymentId", ParseUUIDPipe) paymentId: string,
   ) {
     return this.paymentsService.generateCharge(req.user.sub, paymentId);
@@ -98,7 +102,7 @@ export class PaymentsController {
     description: "Payment does not belong to client",
   })
   getStatus(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("paymentId", ParseUUIDPipe) paymentId: string,
   ) {
     return this.paymentsService.getStatus(req.user.sub, paymentId);
@@ -130,7 +134,7 @@ export class PaymentsController {
         eventId: dto.eventId,
         providedKey: webhookKey ? "[REDACTED]" : "missing",
       });
-      throw new ForbiddenException("Webhook rejeitado");
+      throw new ForbiddenException(WEBHOOK_REJECTED);
     }
 
     try {
@@ -141,7 +145,7 @@ export class PaymentsController {
         timestamp: dto.timestamp,
         error: (e as Error).message,
       });
-      throw new ForbiddenException("Webhook rejeitado");
+      throw new ForbiddenException(WEBHOOK_REJECTED);
     }
 
     return this.paymentsService.confirmPayment(dto);

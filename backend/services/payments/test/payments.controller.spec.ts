@@ -61,7 +61,7 @@ describe("PaymentsController", () => {
 
   describe("findAll", () => {
     it("should forward the authenticated user to the service", async () => {
-      const req = { user: { sub: "user-1" } };
+      const req = { user: { sub: "user-1", role: "CLIENT" } };
       const pagamentos = [{ id: "payment-1", status: "PAID" }];
       service.findAll.mockResolvedValue(pagamentos);
 
@@ -74,7 +74,7 @@ describe("PaymentsController", () => {
 
   describe("create", () => {
     it("should forward the user and DTO to the service", async () => {
-      const req = { user: { sub: "user-1" } };
+      const req = { user: { sub: "user-1", role: "CLIENT" } };
       const dto = {
         serviceOrderId: "uuid-do-pedido",
         method: PaymentMethod.PIX,
@@ -92,7 +92,7 @@ describe("PaymentsController", () => {
 
   describe("generateCharge", () => {
     it("should forward the user and paymentId to the service", async () => {
-      const req = { user: { sub: "user-1" } };
+      const req = { user: { sub: "user-1", role: "CLIENT" } };
       const cobranca = { paymentId: "uuid-payment-1", status: "PENDING" };
       service.generateCharge.mockResolvedValue(cobranca);
 
@@ -108,7 +108,7 @@ describe("PaymentsController", () => {
 
   describe("getStatus", () => {
     it("should forward the user and paymentId to the service", async () => {
-      const req = { user: { sub: "user-1" } };
+      const req = { user: { sub: "user-1", role: "CLIENT" } };
       const status = { paymentId: "uuid-payment-1", status: "PAID" };
       service.getStatus.mockResolvedValue(status);
 

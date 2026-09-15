@@ -1,7 +1,8 @@
 // Notifications service — user notification delivery
 
 import { Injectable, Logger, BadRequestException } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { Prisma } from "@prisma/client";
+import { PrismaService } from "@pode-deixar/prisma";
 import { CreateNotificationDto } from "./dto/create-notification.dto";
 
 @Injectable()
@@ -35,7 +36,7 @@ export class NotificationsService {
     page = 1,
     limit = 20,
   ) {
-    const where: any = { recipient };
+    const where: Prisma.NotificationWhereInput = { recipient };
     if (isRead !== undefined) {
       where.read = isRead;
     }

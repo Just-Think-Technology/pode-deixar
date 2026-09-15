@@ -5,7 +5,7 @@ import {
   NotFoundException,
   ConflictException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
@@ -41,7 +41,7 @@ export class CategoriesService {
     }));
   }
 
-  async create(dto: CreateCategoryDto, ip: string) {
+  async create(dto: CreateCategoryDto, ip?: string) {
     const existing = await this.prisma.category.findFirst({
       where: { OR: [{ name: dto.name }, { slug: dto.slug }] },
     });
@@ -58,7 +58,7 @@ export class CategoriesService {
     return category;
   }
 
-  async update(id: string, dto: UpdateCategoryDto, ip: string) {
+  async update(id: string, dto: UpdateCategoryDto, ip?: string) {
     const category = await this.prisma.category.findUnique({ where: { id } });
     if (!category) {
       throw new NotFoundException("Categoria não encontrada");
@@ -89,7 +89,7 @@ export class CategoriesService {
     return updated;
   }
 
-  async remove(id: string, ip: string) {
+  async remove(id: string, ip?: string) {
     const category = await this.prisma.category.findUnique({ where: { id } });
     if (!category) {
       throw new NotFoundException("Categoria não encontrada");
