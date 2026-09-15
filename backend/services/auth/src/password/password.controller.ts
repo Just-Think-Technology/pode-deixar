@@ -16,6 +16,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { anonymizeEmailForLog } from '../shared/auth-logger.service';
+import { AuthenticatedRequest } from '../jwt/authenticated-request';
 import getLogger from '../shared/shared-logger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../jwt/jwt-auth.guard';
@@ -55,7 +56,10 @@ export class PasswordController {
   @Put('change-password')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async change(@Request() req: any, @Body() dto: ChangePasswordDto) {
+  async change(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: ChangePasswordDto,
+  ) {
     try {
       logger.info(
         'auth.endpoint',

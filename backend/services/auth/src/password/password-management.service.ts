@@ -16,6 +16,9 @@ import { PasswordService } from './password.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const ACCESS_TOKEN_BLACKLIST_TTL_MS = 15 * 60 * 1000;
+
 @Injectable()
 export class PasswordManagementService {
   constructor(
@@ -41,7 +44,7 @@ export class PasswordManagementService {
 
     // Only hash is stored; raw token travels by email (non-prod echo only).
     const resetToken = uuidv4();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -148,7 +151,7 @@ export class PasswordManagementService {
         await this.prisma.tokenBlacklist.create({
           data: {
             jti: accessTokenJti,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+            expiresAt: new Date(Date.now() + ACCESS_TOKEN_BLACKLIST_TTL_MS),
           },
         });
       }
