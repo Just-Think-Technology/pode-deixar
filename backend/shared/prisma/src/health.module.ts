@@ -1,10 +1,10 @@
 // Health module — liveness and database check wiring
 
-import { Module } from '@nestjs/common';
-import { TerminusModule } from '@nestjs/terminus';
-import { HealthController } from './health.controller';
-import { DatabaseHealthIndicator } from './database.health';
-import { PrismaModule } from '../prisma/prisma.module';
+import { Module } from "@nestjs/common";
+import { TerminusModule } from "@nestjs/terminus";
+import { HealthController } from "./health.controller";
+import { DatabaseHealthIndicator } from "./database.health";
+import { PrismaModule } from "./prisma.module";
 
 @Module({
 

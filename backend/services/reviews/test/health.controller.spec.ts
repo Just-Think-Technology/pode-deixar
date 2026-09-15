@@ -1,9 +1,9 @@
 // Health controller tests — liveness and readiness probes
 
 import { Test, TestingModule } from "@nestjs/testing";
-import { HealthController } from "../src/health/health.controller";
+import { HealthController } from "@pode-deixar/prisma";
 import { HealthCheckService, HealthCheckResult } from "@nestjs/terminus";
-import { DatabaseHealthIndicator } from "../src/health/database.health";
+import { DatabaseHealthIndicator } from "@pode-deixar/prisma";
 
 // --- Tests ---
 
