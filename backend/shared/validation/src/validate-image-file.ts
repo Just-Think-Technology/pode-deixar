@@ -4,7 +4,7 @@ import { BadRequestException } from '@nestjs/common';
 import { extname } from 'path';
 
 // Allowed extensions for image upload (lowercase, with dot).
-const EXTENSOES_PERMITIDAS = new Set([
+const ALLOWED_EXTENSIONS = new Set([
   '.jpg',
   '.jpeg',
   '.png',
@@ -13,7 +13,7 @@ const EXTENSOES_PERMITIDAS = new Set([
 ]);
 
 // Expected extensions for each type detected by magic bytes.
-const EXTENSOES_POR_TIPO: Record<string, string[]> = {
+const EXPECTED_EXTENSIONS_BY_TYPE: Record<string, string[]> = {
   jpeg: ['.jpg', '.jpeg'],
   png: ['.png'],
   webp: ['.webp'],
@@ -21,7 +21,7 @@ const EXTENSOES_POR_TIPO: Record<string, string[]> = {
 };
 
 // Client-supplied mimetype/extension are forgeable, so sniff the real type.
-function detectarTipoPorMagicBytes(
+function detectTypeByMagicBytes(
   buffer: Buffer,
 ): 'jpeg' | 'png' | 'webp' | 'gif' | null {
   if (!buffer || buffer.length < 3) {
@@ -73,20 +73,20 @@ function detectarTipoPorMagicBytes(
 // Validate file extension (allowlist) and real content (magic bytes).
 // Rejects when the extension is not allowed, the content is not a supported
 // image, or the content does not match the informed extension.
-export function validarArquivoImagem(
+export function validateImageFile(
   originalname: string,
   buffer: Buffer,
 ): void {
   const ext = extname(originalname || '').toLowerCase();
-  if (!EXTENSOES_PERMITIDAS.has(ext)) {
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
     throw new BadRequestException(
       'Formato de imagem inválido. Permitidos: JPEG, PNG, WebP, GIF',
     );
   }
-  const tipo = detectarTipoPorMagicBytes(buffer);
+  const fileType = detectTypeByMagicBytes(buffer);
   // Safe: the key is the validated union returned by magic bytes detection.
   // eslint-disable-next-line security/detect-object-injection
-  if (!tipo || !EXTENSOES_POR_TIPO[tipo].includes(ext)) {
+  if (!fileType || !EXPECTED_EXTENSIONS_BY_TYPE[fileType].includes(ext)) {
     throw new BadRequestException(
       'Conteúdo do arquivo não corresponde a uma imagem válida',
     );

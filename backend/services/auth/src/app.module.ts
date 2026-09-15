@@ -17,13 +17,13 @@ import { createResponseLoggerInterceptor } from '@pode-deixar/logger';
 import { EmailModule } from '@pode-deixar/email';
 import { RedisThrottlerStorage } from '@pode-deixar/security';
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
-  MensagensRestricao,
+  translateValidationErrors as translateSharedErrors,
+  FieldLabels,
+  ConstraintMessages,
 } from '@pode-deixar/validation';
 
 // Auth field labels (user-facing, in Portuguese); restriction messages live in shared core, with auth divergences below.
-const ROTULOS_AUTH: RotulosCampos = {
+const AUTH_FIELD_LABELS: FieldLabels = {
   email: 'Email',
   password: 'Senha',
   complete_name: 'Nome completo',
@@ -36,13 +36,13 @@ const ROTULOS_AUTH: RotulosCampos = {
   token: 'Token',
 };
 
-const SOBRESCRITAS_AUTH: MensagensRestricao = {
+const AUTH_OVERRIDES: ConstraintMessages = {
   minLength: (r) => `${r} deve ter no mínimo 8 caracteres`,
   maxLength: (r) => `${r} deve ter no máximo 200 caracteres`,
 };
 
 function translateValidationErrors(errors: ValidationError[]): string[] {
-  return traduzirErrosNucleo(errors, ROTULOS_AUTH, SOBRESCRITAS_AUTH);
+  return translateSharedErrors(errors, AUTH_FIELD_LABELS, AUTH_OVERRIDES);
 }
 
 @Module({

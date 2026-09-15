@@ -20,7 +20,7 @@ import {
 } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { extname } from "path";
-import { validarArquivoImagem } from "@pode-deixar/validation";
+import { validateImageFile } from "@pode-deixar/validation";
 
 type ProfileUser = Prisma.UserGetPayload<{
   select: {
@@ -330,7 +330,7 @@ export class ProfilesService {
   }
 
   private async storeAvatar(file: Express.Multer.File): Promise<string> {
-    validarArquivoImagem(file.originalname, file.buffer);
+    validateImageFile(file.originalname, file.buffer);
     const ext = extname(file.originalname).toLowerCase();
     return this.minio.uploadFile(
       `${randomUUID()}${ext}`,
