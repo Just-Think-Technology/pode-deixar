@@ -5,4 +5,5 @@ export interface AuthenticatedRequest {
     sub: string;
     role: string;
   };
+  ip?: string;
 }
