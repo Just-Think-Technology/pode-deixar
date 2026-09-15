@@ -24,7 +24,7 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ServiceImagesService } from "./service-images.service";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "../auth/authenticated-request";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 import { memoryStorage } from "multer";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;

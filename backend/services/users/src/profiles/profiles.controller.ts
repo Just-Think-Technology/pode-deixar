@@ -28,7 +28,7 @@ import { UpdateClientProfileDto } from "./dto/update-client-profile.dto";
 import { CreateProviderProfileDto } from "./dto/create-provider-profile.dto";
 import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "../auth/authenticated-request";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Profiles")
 @Controller("profiles")

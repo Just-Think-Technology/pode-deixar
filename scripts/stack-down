@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+ENV_KEY="${1:-dev}"
+cd "$(dirname "$0")/.."
+
+case "$ENV_KEY" in
+  dev)
+    FILE=docker-compose.dev.yml
+    ;;
+  staging)
+    FILE=docker-compose.staging.yml
+    ;;
+  production)
+    FILE=docker-compose.production.yml
+    ;;
+  *)
+    echo "Uso: $0 [dev|staging|production]" >&2
+    exit 1
+    ;;
+esac
+
+docker compose -f "$FILE" down
+
+echo ""
+echo "--------------------------------------------------"
+echo " Stack $ENV_KEY derrubada"
+echo "--------------------------------------------------"
+echo ""

@@ -2,7 +2,7 @@
 
 import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "@pode-deixar/prisma";
 import { CreateNotificationDto } from "./dto/create-notification.dto";
 
 @Injectable()

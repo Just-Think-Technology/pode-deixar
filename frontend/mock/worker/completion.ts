@@ -9,7 +9,7 @@ import type {
 
 export const MAX_COMPLETION_PHOTOS = 10;
 
-const MOCK_CLIENT_NAMES: Record<string, string> = {
+export const MOCK_CLIENT_NAMES: Record<string, string> = {
   "mock-order-agenda-001": "Maria Silva",
   "mock-order-agenda-002": "João Pereira",
   "mock-order-agenda-003": "Ana Costa",

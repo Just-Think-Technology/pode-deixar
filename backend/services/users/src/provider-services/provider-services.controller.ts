@@ -25,7 +25,7 @@ import { CreateProviderServiceDto } from "./dto/create-provider-service.dto";
 import { UpdateProviderServiceDto } from "./dto/update-provider-service.dto";
 import { SearchProvidersQueryDto } from "./dto/search-providers-query.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "../auth/authenticated-request";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Provider Services")
 @Controller("providers/me/services")

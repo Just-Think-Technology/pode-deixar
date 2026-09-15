@@ -24,7 +24,7 @@ import { ReviewsService } from "./reviews.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "../auth/authenticated-request";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Reviews")
 @Controller("reviews")

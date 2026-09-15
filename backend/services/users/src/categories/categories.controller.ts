@@ -21,7 +21,7 @@ import { CategoriesService } from "./categories.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "../auth/authenticated-request";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Categories")
 @Controller("categories")

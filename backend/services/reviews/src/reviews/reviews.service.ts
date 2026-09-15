@@ -6,8 +6,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { Prisma, ServiceOrder } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
+import { Prisma } from "@prisma/client";
+import { PrismaService } from "@pode-deixar/prisma";
 import { ReviewsLoggerService } from "../shared/reviews-logger.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";

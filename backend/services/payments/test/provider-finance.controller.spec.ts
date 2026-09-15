@@ -36,7 +36,7 @@ describe("ProviderFinanceController", () => {
 
   describe("summary", () => {
     it("should forward the authenticated provider to the service", async () => {
-      const req = { user: { sub: "provider-1" } };
+      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
       const resumo = { currency: "BRL", toReceiveNet: 315 };
       service.getProviderFinanceSummary.mockResolvedValue(resumo);
 
@@ -49,7 +49,7 @@ describe("ProviderFinanceController", () => {
 
   describe("items", () => {
     it("should forward the provider and status filter to the service", async () => {
-      const req = { user: { sub: "provider-1" } };
+      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
       const itens = [{ paymentId: "payment-1", paymentStatus: "PAID" }];
       service.getProviderFinanceItems.mockResolvedValue(itens);
 
@@ -65,7 +65,7 @@ describe("ProviderFinanceController", () => {
     });
 
     it("should call the service without a filter when status is not given", async () => {
-      const req = { user: { sub: "provider-1" } };
+      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
       service.getProviderFinanceItems.mockResolvedValue([]);
 
       await controller.items(req, {});
@@ -79,7 +79,7 @@ describe("ProviderFinanceController", () => {
 
   describe("chart", () => {
     it("should forward the provider and month count to the service", async () => {
-      const req = { user: { sub: "provider-1" } };
+      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
       const dados = [{ month: "2026-03", netReceived: 0, feesRetained: 0 }];
       service.getProviderFinanceChart.mockResolvedValue(dados);
 
@@ -93,7 +93,7 @@ describe("ProviderFinanceController", () => {
     });
 
     it("should default to 6 months when the query is empty", async () => {
-      const req = { user: { sub: "provider-1" } };
+      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
       service.getProviderFinanceChart.mockResolvedValue([]);
 
       await controller.chart(req, {});
