@@ -21,7 +21,7 @@ import { CounterProposalsService } from "./counter-proposals.service";
 import { CreateCounterProposalDto } from "./dto/create-counter-proposal.dto";
 import { PaginationQueryDto } from "../shared/pagination-query.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "../auth/authenticated-request";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Contrapropostas")
 @Controller("counter-proposals")

@@ -1,8 +1,6 @@
-// Logger tests — creation and file handling
-
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import fs = require('fs');
+import os = require('os');
+import path = require('path');
 import createLoggerDefault, { createLogger } from '../index';
 
 process.env.LOG_LEVEL = 'fatal';
@@ -11,8 +9,6 @@ const flushImmediate = () =>
   new Promise<void>((resolve) => {
     setImmediate(() => setImmediate(() => resolve()));
   });
-
-// --- Tests ---
 
 describe('createLogger (shared)', () => {
   it('should expose the default export as createLogger', () => {

@@ -27,7 +27,7 @@ import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import { AgendaQueryDto } from "./dto/agenda-query.dto";
 import { PaginationQueryDto } from "../shared/pagination-query.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "../auth/authenticated-request";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Service Orders (Client)")
 @Controller("services/me")

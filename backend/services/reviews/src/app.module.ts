@@ -6,12 +6,11 @@ import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
-import { PrismaModule } from "./prisma/prisma.module";
-import { HealthModule } from "./health/health.module";
+import { PrismaModule, HealthModule } from "@pode-deixar/prisma";
 import { SharedModule } from "./shared/shared.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
-import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
+import { createResponseLoggerInterceptor } from "@pode-deixar/logger";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
@@ -87,7 +86,7 @@ function translateValidationErrors(errors: ValidationError[]): string {
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: ResponseLoggerInterceptor,
+      useClass: createResponseLoggerInterceptor("reviews-service"),
     },
   ],
 })
