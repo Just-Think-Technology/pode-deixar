@@ -21,6 +21,7 @@ import { CategoriesService } from "./categories.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
+import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Categories")
 @Controller("categories")
@@ -67,7 +68,7 @@ export class AdminCategoriesController {
     description: "A category with this name or slug already exists",
   })
   async create(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Body() dto: CreateCategoryDto,
   ): Promise<{
     id: string;
@@ -87,7 +88,7 @@ export class AdminCategoriesController {
   @ApiResponse({ status: 404, description: "Category not found" })
   @ApiResponse({ status: 409, description: "Name or slug conflict" })
   async update(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param("id") id: string,
     @Body() dto: UpdateCategoryDto,
   ): Promise<{
@@ -110,7 +111,7 @@ export class AdminCategoriesController {
     status: 409,
     description: "Category has linked services",
   })
-  async remove(@Request() req: any, @Param("id") id: string) {
+  async remove(@Request() req: AuthenticatedRequest, @Param("id") id: string) {
     await this.categoriesService.remove(id, req.ip);
     return { message: "Categoria excluída com sucesso" };
   }

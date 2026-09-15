@@ -15,6 +15,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { DialogTitle } from "@/components/ui/dialog";
+import { toSafeImageUrl } from "@/lib/tracking/image";
 import type { WorkerAgendaEvent } from "@/lib/worker/agenda/types";
 
 type AgendaPhotoLightboxProps = {
@@ -79,8 +80,9 @@ export function AgendaPhotoLightbox({
                 {/* Mock/data-URI photo: next/image cannot optimize it. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.url}
+                  src={toSafeImageUrl(item.url)}
                   alt={`Foto ${photoIndex + 1} do serviço ${event.title}`}
+                  referrerPolicy="no-referrer"
                   className="max-h-[calc(100dvh-6rem)] max-w-full object-contain"
                 />
               </CarouselItem>
@@ -100,8 +102,9 @@ export function AgendaPhotoLightbox({
           {/* Mock/data-URI photo: next/image cannot optimize it. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={photo.url}
+            src={toSafeImageUrl(photo.url)}
             alt={`Foto do serviço ${event.title}`}
+            referrerPolicy="no-referrer"
             className="max-h-[calc(100dvh-6rem)] max-w-full object-contain"
           />
         </div>

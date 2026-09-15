@@ -15,7 +15,7 @@ import {
   teardownTestApp,
   promoteToAdmin,
 } from './test-setup';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaService } from '@pode-deixar/prisma';
 import { JwtService } from '@nestjs/jwt';
 
 // --- Tests ---

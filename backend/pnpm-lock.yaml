@@ -186,6 +186,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../../shared/logger
+      '@pode-deixar/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
       '@pode-deixar/security':
         specifier: workspace:*
         version: link:../../shared/security
@@ -367,6 +370,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../../shared/logger
+      '@pode-deixar/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
       '@pode-deixar/security':
         specifier: workspace:*
         version: link:../../shared/security
@@ -524,6 +530,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../../shared/logger
+      '@pode-deixar/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
       '@pode-deixar/security':
         specifier: workspace:*
         version: link:../../shared/security
@@ -678,6 +687,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../../shared/logger
+      '@pode-deixar/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
       '@pode-deixar/security':
         specifier: workspace:*
         version: link:../../shared/security
@@ -844,6 +856,9 @@ importers:
       '@pode-deixar/logger':
         specifier: workspace:*
         version: link:../../shared/logger
+      '@pode-deixar/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
       '@pode-deixar/security':
         specifier: workspace:*
         version: link:../../shared/security
@@ -1013,7 +1028,26 @@ importers:
         version: 5.9.3
 
   shared/logger:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.0.0
+        version: 11.1.28(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.28)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.4.7(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@pode-deixar/security':
+        specifier: workspace:*
+        version: link:../security
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.2
     devDependencies:
+      '@types/express':
+        specifier: ^5.0.6
+        version: 5.0.6
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
@@ -1033,23 +1067,72 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
+  shared/prisma:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.4.7(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@nestjs/terminus':
+        specifier: ^11.0.0
+        version: 11.1.1(@grpc/grpc-js@1.14.4)(@grpc/proto-loader@0.8.1)(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(@prisma/client@5.22.0(prisma@5.22.0))(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@prisma/client':
+        specifier: 5.22.0
+        version: 5.22.0(prisma@5.22.0)
+    devDependencies:
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
+      jest:
+        specifier: ^30.0.0
+        version: 30.4.2(@types/node@20.19.43)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3))
+      prisma:
+        specifier: 5.22.0
+        version: 5.22.0
+      ts-jest:
+        specifier: ^29.2.5
+        version: 29.4.12(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(jest-util@30.4.1)(jest@30.4.2(@types/node@20.19.43)(ts-node@10.9.2(@types/node@20.19.43)(typescript@5.9.3)))(typescript@5.9.3)
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+
   shared/security:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^4.0.0
+        version: 4.0.4(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(rxjs@7.8.2)
       '@nestjs/core':
         specifier: ^11.0.0
         version: 11.1.28(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.28)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/jwt':
+        specifier: ^11.0.0
+        version: 11.0.2(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))
       '@nestjs/passport':
         specifier: ^11.0.0
         version: 11.0.5(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(passport@0.7.0)
       '@nestjs/throttler':
         specifier: ^6.0.0
         version: 6.5.0(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(reflect-metadata@0.2.2)
+      '@pode-deixar/prisma':
+        specifier: workspace:*
+        version: link:../prisma
       helmet:
         specifier: ^8.0.0
         version: 8.3.0
+      passport-jwt:
+        specifier: ^4.0.1
+        version: 4.0.1
       redis:
         specifier: ^4.6.0
         version: 4.7.1
@@ -1063,6 +1146,9 @@ importers:
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.43
+      '@types/passport-jwt':
+        specifier: ^4.0.1
+        version: 4.0.1
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0

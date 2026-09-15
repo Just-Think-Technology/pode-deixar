@@ -101,20 +101,61 @@ export const MOCK_CLIENT_ORDERS: ClientOrder[] = [
       },
     ],
   },
+  {
+    id: "mock-client-order-004",
+    client_id: "mock-client-id",
+    provider_id: "mock-provider-id",
+    title: "Limpeza de caixa d'água",
+    description:
+      "Limpeza completa da caixa d'água de 1000L com higienização e verificação da tampa.",
+    category_id: "a1000000-0000-4000-8000-000000000004",
+    category: {
+      id: "a1000000-0000-4000-8000-000000000004",
+      name: "Hidráulica",
+      slug: "hidraulica",
+    },
+    budget_min: 150,
+    budget_max: 350,
+    address: {},
+    status: "COMPLETED",
+    created_at: "2026-06-10T09:00:00.000Z",
+    updated_at: "2026-06-15T12:00:00.000Z",
+    proposals: [
+      {
+        id: "mock-client-proposal-004",
+        provider_id: "mock-provider-id",
+        price: 280,
+        description:
+          "Limpeza com produtos próprios para caixa d'água e descarte correto da água.",
+        estimated_duration: "3 horas",
+        status: "ACCEPTED",
+        created_at: "2026-06-11T10:00:00.000Z",
+      },
+    ],
+  },
 ];
 
 function cloneOrders(): ClientOrder[] {
   return structuredClone(MOCK_CLIENT_ORDERS);
 }
 
+// Seed version — bump when MOCK_CLIENT_ORDERS changes so HMR-kept
+// globalThis state is re-cloned instead of serving a stale snapshot.
+const MOCK_ORDERS_VERSION = 1;
+
 type MockOrdersGlobal = typeof globalThis & {
   __podeDeixarMockClientOrders?: ClientOrder[];
+  __podeDeixarMockClientOrdersVersion?: number;
 };
 
 function getRuntimeOrders(): ClientOrder[] {
   const g = globalThis as MockOrdersGlobal;
-  if (!g.__podeDeixarMockClientOrders) {
+  if (
+    !g.__podeDeixarMockClientOrders ||
+    g.__podeDeixarMockClientOrdersVersion !== MOCK_ORDERS_VERSION
+  ) {
     g.__podeDeixarMockClientOrders = cloneOrders();
+    g.__podeDeixarMockClientOrdersVersion = MOCK_ORDERS_VERSION;
   }
   return g.__podeDeixarMockClientOrders;
 }
@@ -122,6 +163,7 @@ function getRuntimeOrders(): ClientOrder[] {
 export function resetMockClientOrders() {
   const g = globalThis as MockOrdersGlobal;
   g.__podeDeixarMockClientOrders = cloneOrders();
+  g.__podeDeixarMockClientOrdersVersion = MOCK_ORDERS_VERSION;
 }
 
 export function getMockClientOrders(): ClientOrder[] {

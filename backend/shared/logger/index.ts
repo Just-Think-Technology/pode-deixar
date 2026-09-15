@@ -2,8 +2,8 @@
 
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
-import fs from 'fs';
-import path from 'path';
+import fs = require('fs');
+import path = require('path');
 
 type PinoLogger = pino.Logger;
 export type LoggerWithEvent = PinoLogger & {
@@ -233,5 +233,9 @@ export function createLogger(serviceName: string, featureName?: string, options:
   loggerCache.set(key, logger);
   return logger;
 }
+
+export { createResponseLoggerInterceptor } from './response-logger.interceptor';
+export { bootstrapService } from './bootstrap';
+export type { BootstrapServiceOptions } from './bootstrap';
 
 export default createLogger;
