@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — sonner toaster
 "use client"
 
 import { useTheme } from "next-themes"

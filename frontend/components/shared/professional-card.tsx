@@ -1,3 +1,5 @@
+// Professional card — provider summary for search results
+
 "use client";
 
 import Image from "next/image";

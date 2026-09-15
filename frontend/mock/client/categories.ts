@@ -1,3 +1,5 @@
+// Client category mocks — seeded categories for search and home
+
 import type { Category } from "@/lib/client/quote/types";
 
 export const MOCK_CATEGORIES: Category[] = [

@@ -1,3 +1,5 @@
+// Orders and proposals tests — cross-endpoint integration flows
+
 import { INestApplication } from '@nestjs/common';
 // import-require: these services lack esModuleInterop (unlike auth),
 // so the default import compiles to a nonexistent `.default` at runtime.
@@ -21,7 +23,7 @@ const PNG_1X1 = Buffer.from(
   'base64',
 );
 
-// ─── Integration: Pedidos + propostas + fotos (HTTP + banco real) ──────────
+// --- Integration: Orders And Proposals ---
 
 describe('Orders & Proposals (integration)', () => {
   let app: INestApplication<App>;

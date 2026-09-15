@@ -1,3 +1,4 @@
+// --- Setup ---
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -18,7 +19,7 @@ export interface TestAppSetup {
 
 // --- MinIO stub ---
 // The real MinioService connects on onModuleInit — unfeasible without MinIO.
-// Substitui o comportamento de rede, mantendo o contrato usado pelos services.
+// Mocks network behavior while keeping the service contract.
 
 export const mockMinio = {
   avatarBucket: 'avatars',

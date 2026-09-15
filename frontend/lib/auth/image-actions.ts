@@ -1,3 +1,5 @@
+// Auth image actions — avatar and service image server actions
+
 "use server";
 
 import { getAccessToken } from "@/lib/auth/session.server";
@@ -10,6 +12,18 @@ const ALLOWED_IMAGE_MIME = new Set([
   "image/webp",
   "image/gif",
 ]);
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Allowlist resource IDs to safe shapes before interpolating them into the
+// backend URL path, so traversal or alternate endpoints cannot be smuggled in.
+function assertResourceId(value: string, message: string): void {
+  const id = value?.trim() ?? "";
+  if (!id || (!UUID_REGEX.test(id) && !id.startsWith("mock-"))) {
+    throw new Error(message);
+  }
+}
 
 function hasAllowedMagicBytes(bytes: Uint8Array, mime: string): boolean {
   if (mime === "image/jpeg") {
@@ -57,6 +71,7 @@ export async function uploadServiceImageAction(
   if (!token) {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
+  assertResourceId(serviceId, "Serviço inválido");
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
@@ -74,7 +89,7 @@ export async function uploadServiceImageAction(
   }
 
   const res = await fetch(
-    `${getApiBaseUrl()}/providers/me/services/${serviceId}/images`,
+    `${getApiBaseUrl()}/providers/me/services/${encodeURIComponent(serviceId)}/images`,
     {
       method: "POST",
       headers: {
@@ -105,9 +120,11 @@ export async function deleteServiceImageAction(
   if (!token) {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
+  assertResourceId(serviceId, "Serviço inválido");
+  assertResourceId(imageId, "Imagem inválida");
 
   const res = await fetch(
-    `${getApiBaseUrl()}/providers/me/services/${serviceId}/images/${imageId}`,
+    `${getApiBaseUrl()}/providers/me/services/${encodeURIComponent(serviceId)}/images/${encodeURIComponent(imageId)}`,
     {
       method: "DELETE",
       headers: {

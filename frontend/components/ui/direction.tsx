@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — direction
 "use client"
 
 export {

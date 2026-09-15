@@ -1,3 +1,5 @@
+// Client home mocks — seeded categories and professionals for the home page
+
 import type { ServiceCategory } from "@/mock/types";
 import type { ProviderSearchResult } from "@/lib/client/search/types";
 

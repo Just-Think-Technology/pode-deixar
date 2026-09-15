@@ -1,3 +1,5 @@
+// JWT strategy — access-token validation
+
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
@@ -20,6 +22,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: configService.getOrThrow<string>("JWT_ACCESS_SECRET"),
     });
   }
+
+  // --- Public API ---
 
   async validate(payload: any) {
     assertTokenPayload(payload);

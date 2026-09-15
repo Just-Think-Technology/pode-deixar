@@ -1,3 +1,5 @@
+// Worker agenda actions — event listing server actions
+
 "use server";
 
 import { ApiError } from "@/api/client";

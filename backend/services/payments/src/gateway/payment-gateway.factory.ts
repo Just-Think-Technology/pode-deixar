@@ -1,3 +1,5 @@
+// Payment gateway factory — active provider resolution
+
 import { Injectable } from "@nestjs/common";
 import { PaymentGateway } from "./payment-gateway.interface";
 import { MercadoPagoGateway } from "./mercadopago.gateway";
@@ -9,6 +11,8 @@ export class PaymentGatewayFactory {
     private readonly mercadoPago: MercadoPagoGateway,
     private readonly mockGateway: MockPaymentGateway,
   ) {}
+
+  // --- Public API ---
 
   get active(): PaymentGateway {
     return this.mercadoPago.isConfigured ? this.mercadoPago : this.mockGateway;

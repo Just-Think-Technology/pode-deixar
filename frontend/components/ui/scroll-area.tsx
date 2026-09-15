@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — scroll area
 "use client"
 
 import * as React from "react"

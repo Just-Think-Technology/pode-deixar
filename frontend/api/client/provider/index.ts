@@ -1,3 +1,5 @@
+// Client provider API — public provider profile fetcher
+
 import { apiFetch } from "@/api/client";
 import { mockGetProviderPublicProfile } from "@/mock/client/provider";
 import type { ProviderPublicProfile } from "@/lib/client/provider/types";

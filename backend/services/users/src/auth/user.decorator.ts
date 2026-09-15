@@ -1,3 +1,5 @@
+// User decorator — authenticated user param extraction
+
 import {
   createParamDecorator,
   ExecutionContext,

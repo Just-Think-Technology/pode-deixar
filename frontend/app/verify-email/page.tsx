@@ -1,3 +1,4 @@
+// purpose: Email verification route — renders the verification page
 "use client";
 
 import Link from "next/link";

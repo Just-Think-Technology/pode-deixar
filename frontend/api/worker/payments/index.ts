@@ -1,3 +1,5 @@
+// Worker payments API — receipt lookup with mock fallback
+
 import {
   mockGetPaymentByProposalId,
   mockListWorkerPayments,
@@ -28,7 +30,7 @@ export function getPaymentStatusByProposal(
 
 /**
  * Lists receipts of the authenticated provider.
- * Contrato futuro: GET /payments/provider/me (role PROVIDER).
+ * Future contract: GET /payments/provider/me (role PROVIDER).
  */
 export function listWorkerPayments(
   _accessToken: string,

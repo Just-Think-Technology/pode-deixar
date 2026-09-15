@@ -1,3 +1,5 @@
+// Test setup — auth app boot and user helpers
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -204,6 +206,6 @@ export async function teardownTestApp(
   app: INestApplication,
   prisma: PrismaService,
 ): Promise<void> {
-  await prisma.$disconnect(); // fecha conexão com banco
-  await app.close();          // fecha HTTP server do Nest
+  await prisma.$disconnect(); // close database connection
+  await app.close();          // close Nest HTTP server
 }

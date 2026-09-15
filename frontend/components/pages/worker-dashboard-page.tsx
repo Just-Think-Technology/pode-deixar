@@ -1,3 +1,5 @@
+// Worker dashboard — stats and charts overview
+
 "use client";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";

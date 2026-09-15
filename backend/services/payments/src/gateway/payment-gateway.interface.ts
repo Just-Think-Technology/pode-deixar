@@ -1,3 +1,5 @@
+// Payment gateway contract — charge and webhook interface
+
 import { PaymentMethod, PaymentStatus } from "@prisma/client";
 
 export interface CreateChargeParams {

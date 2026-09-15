@@ -1,3 +1,5 @@
+// Client order detail — order info with proposal accept/reject
+
 "use client";
 
 import Link from "next/link";
@@ -116,6 +118,10 @@ export default function ClientOrderDetailPage({
   );
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog>(null);
   const proposals = currentOrder.proposals ?? [];
+  const showTracking = ["IN_PROGRESS", "CANCELLED"].includes(
+    currentOrder.status,
+  );
+  const showReview = currentOrder.status === "COMPLETED";
 
   useEffect(() => {
     setCurrentOrder(order);
@@ -185,6 +191,24 @@ export default function ClientOrderDetailPage({
           {getOrderStatusLabel(currentOrder.status)}
         </Badge>
       </div>
+
+      {showTracking ? (
+        <Link
+          href={`/client/orders/${currentOrder.id}/tracking`}
+          className={cn(buttonVariants({ variant: "outline" }), "mb-6 gap-2")}
+        >
+          Acompanhar contratação
+        </Link>
+      ) : null}
+
+      {showReview ? (
+        <Link
+          href={`/client/orders/${currentOrder.id}/tracking#avaliacao`}
+          className={cn(buttonVariants({ variant: "outline" }), "mb-6 gap-2")}
+        >
+          Avaliar serviço
+        </Link>
+      ) : null}
 
       <div className="space-y-6">
         <Card>

@@ -1,3 +1,5 @@
+// Client checkout page — payment method, scheduling, and charge display
+
 "use client";
 
 import Link from "next/link";

@@ -1,3 +1,5 @@
+// E2E worker finance — earnings dashboard and receipts
+
 import { expect, test } from "@playwright/test";
 
 import { loginAsWorkerMock } from "./helpers/auth";

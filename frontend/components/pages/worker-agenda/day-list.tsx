@@ -1,3 +1,5 @@
+// Agenda day list — chronological events for a single day
+
 "use client";
 
 import { Calendar } from "lucide-react";

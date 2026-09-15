@@ -1,10 +1,5 @@
-# ============================================================
-# Pode Deixar - Stack local com hot-reload (comando único)
-# ============================================================
-#   docker compose -f docker-compose.dev.yml up -d --build
-#
-# Inclui o docker-compose.yml e aplica os overrides de dev.
-# ============================================================
+# purpose: Local stack with hot-reload (extends docker-compose.yml)
+# Run: docker compose -f docker-compose.dev.yml up -d --build
 
 include:
   - path: docker-compose.yml
@@ -12,18 +7,18 @@ include:
 name: pode-deixar-dev
 
 services:
-  # -- Postgres local --
+  # --- Postgres ---
   postgres:
     ports: !override
       - "15432:5432"
 
-  # -- MinIO local --
+  # --- MinIO ---
   minio:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
 
-  # -- Frontend --
+  # --- Frontend ---
   frontend:
     build:
       context: ./frontend
@@ -40,7 +35,7 @@ services:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
 
-  # -- Auth Service --
+  # --- Auth Service ---
   auth:
     build:
       context: ./backend
@@ -77,20 +72,18 @@ services:
       - ./backend/shared/security/helmet-config.ts:/app/shared/security/helmet-config.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
-      - ./backend/shared/security/dist:/app/shared/security/dist
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
-    
+
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
-      - ./backend/shared/validation/dist:/app/shared/validation/dist
-    
+
       - ./backend/prisma:/app/prisma
     depends_on:
       mailpit:
         condition: service_started
 
-  # -- Users Service --
+  # --- Users Service ---
   users:
     build:
       context: ./backend
@@ -122,15 +115,17 @@ services:
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/dist:/app/shared/security/dist
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+      - ./backend/shared/validation/dist:/app/shared/validation/dist
 
       - ./backend/prisma:/app/prisma
 
-  # -- Service Orders Service --
+  # --- Service Orders Service ---
   service-orders:
     build:
       context: ./backend
@@ -164,15 +159,17 @@ services:
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/dist:/app/shared/security/dist
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+      - ./backend/shared/validation/dist:/app/shared/validation/dist
 
       - ./backend/prisma:/app/prisma
 
-  # -- Payments Service --
+  # --- Payments Service ---
   payments:
     build:
       context: ./backend
@@ -207,15 +204,17 @@ services:
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/dist:/app/shared/security/dist
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+      - ./backend/shared/validation/dist:/app/shared/validation/dist
 
       - ./backend/prisma:/app/prisma
 
-  # -- Reviews Service --
+  # --- Reviews Service ---
   reviews:
     build:
       context: ./backend
@@ -247,11 +246,13 @@ services:
       - ./backend/shared/security/index.ts:/app/shared/security/index.ts
       - ./backend/shared/security/redis-throttler-storage.ts:/app/shared/security/redis-throttler-storage.ts
       - ./backend/shared/security/src:/app/shared/security/src
+      - ./backend/shared/security/dist:/app/shared/security/dist
       - ./backend/shared/security/tsconfig.json:/app/shared/security/tsconfig.json
 
       - ./backend/shared/validation/index.ts:/app/shared/validation/index.ts
       - ./backend/shared/validation/src:/app/shared/validation/src
       - ./backend/shared/validation/tsconfig.json:/app/shared/validation/tsconfig.json
+      - ./backend/shared/validation/dist:/app/shared/validation/dist
 
       - ./backend/prisma:/app/prisma
 

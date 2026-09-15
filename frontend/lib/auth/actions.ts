@@ -1,3 +1,5 @@
+// Auth actions — login, registration, and session server actions
+
 "use server";
 
 import { login } from "@/api/login";

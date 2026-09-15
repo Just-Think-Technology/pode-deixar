@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — chart
 "use client"
 
 import * as React from "react"

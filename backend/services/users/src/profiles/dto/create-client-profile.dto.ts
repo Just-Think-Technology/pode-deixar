@@ -1,3 +1,5 @@
+// Client profile DTO — client profile creation validation
+
 import { IsOptional, IsUrl, IsObject } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 

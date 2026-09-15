@@ -1,3 +1,4 @@
+// purpose: Client request quote route — renders quote form with provider profile and categories
 import { notFound } from "next/navigation";
 
 import { getCategories } from "@/api/client/categories";

@@ -1,3 +1,5 @@
+// Session route — refreshes the auth cookie
+
 import { NextRequest, NextResponse } from "next/server";
 
 import { verifyAccessToken } from "@/api/auth/verify";

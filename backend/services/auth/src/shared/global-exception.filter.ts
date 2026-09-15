@@ -1,3 +1,5 @@
+// Auth exception filter — localized error envelope
+
 import {
   ExceptionFilter,
   Catch,
@@ -10,6 +12,9 @@ import { Request, Response } from 'express';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+
+  // --- Private Helpers ---
+
   private readonly logger = new Logger(GlobalExceptionFilter.name);
 
   private translateMessage(msg: string): string {
@@ -44,6 +49,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         return 'Erro Interno do Servidor';
     }
   }
+
+  // --- Public API ---
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();

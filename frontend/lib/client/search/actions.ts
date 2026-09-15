@@ -1,3 +1,5 @@
+// Client search actions — professional search server actions
+
 "use server";
 
 import { ApiError } from "@/api/client";

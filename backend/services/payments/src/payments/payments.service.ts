@@ -1,3 +1,5 @@
+// Payments service — charges, webhooks and provider finance
+
 import {
   Injectable,
   NotFoundException,
@@ -52,6 +54,8 @@ export class PaymentsService {
     private readonly gateways: PaymentGatewayFactory,
     private readonly logger: PaymentLoggerService,
   ) {}
+
+  // --- Private Helpers ---
 
   private async findClientPayment(paymentId: string, userId: string) {
     const payment = await this.prisma.payment.findUnique({
@@ -121,6 +125,8 @@ export class PaymentsService {
         : this.roundToCents(Number(payment.amount) - feeAmount);
     return { feeRate, feeAmount, netAmount };
   }
+
+  // --- Public API ---
 
   findAll(userId: string) {
     return this.prisma.payment.findMany({

@@ -1,3 +1,4 @@
+// purpose: Reset password route — renders the reset form
 import { Suspense } from "react";
 import { ResetPasswordForm } from "@/components/pages/reset-password";
 

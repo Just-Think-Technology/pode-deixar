@@ -1,5 +1,8 @@
+// Agenda event dialog — order details with photo gallery entry point
+
 "use client";
 
+import Link from "next/link";
 import { MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +107,21 @@ function AgendaEventDetailContent({
             ))}
           </ul>
         </div>
+      ) : null}
+
+      <Link
+        href={`/worker/orders/${event.order_id}/tracking`}
+        className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+      >
+        Acompanhar contratação
+      </Link>
+      {event.order_status === "IN_PROGRESS" ? (
+        <Link
+          href={`/worker/orders/${event.order_id}/complete`}
+          className={cn(buttonVariants(), "w-full")}
+        >
+          Finalizar serviço
+        </Link>
       ) : null}
     </>
   );

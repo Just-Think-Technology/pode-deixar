@@ -1,3 +1,5 @@
+// Auth refresh tests — POST /auth/refresh-token flow
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -8,6 +10,8 @@ import {
   teardownTestApp
 } from './test-setup';
 import { PrismaService } from '@pode-deixar/prisma';
+
+// --- Tests ---
 
 describe('POST /auth/refresh-token', () => {
   let app: INestApplication<App>;

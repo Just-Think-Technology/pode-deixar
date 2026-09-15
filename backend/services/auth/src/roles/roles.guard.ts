@@ -1,3 +1,5 @@
+// Roles guard — role-based route authorization
+
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { User } from '@prisma/client';
@@ -7,6 +9,8 @@ import { Role } from '@prisma/client';
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
+
+  // --- Public API ---
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [

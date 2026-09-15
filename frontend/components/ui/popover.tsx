@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — popover
 "use client"
 
 import * as React from "react"

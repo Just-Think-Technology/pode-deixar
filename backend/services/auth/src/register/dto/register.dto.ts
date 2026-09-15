@@ -1,3 +1,5 @@
+// Register DTO — signup input validation
+
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,

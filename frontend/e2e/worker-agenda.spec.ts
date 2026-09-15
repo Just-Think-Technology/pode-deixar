@@ -1,3 +1,5 @@
+// E2E worker agenda — calendar views and event detail
+
 import { expect, test } from "@playwright/test";
 
 import { loginAsWorkerMock } from "./helpers/auth";

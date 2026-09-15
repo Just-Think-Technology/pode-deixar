@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — combobox
 "use client"
 
 import * as React from "react"

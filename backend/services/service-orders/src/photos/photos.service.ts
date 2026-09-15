@@ -1,3 +1,5 @@
+// Photos service — order photo uploads and signed viewing
+
 import {
   Injectable,
   BadRequestException,
@@ -20,6 +22,8 @@ export class PhotosService {
     private prisma: PrismaService,
     private minio: MinioService,
   ) {}
+
+  // --- Public API ---
 
   async upload(
     orderId: string,
@@ -56,8 +60,8 @@ export class PhotosService {
       throw new BadRequestException("Máximo de 10 fotos por upload");
     }
 
-    // Validação canônica de imagem (extensão + magic bytes) no pacote
-    // compartilhado — mesma regra do upload de avatar/serviço do users.
+    // Canonical image validation (extension + magic bytes) in the shared
+    // package — same rule as the users avatar/service upload.
     for (const file of files) {
       validarArquivoImagem(file.originalname, file.buffer);
     }
@@ -155,6 +159,8 @@ export class PhotosService {
 
     throw new ForbiddenException("Acesso negado a esta foto");
   }
+
+  // --- Private Helpers ---
 
   private async buildViewResponse(storedUrl: string) {
     const fileName = this.minio.extractFileName(storedUrl);

@@ -1,3 +1,5 @@
+// Auth forms spec — login and registration rendering with jsdom workarounds
+
 import { describe, it, expect, vitest, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
@@ -29,23 +31,19 @@ describe('Authentication Forms', () => {
     it('should render login form', () => {
       render(<ClientLoginForm />)
 
-      // Should have email field
       const emailInput = screen.getByRole('textbox', {
         name: /e-mail/i,
       })
       expect(emailInput).toBeInTheDocument()
 
-      // Should have password field
     const passwordInput = screen.getByLabelText(/senha/i)
       expect(passwordInput).toBeInTheDocument()
 
-      // Should have login button
       const loginButton = screen.getByRole('button', {
         name: /entrar/i,
       })
       expect(loginButton).toBeInTheDocument()
 
-      // Should have "Esqueceu sua senha?" link
       const forgotLink = screen.getByRole('link', {
         name: /esqueceu sua senha/i,
       })
@@ -82,35 +80,29 @@ describe('Authentication Forms', () => {
     it('should render client registration form', () => {
       render(<ClientRegisterForm />)
 
-      // Should have name field
       const nameInput = screen.getByRole('textbox', {
         name: /nome completo/i,
       })
       expect(nameInput).toBeInTheDocument()
 
-      // Should have email field
       const emailInput = screen.getByRole('textbox', {
         name: /e-mail/i,
       })
       expect(emailInput).toBeInTheDocument()
 
-      // Should have phone field
       const phoneInput = screen.getByRole('textbox', {
         name: /telefone/i,
       })
       expect(phoneInput).toBeInTheDocument()
 
-      // Should have postal code field
       const postalInput = screen.getByRole('textbox', {
         name: /cep/i,
       })
       expect(postalInput).toBeInTheDocument()
 
-      // Should have password field
       const passwordInput = screen.getByLabelText(/^senha$/i)
       expect(passwordInput).toBeInTheDocument()
 
-      // Should have confirm password field
       const confirmPasswordInput = screen.getByLabelText(/confirmar senha/i)
       expect(confirmPasswordInput).toBeInTheDocument()
 

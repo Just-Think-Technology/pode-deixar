@@ -1,3 +1,4 @@
+// purpose: Worker proposal detail route — shows a single proposal
 import { notFound } from "next/navigation";
 
 import WorkerProposalDetailPage from "@/components/pages/worker-proposal-detail-page";

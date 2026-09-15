@@ -10,13 +10,13 @@ Single source of truth for product decisions, development rules and architecture
 
 ## Stack
 
-- **Backend:** NestJS 11, TypeScript, Prisma 5.22, PostgreSQL
-- **Frontend:** Next.js 16, React 19, shadcn/ui, Tailwind CSS 4
-- **Infra:** Docker Compose, Caddy, pnpm 11 (workspaces), Redis 7, MinIO
+* **Backend:** NestJS 11, TypeScript, Prisma 5.22, PostgreSQL
+* **Frontend:** Next.js 16, React 19, shadcn/ui, Tailwind CSS 4
+* **Infra:** Docker Compose, Caddy, pnpm 11 (workspaces), Redis 7, MinIO
 
 ## Monorepo layout
 
-```
+```text
 backend/
 ├── prisma/          # Shared schema and migrations
 ├── shared/          # Shared packages (logger, email, security, validation, prisma)
@@ -38,17 +38,17 @@ docs/                # Security, product and deploy decisions
 
 ## Architecture
 
-- No sync HTTP between services — integration is via the shared PostgreSQL
+* No sync HTTP between services — integration is via the shared PostgreSQL
   (single Prisma schema in `backend/prisma/`); the frontend reaches services
   through the Caddy gateway (`/api/*`)
-- Auth guards (`JwtAuthGuard`, `RolesGuard`, `Roles`), the global exception
+* Auth guards (`JwtAuthGuard`, `RolesGuard`, `Roles`), the global exception
   filter, token payload/revocation helpers and validation core live only in
   `@pode-deixar/security` / `@pode-deixar/validation`; the auth service keeps
   its own specialized guard/strategy/filter versions (IP logging, access-type
   check, DB user lookup)
-- New code layering: controller (HTTP + validation) → service (business
+* New code layering: controller (HTTP + validation) → service (business
   rules) → repository (Prisma); no Prisma in controllers, DTO on every input
-- Code used by 2+ services is extracted to `backend/shared/` (`@pode-deixar/*`)
+* Code used by 2+ services is extracted to `backend/shared/` (`@pode-deixar/*`)
   by the task that creates the second usage
 
 Full rules: [docs/architecture.md](docs/architecture.md).
@@ -87,59 +87,80 @@ databases (`docker compose up -d postgres` from the repo root).
 
 ## Conventions
 
-- **Language:** code, comments and identifiers in English; user-facing copy
+* **Language:** code, comments and identifiers in English; user-facing copy
   (validation messages, API error messages, emails, UI text) stays in
   Portuguese for BR users — comments explain only why/decisions, never what
-- **This file and docs/ are in English**
-- **Validation:** class-validator + class-transformer, messages in Portuguese
-- **Auth:** JWT (access 15min + refresh 7 days) with rotation and blacklist
-- **Roles:** CLIENT, PROVIDER, ADMIN
-- **Soft delete:** services use `is_active`; orders move to CANCELLED
-- **Commits:** messages and PR titles in English, Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`, `refactor:`); PR body in Portuguese or English (what changed, how to validate, checks run)
-- **Branches:** `feat/`, `fix/`, `docs/`, `test/`, `chore/`, `refactor/` + short slug (e.g. `feat/order-photos`)
-- **Commit hygiene:** review `git status` / `git diff` before committing; never commit env files, secrets or generated artifacts
+* **Comments:** full convention in [docs/comments.md](docs/comments.md)
+  (`//` inline, `/** */` JSDoc on public APIs only, `// --- Section ---`
+  headers, English-only, no TODO/FIXME, no commented-out code)
+* **Clean Code:** full development and code-quality guidelines in
+  [docs/clean-code.md](docs/clean-code.md); code must follow its principles
+  for naming, responsibilities, control flow, error handling, duplication,
+  abstraction, testability, and maintainability
+* **This file and docs/ are in English**
+* **Validation:** class-validator + class-transformer, messages in Portuguese
+* **Auth:** JWT (access 15min + refresh 7 days) with rotation and blacklist
+* **Roles:** CLIENT, PROVIDER, ADMIN
+* **Soft delete:** services use `is_active`; orders move to CANCELLED
+* **Commits:** messages and PR titles in English, Conventional Commits (`feat:`,
+  `fix:`, `chore:`, `test:`, `docs:`, `refactor:`); PR body in Portuguese or
+  English (what changed, how to validate, checks run)
+* **Branches:** `feat/`, `fix/`, `docs/`, `test/`, `chore/`, `refactor/` +
+  short slug (e.g. `feat/order-photos`)
+* **Commit hygiene:** review `git status` / `git diff` before committing;
+  never commit env files, secrets or generated artifacts
 
 ## Task flow
 
 1. Understand the task — ask if anything is ambiguous
-2. Create a specific branch with a descriptive name BEFORE any code change (never develop on main/develop; one task = one branch = one PR)
-3. Study the existing architecture before coding; check [docs/task-checklists.md](docs/task-checklists.md) for the matching task type
-4. Implement following best practices (DRY, SOLID where applicable, SRP, KISS, YAGNI, composition over inheritance, low coupling)
+2. Create a specific branch with a descriptive name BEFORE any code change
+   (never develop on main/develop; one task = one branch = one PR)
+3. Study the existing architecture before coding; check
+   [docs/task-checklists.md](docs/task-checklists.md) for the matching task type
+4. Implement following best practices (DRY, SOLID where applicable, SRP, KISS,
+   YAGNI, composition over inheritance, low coupling) and follow
+   [docs/clean-code.md](docs/clean-code.md)
 5. Update or create tests for the change; run `pnpm lint` and `pnpm typecheck`
-6. Validate nothing broke (run the affected suites) — before push/PR, the affected suites plus `pnpm lint` and `pnpm typecheck` must be green
+6. Validate nothing broke (run the affected suites) — before push/PR, the
+   affected suites plus `pnpm lint` and `pnpm typecheck` must be green
 7. **Update this file / docs/ if the task changed or added a decision**
-8. Open a PR (what changed, how to validate, checklist: tests, lint, typecheck, docs) and request review before the next task
+8. Open a PR (what changed, how to validate, checklist: tests, lint, typecheck,
+   docs) and request review before the next task
 
 ## How to work
 
-- Act directly within the task scope; present a plan for approval first only
+* Act directly within the task scope; present a plan for approval first only
   for large changes (new service, destructive migration, public contract)
-- Chat in Portuguese: concise, with file paths/links and short test evidence
-- Blocked (missing credential, ambiguous requirement, broken environment)?
+* Chat in Portuguese: concise, with file paths/links and short test evidence
+* Blocked (missing credential, ambiguous requirement, broken environment)?
   Stop, describe the blocker and the options, and wait — never guess ahead
-- "Done" requires short evidence (e.g. suite counts, lint ok), not bare claims
+* "Done" requires short evidence (e.g. suite counts, lint ok), not bare claims
 
 ## Code standards
 
-- Clear, descriptive names; self-explanatory code; small cohesive functions
-- No magic numbers; explicit error handling (never swallow exceptions)
-- Minimal changes: touch only what the task needs; suggest (don't implement) unrelated improvements
-- Reuse first: check for an existing equivalent before creating files, classes or services
-- No premature optimization, but no knowingly wasteful queries, loops or allocations
-- No new libraries without need and justification; check `package.json` first
-- Public API/contract/behavior changes must be announced beforehand
+* Clear, descriptive names; self-explanatory code; small cohesive functions
+* No magic numbers; explicit error handling (never swallow exceptions)
+* Minimal changes: touch only what the task needs; suggest (don't implement)
+  unrelated improvements
+* Reuse first: check for an existing equivalent before creating files, classes
+  or services
+* No premature optimization, but no knowingly wasteful queries, loops or allocations
+* No new libraries without need and justification; check `package.json` first
+* Public API/contract/behavior changes must be announced beforehand
+* Follow [docs/clean-code.md](docs/clean-code.md) for detailed Clean Code
+  practices and PR review criteria
 
 ## Security baseline
 
 The backend is the source of truth — never trust values from the frontend
 (prices, IDs, status). Full policies live in [docs/security/](docs/security/):
 
-- [Card data (PCI-DSS)](docs/security/pci-card-data.md) — never store, accept, log or echo PAN/CVV; gateway tokenization only
-- [Rate limiting](docs/security/rate-limiting.md) — 100 req/min global via `@nestjs/throttler`; stricter limits on sensitive endpoints; Redis in production
-- [Content Security Policy](docs/security/content-security-policy.md) — centralized `getHelmetConfig()` in `@pode-deixar/security`
-- [CI security pipeline](docs/security/ci-pipeline.md) — audit, dependency review, TruffleHog, CodeQL, eslint-plugin-security, Hadolint
-- [Backups](docs/security/backups.md) — daily `pg_dump`, 7-day retention, tested restore
-- [Encryption at rest](docs/security/encryption-at-rest-decision.md) — decision record
+* [Card data (PCI-DSS)](docs/security/pci-card-data.md) — never store, accept, log or echo PAN/CVV; gateway tokenization only
+* [Rate limiting](docs/security/rate-limiting.md) — 100 req/min global via `@nestjs/throttler`; stricter limits on sensitive endpoints; Redis in production
+* [Content Security Policy](docs/security/content-security-policy.md) — centralized `getHelmetConfig()` in `@pode-deixar/security`
+* [CI security pipeline](docs/security/ci-pipeline.md) — audit, dependency review, TruffleHog, CodeQL, eslint-plugin-security, Hadolint
+* [Backups](docs/security/backups.md) — daily `pg_dump`, 7-day retention, tested restore
+* [Encryption at rest](docs/security/encryption-at-rest-decision.md) — decision record
 
 Per-task security checklists (new endpoint, Prisma migration, webhook/gateway,
 new service): [docs/task-checklists.md](docs/task-checklists.md).
@@ -164,14 +185,13 @@ new service): [docs/task-checklists.md](docs/task-checklists.md).
 
 ## Product decisions
 
-- [Ownership and data access](docs/decisions/ownership-access.md) — ownership validation, 403 semantics, proposal visibility, directed orders
-- [Order photos](docs/decisions/order-photos.md) — MinIO, webp via sharp, limits, dedicated upload endpoint
-- [Payments](docs/decisions/payments.md) — PIX/credit-card status, tokenization path, webhook idempotency, structured logging
-- [Database](docs/decisions/database.md) — least-privilege role
+* [Ownership and data access](docs/decisions/ownership-access.md) — ownership validation, 403 semantics, proposal visibility, directed orders
+* [Order photos](docs/decisions/order-photos.md) — MinIO, webp via sharp, limits, dedicated upload endpoint
+* [Payments](docs/decisions/payments.md) — PIX/credit-card status, tokenization path, webhook idempotency, structured logging
+* [Database](docs/decisions/database.md) — least-privilege role
 
 ## Deploy
 
-All-free topology (Vercel + Oracle VPS + Neon + Cloudflare + Resend/Brevo),
 `docker-compose.dev.yml` for local (own Postgres), `docker-compose.staging.yml` /
 `docker-compose.production.yml` for deploy (one command each, stacks isolated by
 `name`), Caddy vhosts, per-stack Redis:

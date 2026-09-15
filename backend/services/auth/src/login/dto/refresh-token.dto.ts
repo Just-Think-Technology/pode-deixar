@@ -1,3 +1,5 @@
+// Refresh token DTO — session renewal input validation
+
 import { IsNotEmpty, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 

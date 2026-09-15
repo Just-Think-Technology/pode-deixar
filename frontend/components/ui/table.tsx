@@ -1,3 +1,4 @@
+// Vendored shadcn primitive — table
 "use client"
 
 import * as React from "react"

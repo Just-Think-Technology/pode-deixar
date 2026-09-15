@@ -1,3 +1,5 @@
+// Counter-proposals tests — creation and acceptance
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { CounterProposalsService } from "../src/counter-proposals/counter-proposals.service";
 import { PrismaService } from "@pode-deixar/prisma";
@@ -7,6 +9,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
+
+// --- Tests ---
 
 describe("CounterProposalsService", () => {
   let service: CounterProposalsService;

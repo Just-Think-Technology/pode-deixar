@@ -1,6 +1,10 @@
+// Mock payment gateway tests — test double behavior
+
 import { Test, TestingModule } from "@nestjs/testing";
 import { PaymentMethod } from "@prisma/client";
 import { MockPaymentGateway } from "../src/gateway/mock-payment.gateway";
+
+// --- Tests ---
 
 describe("MockPaymentGateway", () => {
   let gateway: MockPaymentGateway;

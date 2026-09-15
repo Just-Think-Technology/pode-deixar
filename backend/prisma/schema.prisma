@@ -1,3 +1,5 @@
+// Prisma schema — core domain models for all services
+
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]

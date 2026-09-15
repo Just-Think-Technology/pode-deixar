@@ -1,3 +1,5 @@
+// Roles guard tests — role-based access decisions
+
 import { ForbiddenException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { RolesGuard } from "../src/guards/roles.guard";
@@ -14,6 +16,8 @@ function montarContexto(papeis: string[] | undefined, usuario: unknown) {
   } as never;
   return { guarda: new RolesGuard(reflector), contexto };
 }
+
+// --- Tests ---
 
 describe("RolesGuard", () => {
   it("libera quando a rota não exige papéis", () => {

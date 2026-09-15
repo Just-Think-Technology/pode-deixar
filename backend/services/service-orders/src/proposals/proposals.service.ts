@@ -1,3 +1,5 @@
+// Proposals service — provider proposals on service orders
+
 import {
   Injectable,
   NotFoundException,
@@ -19,6 +21,8 @@ export class ProposalsService {
     private prisma: PrismaService,
     private logger: ServicesLoggerService,
   ) {}
+
+  // --- Private Helpers ---
 
   private formatProposal(proposal: any) {
     return {
@@ -54,6 +58,8 @@ export class ProposalsService {
         : null,
     };
   }
+
+  // --- Public API ---
 
   async create(providerId: string, dto: CreateProposalDto, ip?: string) {
     const order = await this.prisma.serviceOrder.findUnique({

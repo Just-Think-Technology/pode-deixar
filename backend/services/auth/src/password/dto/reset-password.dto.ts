@@ -1,3 +1,5 @@
+// Reset password DTO — token-based password reset validation
+
 import { IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 

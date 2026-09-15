@@ -1,3 +1,5 @@
+// Client journey tests — cross-service client flows
+
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import {
@@ -12,7 +14,8 @@ import {
   E2EApps,
 } from './apps';
 
-// ─── E2E: jornada completa do cliente ───────────────────────────────────────
+// --- Client Journey ---
+
 // Signup (auth) → verification → login → profile (users) → order → proposal
 // → acceptance → completion (orders) → payment + webhook (payments) → review
 // (reviews). The token issued by the auth-service is accepted by the other 4

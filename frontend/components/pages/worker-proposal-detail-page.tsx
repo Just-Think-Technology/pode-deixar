@@ -1,3 +1,5 @@
+// Worker proposal detail — proposal info with payment status
+
 "use client";
 
 import Link from "next/link";

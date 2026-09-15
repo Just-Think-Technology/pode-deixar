@@ -1,9 +1,11 @@
+// Auth email tests — mocked verification and reset delivery
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { EmailService } from '@pode-deixar/email';
 
-// ─── Nodemailer mock ──────────────────────────────────────────────────────────
+// --- Nodemailer Mock ---
 
 const mockSendMail = jest.fn();
 
@@ -13,7 +15,7 @@ jest.mock('nodemailer', () => ({
   })),
 }));
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ---
 
 const CONFIG: Record<string, string | number> = {
   SMTP_HOST: 'smtp.example.com',
@@ -31,7 +33,7 @@ function buildConfigService(overrides: Partial<typeof CONFIG> = {}): Partial<Con
   };
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
+// --- Tests ---
 
 describe('EmailService', () => {
   let service: EmailService;
@@ -53,11 +55,11 @@ describe('EmailService', () => {
     service = module.get<EmailService>(EmailService);
   });
 
-  // ── Constructor / transport setup ──────────────────────────────────────────
+  // --- Transporter Setup ---
 
   describe('Transporter setup', () => {
     it('should call nodemailer.createTransport with values from ConfigService', () => {
-      // Justificativa AppSec: transporte agora exige TLS (requireTLS + TLSv1.2).
+      // Transport requires TLS (requireTLS + TLSv1.2).
       expect(nodemailer.createTransport).toHaveBeenCalledWith({
         host: CONFIG.SMTP_HOST,
         port: CONFIG.SMTP_PORT,
@@ -89,7 +91,7 @@ describe('EmailService', () => {
     });
   });
 
-  // ── sendEmailVerification ──────────────────────────────────────────────────
+  // --- Email Verification ---
 
   describe('sendEmailVerification()', () => {
     const EMAIL = 'user@test.com';
@@ -157,7 +159,7 @@ describe('EmailService', () => {
     });
   });
 
-  // ── sendPasswordReset ──────────────────────────────────────────────────────
+  // --- Password Reset ---
 
   describe('sendPasswordReset()', () => {
     const EMAIL = 'user@test.com';
