@@ -3,7 +3,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, User } from '@prisma/client';
-import { PrismaService } from '@pode-deixar/prisma';
+import { LoginRepository } from './login.repository';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthLoggerService } from '../shared/auth-logger.service';
@@ -37,7 +37,7 @@ export function requireJwtSecrets(config: ConfigService): void {
 @Injectable()
 export class LoginService {
   constructor(
-    private prisma: PrismaService,
+    private repository: LoginRepository,
     private jwtService: JwtService,
     private configService: ConfigService,
     private authLogger: AuthLoggerService,
@@ -64,7 +64,7 @@ export class LoginService {
   }
 
   private async findUserByEmailOrThrow(email: string, ip?: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.repository.findUserByEmail(email);
     if (!user) {
       this.authLogger.logLoginAttempt(email, false, ip);
       throw new UnauthorizedException(INVALID_CREDENTIALS);
@@ -107,19 +107,13 @@ export class LoginService {
       DEFAULT_LOCKOUT_MINUTES;
 
     if (newAttempts < maxAttempts) {
-      await this.prisma.user.updateMany({
-        where: { id: user.id },
-        data: { failedLoginAttempts: newAttempts },
-      });
+      await this.repository.incrementFailedAttempts(user.id, newAttempts);
       this.authLogger.logLoginAttempt(email, false, ip);
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
     const lockoutUntil = new Date(Date.now() + lockoutMinutes * MS_PER_MINUTE);
-    await this.prisma.user.updateMany({
-      where: { id: user.id },
-      data: { failedLoginAttempts: newAttempts, lockoutUntil },
-    });
+    await this.repository.lockAccount(user.id, newAttempts, lockoutUntil);
     this.authLogger.logSecurityEvent('account_locked', {
       email,
       attempts: newAttempts,
@@ -145,17 +139,11 @@ export class LoginService {
   }
 
   private async issueSession(user: User, email: string, ip?: string) {
-    await this.prisma.user.updateMany({
-      where: { id: user.id },
-      data: { failedLoginAttempts: 0, lockoutUntil: null, lastLoginAt: new Date() },
-    });
+    await this.repository.resetLoginState(user.id);
 
     const accessToken = await this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user);
-    await this.prisma.user.updateMany({
-      where: { id: user.id },
-      data: { refreshToken: this.hashRefreshToken(refreshToken) },
-    });
+    await this.repository.storeRefreshTokenHash(user.id, this.hashRefreshToken(refreshToken));
 
     this.authLogger.logLoginAttempt(email, true, ip);
 
@@ -189,30 +177,19 @@ export class LoginService {
 
       const hashedIncoming = this.hashRefreshToken(dto.refreshToken);
 
-      const user = await this.prisma.user.findFirst({
-        where: { id: payload.sub, refreshToken: hashedIncoming },
-      });
+      const user = await this.repository.findUserByIdAndRefreshToken(payload.sub, hashedIncoming);
 
       if (!user) {
-        await this.prisma.user.updateMany({
-          where: { id: payload.sub },
-          data: { refreshToken: null },
-        });
+        await this.repository.clearRefreshTokenByUserId(payload.sub);
         throw new UnauthorizedException('Token de atualização inválido');
       }
 
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { refreshToken: null },
-      });
+      await this.repository.clearRefreshToken(user.id);
 
       const newAccessToken = await this.generateAccessToken(user);
       const newRefreshToken = await this.generateRefreshToken(user);
 
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { refreshToken: this.hashRefreshToken(newRefreshToken) },
-      });
+      await this.repository.storeNewRefreshToken(user.id, this.hashRefreshToken(newRefreshToken));
 
       this.authLogger.logTokenRefresh(user.id, true);
 
@@ -233,31 +210,16 @@ export class LoginService {
    * access token when its ID is provided.
    */
   async logout(userId: string, accessTokenJti?: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true },
-    });
+    const user = await this.repository.findUserEmailById(userId);
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { refreshToken: null },
-    });
+    await this.repository.clearRefreshToken(userId);
 
     try {
       if (accessTokenJti) {
-        await this.prisma.tokenBlacklist.create({
-          data: {
-            jti: accessTokenJti,
-            expiresAt: new Date(
-              Date.now() + ACCESS_TOKEN_TTL_SECONDS * 1000,
-            ),
-          },
-        });
+        await this.repository.blacklistToken(accessTokenJti, new Date(Date.now() + ACCESS_TOKEN_TTL_SECONDS * 1000));
       }
 
-      await this.prisma.tokenBlacklist.deleteMany({
-        where: { expiresAt: { lte: new Date() } },
-      });
+      await this.repository.pruneExpiredTokens();
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -319,13 +281,7 @@ export class LoginService {
   ): Promise<void> {
     const rawToken = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
-    await this.prisma.user.updateMany({
-      where: { id: userId },
-      data: {
-        emailVerificationToken: this.hashToken(rawToken),
-        emailVerificationExpires: expiresAt,
-      },
-    });
+    await this.repository.updateVerificationHint(userId, this.hashToken(rawToken), expiresAt);
     try {
       await this.emailService.sendEmailVerification(email, rawToken);
     } catch (error) {

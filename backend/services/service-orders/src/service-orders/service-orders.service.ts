@@ -6,7 +6,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { PrismaService } from "@pode-deixar/prisma";
+import { ServiceOrdersRepository } from "./service-orders.repository";
 import { ServicesLoggerService } from "../shared/services-logger.service";
 import { CreateServiceOrderDto } from "./dto/create-service-order.dto";
 import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
@@ -16,41 +16,7 @@ import {
   formatAddress,
   formatAddressSummary,
 } from "./dto/service-order-address.dto";
-import {
-  normalizePagination,
-  PaginationQuery,
-} from "../shared/pagination-query.dto";
-import { Prisma } from "@prisma/client";
-
-type OrderDetail = Prisma.ServiceOrderGetPayload<{
-  include: {
-    proposals: true;
-    photos: { select: { id: true; url: true } };
-    category: { select: { id: true; name: true; slug: true } };
-  };
-}>;
-
-type OrderListView = Omit<OrderDetail, "proposals" | "photos"> & {
-  category?: OrderDetail["category"] | null;
-};
-
-type OrderWithProposals = Prisma.ServiceOrderGetPayload<{
-  include: {
-    proposals: true;
-    category: { select: { id: true; name: true; slug: true } };
-  };
-}>;
-
-type AgendaOrder = Prisma.ServiceOrderGetPayload<{
-  include: {
-    photos: { select: { id: true; url: true } };
-    payments: {
-      where: { status: "PAID" };
-      orderBy: { paidAt: "desc" };
-      take: 1;
-    };
-  };
-}>;
+import { normalizePagination, PaginationQuery } from "@pode-deixar/validation";
 
 const MAX_AGENDA_WINDOW_DAYS = 92;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -58,13 +24,11 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 @Injectable()
 export class ServiceOrdersService {
   constructor(
-    private prisma: PrismaService,
+    private repository: ServiceOrdersRepository,
     private logger: ServicesLoggerService,
   ) {}
 
-  // --- Private Helpers ---
-
-  private formatOrder(order: OrderListView) {
+  private formatOrder(order: any) {
     return {
       id: order.id,
       client_id: order.clientId,
@@ -91,25 +55,25 @@ export class ServiceOrdersService {
   }
 
   // Exposed `url` is the authenticated view endpoint since the bucket is not public.
-  private formatPhotos(photos: { id: string }[] | undefined) {
-    return (photos ?? []).map((p) => ({
+  private formatPhotos(photos: any[] | undefined) {
+    return (photos ?? []).map((p: any) => ({
       id: p.id,
       url: `/api/services/photos/${p.id}/view`,
     }));
   }
 
   // Showcase items use a brief address to avoid exposing street/number/ZIP.
-  private formatOpenOrderListItem(order: OrderListView) {
+  private formatOpenOrderListItem(order: any) {
     return {
       ...this.formatOrder(order),
       address: formatAddressSummary(order.address),
     };
   }
 
-  private formatOrderWithProposals(order: OrderWithProposals) {
+  private formatOrderWithProposals(order: any) {
     return {
       ...this.formatOrder(order),
-      proposals: order.proposals.map((p) => ({
+      proposals: order.proposals.map((p: any) => ({
         id: p.id,
         provider_id: p.providerId,
         price: p.price,
@@ -128,10 +92,7 @@ export class ServiceOrdersService {
       );
     }
 
-    const provider = await this.prisma.user.findUnique({
-      where: { id: providerId },
-      select: { id: true, role: true },
-    });
+    const provider = await this.repository.findProviderUserById(providerId);
 
     if (!provider) {
       throw new BadRequestException("Prestador não encontrado");
@@ -142,8 +103,6 @@ export class ServiceOrdersService {
     }
   }
 
-  // --- Public API ---
-
   async create(clientId: string, dto: CreateServiceOrderDto, ip?: string) {
     if (dto.providerId) {
       await this.validateProvider(dto.providerId, clientId);
@@ -151,20 +110,15 @@ export class ServiceOrdersService {
 
     const address = sanitizeAddress(dto.address);
 
-    const order = await this.prisma.serviceOrder.create({
-      data: {
-        clientId,
-        providerId: dto.providerId ?? null,
-        title: dto.title,
-        description: dto.description,
-        categoryId: dto.categoryId,
-        budgetMin: dto.budgetMin ?? null,
-        budgetMax: dto.budgetMax ?? null,
-        ...(address ? { address: address } : {}),
-      },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-      },
+    const order = await this.repository.createOrder({
+      clientId,
+      providerId: dto.providerId ?? null,
+      title: dto.title,
+      description: dto.description,
+      categoryId: dto.categoryId,
+      budgetMin: dto.budgetMin ?? null,
+      budgetMax: dto.budgetMax ?? null,
+      ...(address ? { address } : {}),
     });
 
     this.logger.logServiceOrderCreated(clientId, order.id, ip);
@@ -177,42 +131,24 @@ export class ServiceOrdersService {
     pagination?: PaginationQuery,
   ) {
     const { skip, take } = normalizePagination(pagination);
-    const orders = await this.prisma.serviceOrder.findMany({
-      where: { providerId },
-      orderBy: { createdAt: "desc" },
+    const orders = await this.repository.findReceivedByProvider(
+      providerId,
       skip,
       take,
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
+    );
 
     return orders.map((o) => this.formatOrder(o));
   }
 
   async findByClient(clientId: string, pagination?: PaginationQuery) {
     const { skip, take } = normalizePagination(pagination);
-    const orders = await this.prisma.serviceOrder.findMany({
-      where: { clientId },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take,
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
+    const orders = await this.repository.findByClient(clientId, skip, take);
 
     return orders.map((o) => this.formatOrder(o));
   }
 
   async findById(id: string) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id },
-      include: {
-        proposals: true,
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
+    const order = await this.repository.findOrderWithProposalsById(id);
 
     if (!order) {
       throw new NotFoundException("Pedido de serviço não encontrado");
@@ -222,13 +158,7 @@ export class ServiceOrdersService {
   }
 
   async findByIdForClient(orderId: string, clientId: string) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: orderId },
-      include: {
-        proposals: true,
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
+    const order = await this.repository.findOrderWithProposalsById(orderId);
 
     if (!order) {
       throw new NotFoundException("Pedido de serviço não encontrado");
@@ -242,17 +172,7 @@ export class ServiceOrdersService {
   }
 
   async findByIdWithAccess(orderId: string, userId: string, role: string) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: orderId },
-      include: {
-        proposals: true,
-        photos: {
-          select: { id: true, url: true },
-          orderBy: { createdAt: "asc" },
-        },
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
+    const order = await this.repository.findOrderWithAccessById(orderId);
 
     if (!order) {
       throw new NotFoundException("Pedido de serviço não encontrado");
@@ -266,64 +186,48 @@ export class ServiceOrdersService {
     }
 
     if (role === "PROVIDER") {
-      const providerView = this.formatProviderOrderView(order, userId);
-      if (providerView) {
-        return providerView;
+      if (order.providerId && order.providerId !== userId) {
+        throw new ForbiddenException("Acesso negado a este pedido");
+      }
+
+      const proposal = order.proposals.find((p) => p.providerId === userId);
+      if (proposal) {
+        return {
+          ...this.formatOrder(order),
+          proposals: [
+            {
+              id: proposal.id,
+              provider_id: proposal.providerId,
+              price: proposal.price,
+              description: proposal.description,
+              estimated_duration: proposal.estimatedDuration,
+              status: proposal.status,
+              created_at: proposal.createdAt,
+            },
+          ],
+          photos: this.formatPhotos(order.photos),
+        };
+      }
+
+      if (order.providerId === userId) {
+        return {
+          ...this.formatOrder(order),
+          photos: this.formatPhotos(order.photos),
+        };
       }
     }
 
     throw new ForbiddenException("Acesso negado a este pedido");
   }
 
-  private formatProviderOrderView(order: OrderDetail, userId: string) {
-    if (order.providerId && order.providerId !== userId) {
-      throw new ForbiddenException("Acesso negado a este pedido");
-    }
-
-    const proposal = order.proposals.find((p) => p.providerId === userId);
-    if (proposal) {
-      return {
-        ...this.formatOrder(order),
-        proposals: [
-          {
-            id: proposal.id,
-            provider_id: proposal.providerId,
-            price: proposal.price,
-            description: proposal.description,
-            estimated_duration: proposal.estimatedDuration,
-            status: proposal.status,
-            created_at: proposal.createdAt,
-          },
-        ],
-        photos: this.formatPhotos(order.photos),
-      };
-    }
-
-    if (order.providerId === userId) {
-      return {
-        ...this.formatOrder(order),
-        photos: this.formatPhotos(order.photos),
-      };
-    }
-
-    return null;
-  }
-
   // Open-order showcase for authenticated providers only; excludes orders directed to another provider.
   async findOpenOrders(callerUserId: string, pagination?: PaginationQuery) {
     const { skip, take } = normalizePagination(pagination);
-    const orders = await this.prisma.serviceOrder.findMany({
-      where: {
-        status: "OPEN",
-        OR: [{ providerId: null }, { providerId: callerUserId }],
-      },
-      orderBy: { createdAt: "desc" },
+    const orders = await this.repository.findOpenOrders(
+      callerUserId,
       skip,
       take,
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
+    );
 
     return orders.map((o) => this.formatOpenOrderListItem(o));
   }
@@ -334,9 +238,7 @@ export class ServiceOrdersService {
     dto: UpdateServiceOrderDto,
     ip?: string,
   ) {
-    const existing = await this.prisma.serviceOrder.findUnique({
-      where: { id: orderId },
-    });
+    const existing = await this.repository.findOrderById(orderId);
 
     if (!existing) {
       throw new NotFoundException("Pedido de serviço não encontrado");
@@ -352,20 +254,14 @@ export class ServiceOrdersService {
       );
     }
 
-    const order = await this.prisma.serviceOrder.update({
-      where: { id: orderId },
-      data: {
-        title: dto.title ?? existing.title,
-        description: dto.description ?? existing.description,
-        categoryId: dto.categoryId ?? existing.categoryId,
-        budgetMin:
-          dto.budgetMin !== undefined ? dto.budgetMin : existing.budgetMin,
-        budgetMax:
-          dto.budgetMax !== undefined ? dto.budgetMax : existing.budgetMax,
-      },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-      },
+    const order = await this.repository.updateOrder(orderId, {
+      title: dto.title ?? existing.title,
+      description: dto.description ?? existing.description,
+      categoryId: dto.categoryId ?? existing.categoryId,
+      budgetMin:
+        dto.budgetMin !== undefined ? dto.budgetMin : existing.budgetMin,
+      budgetMax:
+        dto.budgetMax !== undefined ? dto.budgetMax : existing.budgetMax,
     });
 
     this.logger.logServiceOrderUpdated(clientId, orderId, ip);
@@ -374,9 +270,7 @@ export class ServiceOrdersService {
   }
 
   async cancel(clientId: string, orderId: string, ip?: string) {
-    const existing = await this.prisma.serviceOrder.findUnique({
-      where: { id: orderId },
-    });
+    const existing = await this.repository.findOrderById(orderId);
 
     if (!existing) {
       throw new NotFoundException("Pedido de serviço não encontrado");
@@ -392,13 +286,7 @@ export class ServiceOrdersService {
       );
     }
 
-    const order = await this.prisma.serviceOrder.update({
-      where: { id: orderId },
-      data: { status: "CANCELLED" },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
+    const order = await this.repository.cancelOrder(orderId);
 
     this.logger.logServiceOrderCancelled(clientId, orderId, ip);
 
@@ -406,9 +294,7 @@ export class ServiceOrdersService {
   }
 
   async complete(providerId: string, orderId: string, ip?: string) {
-    const existing = await this.prisma.serviceOrder.findUnique({
-      where: { id: orderId },
-    });
+    const existing = await this.repository.findOrderById(orderId);
 
     if (!existing) {
       throw new NotFoundException("Pedido de serviço não encontrado");
@@ -428,49 +314,49 @@ export class ServiceOrdersService {
       );
     }
 
-    const order = await this.prisma.serviceOrder.update({
-      where: { id: orderId },
-      data: { status: "COMPLETED" },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
+    const order = await this.repository.completeOrder(orderId);
 
     this.logger.logServiceOrderCompleted(providerId, orderId, ip);
 
     return this.formatOrder(order);
   }
 
-  /**
-   * Hires a provider service directly, creating an IN_PROGRESS order.
-   * Clients cannot hire their own services; inactive services are rejected.
-   */
   async hireFromProvider(
     clientId: string,
     dto: HireProviderServiceDto,
     ip?: string,
   ) {
-    const providerService = await this.findProviderServiceOrThrow(
+    const providerService = await this.repository.findProviderServiceById(
       dto.providerServiceId,
     );
-    this.assertHireable(providerService, clientId);
+
+    if (!providerService) {
+      throw new NotFoundException("Serviço do prestador não encontrado");
+    }
+
+    if (!providerService.isActive) {
+      throw new BadRequestException("Serviço não está disponível");
+    }
+
+    const providerUserId = providerService.providerProfile.userId;
+
+    if (providerUserId === clientId) {
+      throw new BadRequestException(
+        "Você não pode contratar seu próprio serviço",
+      );
+    }
 
     const address = sanitizeAddress(dto.address);
-    const order = await this.prisma.serviceOrder.create({
-      data: {
-        clientId,
-        providerId: providerService.providerProfile.userId,
-        providerServiceId: providerService.id,
-        agreedPrice: providerService.fixedPrice,
-        title: providerService.title,
-        description: providerService.description,
-        categoryId: providerService.categoryId,
-        status: "IN_PROGRESS",
-        ...(address ? { address: address } : {}),
-      },
-      include: {
-        category: { select: { id: true, name: true, slug: true } },
-      },
+
+    const order = await this.repository.createHiredOrder({
+      clientId,
+      providerId: providerUserId,
+      providerServiceId: providerService.id,
+      agreedPrice: providerService.fixedPrice,
+      title: providerService.title,
+      description: providerService.description,
+      categoryId: providerService.categoryId,
+      ...(address ? { address } : {}),
     });
 
     this.logger.logInfo(
@@ -486,34 +372,6 @@ export class ServiceOrdersService {
     );
 
     return this.formatOrder(order);
-  }
-
-  private async findProviderServiceOrThrow(providerServiceId: string) {
-    const providerService = await this.prisma.providerService.findUnique({
-      where: { id: providerServiceId },
-      include: {
-        providerProfile: true,
-        category: { select: { id: true, name: true, slug: true } },
-      },
-    });
-    if (!providerService) {
-      throw new NotFoundException("Serviço do prestador não encontrado");
-    }
-    return providerService;
-  }
-
-  private assertHireable(
-    providerService: { isActive: boolean; providerProfile: { userId: string } },
-    clientId: string,
-  ): void {
-    if (!providerService.isActive) {
-      throw new BadRequestException("Serviço não está disponível");
-    }
-    if (providerService.providerProfile.userId === clientId) {
-      throw new BadRequestException(
-        "Você não pode contratar seu próprio serviço",
-      );
-    }
   }
 
   async findProviderAgenda(providerId: string, from: string, to: string) {
@@ -538,36 +396,16 @@ export class ServiceOrdersService {
       );
     }
 
-    const orders = await this.prisma.serviceOrder.findMany({
-      where: {
-        status: { in: ["IN_PROGRESS", "COMPLETED"] },
-        scheduledAt: { gte: fromDate, lte: toDate },
-        payments: { some: { status: "PAID" } },
-        OR: [
-          { providerId },
-          {
-            proposals: { some: { providerId, status: "ACCEPTED" } },
-          },
-        ],
-      },
-      include: {
-        photos: {
-          select: { id: true, url: true },
-          orderBy: { createdAt: "asc" },
-        },
-        payments: {
-          where: { status: "PAID" },
-          orderBy: { paidAt: "desc" },
-          take: 1,
-        },
-      },
-      orderBy: { scheduledAt: "asc" },
-    });
+    const orders = await this.repository.findProviderAgenda(
+      providerId,
+      fromDate,
+      toDate,
+    );
 
     return orders.map((o) => this.formatAgendaItem(o));
   }
 
-  private formatAgendaItem(order: AgendaOrder) {
+  private formatAgendaItem(order: any) {
     const payment = order.payments?.[0] ?? null;
 
     return {

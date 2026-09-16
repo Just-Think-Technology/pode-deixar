@@ -7,6 +7,8 @@ import { PublicProviderProfileController } from "./public-provider-profile.contr
 import { PrismaModule } from "@pode-deixar/prisma";
 import { SharedModule } from "../shared/shared.module";
 
+import { ProfilesRepository } from "./profiles.repository";
+
 @Module({
 
   // --- Imports ---
@@ -19,7 +21,7 @@ import { SharedModule } from "../shared/shared.module";
 
   // --- Providers ---
 
-  providers: [ProfilesService],
+  providers: [ProfilesService, ProfilesRepository],
   exports: [ProfilesService],
 })
 export class ProfilesModule {}

@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -19,9 +20,8 @@ import {
 } from "@nestjs/swagger";
 import { CounterProposalsService } from "./counter-proposals.service";
 import { CreateCounterProposalDto } from "./dto/create-counter-proposal.dto";
-import { PaginationQueryDto } from "../shared/pagination-query.dto";
+import { PaginationQueryDto } from "@pode-deixar/validation";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
-import { AuthenticatedRequest } from "@pode-deixar/security";
 
 @ApiTags("Contrapropostas")
 @Controller("counter-proposals")
@@ -31,8 +31,6 @@ export class CounterProposalsController {
   constructor(
     private readonly counterProposalsService: CounterProposalsService,
   ) {}
-
-  // --- Public API ---
 
   @Post()
   @Roles("CLIENT", "PROVIDER")
@@ -47,7 +45,7 @@ export class CounterProposalsController {
     description:
       "Proposal is not pending or already has an active counter-proposal",
   })
-  async create(@Request() req: AuthenticatedRequest, @Body() dto: CreateCounterProposalDto) {
+  async create(@Request() req: any, @Body() dto: CreateCounterProposalDto) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.counterProposalsService.create(userId, dto, ip);
@@ -61,7 +59,7 @@ export class CounterProposalsController {
     description: "Counter-proposals list returned successfully",
   })
   async findMySent(
-    @Request() req: AuthenticatedRequest,
+    @Request() req: any,
     @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
@@ -77,8 +75,8 @@ export class CounterProposalsController {
     description: "Counter-proposals list returned successfully",
   })
   async findByProposal(
-    @Request() req: AuthenticatedRequest,
-    @Param("proposalId") proposalId: string,
+    @Request() req: any,
+    @Param("proposalId", ParseUUIDPipe) proposalId: string,
     @Query() pagination: PaginationQueryDto,
   ) {
     const userId = req.user.sub;
@@ -99,8 +97,6 @@ export class CounterProposalActionController {
     private readonly counterProposalsService: CounterProposalsService,
   ) {}
 
-  // --- Public API ---
-
   @Post("accept")
   @Roles("CLIENT", "PROVIDER")
   @ApiOperation({ summary: "Accept counter-proposal" })
@@ -115,8 +111,8 @@ export class CounterProposalActionController {
     description: "Counter-proposal is not pending or order is not open",
   })
   async accept(
-    @Request() req: AuthenticatedRequest,
-    @Param("counterProposalId") counterProposalId: string,
+    @Request() req: any,
+    @Param("counterProposalId", ParseUUIDPipe) counterProposalId: string,
   ) {
     const userId = req.user.sub;
     const ip = req.ip;
@@ -133,8 +129,8 @@ export class CounterProposalActionController {
   })
   @ApiResponse({ status: 404, description: "Counter-proposal not found" })
   async reject(
-    @Request() req: AuthenticatedRequest,
-    @Param("counterProposalId") counterProposalId: string,
+    @Request() req: any,
+    @Param("counterProposalId", ParseUUIDPipe) counterProposalId: string,
   ) {
     const userId = req.user.sub;
     const ip = req.ip;

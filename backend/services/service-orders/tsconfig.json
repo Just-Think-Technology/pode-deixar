@@ -25,7 +25,8 @@
       "rxjs": ["../../node_modules/rxjs"],
       "rxjs/*": ["../../node_modules/rxjs/*"],
       "@pode-deixar/security": ["../../shared/security/dist"],
-      "@pode-deixar/prisma": ["../../shared/prisma/dist"]
+      "@pode-deixar/prisma": ["../../shared/prisma/dist"],
+      "@pode-deixar/storage": ["../../shared/storage/dist"]
     }
   },
   "exclude": ["node_modules", "dist", "test"]

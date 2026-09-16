@@ -1,32 +1,13 @@
 // Services logger — scoped audit event helpers
 
+
 import { Injectable } from "@nestjs/common";
-import { createLogger, LoggerWithEvent } from "@pode-deixar/logger";
+import { BaseDomainLogger } from "@pode-deixar/logger";
 
 @Injectable()
-export class ServicesLoggerService {
-  private readonly logger: LoggerWithEvent;
-
+export class ServicesLoggerService extends BaseDomainLogger {
   constructor() {
-    this.logger = createLogger("services-service");
-  }
-
-  // --- Public API ---
-
-  logInfo(event: string, message: string, meta?: Record<string, unknown>) {
-    this.logger.info(event, message, meta);
-  }
-
-  logWarn(event: string, message: string, meta?: Record<string, unknown>) {
-    this.logger.warn(event, message, meta);
-  }
-
-  logError(event: string, message: string, meta?: Record<string, unknown>) {
-    this.logger.error(event, message, meta);
-  }
-
-  logDebug(event: string, message: string, meta?: Record<string, unknown>) {
-    this.logger.debug(event, message, meta);
+    super("services-service");
   }
 
   logServiceOrderCreated(clientId: string, orderId: string, ip?: string) {
@@ -115,9 +96,5 @@ export class ServicesLoggerService {
         ip,
       },
     );
-  }
-
-  logSecurityEvent(event: string, meta: Record<string, unknown>) {
-    this.logger.warn(event, `Security event: ${event}`, meta);
   }
 }

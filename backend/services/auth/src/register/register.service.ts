@@ -2,7 +2,7 @@
 
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { User } from '@prisma/client';
-import { PrismaService } from '@pode-deixar/prisma';
+import { RegisterRepository } from './register.repository';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
@@ -19,7 +19,7 @@ const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 @Injectable()
 export class RegisterService {
   constructor(
-    private prisma: PrismaService,
+    private repository: RegisterRepository,
     private authLogger: AuthLoggerService,
     private emailService: EmailService,
     private passwordService: PasswordService,
@@ -37,9 +37,7 @@ export class RegisterService {
       throw new BadRequestException('Senhas não conferem');
     }
 
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+    const existingUser = await this.repository.findUserByEmail(dto.email);
     if (existingUser) {
       return this.handleExistingUser(existingUser, dto.email);
     }
@@ -92,60 +90,22 @@ export class RegisterService {
       emailVerificationExpires: Date;
     },
   ) {
-    const [user] = await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          completeName: dto.complete_name,
-          email: dto.email,
-          password: credentials.passwordHash,
-          role: dto.role,
-          phone: dto.phone,
-          postalCode: dto.postal_code,
-          emailVerificationToken: credentials.emailVerificationTokenHash,
-          emailVerificationExpires: credentials.emailVerificationExpires,
-        },
-        select: {
-          id: true,
-          completeName: true,
-          email: true,
-          role: true,
-          phone: true,
-          postalCode: true,
-          emailVerified: true,
-          createdAt: true,
-          emailVerificationToken: true,
-        },
-      });
-
-      if (dto.role === 'CLIENT') {
-        await tx.clientProfile.create({
-          data: { userId: user.id, preferences: {} },
-        });
-      } else if (dto.role === 'PROVIDER') {
-        await tx.providerProfile.create({
-          data: {
-            userId: user.id,
-            skills: [],
-            portfolio: [],
-            isAvailable: true,
-          },
-        });
-      }
-
-      return [user];
+    const [user] = await this.repository.createUserWithProfile({
+      completeName: dto.complete_name,
+      email: dto.email,
+      passwordHash: credentials.passwordHash,
+      role: dto.role,
+      phone: dto.phone,
+      postalCode: dto.postal_code,
+      emailVerificationTokenHash: credentials.emailVerificationTokenHash,
+      emailVerificationExpires: credentials.emailVerificationExpires,
     });
     return user;
   }
 
   private async rotateVerificationToken(userId: string): Promise<string> {
     const emailVerificationToken = uuidv4();
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        emailVerificationToken: this.hashToken(emailVerificationToken),
-        emailVerificationExpires: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
-      },
-    });
+    await this.repository.updateVerificationToken(userId, this.hashToken(emailVerificationToken), new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS));
     return emailVerificationToken;
   }
 
@@ -169,9 +129,7 @@ export class RegisterService {
    * Rejects unknown, already-used, and expired tokens with distinct messages.
    */
   async verifyEmail(dto: VerifyEmailDto) {
-    const user = await this.prisma.user.findFirst({
-      where: { emailVerificationToken: this.hashToken(dto.token) },
-    });
+    const user = await this.repository.findUserByVerificationTokenHash(this.hashToken(dto.token));
     if (!user) {
       this.authLogger.logEmailVerificationTokenFailure(
         dto.token,
@@ -197,14 +155,7 @@ export class RegisterService {
       );
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationExpires: null,
-      },
-    });
+    await this.repository.markEmailVerified(user.id);
     this.authLogger.logEmailVerification(user.email, true);
     return { message: 'Email verificado com sucesso' };
   }
@@ -220,9 +171,7 @@ export class RegisterService {
       message: 'Se o email existir, um novo link de verificação foi enviado',
     });
 
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+    const user = await this.repository.findUserByEmail(dto.email);
     if (!user || user.emailVerified) {
       this.authLogger.logResendVerification(dto.email, false);
       return genericResponse();
