@@ -223,11 +223,16 @@ describe("ServiceOrdersRepository", () => {
   it("completes an order", async () => {
     mockPrisma.serviceOrder.update.mockResolvedValue({ id: "order-1" });
 
-    await repository.completeOrder("order-1");
+    await repository.completeOrder("order-1", "provider-1", "Obs");
 
     expect(mockPrisma.serviceOrder.update).toHaveBeenCalledWith({
       where: { id: "order-1" },
-      data: { status: "COMPLETED" },
+      data: {
+        status: "COMPLETED",
+        completedAt: expect.any(Date),
+        completedBy: "provider-1",
+        observations: "Obs",
+      },
       include: { category: { select: { id: true, name: true, slug: true } } },
     });
   });

@@ -168,6 +168,9 @@ model ServiceOrder {
   address     Json?              @default("{}")
   scheduledAt DateTime?          @map("scheduled_at")
   scheduledEndAt DateTime?       @map("scheduled_end_at")
+  completedAt DateTime?          @map("completed_at")
+  completedBy String?            @map("completed_by")
+  observations String?           @db.Text
   status      ServiceOrderStatus @default(OPEN)
   createdAt   DateTime           @default(now()) @map("created_at")
   updatedAt   DateTime           @updatedAt @map("updated_at")

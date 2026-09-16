@@ -88,6 +88,100 @@ export class PhotosService {
     );
   }
 
+  async uploadCompletion(
+    orderId: string,
+    providerId: string,
+    files: Express.Multer.File[],
+  ) {
+    const order = await this.repository.findOrderById(orderId);
+
+    if (!order) {
+      throw new NotFoundException("Pedido não encontrado");
+    }
+
+    if (order.providerId !== providerId) {
+      throw new ForbiddenException("Pedido não pertence a este prestador");
+    }
+
+    if (order.status !== "IN_PROGRESS") {
+      throw new BadRequestException(
+        "Só é possível enviar fotos para pedidos em andamento",
+      );
+    }
+
+    if (!Array.isArray(files) || files.length === 0) {
+      throw new BadRequestException("Nenhuma foto enviada");
+    }
+
+    if (files.length > 10) {
+      throw new BadRequestException("Máximo de 10 fotos por upload");
+    }
+
+    for (const file of files) {
+      validateImageFile(file.originalname, file.buffer);
+    }
+
+    const webpBuffers: Buffer[] = [];
+
+    for (const file of files) {
+      try {
+        const webpBuffer = await sharp(file.buffer, {
+          limitInputPixels: SHARP_PIXEL_LIMIT,
+        })
+          .webp({ quality: 80 })
+          .toBuffer();
+        webpBuffers.push(webpBuffer);
+      } catch {
+        throw new BadRequestException(
+          `Imagem inválida ou corrompida: "${file.originalname}"`,
+        );
+      }
+    }
+
+    return this.repository.uploadPhotos(
+      orderId,
+      webpBuffers,
+      (fileName, buffer, mimeType) =>
+        this.minio.uploadFile(fileName, buffer, mimeType),
+    );
+  }
+
+  async deleteCompletionPhoto(
+    orderId: string,
+    photoId: string,
+    providerId: string,
+  ) {
+    const order = await this.repository.findOrderById(orderId);
+
+    if (!order) {
+      throw new NotFoundException("Pedido não encontrado");
+    }
+
+    if (order.providerId !== providerId) {
+      throw new ForbiddenException("Pedido não pertence a este prestador");
+    }
+
+    if (order.status === "COMPLETED") {
+      throw new BadRequestException(
+        "Não é possível remover fotos de um serviço já concluído",
+      );
+    }
+
+    const photo = await this.repository.findPhotoById(photoId);
+
+    if (!photo || photo.serviceOrderId !== orderId) {
+      throw new NotFoundException("Foto não encontrada");
+    }
+
+    const fileName = this.minio.extractFileName(photo.url);
+
+    await this.repository.deletePhoto(photoId);
+
+    await this.minio.deleteFile(fileName).catch(() => {});
+
+    return { id: photoId };
+  }
+
   async getViewUrl(photoId: string, userId: string, role: string) {
     const photo = await this.repository.findPhotoWithOrderById(photoId);
 
@@ -102,6 +196,10 @@ export class PhotosService {
     }
 
     if (role === "PROVIDER") {
+      if (order.providerId === userId) {
+        return this.buildViewResponse(photo.url);
+      }
+
       const proposal = await this.repository.findProposalForViewer(
         order.id,
         userId,

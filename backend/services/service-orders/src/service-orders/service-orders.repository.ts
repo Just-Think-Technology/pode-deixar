@@ -125,6 +125,27 @@ export class ServiceOrdersRepository {
     });
   }
 
+  findUserById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, completeName: true },
+    });
+  }
+
+  countPhotosByOrderId(orderId: string) {
+    return this.prisma.orderPhoto.count({
+      where: { serviceOrderId: orderId },
+    });
+  }
+
+  findPhotosByOrderId(orderId: string) {
+    return this.prisma.orderPhoto.findMany({
+      where: { serviceOrderId: orderId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, url: true, createdAt: true },
+    });
+  }
+
   updateOrder(orderId: string, data: UpdateServiceOrderData) {
     return this.prisma.serviceOrder.update({
       where: { id: orderId },
@@ -151,12 +172,34 @@ export class ServiceOrdersRepository {
     });
   }
 
-  completeOrder(orderId: string) {
+  completeOrder(
+    orderId: string,
+    completedBy: string,
+    observations: string | null,
+  ) {
     return this.prisma.serviceOrder.update({
       where: { id: orderId },
-      data: { status: "COMPLETED" },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        completedBy,
+        observations,
+      },
       include: {
         category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+  }
+
+  createCompletionNotification(recipient: string, orderId: string) {
+    return this.prisma.notification.create({
+      data: {
+        recipient,
+        type: "ORDER_COMPLETED",
+        title: "Serviço concluído",
+        message: "Seu serviço foi concluído pelo prestador",
+        relatedId: orderId,
+        relatedType: "service_order",
       },
     });
   }

@@ -5,6 +5,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from "@nestjs/common";
 import { ServiceOrdersRepository } from "./service-orders.repository";
 import { ServicesLoggerService } from "../shared/services-logger.service";
@@ -20,13 +21,36 @@ import { normalizePagination, PaginationQuery } from "@pode-deixar/validation";
 
 const MAX_AGENDA_WINDOW_DAYS = 92;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MAX_OBSERVATIONS_LENGTH = 2000;
 
 @Injectable()
 export class ServiceOrdersService {
+  private readonly logger = new Logger(ServiceOrdersService.name);
+
   constructor(
     private repository: ServiceOrdersRepository,
-    private logger: ServicesLoggerService,
+    private servicesLogger: ServicesLoggerService,
   ) {}
+
+  private get loggerService(): ServicesLoggerService {
+    return this.servicesLogger;
+  }
+
+  private toNumber(value: unknown): number | null {
+    if (value == null) {
+      return null;
+    }
+    if (typeof value === "number") {
+      return value;
+    }
+    // Prisma Decimal
+    const decimal = value as { toNumber?: () => number };
+    if (typeof decimal.toNumber === "function") {
+      return decimal.toNumber();
+    }
+    const num = Number(value);
+    return Number.isNaN(num) ? null : num;
+  }
 
   private formatOrder(order: any) {
     return {
@@ -49,6 +73,11 @@ export class ServiceOrdersService {
       budget_max: order.budgetMax,
       address: formatAddress(order.address),
       status: order.status,
+      scheduled_at: order.scheduledAt ?? null,
+      scheduled_end_at: order.scheduledEndAt ?? null,
+      completed_at: order.completedAt ?? null,
+      completed_by: order.completedBy ?? null,
+      observations: order.observations ?? null,
       created_at: order.createdAt,
       updated_at: order.updatedAt,
     };
@@ -59,7 +88,39 @@ export class ServiceOrdersService {
     return (photos ?? []).map((p: any) => ({
       id: p.id,
       url: `/api/services/photos/${p.id}/view`,
+      created_at: p.createdAt ?? undefined,
     }));
+  }
+
+  private formatCompletionHistory(order: any, photos: any[]) {
+    return {
+      order_id: order.id,
+      completed_at: order.completedAt ? order.completedAt.toISOString() : null,
+      completed_by: order.completedBy ?? null,
+      observations: order.observations ?? null,
+      photos: photos.map((p: any) => ({
+        id: p.id,
+        url: `/api/services/photos/${p.id}/view`,
+      })),
+    };
+  }
+
+  private async buildCompletionOrderPayload(order: any) {
+    const client = await this.repository.findUserById(order.clientId);
+    const amount = this.toNumber(order.agreedPrice);
+    return {
+      ...this.formatOrder(order),
+      // Aliases expected by the completion screen (CompletionOrder)
+      order_id: order.id,
+      client_name: client?.completeName ?? "Cliente",
+      scheduled_at: order.scheduledAt ? order.scheduledAt.toISOString() : null,
+      scheduled_end_at: order.scheduledEndAt
+        ? order.scheduledEndAt.toISOString()
+        : null,
+      amount: amount ?? 0,
+      order_status: order.status,
+      photos: this.formatPhotos(order.photos),
+    };
   }
 
   // Showcase items use a brief address to avoid exposing street/number/ZIP.
@@ -121,7 +182,7 @@ export class ServiceOrdersService {
       ...(address ? { address } : {}),
     });
 
-    this.logger.logServiceOrderCreated(clientId, order.id, ip);
+    this.loggerService.logServiceOrderCreated(clientId, order.id, ip);
 
     return this.formatOrder(order);
   }
@@ -179,8 +240,11 @@ export class ServiceOrdersService {
     }
 
     if (role === "CLIENT" && order.clientId === userId) {
+      const payload = await this.buildCompletionOrderPayload(order);
+      const withProposals = this.formatOrderWithProposals(order);
       return {
-        ...this.formatOrderWithProposals(order),
+        ...payload,
+        proposals: withProposals.proposals,
         photos: this.formatPhotos(order.photos),
       };
     }
@@ -192,8 +256,9 @@ export class ServiceOrdersService {
 
       const proposal = order.proposals.find((p) => p.providerId === userId);
       if (proposal) {
+        const payload = await this.buildCompletionOrderPayload(order);
         return {
-          ...this.formatOrder(order),
+          ...payload,
           proposals: [
             {
               id: proposal.id,
@@ -210,10 +275,7 @@ export class ServiceOrdersService {
       }
 
       if (order.providerId === userId) {
-        return {
-          ...this.formatOrder(order),
-          photos: this.formatPhotos(order.photos),
-        };
+        return this.buildCompletionOrderPayload(order);
       }
     }
 
@@ -264,7 +326,7 @@ export class ServiceOrdersService {
         dto.budgetMax !== undefined ? dto.budgetMax : existing.budgetMax,
     });
 
-    this.logger.logServiceOrderUpdated(clientId, orderId, ip);
+    this.loggerService.logServiceOrderUpdated(clientId, orderId, ip);
 
     return this.formatOrder(order);
   }
@@ -288,12 +350,17 @@ export class ServiceOrdersService {
 
     const order = await this.repository.cancelOrder(orderId);
 
-    this.logger.logServiceOrderCancelled(clientId, orderId, ip);
+    this.loggerService.logServiceOrderCancelled(clientId, orderId, ip);
 
     return this.formatOrder(order);
   }
 
-  async complete(providerId: string, orderId: string, ip?: string) {
+  async complete(
+    providerId: string,
+    orderId: string,
+    ip?: string,
+    observations?: string | null,
+  ) {
     const existing = await this.repository.findOrderById(orderId);
 
     if (!existing) {
@@ -314,11 +381,83 @@ export class ServiceOrdersService {
       );
     }
 
-    const order = await this.repository.completeOrder(orderId);
+    const normalizedObservations =
+      observations != null && observations.trim().length > 0
+        ? observations.trim()
+        : null;
 
-    this.logger.logServiceOrderCompleted(providerId, orderId, ip);
+    if (
+      normalizedObservations != null &&
+      normalizedObservations.length > MAX_OBSERVATIONS_LENGTH
+    ) {
+      throw new BadRequestException(
+        "Observações devem ter no máximo 2000 caracteres",
+      );
+    }
 
-    return this.formatOrder(order);
+    const photoCount = await this.repository.countPhotosByOrderId(orderId);
+    if (photoCount === 0) {
+      throw new BadRequestException(
+        "Adicione pelo menos uma foto para concluir o serviço.",
+      );
+    }
+
+    const order = await this.repository.completeOrder(
+      orderId,
+      providerId,
+      normalizedObservations,
+    );
+
+    this.loggerService.logServiceOrderCompleted(providerId, orderId, ip);
+
+    // Notify the client — failure must not roll back the completion
+    try {
+      await this.repository.createCompletionNotification(
+        order.clientId,
+        order.id,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to create completion notification for order ${orderId}: ${error}`,
+      );
+    }
+
+    const photos = await this.repository.findPhotosByOrderId(orderId);
+    return this.formatCompletionHistory(order, photos);
+  }
+
+  async getCompletionHistory(orderId: string, userId: string, role: string) {
+    const order = await this.repository.findOrderWithAccessById(orderId);
+
+    if (!order) {
+      throw new NotFoundException("Pedido de serviço não encontrado");
+    }
+
+    // Access mirrors findByIdWithAccess
+    let hasAccess = false;
+    if (role === "CLIENT" && order.clientId === userId) {
+      hasAccess = true;
+    } else if (role === "PROVIDER") {
+      if (order.providerId === userId) {
+        hasAccess = true;
+      } else if (order.proposals.some((p) => p.providerId === userId)) {
+        hasAccess = true;
+      }
+      if (order.providerId && order.providerId !== userId && !hasAccess) {
+        throw new ForbiddenException("Acesso negado a este pedido");
+      }
+    }
+
+    if (!hasAccess) {
+      throw new ForbiddenException("Acesso negado a este pedido");
+    }
+
+    if (order.status !== "COMPLETED") {
+      throw new NotFoundException("Histórico de conclusão não encontrado");
+    }
+
+    const photos = await this.repository.findPhotosByOrderId(orderId);
+    return this.formatCompletionHistory(order, photos);
   }
 
   async hireFromProvider(
@@ -359,7 +498,7 @@ export class ServiceOrdersService {
       ...(address ? { address } : {}),
     });
 
-    this.logger.logInfo(
+    this.loggerService.logInfo(
       "service_order_hired",
       `Service hired by client ${clientId}`,
       {

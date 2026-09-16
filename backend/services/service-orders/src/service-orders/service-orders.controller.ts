@@ -24,6 +24,7 @@ import {
 import { ServiceOrdersService } from "./service-orders.service";
 import { CreateServiceOrderDto } from "./dto/create-service-order.dto";
 import { UpdateServiceOrderDto } from "./dto/update-service-order.dto";
+import { CompleteServiceOrderDto } from "./dto/complete-service-order.dto";
 import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import { AgendaQueryDto } from "./dto/agenda-query.dto";
 import { PaginationQueryDto } from "@pode-deixar/validation";
@@ -269,7 +270,7 @@ export class ProviderOrderActionsController {
   @ApiOperation({
     summary: "Complete order (only the assigned provider)",
     description:
-      "Transitions the order from IN_PROGRESS to COMPLETED. Prerequisite for the service review.",
+      "Transitions the order from IN_PROGRESS to COMPLETED. Requires at least one evidence photo and optional observations (max 2000 chars). Prerequisite for the service review.",
   })
   @ApiParam({ name: "orderId", description: "Order ID" })
   @ApiResponse({ status: 200, description: "Order completed successfully" })
@@ -280,14 +281,48 @@ export class ProviderOrderActionsController {
   })
   @ApiResponse({
     status: 400,
-    description: "Order is not in progress or is already completed",
+    description:
+      "Order is not in progress, is already completed, or has no evidence photos",
   })
   async complete(
     @Request() req: any,
     @Param("orderId", ParseUUIDPipe) orderId: string,
+    @Body() dto: CompleteServiceOrderDto,
   ) {
     const userId = req.user.sub;
     const ip = req.ip;
-    return this.serviceOrdersService.complete(userId, orderId, ip);
+    return this.serviceOrdersService.complete(
+      userId,
+      orderId,
+      ip,
+      dto.observations ?? null,
+    );
+  }
+
+  @Get("completion")
+  @Roles("CLIENT", "PROVIDER")
+  @ApiOperation({
+    summary: "Get completion history (owner client or assigned provider)",
+    description:
+      "Returns completed_at, completed_by, observations and evidence photos when the order is COMPLETED. Reuses findByIdWithAccess visibility rules.",
+  })
+  @ApiParam({ name: "orderId", description: "Order ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Completion history returned successfully",
+  })
+  @ApiResponse({ status: 404, description: "Order or history not found" })
+  @ApiResponse({ status: 403, description: "Access denied to this order" })
+  async getCompletion(
+    @Request() req: any,
+    @Param("orderId", ParseUUIDPipe) orderId: string,
+  ) {
+    const userId = req.user.sub;
+    const role = req.user.role;
+    return this.serviceOrdersService.getCompletionHistory(
+      orderId,
+      userId,
+      role,
+    );
   }
 }

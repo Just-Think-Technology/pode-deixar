@@ -36,6 +36,7 @@ const ORDERS_FIELD_LABELS: FieldLabels = {
   estimatedDuration: "Duração estimada",
   serviceOrderId: "ID do pedido",
   proposalId: "ID da proposta",
+  observations: "Observações",
 };
 
 function translateValidationErrors(errors: ValidationError[]): string[] {
@@ -43,7 +44,6 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
 }
 
 @Module({
-
   // --- Imports ---
 
   imports: [

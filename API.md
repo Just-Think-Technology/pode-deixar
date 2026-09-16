@@ -1246,11 +1246,102 @@ List orders directed to the logged-in provider (received requests).
 
 Transitions the order from `IN_PROGRESS` to `COMPLETED`. Prerequisite for the service review. Only the **provider assigned to the order** (`provider_id`) can complete it.
 
+**Request body (`CompleteServiceOrderDto`):**
+```json
+{
+  "observations": "Serviço realizado com sucesso, cliente orientado"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|-------------|-----------|
+| `observations` | `string` | no | Optional observations, max 2000 chars, `null` allowed |
+
+**Rules:**
+- `400` `Adicione pelo menos uma foto para concluir o serviço.` when the order has 0 photos (photos count via `order_photos`)
+- `400` observations > 2000 chars
+- Records `completed_at` = now(), `completed_by` = providerId, `observations` (trimmed or `null`)
+- Creates a `Notification` (`ORDER_COMPLETED`) for the client (failure does not roll back)
+
+**Response `200` (completion history):**
+```json
+{
+  "order_id": "uuid-do-pedido",
+  "completed_at": "2026-09-16T10:00:00.000Z",
+  "completed_by": "uuid-do-prestador",
+  "observations": "Serviço realizado com sucesso",
+  "photos": [{ "id": "uuid-da-foto", "url": "/api/services/photos/uuid/view" }]
+}
+```
+
 | Error | Code |
 |------|--------|
 | Order not found | `404` |
 | Order does not belong to the provider | `403` |
 | Order is not in progress or is already completed | `400` |
+| No evidence photos | `400` |
+
+### Completion Photos (Provider, JTT-106)
+
+**Prefix:** `services/me/:orderId/completion-photos` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER` | **Throttle:** `20 req/min`
+
+#### `POST /services/me/:orderId/completion-photos`
+
+Upload completion evidence photos (provider, order must be `IN_PROGRESS` and owned by caller).
+
+**Request (multipart/form-data):**
+| Field | Type | Required | Description |
+|-------|------|-------------|-----------|
+| `file` or `photos` | `binary` | yes | JPEG, PNG, WebP or GIF, max 5MB per file, up to 10 files per request; total per order max 10 |
+
+> Files are validated via magic bytes (`validateImageFile`), converted to `.webp` (sharp q80), stored in `order-photos` as `<orderId>/<uuid>.webp`.
+
+**Response `201` (single file → single object; multiple files → array):**
+```json
+[
+  { "id": "uuid-da-foto", "url": "/api/services/photos/uuid/view", "created_at": "2026-09-16T10:00:00.000Z" }
+]
+```
+> When the frontend sends one `file` (current `uploadSinglePhoto` flow) the endpoint returns a single `CompletionPhoto` object; a batch `photos` upload returns the array above. Both shapes are accepted to keep the contract compatible without a frontend change.
+
+| Error | Code |
+|------|--------|
+| Order not found | `404` |
+| Not assigned provider | `403` |
+| Order not in progress | `400` |
+| Invalid image or quota exceeded (10 total) | `400` |
+
+#### `DELETE /services/me/:orderId/completion-photos/:photoId`
+
+Delete a completion evidence photo (provider, order not `COMPLETED`).
+
+| Error | Code |
+|------|--------|
+| Order / photo not found or photo not on this order | `404` |
+| Not assigned provider | `403` |
+| Order already completed (evidence frozen) | `400` |
+
+### Completion History (JTT-106)
+
+**Route:** `GET /services/me/:orderId/completion` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
+
+Read completion history when `COMPLETED`. Access mirrors `GET /services/:orderId` (owner client or assigned/ACCEPTED provider).
+
+**Response `200`:**
+```json
+{
+  "order_id": "uuid-do-pedido",
+  "completed_at": "2026-09-16T10:00:00.000Z",
+  "completed_by": "uuid-do-prestador",
+  "observations": "string|null",
+  "photos": [{ "id": "uuid-da-foto", "url": "/api/services/photos/uuid/view" }]
+}
+```
+
+| Error | Code |
+|------|--------|
+| Order not found or not completed | `404` |
+| Access denied | `403` |
 
 ---
 
@@ -1344,7 +1435,9 @@ Get order detail (authenticated — `CLIENT` or `PROVIDER`).
 **Response `200`:** Same structure with proposals from `GET /services/me/:orderId`, plus:
 | Field | Description |
 |-------|-----------|
-| `photos` | Array `[{ id, url }]` with the order photos (public MinIO URLs) |
+| `photos` | Array `[{ id, url }]` with the order photos (view endpoint `/api/services/photos/:photoId/view`) |
+| `client_name` / `order_id` / `scheduled_at` / `scheduled_end_at` / `amount` / `order_status` | Aliases for the completion screen (§2 "Informações do serviço") — the single call renders the summary: title, client name, scheduled range, textual address, agreed price, status |
+| `completed_at` / `completed_by` / `observations` | Present when `COMPLETED` (history fields, also available via `GET /services/me/:orderId/completion`) |
 
 | Error | Code |
 |------|--------|
