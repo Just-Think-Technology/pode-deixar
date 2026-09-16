@@ -171,6 +171,9 @@ model ServiceOrder {
   completedAt DateTime?          @map("completed_at")
   completedBy String?            @map("completed_by")
   observations String?           @db.Text
+  startedAt    DateTime? @map("started_at")
+  cancelledAt  DateTime? @map("cancelled_at")
+  cancelReason String?   @db.Text @map("cancel_reason")
   status      ServiceOrderStatus @default(OPEN)
   createdAt   DateTime           @default(now()) @map("created_at")
   updatedAt   DateTime           @updatedAt @map("updated_at")
@@ -178,8 +181,23 @@ model ServiceOrder {
   photos      OrderPhoto[]
   payments    Payment[]
   reviews     Review[]
+  timelineEvents OrderTimelineEvent[]
 
   @@map("service_orders")
+}
+
+model OrderTimelineEvent {
+  id             String   @id @default(uuid())
+  serviceOrderId String   @map("service_order_id")
+  serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  eventKey       String   @map("event_key")
+  fromStatus     String?  @map("from_status")
+  toStatus       String?  @map("to_status")
+  actorId        String?  @map("actor_id")
+  reason         String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  @@index([serviceOrderId, createdAt])
+  @@map("order_timeline_events")
 }
 
 model Proposal {

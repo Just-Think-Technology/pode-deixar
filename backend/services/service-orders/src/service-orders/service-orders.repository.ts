@@ -255,4 +255,32 @@ export class ServiceOrdersRepository {
       orderBy: { scheduledAt: "asc" },
     });
   }
+
+  startOrder(orderId: string, actorId: string) {
+    return this.prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: { startedAt: new Date() },
+      include: { category: { select: { id: true, name: true, slug: true } } },
+    });
+  }
+
+  cancelWithReason(orderId: string, reason: string | null) {
+    return this.prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: { status: "CANCELLED", cancelledAt: new Date(), cancelReason: reason },
+      include: { category: { select: { id: true, name: true, slug: true } } },
+    });
+  }
+
+  createTimelineEvent(
+    orderId: string,
+    eventKey: string,
+    from: string | null,
+    to: string | null,
+    actorId: string | null,
+  ) {
+    return this.prisma.orderTimelineEvent.create({
+      data: { serviceOrderId: orderId, eventKey, fromStatus: from, toStatus: to, actorId },
+    });
+  }
 }
