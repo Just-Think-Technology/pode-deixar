@@ -171,14 +171,29 @@ describe('Client journey (cross-service e2e)', () => {
     ).body;
     expect(accepted.status).toBe('ACCEPTED');
 
-    // Provider completes to unlock payment and review
+    // Provider completes to unlock payment and review — JTT-106 requires at least one evidence photo
+    const png1x1 = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    await request(apps.ordersApp.getHttpServer())
+      .post(`/services/me/${orderId}/completion-photos`)
+      .set(bearerAuth(providerToken))
+      .attach('file', png1x1, {
+        filename: 'foto.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+
     const completed = (
       await request(apps.ordersApp.getHttpServer())
         .post(`/services/me/${orderId}/complete`)
         .set(bearerAuth(providerToken))
+        .send({ observations: 'Serviço realizado' })
         .expect(201)
     ).body;
-    expect(completed.status).toBe('COMPLETED');
+    expect(completed.order_id).toBe(orderId);
+    expect(completed.completed_at).toBeDefined();
   });
 
   it('5. client pays via PIX and confirms (payments)', async () => {
