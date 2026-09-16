@@ -204,6 +204,25 @@ export class ServiceOrdersRepository {
     });
   }
 
+  createStatusNotification(
+    recipient: string,
+    orderId: string,
+    type: string,
+    title: string,
+    message: string,
+  ) {
+    return this.prisma.notification.create({
+      data: {
+        recipient,
+        type,
+        title,
+        message,
+        relatedId: orderId,
+        relatedType: "service_order",
+      },
+    });
+  }
+
   findProviderServiceById(id: string) {
     return this.prisma.providerService.findUnique({
       where: { id },

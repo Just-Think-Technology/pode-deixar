@@ -427,9 +427,12 @@ export class ServiceOrdersService {
       const counterpartId =
         role === "CLIENT" ? existing.providerId : existing.clientId;
       if (counterpartId) {
-        await this.repository.createCompletionNotification(
+        await this.repository.createStatusNotification(
           counterpartId,
           orderId,
+          "ORDER_CANCELLED",
+          "Contratação cancelada",
+          "A contratação foi cancelada",
         );
       }
     } catch (error) {
@@ -501,6 +504,21 @@ export class ServiceOrdersService {
         orderId,
       },
     );
+
+    try {
+      const orderForNotify = await this.repository.findOrderById(orderId);
+      if (orderForNotify) {
+        await this.repository.createStatusNotification(
+          orderForNotify.clientId,
+          orderId,
+          "ORDER_STARTED",
+          "Serviço iniciado",
+          "O prestador iniciou o serviço",
+        );
+      }
+    } catch (_error) {
+      void _error;
+    }
 
     return this.getTracking(orderId, providerId, "PROVIDER");
   }
