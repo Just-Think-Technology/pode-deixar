@@ -256,7 +256,7 @@ export class ServiceOrdersRepository {
     });
   }
 
-  startOrder(orderId: string, actorId: string) {
+  startOrder(orderId: string, _actorId: string) {
     return this.prisma.serviceOrder.update({
       where: { id: orderId },
       data: { startedAt: new Date() },
@@ -267,7 +267,11 @@ export class ServiceOrdersRepository {
   cancelWithReason(orderId: string, reason: string | null) {
     return this.prisma.serviceOrder.update({
       where: { id: orderId },
-      data: { status: "CANCELLED", cancelledAt: new Date(), cancelReason: reason },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        cancelReason: reason,
+      },
       include: { category: { select: { id: true, name: true, slug: true } } },
     });
   }
@@ -280,7 +284,44 @@ export class ServiceOrdersRepository {
     actorId: string | null,
   ) {
     return this.prisma.orderTimelineEvent.create({
-      data: { serviceOrderId: orderId, eventKey, fromStatus: from, toStatus: to, actorId },
+      data: {
+        serviceOrderId: orderId,
+        eventKey,
+        fromStatus: from,
+        toStatus: to,
+        actorId,
+      },
+    });
+  }
+
+  findOrderTrackingById(id: string) {
+    return this.prisma.serviceOrder.findUnique({
+      where: { id },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+        proposals: true,
+        photos: {
+          select: { id: true, url: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        },
+        payments: { orderBy: { createdAt: "desc" }, take: 1 },
+        reviews: { take: 1, orderBy: { createdAt: "desc" } },
+        timelineEvents: { orderBy: { createdAt: "asc" } },
+      },
+    });
+  }
+
+  findPaymentsByOrderId(orderId: string) {
+    return this.prisma.payment.findMany({
+      where: { serviceOrderId: orderId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  findReviewsByOrderId(orderId: string) {
+    return this.prisma.review.findMany({
+      where: { serviceOrderId: orderId },
+      orderBy: { createdAt: "desc" },
     });
   }
 }
