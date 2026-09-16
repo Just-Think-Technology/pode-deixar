@@ -32,6 +32,8 @@ const DEFAULT_PLATFORM_FEE_RATE = 0.1;
 
 const BRL_CURRENCY = "BRL";
 
+export const WEBHOOK_REJECTED = "Webhook rejeitado";
+
 interface WebhookEvent {
   gateway: string;
   eventId: string;

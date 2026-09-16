@@ -1,6 +1,7 @@
 // Register service — signup with email verification
 
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { User } from '@prisma/client';
 import { RegisterRepository } from './register.repository';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
