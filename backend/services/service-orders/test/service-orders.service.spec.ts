@@ -46,6 +46,10 @@ describe("ServiceOrdersService", () => {
     findProviderServiceById: jest.fn(),
     createHiredOrder: jest.fn(),
     findProviderAgenda: jest.fn(),
+    findUserById: jest.fn(),
+    countPhotosByOrderId: jest.fn(),
+    findPhotosByOrderId: jest.fn(),
+    createCompletionNotification: jest.fn(),
   };
 
   const mockLogger = {
@@ -680,15 +684,30 @@ describe("ServiceOrdersService", () => {
 
     it("should complete an order in progress", async () => {
       mockRepository.findOrderById.mockResolvedValue(inProgressOrder);
-      mockRepository.completeOrder.mockResolvedValue({
+      mockRepository.countPhotosByOrderId.mockResolvedValue(1);
+      const completed = {
         ...inProgressOrder,
         status: "COMPLETED",
-      });
+        completedAt: new Date("2026-09-16T10:00:00.000Z"),
+        completedBy: "provider-1",
+        observations: null,
+        clientId: "client-1",
+      };
+      mockRepository.completeOrder.mockResolvedValue(completed);
+      mockRepository.findPhotosByOrderId.mockResolvedValue([
+        { id: "photo-1", url: "http://minio/order-1/uuid.webp" },
+      ]);
+      mockRepository.createCompletionNotification.mockResolvedValue({});
 
       const result = await service.complete("provider-1", "order-1");
 
-      expect(result.status).toBe("COMPLETED");
-      expect(mockRepository.completeOrder).toHaveBeenCalledWith("order-1");
+      expect(result.order_id).toBe("order-1");
+      expect(result.completed_by).toBe("provider-1");
+      expect(mockRepository.completeOrder).toHaveBeenCalledWith(
+        "order-1",
+        "provider-1",
+        null,
+      );
       expect(mockLogger.logServiceOrderCompleted).toHaveBeenCalledWith(
         "provider-1",
         "order-1",

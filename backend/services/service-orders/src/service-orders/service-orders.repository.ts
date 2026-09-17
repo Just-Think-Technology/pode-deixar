@@ -125,6 +125,27 @@ export class ServiceOrdersRepository {
     });
   }
 
+  findUserById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, completeName: true },
+    });
+  }
+
+  countPhotosByOrderId(orderId: string) {
+    return this.prisma.orderPhoto.count({
+      where: { serviceOrderId: orderId },
+    });
+  }
+
+  findPhotosByOrderId(orderId: string) {
+    return this.prisma.orderPhoto.findMany({
+      where: { serviceOrderId: orderId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, url: true, createdAt: true },
+    });
+  }
+
   updateOrder(orderId: string, data: UpdateServiceOrderData) {
     return this.prisma.serviceOrder.update({
       where: { id: orderId },
@@ -151,12 +172,53 @@ export class ServiceOrdersRepository {
     });
   }
 
-  completeOrder(orderId: string) {
+  completeOrder(
+    orderId: string,
+    completedBy: string,
+    observations: string | null,
+  ) {
     return this.prisma.serviceOrder.update({
       where: { id: orderId },
-      data: { status: "COMPLETED" },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date(),
+        completedBy,
+        observations,
+      },
       include: {
         category: { select: { id: true, name: true, slug: true } },
+      },
+    });
+  }
+
+  createCompletionNotification(recipient: string, orderId: string) {
+    return this.prisma.notification.create({
+      data: {
+        recipient,
+        type: "ORDER_COMPLETED",
+        title: "Serviço concluído",
+        message: "Seu serviço foi concluído pelo prestador",
+        relatedId: orderId,
+        relatedType: "service_order",
+      },
+    });
+  }
+
+  createStatusNotification(
+    recipient: string,
+    orderId: string,
+    type: string,
+    title: string,
+    message: string,
+  ) {
+    return this.prisma.notification.create({
+      data: {
+        recipient,
+        type,
+        title,
+        message,
+        relatedId: orderId,
+        relatedType: "service_order",
       },
     });
   }
@@ -210,6 +272,75 @@ export class ServiceOrdersRepository {
         },
       },
       orderBy: { scheduledAt: "asc" },
+    });
+  }
+
+  startOrder(orderId: string, _actorId: string) {
+    return this.prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: { startedAt: new Date() },
+      include: { category: { select: { id: true, name: true, slug: true } } },
+    });
+  }
+
+  cancelWithReason(orderId: string, reason: string | null) {
+    return this.prisma.serviceOrder.update({
+      where: { id: orderId },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        cancelReason: reason,
+      },
+      include: { category: { select: { id: true, name: true, slug: true } } },
+    });
+  }
+
+  createTimelineEvent(
+    orderId: string,
+    eventKey: string,
+    from: string | null,
+    to: string | null,
+    actorId: string | null,
+  ) {
+    return this.prisma.orderTimelineEvent.create({
+      data: {
+        serviceOrderId: orderId,
+        eventKey,
+        fromStatus: from,
+        toStatus: to,
+        actorId,
+      },
+    });
+  }
+
+  findOrderTrackingById(id: string) {
+    return this.prisma.serviceOrder.findUnique({
+      where: { id },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+        proposals: true,
+        photos: {
+          select: { id: true, url: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        },
+        payments: { orderBy: { createdAt: "desc" }, take: 1 },
+        reviews: { take: 1, orderBy: { createdAt: "desc" } },
+        timelineEvents: { orderBy: { createdAt: "asc" } },
+      },
+    });
+  }
+
+  findPaymentsByOrderId(orderId: string) {
+    return this.prisma.payment.findMany({
+      where: { serviceOrderId: orderId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  findReviewsByOrderId(orderId: string) {
+    return this.prisma.review.findMany({
+      where: { serviceOrderId: orderId },
+      orderBy: { createdAt: "desc" },
     });
   }
 }

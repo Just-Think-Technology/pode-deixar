@@ -105,7 +105,7 @@ describe("PhotosRepository", () => {
     expect(mockPrisma.orderPhoto.findUnique).toHaveBeenCalledWith({
       where: { id: "photo-1" },
       include: {
-        serviceOrder: { select: { id: true, clientId: true } },
+        serviceOrder: { select: { id: true, clientId: true, providerId: true } },
       },
     });
   });

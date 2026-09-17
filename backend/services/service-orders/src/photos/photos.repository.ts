@@ -74,8 +74,22 @@ export class PhotosRepository {
     return this.prisma.orderPhoto.findUnique({
       where: { id: photoId },
       include: {
-        serviceOrder: { select: { id: true, clientId: true } },
+        serviceOrder: {
+          select: { id: true, clientId: true, providerId: true },
+        },
       },
+    });
+  }
+
+  findPhotoById(photoId: string) {
+    return this.prisma.orderPhoto.findUnique({
+      where: { id: photoId },
+    });
+  }
+
+  deletePhoto(photoId: string) {
+    return this.prisma.orderPhoto.delete({
+      where: { id: photoId },
     });
   }
 

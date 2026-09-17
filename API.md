@@ -1246,11 +1246,102 @@ List orders directed to the logged-in provider (received requests).
 
 Transitions the order from `IN_PROGRESS` to `COMPLETED`. Prerequisite for the service review. Only the **provider assigned to the order** (`provider_id`) can complete it.
 
+**Request body (`CompleteServiceOrderDto`):**
+```json
+{
+  "observations": "Serviço realizado com sucesso, cliente orientado"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|-------------|-----------|
+| `observations` | `string` | no | Optional observations, max 2000 chars, `null` allowed |
+
+**Rules:**
+- `400` `Adicione pelo menos uma foto para concluir o serviço.` when the order has 0 photos (photos count via `order_photos`)
+- `400` observations > 2000 chars
+- Records `completed_at` = now(), `completed_by` = providerId, `observations` (trimmed or `null`)
+- Creates a `Notification` (`ORDER_COMPLETED`) for the client (failure does not roll back)
+
+**Response `200` (completion history):**
+```json
+{
+  "order_id": "uuid-do-pedido",
+  "completed_at": "2026-09-16T10:00:00.000Z",
+  "completed_by": "uuid-do-prestador",
+  "observations": "Serviço realizado com sucesso",
+  "photos": [{ "id": "uuid-da-foto", "url": "/api/services/photos/uuid/view" }]
+}
+```
+
 | Error | Code |
 |------|--------|
 | Order not found | `404` |
 | Order does not belong to the provider | `403` |
 | Order is not in progress or is already completed | `400` |
+| No evidence photos | `400` |
+
+### Completion Photos (Provider, JTT-106)
+
+**Prefix:** `services/me/:orderId/completion-photos` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `PROVIDER` | **Throttle:** `20 req/min`
+
+#### `POST /services/me/:orderId/completion-photos`
+
+Upload completion evidence photos (provider, order must be `IN_PROGRESS` and owned by caller).
+
+**Request (multipart/form-data):**
+| Field | Type | Required | Description |
+|-------|------|-------------|-----------|
+| `file` or `photos` | `binary` | yes | JPEG, PNG, WebP or GIF, max 5MB per file, up to 10 files per request; total per order max 10 |
+
+> Files are validated via magic bytes (`validateImageFile`), converted to `.webp` (sharp q80), stored in `order-photos` as `<orderId>/<uuid>.webp`.
+
+**Response `201` (single file → single object; multiple files → array):**
+```json
+[
+  { "id": "uuid-da-foto", "url": "/api/services/photos/uuid/view", "created_at": "2026-09-16T10:00:00.000Z" }
+]
+```
+> When the frontend sends one `file` (current `uploadSinglePhoto` flow) the endpoint returns a single `CompletionPhoto` object; a batch `photos` upload returns the array above. Both shapes are accepted to keep the contract compatible without a frontend change.
+
+| Error | Code |
+|------|--------|
+| Order not found | `404` |
+| Not assigned provider | `403` |
+| Order not in progress | `400` |
+| Invalid image or quota exceeded (10 total) | `400` |
+
+#### `DELETE /services/me/:orderId/completion-photos/:photoId`
+
+Delete a completion evidence photo (provider, order not `COMPLETED`).
+
+| Error | Code |
+|------|--------|
+| Order / photo not found or photo not on this order | `404` |
+| Not assigned provider | `403` |
+| Order already completed (evidence frozen) | `400` |
+
+### Completion History (JTT-106)
+
+**Route:** `GET /services/me/:orderId/completion` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`
+
+Read completion history when `COMPLETED`. Access mirrors `GET /services/:orderId` (owner client or assigned/ACCEPTED provider).
+
+**Response `200`:**
+```json
+{
+  "order_id": "uuid-do-pedido",
+  "completed_at": "2026-09-16T10:00:00.000Z",
+  "completed_by": "uuid-do-prestador",
+  "observations": "string|null",
+  "photos": [{ "id": "uuid-da-foto", "url": "/api/services/photos/uuid/view" }]
+}
+```
+
+| Error | Code |
+|------|--------|
+| Order not found or not completed | `404` |
+| Access denied | `403` |
 
 ---
 
@@ -1320,6 +1411,116 @@ List the authenticated provider **paid and scheduled services** in the period �
 
 ---
 
+### Tracking (JTT-105)
+
+**Prefix:** `services/:orderId/tracking` | **Authentication:** `JwtAuthGuard` + `RolesGuard` | **Roles:** `CLIENT`, `PROVIDER`, `ADMIN`
+
+#### `GET /services/:orderId/tracking`
+
+Consolidated hiring view for tracking screen (`/client/orders/:id/tracking`, `/worker/orders/:id/tracking`). Returns `ContractTracking` per `frontend/lib/tracking/types.ts`.
+
+**Response `200` (`ContractTracking`):**
+```json
+{
+  "orderId": "uuid-do-pedido",
+  "title": "Troca da torneira",
+  "description": "...",
+  "categoryName": "Hidráulica",
+  "orderStatus": "IN_PROGRESS",
+  "role": "CLIENT",
+  "counterpart": { "id": "uuid", "completeName": "Nome", "avatarUrl": null },
+  "scheduledAt": "2026-09-20T14:00:00.000Z",
+  "scheduledEndAt": "2026-09-20T16:00:00.000Z",
+  "startedAt": "2026-09-20T10:05:00.000Z",
+  "address": { "street": "Rua Augusta", "number": "500", "neighborhood": "Consolação", "city": "São Paulo", "state": "SP", "postal_code": "01305-000" },
+  "grossAmount": 180.0,
+  "feeAmount": 18.0,
+  "netAmount": 162.0,
+  "proposal": { "id": "uuid", "providerId": "uuid", "price": 180.0, "description": "...", "estimatedDuration": "2 horas", "acceptedAt": "2026-09-10T15:30:00.000Z" },
+  "payment": { "id": "uuid-do-pagamento", "status": "PAID", "method": "PIX", "amount": 180.0, "paidAt": "2026-09-11T18:00:00.000Z" },
+  "evidence": { "completedAt": "2026-09-20T11:45:00.000Z", "completedBy": "Nome do prestador", "observations": "...", "photos": [{ "id": "uuid", "url": "/api/services/photos/uuid/view" }] },
+  "review": { "id": "uuid", "rating": 5, "comment": "Excelente!", "createdAt": "2026-09-21T10:00:00.000Z" },
+  "cancelReason": null,
+  "cancelledAt": null,
+  "createdAt": "2026-09-08T10:00:00.000Z"
+}
+```
+
+| Field | Description |
+|-------|-----------|
+| `grossAmount` | Agreed price (backend-calculated, never frontend) |
+| `feeAmount`/`netAmount` | `gross * PLATFORM_FEE_RATE` (default 0.10) — **only for PROVIDER**; omitted for CLIENT (AppSec) |
+| `evidence.photos` | `https` presigned URLs per `docs/decisions/order-photos.md` (frontend allowlist `https\|blob\|data:image`) |
+| `review` | `null` until `POST /reviews` — frontend falls back to `GET /reviews/service-order/:orderId` |
+| `proposal` | Accepted or first proposal; `null` if none |
+
+| Error | Code |
+|------|--------|
+| Order not found | `404` |
+| Access denied (not owner/assigned/proposal) | `403` |
+
+**Timeline:** `order.timelineEvents` are persisted as `OrderTimelineEvent` (`REQUEST_SENT`, `PROPOSAL_SENT`, `PROPOSAL_ACCEPTED`, `PAYMENT_CONFIRMED`, `SERVICE_SCHEDULED`, `SERVICE_STARTED`, `SERVICE_COMPLETED`, `EVIDENCES_ADDED`, `REVIEW_SUBMITTED`), or derived from `createdAt`/`scheduledAt`/`startedAt`/`completedAt`/`cancelledAt` for the `TimelineEvent[]` (`frontend/lib/tracking/timeline-builder.ts`).
+
+---
+
+### Service Lifecycle Transitions (JTT-105)
+
+#### `POST /services/me/:orderId/start` — `PROVIDER` (owner)
+
+Transitions `SCHEDULED` → `IN_PROGRESS` (records `startedAt`). Idempotent: second call returns current tracking.
+
+| Error | Code |
+|------|--------|
+| Order not found / not owned | `404`/`403` |
+| Already completed / cancelled | `400` |
+| Already started | `200` (idempotent, returns tracking) |
+| Payment not `PAID` | `400` `O serviço só pode começar após a confirmação do pagamento` |
+| Not `IN_PROGRESS` | `400` |
+
+#### `POST /services/me/:orderId/finish` — `PROVIDER` (owner) — multipart or JSON
+
+Finishes the hiring with evidence in one call (`IN_PROGRESS` → `COMPLETED`). Accepts either **multipart** (`photos[]` 1-10×5MB + `observations` field) or **JSON** `{ photoCount, observations }` (photoCount checked via existing evidence; multipart photos are webp-converted and stored in `order-photos`). Requires `startedAt` (call `start` first) and `≥1` photo total (existing + new). Persists `completedAt/by/observations`, creates `ORDER_COMPLETED` notification for the client, and returns the updated `ContractTracking` (idempotent: if already `COMPLETED`, returns tracking).
+
+**Multipart request (preferred per `docs/decisions/order-photos.md`):**
+| Field | Type | Required | Description |
+|-------|------|-------------|-----------|
+| `photos` / `file` | `binary` | yes (≥1 total) | JPEG/PNG/WebP/GIF, max 5MB, validated via `validateImageFile` |
+| `observations` | `string` | no | Max 2000 chars |
+
+**JSON fallback (tracking screen):**
+```json
+{ "photoCount": 2, "observations": "Concluído" }
+```
+
+| Error | Code |
+|------|--------|
+| Order not found / not owned | `404`/`403` |
+| Already cancelled | `400` |
+| Not `IN_PROGRESS` or not started | `400` `Inicie o serviço antes de concluí-lo.` |
+| No photos (0 total) | `400` `Adicione pelo menos uma foto para concluir o serviço.` |
+| Observations >2000 | `400` |
+
+#### `DELETE /services/me/:orderId` — `CLIENT` or `PROVIDER` — cancel with reason (updated JTT-105)
+
+Cancels the hiring from any non-final status (`OPEN`, `IN_PROGRESS`, `SCHEDULED`, etc.) with optional `cancelReason` (`≤500` chars, stored as `cancelReason`/`cancelledAt`). Final states `COMPLETED`/`CANCELLED` are rejected. History remains queryable via `GET /services/:orderId/tracking` and blocks `start`/`finish`/`review`.
+
+**Request body (optional, JSON):**
+```json
+{ "cancelReason": "Cliente solicitou antes do pagamento" }
+```
+| Field | Alias | Description |
+|-------|-------|-------------|
+| `cancelReason` | `reason` | Same, legacy alias |
+
+| Error | Code |
+|------|--------|
+| Order not found | `404` |
+| Access denied | `403` |
+| Already finalized (`COMPLETED`/`CANCELLED`) | `400` |
+| Reason >500 | `400` |
+
+---
+
 ### Service Orders (Public)
 
 **Prefix:** `services` | **No authentication**
@@ -1344,7 +1545,9 @@ Get order detail (authenticated — `CLIENT` or `PROVIDER`).
 **Response `200`:** Same structure with proposals from `GET /services/me/:orderId`, plus:
 | Field | Description |
 |-------|-----------|
-| `photos` | Array `[{ id, url }]` with the order photos (public MinIO URLs) |
+| `photos` | Array `[{ id, url }]` with the order photos (view endpoint `/api/services/photos/:photoId/view`) |
+| `client_name` / `order_id` / `scheduled_at` / `scheduled_end_at` / `amount` / `order_status` | Aliases for the completion screen (§2 "Informações do serviço") — the single call renders the summary: title, client name, scheduled range, textual address, agreed price, status |
+| `completed_at` / `completed_by` / `observations` | Present when `COMPLETED` (history fields, also available via `GET /services/me/:orderId/completion`) |
 
 | Error | Code |
 |------|--------|

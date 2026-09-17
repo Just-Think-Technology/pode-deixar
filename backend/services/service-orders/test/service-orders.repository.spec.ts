@@ -12,13 +12,16 @@ describe("ServiceOrdersRepository", () => {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    orderTimelineEvent: {
+      create: jest.fn(),
+    },
     user: {
       findUnique: jest.fn(),
     },
     providerService: {
       findUnique: jest.fn(),
     },
-  };
+  } as any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -220,14 +223,29 @@ describe("ServiceOrdersRepository", () => {
     });
   });
 
+  it("starts an order by setting startedAt", async () => {
+    mockPrisma.serviceOrder.update.mockResolvedValue({ id: "order-1" });
+    await repository.startOrder("order-1", "provider-1");
+    expect(mockPrisma.serviceOrder.update).toHaveBeenCalledWith({
+      where: { id: "order-1" },
+      data: { startedAt: expect.any(Date) },
+      include: { category: { select: { id: true, name: true, slug: true } } },
+    });
+  });
+
   it("completes an order", async () => {
     mockPrisma.serviceOrder.update.mockResolvedValue({ id: "order-1" });
 
-    await repository.completeOrder("order-1");
+    await repository.completeOrder("order-1", "provider-1", "Obs");
 
     expect(mockPrisma.serviceOrder.update).toHaveBeenCalledWith({
       where: { id: "order-1" },
-      data: { status: "COMPLETED" },
+      data: {
+        status: "COMPLETED",
+        completedAt: expect.any(Date),
+        completedBy: "provider-1",
+        observations: "Obs",
+      },
       include: { category: { select: { id: true, name: true, slug: true } } },
     });
   });
