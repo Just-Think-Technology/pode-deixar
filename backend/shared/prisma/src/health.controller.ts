@@ -1,11 +1,7 @@
 // Health controller — liveness and readiness endpoints
 
 import { Controller, Get } from "@nestjs/common";
-import {
-  HealthCheck,
-  HealthCheckService,
-  HealthCheckResult,
-} from "@nestjs/terminus";
+import { HealthCheckService, HealthCheckResult } from "@nestjs/terminus";
 import { DatabaseHealthIndicator } from "./database.health";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 
@@ -20,7 +16,6 @@ export class HealthController {
   // --- Public API ---
 
   @Get()
-  @HealthCheck()
   @ApiOperation({ summary: "Health check endpoint" })
   @ApiResponse({ status: 200, description: "Service healthy" })
   @ApiResponse({ status: 503, description: "Service unhealthy" })
@@ -29,7 +24,6 @@ export class HealthController {
   }
 
   @Get("ready")
-  @HealthCheck()
   @ApiOperation({ summary: "Readiness check endpoint" })
   @ApiResponse({ status: 200, description: "Service ready" })
   @ApiResponse({ status: 503, description: "Service not ready" })
