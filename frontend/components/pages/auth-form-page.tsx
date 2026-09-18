@@ -405,7 +405,7 @@ export function ClientLoginForm() {
                     <RememberMeField />
                 </FieldGroup>
                 <AuthFormActions
-                    submitLabel="Entrar"
+                    submitLabel={role.loginLabel}
                     loading={loading}
                     error={error}
                 />
@@ -461,7 +461,7 @@ export function WorkerLoginForm() {
                     <RememberMeField />
                 </FieldGroup>
                 <AuthFormActions
-                    submitLabel="Entrar"
+                    submitLabel={role.loginLabel}
                     loading={loading}
                     error={error}
                 />

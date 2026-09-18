@@ -115,7 +115,7 @@ export default function WorkerRequestsPage({
                       "w-full",
                     )}
                   >
-                    Ver e responder
+                    Ver detalhes
                   </Link>
                 </CardFooter>
               </Card>

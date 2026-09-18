@@ -134,7 +134,7 @@ export default function ClientOrdersPage({ orders }: ClientOrdersPageProps) {
                         "w-full",
                       )}
                     >
-                      Ver propostas
+                      Ver detalhes
                     </Link>
                   </CardFooter>
                 </Card>
