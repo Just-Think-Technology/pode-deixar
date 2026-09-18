@@ -19,6 +19,7 @@ export type CompletionOrder = {
   address: WorkerAgendaAddress;
   amount: number;
   order_status: WorkerAgendaOrderStatus;
+  photos?: CompletionPhoto[];
 };
 
 export type CompletionHistory = {

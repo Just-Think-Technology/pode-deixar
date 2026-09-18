@@ -18,29 +18,15 @@ import {
   uploadCompletionPhotoAction,
 } from "@/lib/worker/orders/actions";
 import { getUploadPhotoErrorMessage } from "@/lib/worker/orders/labels";
+import { getDisplayPhotoUrl } from "@/lib/worker/orders/photo-urls";
 import type { CompletionPhoto } from "@/lib/worker/orders/types";
 import {
   MAX_COMPLETION_PHOTOS,
   validateCompletionPhoto,
 } from "@/lib/worker/orders/validation";
+import { useResolvedPhotoUrls } from "./use-resolved-photo-urls";
 
 const ACCEPTED_IMAGE_TYPES = "image/jpeg,image/png,image/webp,image/gif";
-
-function toSafeImageUrl(url: string): string {
-  try {
-    const parsed = new URL(url, window.location.origin);
-    if (
-      parsed.protocol === "blob:" ||
-      parsed.protocol === "https:" ||
-      parsed.protocol === "http:"
-    ) {
-      return parsed.href;
-    }
-  } catch {
-    // ignora e retorna fallback seguro
-  }
-  return "about:blank";
-}
 
 type CompletionPhotoUploaderProps = {
   orderId: string;
@@ -83,6 +69,7 @@ export function CompletionPhotoUploader({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const resolvedUrls = useResolvedPhotoUrls(photos);
 
   async function handleFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0 || uploading || disabled) {
@@ -222,7 +209,7 @@ export function CompletionPhotoUploader({
                 {/* Fotos do mock usam object-URL: next/image não as otimiza. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={toSafeImageUrl(photo.url)}
+                  src={getDisplayPhotoUrl(photo.url, resolvedUrls.get(photo.id))}
                   alt={`Evidência ${index + 1} do serviço`}
                   className="size-full object-cover"
                 />

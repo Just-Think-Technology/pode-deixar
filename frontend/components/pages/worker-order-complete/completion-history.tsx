@@ -14,10 +14,12 @@ import { AgendaPhotoLightbox } from "@/components/pages/worker-agenda/photo-ligh
 import { getAgendaStatusLabel } from "@/lib/worker/agenda/labels";
 import type { WorkerAgendaEvent } from "@/lib/worker/agenda/types";
 import { formatCompletionDateTime } from "@/lib/worker/orders/labels";
+import { getDisplayPhotoUrl } from "@/lib/worker/orders/photo-urls";
 import type {
   CompletionHistory,
   CompletionOrder,
 } from "@/lib/worker/orders/types";
+import { useResolvedPhotoUrls } from "./use-resolved-photo-urls";
 
 type CompletionHistoryViewProps = {
   order: CompletionOrder;
@@ -29,7 +31,12 @@ export function CompletionHistoryView({
   history,
 }: CompletionHistoryViewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const photos = history?.photos ?? [];
+  const sourcePhotos = history?.photos ?? [];
+  const resolvedUrls = useResolvedPhotoUrls(sourcePhotos);
+  const photos = sourcePhotos.map((photo) => ({
+    ...photo,
+    url: getDisplayPhotoUrl(photo.url, resolvedUrls.get(photo.id)),
+  }));
 
   const lightboxEvent: WorkerAgendaEvent = {
     id: order.order_id,
