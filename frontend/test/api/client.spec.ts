@@ -114,7 +114,9 @@ describe('api/client (HTTP integration)', () => {
 
       expect(err).toBeInstanceOf(ApiError)
       expect(err.status).toBe(403)
-      expect(err.message).toBe('Você não tem permissão para realizar esta ação.')
+      expect(err.message).toBe(
+        'Você não tem permissão para realizar esta ação. Se precisar, faça login com o perfil correto.',
+      )
     })
 
     it('uses the backend message when it is a string', async () => {
