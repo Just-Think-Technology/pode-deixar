@@ -527,10 +527,11 @@ export function ClientRegisterForm() {
                             autoComplete="name"
                             placeholder="Seu nome"
                             aria-invalid={!!fieldErrors.complete_name}
+                            disabled={loading}
                         />
                         <FieldError message={fieldErrors.complete_name} />
                     </Field>
-                    <EmailField error={fieldErrors.email} />
+                    <EmailField error={fieldErrors.email} disabled={loading} />
                     <Field>
                         <FieldLabel htmlFor="phone">Telefone</FieldLabel>
                         <div className="relative">
@@ -544,14 +545,16 @@ export function ClientRegisterForm() {
                                 placeholder="(11) 99999-9999"
                                 className="h-11 pl-9"
                                 aria-invalid={!!fieldErrors.phone}
+                                disabled={loading}
                             />
                         </div>
                         <FieldError message={fieldErrors.phone} />
                     </Field>
-                    <PostalCodeField error={fieldErrors.postal_code} />
+                    <PostalCodeField error={fieldErrors.postal_code} disabled={loading} />
                     <PasswordField
                         autoComplete="new-password"
                         error={fieldErrors.password}
+                        disabled={loading}
                     />
                     <Field>
                         <FieldLabel htmlFor="confirm-password">
@@ -566,6 +569,7 @@ export function ClientRegisterForm() {
                             placeholder="Confirme sua senha"
                             className="h-11"
                             aria-invalid={!!fieldErrors["confirm-password"]}
+                            disabled={loading}
                         />
                         <FieldError message={fieldErrors["confirm-password"]} />
                     </Field>
@@ -622,10 +626,11 @@ export function WorkerRegisterForm() {
                             autoComplete="name"
                             placeholder="Seu nome"
                             aria-invalid={!!fieldErrors.complete_name}
+                            disabled={loading}
                         />
                         <FieldError message={fieldErrors.complete_name} />
                     </Field>
-                    <EmailField error={fieldErrors.email} />
+                    <EmailField error={fieldErrors.email} disabled={loading} />
                     <Field>
                         <FieldLabel htmlFor="phone">Telefone</FieldLabel>
                         <div className="relative">
@@ -639,14 +644,16 @@ export function WorkerRegisterForm() {
                                 placeholder="(11) 99999-9999"
                                 className="h-11 pl-9"
                                 aria-invalid={!!fieldErrors.phone}
+                                disabled={loading}
                             />
                         </div>
                         <FieldError message={fieldErrors.phone} />
                     </Field>
-                    <PostalCodeField error={fieldErrors.postal_code} />
+                    <PostalCodeField error={fieldErrors.postal_code} disabled={loading} />
                     <PasswordField
                         autoComplete="new-password"
                         error={fieldErrors.password}
+                        disabled={loading}
                     />
                     <Field>
                         <FieldLabel htmlFor="confirm-password">
@@ -661,6 +668,7 @@ export function WorkerRegisterForm() {
                             placeholder="Confirme sua senha"
                             className="h-11"
                             aria-invalid={!!fieldErrors["confirm-password"]}
+                            disabled={loading}
                         />
                         <FieldError message={fieldErrors["confirm-password"]} />
                     </Field>
