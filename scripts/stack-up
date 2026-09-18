@@ -6,15 +6,15 @@ cd "$(dirname "$0")/.."
 
 case "$ENV_KEY" in
   dev)
-    FILE=docker-compose.dev.yml
+    FILE=deploy/docker-compose.dev.yml
     ENV_FILE=.env.dev
     ;;
   staging)
-    FILE=docker-compose.staging.yml
+    FILE=deploy/docker-compose.staging.yml
     ENV_FILE=.env.staging
     ;;
   production)
-    FILE=docker-compose.production.yml
+    FILE=deploy/docker-compose.production.yml
     ENV_FILE=.env.production
     ;;
   *)
@@ -44,7 +44,7 @@ if [ "$ENV_KEY" = "dev" ]; then
   echo "  Pagamentos ....... http://localhost:3004"
   echo "  Reviews .......... http://localhost:3005"
   echo "  Mailpit .......... http://localhost:8025 (SMTP :1025)"
-  echo "  MinIO console .... http://localhost:9001 (API :9000)"
+  echo "  SeaweedFS S3 ..... http://localhost:8333 (filer :8888)"
   echo "  Postgres ......... localhost:15432 (entre containers: postgres:5432)"
 else
   API_DOMAIN="$(ler_env API_DOMAIN || true)"
@@ -54,6 +54,6 @@ else
   echo "  API .............. https://${API_DOMAIN:-<API_DOMAIN?>}/api"
   echo "  Frontend ......... ${FRONTEND_URL:-<FRONTEND_URL?>} (Vercel)"
   echo "  (serviços sem porta publicada — acesso só via Caddy;"
-  echo "   MinIO/Redis internos à stack)"
+  echo "   SeaweedFS/Redis internos à stack)"
 fi
 echo ""

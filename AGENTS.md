@@ -12,7 +12,7 @@ Single source of truth for product decisions, development rules and architecture
 
 * **Backend:** NestJS 11, TypeScript, Prisma 5.22, PostgreSQL
 * **Frontend:** Next.js 16, React 19, shadcn/ui, Tailwind CSS 4
-* **Infra:** Docker Compose, Caddy, pnpm 11 (workspaces), Redis 7, MinIO
+* **Infra:** Docker Compose, Caddy, pnpm 11 (workspaces), Redis 7, SeaweedFS S3
 
 ## Monorepo layout
 
@@ -33,7 +33,7 @@ frontend/
 ├── components/      # React components
 ├── lib/auth/        # Server actions and session
 └── mock/            # Mock data for dev
-docs/                # Security, product and deploy decisions
+.agents/             # Security, product and deploy decisions (agent rules)
 ```
 
 ## Architecture
@@ -51,7 +51,7 @@ docs/                # Security, product and deploy decisions
 * Code used by 2+ services is extracted to `backend/shared/` (`@pode-deixar/*`)
   by the task that creates the second usage
 
-Full rules: [docs/architecture.md](docs/architecture.md).
+Full rules: [.agents/rules/architecture.md](.agents/rules/architecture.md).
 
 ## Main commands
 
@@ -80,7 +80,7 @@ pnpm typecheck        # tsc --noEmit
 CI runs the same gates per push: backend jobs `changes, quick, e2e, shared,
 security, build, image, codeql, dependency-review`; frontend jobs
 `quick, deep, security, image, codeql, dependency-review`.
-Details: [docs/security/ci-pipeline.md](docs/security/ci-pipeline.md).
+Details: [.agents/security/ci-pipeline.md](.agents/security/ci-pipeline.md).
 
 Backend `test` / `test:e2e` need a local Postgres with the per-service test
 databases (`docker compose up -d postgres` from the repo root).
@@ -90,14 +90,14 @@ databases (`docker compose up -d postgres` from the repo root).
 * **Language:** code, comments and identifiers in English; user-facing copy
   (validation messages, API error messages, emails, UI text) stays in
   Portuguese for BR users — comments explain only why/decisions, never what
-* **Comments:** full convention in [docs/comments.md](docs/comments.md)
+* **Comments:** full convention in [.agents/rules/comments.md](.agents/rules/comments.md)
   (`//` inline, `/** */` JSDoc on public APIs only, `// --- Section ---`
   headers, English-only, no TODO/FIXME, no commented-out code)
 * **Clean Code:** full development and code-quality guidelines in
-  [docs/clean-code.md](docs/clean-code.md); code must follow its principles
+  [.agents/rules/clean-code.md](.agents/rules/clean-code.md); code must follow its principles
   for naming, responsibilities, control flow, error handling, duplication,
   abstraction, testability, and maintainability
-* **This file and docs/ are in English**
+* **This file and .agents/ are in English**
 * **Validation:** class-validator + class-transformer, messages in Portuguese
 * **Auth:** JWT (access 15min + refresh 7 days) with rotation and blacklist
 * **Roles:** CLIENT, PROVIDER, ADMIN
@@ -116,14 +116,14 @@ databases (`docker compose up -d postgres` from the repo root).
 2. Create a specific branch with a descriptive name BEFORE any code change
    (never develop on main/develop; one task = one branch = one PR)
 3. Study the existing architecture before coding; check
-   [docs/task-checklists.md](docs/task-checklists.md) for the matching task type
+   [.agents/rules/task-checklists.md](.agents/rules/task-checklists.md) for the matching task type
 4. Implement following best practices (DRY, SOLID where applicable, SRP, KISS,
    YAGNI, composition over inheritance, low coupling) and follow
-   [docs/clean-code.md](docs/clean-code.md)
+   [.agents/rules/clean-code.md](.agents/rules/clean-code.md)
 5. Update or create tests for the change; run `pnpm lint` and `pnpm typecheck`
 6. Validate nothing broke (run the affected suites) — before push/PR, the
    affected suites plus `pnpm lint` and `pnpm typecheck` must be green
-7. **Update this file / docs/ if the task changed or added a decision**
+7. **Update this file / .agents/ if the task changed or added a decision**
 8. Open a PR (what changed, how to validate, checklist: tests, lint, typecheck,
    docs) and request review before the next task
 
@@ -144,27 +144,27 @@ databases (`docker compose up -d postgres` from the repo root).
   unrelated improvements
 * Reuse first: check for an existing equivalent before creating files, classes
   or services
-* Orthogonality: one authoritative home per logic (see [docs/architecture.md](docs/architecture.md)) — consume `@pode-deixar/*`, specialize instead of forking, never a third copy
+* Orthogonality: one authoritative home per logic (see [.agents/rules/architecture.md](.agents/rules/architecture.md)) — consume `@pode-deixar/*`, specialize instead of forking, never a third copy
 * No premature optimization, but no knowingly wasteful queries, loops or allocations
 * No new libraries without need and justification; check `package.json` first
 * Public API/contract/behavior changes must be announced beforehand
-* Follow [docs/clean-code.md](docs/clean-code.md) for detailed Clean Code
+* Follow [.agents/rules/clean-code.md](.agents/rules/clean-code.md) for detailed Clean Code
   practices and PR review criteria
 
 ## Security baseline
 
 The backend is the source of truth — never trust values from the frontend
-(prices, IDs, status). Full policies live in [docs/security/](docs/security/):
+(prices, IDs, status). Full policies live in [.agents/security/](.agents/security/):
 
-* [Card data (PCI-DSS)](docs/security/pci-card-data.md) — never store, accept, log or echo PAN/CVV; gateway tokenization only
-* [Rate limiting](docs/security/rate-limiting.md) — 100 req/min global via `@nestjs/throttler`; stricter limits on sensitive endpoints; Redis in production
-* [Content Security Policy](docs/security/content-security-policy.md) — centralized `getHelmetConfig()` in `@pode-deixar/security`
-* [CI security pipeline](docs/security/ci-pipeline.md) — audit, dependency review, TruffleHog, CodeQL, eslint-plugin-security, Hadolint
-* [Backups](docs/security/backups.md) — daily `pg_dump`, 7-day retention, tested restore
-* [Encryption at rest](docs/security/encryption-at-rest-decision.md) — decision record
+* [Card data (PCI-DSS)](.agents/security/pci-card-data.md) — never store, accept, log or echo PAN/CVV; gateway tokenization only
+* [Rate limiting](.agents/security/rate-limiting.md) — 100 req/min global via `@nestjs/throttler`; stricter limits on sensitive endpoints; Redis in production
+* [Content Security Policy](.agents/security/content-security-policy.md) — centralized `getHelmetConfig()` in `@pode-deixar/security`
+* [CI security pipeline](.agents/security/ci-pipeline.md) — audit, dependency review, TruffleHog, CodeQL, eslint-plugin-security, Hadolint
+* [Backups](.agents/security/backups.md) — daily `pg_dump`, 7-day retention, tested restore
+* [Encryption at rest](.agents/security/encryption-at-rest-decision.md) — decision record
 
 Per-task security checklists (new endpoint, Prisma migration, webhook/gateway,
-new service): [docs/task-checklists.md](docs/task-checklists.md).
+new service): [.agents/rules/task-checklists.md](.agents/rules/task-checklists.md).
 
 ## Never do
 
@@ -186,14 +186,14 @@ new service): [docs/task-checklists.md](docs/task-checklists.md).
 
 ## Product decisions
 
-* [Ownership and data access](docs/decisions/ownership-access.md) — ownership validation, 403 semantics, proposal visibility, directed orders
-* [Order photos](docs/decisions/order-photos.md) — MinIO, webp via sharp, limits, dedicated upload endpoint
-* [Payments](docs/decisions/payments.md) — PIX/credit-card status, tokenization path, webhook idempotency, structured logging
-* [Database](docs/decisions/database.md) — least-privilege role
+* [Ownership and data access](.agents/decisions/ownership-access.md) — ownership validation, 403 semantics, proposal visibility, directed orders
+* [Order photos](.agents/decisions/order-photos.md) — SeaweedFS S3, webp via sharp, limits, dedicated upload endpoint
+* [Payments](.agents/decisions/payments.md) — PIX/credit-card status, tokenization path, webhook idempotency, structured logging
+* [Database](.agents/decisions/database.md) — least-privilege role
 
 ## Deploy
 
-`docker-compose.dev.yml` for local (own Postgres), `docker-compose.staging.yml` /
-`docker-compose.production.yml` for deploy (one command each, stacks isolated by
-`name`), Caddy vhosts, per-stack Redis:
-[docs/deploy.md](docs/deploy.md).
+`deploy/docker-compose.dev.yml` for local (own Postgres), `deploy/docker-compose.staging.yml` /
+`deploy/docker-compose.production.yml` for deploy (one command each, stacks isolated by
+`name`), Caddy vhosts (`deploy/Caddyfile.*`), per-stack Redis:
+[deploy/deploy.md](deploy/deploy.md).

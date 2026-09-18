@@ -1,0 +1,11 @@
+# TruffleHog allowlist — versioned disposable credentials
+# .env.dev / .env.test hold local-only postgres URLs (postgres:postgres) that are
+# intentionally committed and verified as reachable in CI, but are not secrets.
+\.env\.dev
+\.env\.test
+\.env\.example
+# Also ignore the historical docs copy that still contains the same URLs
+docs/.*
+\.agents/.*
+# Deploy compose files reference the same env files
+deploy/.*
