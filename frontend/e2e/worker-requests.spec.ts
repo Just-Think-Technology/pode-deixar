@@ -20,7 +20,7 @@ test.describe("Provider requests (JTT-83)", () => {
       page.getByText("Conserto de vazamento no chuveiro"),
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "Ver e responder" }).first(),
+      page.getByRole("link", { name: "Ver detalhes" }).first(),
     ).toBeVisible();
   });
 
