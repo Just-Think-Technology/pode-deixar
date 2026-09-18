@@ -29,6 +29,21 @@ controller / service / DTOs. For new code, strict layering:
 Pre-existing code predates the repository layer — do not retrofit it
 outside the task scope (see "Never do" 13 in AGENTS.md).
 
+## Docker images
+
+- **pnpm is pinned** — `backend/package.json` and `frontend/package.json`
+  declare `packageManager: pnpm@11.9.0`; every Dockerfile
+  (`backend/Dockerfile`, `backend/Dockerfile.dev`, `frontend/Dockerfile`)
+  must use `corepack prepare pnpm@11.9.0 --activate`, never
+  `pnpm@latest`. Bumps are atomic: update `packageManager` + all
+  Dockerfiles in the same PR.
+- **`CI=true` in compose** — `deploy/docker-compose.dev.yml` keeps `CI=true`
+  on `frontend` + backend services (`auth`, `users`, `service-orders`,
+  `payments`, `reviews`) for frozen-lockfile determinism (`pnpm install
+  --frozen-lockfile` fails when lock is stale) and to surface warnings as
+  errors locally like in CI; `staging` mirrors this (`CI=true`), `production`
+  relies on `NODE_ENV=production` (strict) and does not need `CI`.
+
 ## Shared code
 
 - `backend/shared/` packages (`@pode-deixar/logger`, `@pode-deixar/email`,

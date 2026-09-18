@@ -6,7 +6,7 @@ RUN apk update && apk add --no-cache openssl
 WORKDIR /app
 # Corepack enabled for pnpm runtime (node user runs the process)
 ENV COREPACK_HOME=/usr/local/share/corepack
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
 # --- Deps ---
 FROM base AS deps

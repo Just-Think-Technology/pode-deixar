@@ -19,6 +19,8 @@ services:
       context: ../backend
       dockerfile: Dockerfile.dev
       target: auth-build
+    environment:
+      CI: "true"
     command: >
       sh -c "pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
              pnpm run --filter @pode-deixar/auth start:dev"
@@ -62,6 +64,8 @@ services:
       context: ../backend
       dockerfile: Dockerfile.dev
       target: users-build
+    environment:
+      CI: "true"
     command: pnpm run --filter @pode-deixar/users start:dev
     volumes:
       - ./backend/services/users/src:/app/services/users/src
@@ -103,6 +107,8 @@ services:
       context: ../backend
       dockerfile: Dockerfile.dev
       target: service-orders-build
+    environment:
+      CI: "true"
     command: >
       sh -c "rm -f /app/services/service-orders/tsconfig.build.tsbuildinfo &&
              pnpm run --filter @pode-deixar/service-orders start:dev"
@@ -146,6 +152,8 @@ services:
       context: ../backend
       dockerfile: Dockerfile.dev
       target: payments-build
+    environment:
+      CI: "true"
     command: >
       sh -c "pnpm exec prisma generate --schema=prisma/schema.prisma &&
              pnpm exec prisma migrate deploy --schema=prisma/schema.prisma &&
@@ -190,6 +198,8 @@ services:
       context: ../backend
       dockerfile: Dockerfile.dev
       target: reviews-build
+    environment:
+      CI: "true"
     command: pnpm run --filter @pode-deixar/reviews start:dev
     volumes:
       - ./backend/services/reviews/src:/app/services/reviews/src
