@@ -93,6 +93,7 @@ export default function ClientOrdersPage({ orders }: ClientOrdersPageProps) {
                     </div>
                     <Badge
                       variant="outline"
+                      title={getOrderStatusLabel(order.status)}
                       className={cn(
                         STATUS_BADGE_CLASS[order.status] ??
                           "border-slate-200 bg-slate-50 text-slate-700",

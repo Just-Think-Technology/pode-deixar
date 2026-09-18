@@ -101,6 +101,17 @@ export function ContractTrackingView({
       {actions.canViewEvidence && tracking.evidence ? (
         <EvidenceGallery tracking={tracking} evidence={tracking.evidence} />
       ) : null}
+
+      <p className="text-center text-xs text-muted-foreground">
+        Dúvidas? Consulte a{" "}
+        <a
+          href="/help"
+          className="font-medium text-primary hover:underline"
+        >
+          central de ajuda
+        </a>{" "}
+        ou fale com o suporte.
+      </p>
     </div>
   );
 }
