@@ -5,6 +5,7 @@
     ".agents/rules/architecture.md",
     ".agents/rules/clean-code.md",
     ".agents/rules/comments.md",
+    ".agents/rules/nielsen-heuristics.md",
     ".agents/rules/task-checklists.md"
   ],
   "references": {
