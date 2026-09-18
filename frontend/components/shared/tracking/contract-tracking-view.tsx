@@ -1,6 +1,8 @@
 // Contract tracking view — shared composition for client and provider
 
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -35,14 +37,29 @@ export function ContractTrackingView({
   backHref,
   backLabel,
 }: ContractTrackingViewProps) {
+  const router = useRouter();
   const status = deriveContractStatus(tracking);
   const events = buildTimelineEvents(tracking);
   const actions = getAvailableActions(tracking);
 
+  function handleBack() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      const referrer = document.referrer;
+      const isInternal =
+        referrer === "" || referrer.startsWith(window.location.origin);
+      if (isInternal) {
+        router.back();
+        return;
+      }
+    }
+    router.push(backHref);
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-      <Link
-        href={backHref}
+      <button
+        type="button"
+        onClick={handleBack}
         className={cn(
           buttonVariants({ variant: "ghost", size: "sm" }),
           "gap-2 text-muted-foreground",
@@ -50,7 +67,7 @@ export function ContractTrackingView({
       >
         <ArrowLeft className="size-4" />
         {backLabel}
-      </Link>
+      </button>
 
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
