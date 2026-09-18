@@ -48,10 +48,16 @@ export class RegisterService {
     const user = await this.createUserWithProfile(dto, {
       passwordHash,
       emailVerificationTokenHash: this.hashToken(emailVerificationToken),
-      emailVerificationExpires: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+      emailVerificationExpires: new Date(
+        Date.now() + VERIFICATION_TOKEN_TTL_MS,
+      ),
     });
 
-    await this.sendVerificationEmail(dto.email, emailVerificationToken);
+    await this.sendVerificationEmail(
+      dto.email,
+      emailVerificationToken,
+      dto.role,
+    );
     this.authLogger.logRegistration(dto.email, dto.role, ip);
 
     return {
@@ -76,7 +82,11 @@ export class RegisterService {
       const emailVerificationToken = await this.rotateVerificationToken(
         existingUser.id,
       );
-      await this.sendVerificationEmail(email, emailVerificationToken);
+      await this.sendVerificationEmail(
+        email,
+        emailVerificationToken,
+        existingUser.role,
+      );
     }
     this.authLogger.logSecurityEvent('register_existing_email', { email });
     return { message: SIGNUP_RESPONSE_MESSAGE };
@@ -105,15 +115,20 @@ export class RegisterService {
 
   private async rotateVerificationToken(userId: string): Promise<string> {
     const emailVerificationToken = uuidv4();
-    await this.repository.updateVerificationToken(userId, this.hashToken(emailVerificationToken), new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS));
+    await this.repository.updateVerificationToken(
+      userId,
+      this.hashToken(emailVerificationToken),
+      new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+    );
     return emailVerificationToken;
   }
 
   private async sendVerificationEmail(
     email: string,
     token: string,
+    role?: string,
   ): Promise<void> {
-    await this.trySendVerificationEmail(email, token);
+    await this.trySendVerificationEmail(email, token, role);
   }
 
   private devOnlyVerificationToken(token: string) {
@@ -129,7 +144,9 @@ export class RegisterService {
    * Rejects unknown, already-used, and expired tokens with distinct messages.
    */
   async verifyEmail(dto: VerifyEmailDto) {
-    const user = await this.repository.findUserByVerificationTokenHash(this.hashToken(dto.token));
+    const user = await this.repository.findUserByVerificationTokenHash(
+      this.hashToken(dto.token),
+    );
     if (!user) {
       this.authLogger.logEmailVerificationTokenFailure(
         dto.token,
@@ -157,7 +174,7 @@ export class RegisterService {
 
     await this.repository.markEmailVerified(user.id);
     this.authLogger.logEmailVerification(user.email, true);
-    return { message: 'Email verificado com sucesso' };
+    return { message: 'Email verificado com sucesso', role: user.role };
   }
 
   /**
@@ -181,6 +198,7 @@ export class RegisterService {
     const sent = await this.trySendVerificationEmail(
       dto.email,
       emailVerificationToken,
+      user.role,
     );
     this.authLogger.logResendVerification(dto.email, sent);
 
@@ -193,9 +211,10 @@ export class RegisterService {
   private async trySendVerificationEmail(
     email: string,
     token: string,
+    role?: string,
   ): Promise<boolean> {
     try {
-      await this.emailService.sendEmailVerification(email, token);
+      await this.emailService.sendEmailVerification(email, token, role);
       return true;
     } catch (error) {
       this.authLogger.logSecurityEvent('email_send_failed', {

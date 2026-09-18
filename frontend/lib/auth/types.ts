@@ -88,6 +88,7 @@ export type VerifyEmailPayload = {
 
 export type VerifyEmailResponse = {
   message: string;
+  role?: PublicRole;
 };
 
 export type ResendVerificationPayload = {
