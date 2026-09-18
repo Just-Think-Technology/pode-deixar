@@ -80,6 +80,23 @@ describe('api/client (HTTP integration)', () => {
       )
     })
 
+    it('omits the JSON content type for FormData bodies', async () => {
+      fetchMock.mockResolvedValue(jsonResponse({ ok: true }))
+
+      const body = new FormData()
+      body.append('file', new File(['x'], 'foto.jpg', { type: 'image/jpeg' }))
+      await apiFetch('/upload', { method: 'POST', body })
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://api.test/upload',
+        expect.objectContaining({ method: 'POST' }),
+      )
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+      expect(
+        (init.headers as Record<string, string>)['Content-Type'],
+      ).toBeUndefined()
+    })
+
     it('maps 401 to expired session', async () => {
       fetchMock.mockResolvedValue(jsonResponse({}, 401))
 

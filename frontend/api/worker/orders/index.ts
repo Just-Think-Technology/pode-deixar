@@ -2,6 +2,7 @@ import { apiFetchAuth } from "@/api/client";
 import type {
   CompleteOrderInput,
   CompleteOrderResult,
+  CompletionHistory,
   CompletionOrder,
   CompletionPhoto,
 } from "@/lib/worker/orders/types";
@@ -15,11 +16,13 @@ const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export const WORKER_ORDER_ROUTES = {
   detail: (orderId: string) => `/services/${orderId}`,
+  completion: (orderId: string) => `/services/me/${orderId}/completion`,
   complete: (orderId: string) => `/services/me/${orderId}/complete`,
   uploadPhoto: (orderId: string) =>
     `/services/me/${orderId}/completion-photos`,
   deletePhoto: (orderId: string, photoId: string) =>
     `/services/me/${orderId}/completion-photos/${photoId}`,
+  photoView: (photoId: string) => `/services/photos/${photoId}/view`,
 } as const;
 
 export function getWorkerOrderDetail(
@@ -41,6 +44,38 @@ export function getWorkerOrderDetail(
   );
 }
 
+export function getWorkerOrderCompletion(
+  accessToken: string,
+  orderId: string,
+): Promise<CompletionHistory> {
+  return apiFetchAuth<CompletionHistory>(
+    WORKER_ORDER_ROUTES.completion(orderId),
+    accessToken,
+    { method: "GET" },
+  );
+}
+
+export type OrderPhotoViewResult = {
+  url: string;
+};
+
+export function getOrderPhotoViewUrl(
+  accessToken: string,
+  photoId: string,
+): Promise<OrderPhotoViewResult> {
+  return apiFetchAuth<OrderPhotoViewResult>(
+    WORKER_ORDER_ROUTES.photoView(photoId),
+    accessToken,
+    { method: "GET" },
+  );
+}
+
+// Backend returns a single object for one file and an array for many.
+export function normalizeUploadedPhotos(
+  payload: CompletionPhoto | CompletionPhoto[],
+): CompletionPhoto[] {
+  return Array.isArray(payload) ? payload : [payload];
+}
 export function uploadWorkerOrderPhoto(
   accessToken: string,
   orderId: string,
@@ -51,11 +86,17 @@ export function uploadWorkerOrderPhoto(
     return Promise.resolve(mockUploadCompletionPhoto(orderId, previewUrl));
   }
 
-  return apiFetchAuth<CompletionPhoto>(
+  return apiFetchAuth<CompletionPhoto | CompletionPhoto[]>(
     WORKER_ORDER_ROUTES.uploadPhoto(orderId),
     accessToken,
     { method: "POST", body: formData },
-  );
+  ).then((payload) => {
+    const photo = normalizeUploadedPhotos(payload)[0];
+    if (!photo) {
+      throw new Error("Não foi possível enviar a foto. Tente novamente.");
+    }
+    return photo;
+  });
 }
 
 export function deleteWorkerOrderPhoto(

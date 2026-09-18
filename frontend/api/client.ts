@@ -35,11 +35,15 @@ export async function apiFetch<T>(
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
   try {
+    // FormData sets its own multipart boundary; a JSON content type would
+    // corrupt the upload payload.
+    const isFormData =
+      typeof FormData !== "undefined" && options?.body instanceof FormData;
     const res = await fetch(`${getApiBaseUrl()}${path}`, {
       ...options,
       signal: controller.signal,
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...options?.headers,
       },
     });
