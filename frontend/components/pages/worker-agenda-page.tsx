@@ -5,8 +5,11 @@
 import { useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { format, isSameDay } from "date-fns";
-import { CalendarDays } from "lucide-react";
+import { AlertCircle, CalendarDays, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 import { AgendaDayList } from "@/components/pages/worker-agenda/day-list";
 import { AgendaEventDetailDialog } from "@/components/pages/worker-agenda/event-detail-dialog";
@@ -130,9 +133,22 @@ export default function WorkerAgendaPage({
       </h1>
 
       {loadError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {loadError}
-        </p>
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Falha ao carregar agenda</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>{loadError}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => startTransition(async () => await reloadAgenda(visibleMonth))}
+              disabled={isPending}
+            >
+              Tentar novamente
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {events.length === 0 && selectedDay == null && !loadError ? (
@@ -150,9 +166,14 @@ export default function WorkerAgendaPage({
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-start">
           <aside
-            className="h-fit w-full shrink-0 rounded-xl bg-card p-4 ring-1 ring-foreground/10 lg:w-96"
+            className="relative h-fit w-full shrink-0 rounded-xl bg-card p-4 ring-1 ring-foreground/10 lg:w-96"
             aria-busy={isPending}
           >
+            {isPending ? (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-card/60">
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : null}
             <AgendaMiniCalendar
               month={visibleMonth}
               selectedDay={selectedDay}
