@@ -196,4 +196,4 @@ new service): [.agents/rules/task-checklists.md](.agents/rules/task-checklists.m
 `deploy/docker-compose.dev.yml` for local (own Postgres), `deploy/docker-compose.staging.yml` /
 `deploy/docker-compose.production.yml` for deploy (one command each, stacks isolated by
 `name`), Caddy vhosts (`deploy/Caddyfile.*`), per-stack Redis:
-[.agents/deploy.md](.agents/deploy.md).
+[deploy/deploy.md](deploy/deploy.md).

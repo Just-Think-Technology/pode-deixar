@@ -14,9 +14,9 @@ services:
   # --- Auth Service ---
   auth:
     env_file:
-      - ./.env.staging
+      - ../.env.staging
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
       target: auth-build
     command: >
@@ -57,9 +57,9 @@ services:
   # --- Users Service ---
   users:
     env_file:
-      - ./.env.staging
+      - ../.env.staging
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
       target: users-build
     command: pnpm run --filter @pode-deixar/users start:dev
@@ -98,9 +98,9 @@ services:
   # --- Service Orders Service ---
   service-orders:
     env_file:
-      - ./.env.staging
+      - ../.env.staging
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
       target: service-orders-build
     command: >
@@ -141,9 +141,9 @@ services:
   # --- Payments Service ---
   payments:
     env_file:
-      - ./.env.staging
+      - ../.env.staging
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
       target: payments-build
     command: >
@@ -185,9 +185,9 @@ services:
   # --- Reviews Service ---
   reviews:
     env_file:
-      - ./.env.staging
+      - ../.env.staging
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
       target: reviews-build
     command: pnpm run --filter @pode-deixar/reviews start:dev
@@ -226,14 +226,14 @@ services:
   # --- MinIO ---
   minio:
     env_file:
-      - ./.env.staging
+      - ../.env.staging
 
   # --- MinIO Setup ---
   minio-setup:
     env_file:
-      - ./.env.staging
+      - ../.env.staging
 
   # --- Database Backup ---
   db-backup:
     env_file:
-      - ./.env.staging
+      - ../.env.staging

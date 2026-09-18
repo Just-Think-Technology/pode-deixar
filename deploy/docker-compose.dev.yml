@@ -23,7 +23,7 @@ services:
   # alterações no host não aparecem até rebuild.
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: Dockerfile.dev
       args:
         NEXT_PUBLIC_BACKEND_URL: http://localhost:8080/api
@@ -41,9 +41,9 @@ services:
   # -- Auth Service (dev, hot-reload) --
   auth:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
-    env_file: ./.env.dev
+    env_file: ../.env.dev
     environment:
       FRONTEND_URL: http://localhost:8080
       ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000,http://127.0.0.1:3000"
@@ -76,9 +76,9 @@ services:
   # -- Users Service (dev, hot-reload) --
   users:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
-    env_file: ./.env.dev
+    env_file: ../.env.dev
     environment:
       TZ: America/Sao_Paulo
       # Storage local: acompanha o MinIO de dev acima (como o banco,
@@ -103,9 +103,9 @@ services:
   # -- Service Orders Service (dev, hot-reload) --
   service-orders:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
-    env_file: ./.env.dev
+    env_file: ../.env.dev
     environment:
       TZ: America/Sao_Paulo
       # Storage local: acompanha o MinIO de dev acima (como o banco,
@@ -133,9 +133,9 @@ services:
   # -- Payments Service (dev, hot-reload) --
   payments:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
-    env_file: ./.env.dev
+    env_file: ../.env.dev
     environment:
       TZ: America/Sao_Paulo
       # Storage local: acompanha o MinIO de dev acima (como o banco,
@@ -162,9 +162,9 @@ services:
   # -- Reviews Service (dev, hot-reload) --
   reviews:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile.dev
-    env_file: ./.env.dev
+    env_file: ../.env.dev
     environment:
       TZ: America/Sao_Paulo
       # Storage local: acompanha o MinIO de dev acima (como o banco,
