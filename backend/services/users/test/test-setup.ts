@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from "@pode-deixar/prisma";
-import { MinioService } from '@pode-deixar/storage';
+import { MinioService, StorageService } from '@pode-deixar/storage';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
 // --- Types ---
@@ -17,22 +17,27 @@ export interface TestAppSetup {
   prisma: PrismaService;
 }
 
-// --- MinIO stub ---
-// The real MinioService connects on onModuleInit — unfeasible without MinIO.
+// --- Storage stub (SeaweedFS S3, MINIO alias kept for backward compat) ---
+// The real StorageService connects on onModuleInit — unfeasible without SeaweedFS.
 // Mocks network behavior while keeping the service contract.
 
 export const mockMinio = {
   avatarBucket: 'avatars',
   uploadFile: jest.fn(
     async (fileName: string, _buffer: Buffer, _mime: string, bucket?: string) =>
-      `http://minio.test/${bucket ?? 'avatars'}/${fileName}`,
+      `http://seaweedfs.test/${bucket ?? 'avatars'}/${fileName}`,
   ),
   deleteFile: jest.fn(async (_fileName: string, _bucket?: string) => undefined),
   extractFileName: jest.fn(
     (url: string, bucket?: string) =>
       url.split(`/${bucket ?? 'avatars'}/`).pop() as string,
   ),
+  generateTemporaryUrl: jest.fn(
+    async (fileName: string, bucket?: string) =>
+      `http://seaweedfs.test/${bucket ?? 'avatars'}/${fileName}?X-Amz-Signature=mock`,
+  ),
 };
+export const mockStorage = mockMinio;
 
 /**
  * Boots the real Nest app (validation pipeline, guards and production filters).
@@ -47,6 +52,8 @@ export async function setupTestApp(): Promise<TestAppSetup> {
     ],
   })
     .overrideProvider(MinioService)
+    .useValue(mockMinio)
+    .overrideProvider(StorageService)
     .useValue(mockMinio)
     // Sensitive endpoints carry strict @Throttle (5 req/min); test flows share
     // one IP and would hit 429. Fake storage that never blocks — the real

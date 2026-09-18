@@ -30,7 +30,9 @@ export class ProfilesService {
     configService: ConfigService,
   ) {
     this.avatarBucket =
-      configService.get<string>("MINIO_AVATAR_BUCKET") || "avatars";
+      configService.get<string>("STORAGE_AVATARS_BUCKET") ||
+      configService.get<string>("MINIO_AVATARS_BUCKET") ||
+      "avatars";
   }
 
   private async getUser(userId: string) {

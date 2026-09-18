@@ -210,7 +210,7 @@ describe('Profiles (integration)', () => {
         .expect(200);
 
       expect(mockMinio.uploadFile).toHaveBeenCalled();
-      expect(response.body.avatar_url).toContain('http://minio.test/avatars/');
+      expect(response.body.avatar_url).toContain('/avatars/');
     });
 
     it('deve retornar 400 para tipo de arquivo inválido', async () => {
