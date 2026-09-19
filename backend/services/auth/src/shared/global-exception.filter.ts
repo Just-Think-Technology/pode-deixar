@@ -12,7 +12,6 @@ import { Request, Response } from 'express';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-
   // --- Private Helpers ---
 
   private readonly logger = new Logger(GlobalExceptionFilter.name);

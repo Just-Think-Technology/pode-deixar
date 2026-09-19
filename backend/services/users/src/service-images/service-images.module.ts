@@ -8,7 +8,6 @@ import { PrismaModule } from "@pode-deixar/prisma";
 import { ServiceImagesRepository } from "./service-images.repository";
 
 @Module({
-
   // --- Imports ---
 
   imports: [PrismaModule],

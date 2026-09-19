@@ -1,65 +1,132 @@
-// Photos controller tests — order photo upload endpoints
+// Photos controller tests — HTTP status / guard / 403 via request(app)
 
-import { Test, TestingModule } from "@nestjs/testing";
-import { PhotosController } from "../src/photos/photos.controller";
-import { PhotosService } from "../src/photos/photos.service";
-import { BadRequestException } from "@nestjs/common";
+import { INestApplication } from '@nestjs/common';
+import request = require('supertest');
+import { App } from 'supertest/types';
+import {
+  setupTestApp,
+  teardownTestApp,
+  createTestUser,
+  createCategory,
+  mintToken,
+  bearerAuth,
+  TestAppSetup,
+} from './test-setup';
+import { PrismaService } from '@pode-deixar/prisma';
 
-// --- Tests ---
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
 
-describe("PhotosController", () => {
-  let controller: PhotosController;
+describe('PhotosController (HTTP)', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaService;
 
-  const mockPhotosService = {
-    upload: jest.fn(),
-  };
-
-  const mockRequest = (overrides = {}) => ({
-    user: { sub: "client-1", email: "client@test.com", role: "CLIENT" },
-    ip: "127.0.0.1",
-    ...overrides,
+  beforeAll(async () => {
+    const setup: TestAppSetup = await setupTestApp();
+    app = setup.app;
+    prisma = setup.prisma;
   });
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [PhotosController],
-      providers: [
-        { provide: PhotosService, useValue: mockPhotosService },
-      ],
-    }).compile();
-
-    controller = module.get<PhotosController>(PhotosController);
-    jest.clearAllMocks();
+  afterAll(async () => {
+    await teardownTestApp(app, prisma);
   });
 
-  describe("upload", () => {
-    it("should call service.upload with orderId, userId and files", async () => {
-      const req = mockRequest();
-      const files = [{ buffer: Buffer.from("test"), originalname: "foto.jpg" }] as any;
-      const expectedResult = [{ id: "photo-1", url: "http://..." }];
+  async function clientWithOrder() {
+    const user = await createTestUser(prisma, { role: 'CLIENT' });
+    const token = mintToken(user);
+    const category = await createCategory(prisma);
+    const order = await prisma.serviceOrder.create({
+      data: {
+        title: 'Pedido fotos',
+        description: 'Descrição',
+        categoryId: category.id,
+        clientId: user.id,
+        status: 'OPEN',
+      },
+    });
+    return { user, token, order };
+  }
 
-      mockPhotosService.upload.mockResolvedValue(expectedResult);
-
-      const result = await controller.upload(req, "order-1", files);
-
-      expect(mockPhotosService.upload).toHaveBeenCalledWith(
-        "order-1",
-        "client-1",
-        files,
-      );
-      expect(result).toEqual(expectedResult);
+  describe('POST /services/me/:orderId/photos', () => {
+    it('should return 401 without token', async () => {
+      const { order } = await clientWithOrder();
+      await request(app.getHttpServer())
+        .post(`/services/me/${order.id}/photos`)
+        .expect(401);
     });
 
-    it("should throw BadRequestException when no files provided", async () => {
-      const req = mockRequest();
+    it('should return 403 when provider tries to upload on client-only endpoint', async () => {
+      const { order } = await clientWithOrder();
+      const provider = await createTestUser(prisma, { role: 'PROVIDER' });
+      const token = mintToken(provider);
 
-      await expect(controller.upload(req, "order-1", null as any)).rejects.toThrow(
-        BadRequestException,
-      );
+      await request(app.getHttpServer())
+        .post(`/services/me/${order.id}/photos`)
+        .set(bearerAuth(token))
+        .attach('photos', PNG_1X1, { filename: 'foto.png', contentType: 'image/png' })
+        .expect(403);
+    });
 
-      await expect(controller.upload(req, "order-1", [] as any)).rejects.toThrow(
-        BadRequestException,
-      );
+    it('should return 400 when no files sent', async () => {
+      const { token, order } = await clientWithOrder();
+      await request(app.getHttpServer())
+        .post(`/services/me/${order.id}/photos`)
+        .set(bearerAuth(token))
+        .expect(400);
+    });
+
+    it('should return 403 when another client tries to upload on чужое order', async () => {
+      const { order } = await clientWithOrder();
+      const intruder = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(intruder);
+      await request(app.getHttpServer())
+        .post(`/services/me/${order.id}/photos`)
+        .set(bearerAuth(token))
+        .attach('photos', PNG_1X1, { filename: 'foto.png', contentType: 'image/png' })
+        .expect(403);
+    });
+
+    it('should return 201 and persist photo for owner client with valid png', async () => {
+      const { token, order } = await clientWithOrder();
+      const response = await request(app.getHttpServer())
+        .post(`/services/me/${order.id}/photos`)
+        .set(bearerAuth(token))
+        .attach('photos', PNG_1X1, { filename: 'foto.png', contentType: 'image/png' })
+        .expect(201);
+
+      const body = Array.isArray(response.body) ? response.body : [response.body];
+      expect(body[0].url ?? body[0].photoUrl ?? body[0].id).toBeDefined();
+
+      const photos = await prisma.orderPhoto.findMany({ where: { serviceOrderId: order.id } });
+      expect(photos.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should return 400 for invalid file type (magic-byte validation)', async () => {
+      const { token, order } = await clientWithOrder();
+      await request(app.getHttpServer())
+        .post(`/services/me/${order.id}/photos`)
+        .set(bearerAuth(token))
+        .attach('photos', Buffer.from('not-an-image'), { filename: 'doc.txt', contentType: 'text/plain' })
+        .expect(400);
+    });
+  });
+
+  describe('GET /services/photos/:photoId/view', () => {
+    it('should return 401 without token', async () => {
+      await request(app.getHttpServer())
+        .get('/services/photos/00000000-0000-0000-0000-000000000000/view')
+        .expect(401);
+    });
+
+    it('should return 404 for nonexistent photo', async () => {
+      const user = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(user);
+      await request(app.getHttpServer())
+        .get('/services/photos/00000000-0000-0000-0000-000000000000/view')
+        .set(bearerAuth(token))
+        .expect(404);
     });
   });
 });

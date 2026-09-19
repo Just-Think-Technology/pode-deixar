@@ -12,7 +12,6 @@ import { SharedModule } from "../shared/shared.module";
 import { CounterProposalsRepository } from "./counter-proposals.repository";
 
 @Module({
-
   // --- Imports ---
 
   imports: [PrismaModule, SharedModule],

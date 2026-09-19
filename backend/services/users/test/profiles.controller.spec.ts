@@ -1,187 +1,152 @@
-// Profiles controller tests — client and provider endpoints
+// Profiles controller tests — HTTP status / guard / 403 via request(app)
 
-import { Test, TestingModule } from "@nestjs/testing";
-import { ProfilesController } from "../src/profiles/profiles.controller";
-import { PublicProviderProfileController } from "../src/profiles/public-provider-profile.controller";
-import { ProfilesService } from "../src/profiles/profiles.service";
+import { INestApplication } from '@nestjs/common';
+import request = require('supertest');
+import { App } from 'supertest/types';
+import {
+  setupTestApp,
+  teardownTestApp,
+  createTestUser,
+  mintToken,
+  bearerAuth,
+  TestAppSetup,
+} from './test-setup';
+import { PrismaService } from '@pode-deixar/prisma';
 
-// --- Tests ---
+describe('ProfilesController (HTTP)', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaService;
 
-describe("ProfilesController", () => {
-  let controller: ProfilesController;
-  let publicProfileController: PublicProviderProfileController;
-
-  const mockProfilesService = {
-    getProfile: jest.fn(),
-    createClientProfile: jest.fn(),
-    updateClientProfile: jest.fn(),
-    createProviderProfile: jest.fn(),
-    updateProviderProfile: jest.fn(),
-    uploadAvatar: jest.fn(),
-    getPublicProviderProfile: jest.fn(),
-  };
-
-  const mockRequest = (overrides = {}) => ({
-    user: { sub: "user-1", email: "test@test.com", role: "CLIENT" },
-    ip: "127.0.0.1",
-    ...overrides,
+  beforeAll(async () => {
+    const setup: TestAppSetup = await setupTestApp();
+    app = setup.app;
+    prisma = setup.prisma;
   });
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [ProfilesController, PublicProviderProfileController],
-      providers: [
-        { provide: ProfilesService, useValue: mockProfilesService },
-      ],
-    }).compile();
-
-    controller = module.get<ProfilesController>(ProfilesController);
-    publicProfileController = module.get<PublicProviderProfileController>(
-      PublicProviderProfileController,
-    );
-    jest.clearAllMocks();
+  afterAll(async () => {
+    await teardownTestApp(app, prisma);
   });
 
-  describe("getMyProfile", () => {
-    it("should call service.getProfile with userId and role from token", async () => {
-      const req = mockRequest();
-      const expectedProfile = { id: "client-1", user: { complete_name: "Test" } };
+  describe('GET /profiles/me', () => {
+    it('should return 401 without token (guard)', async () => {
+      await request(app.getHttpServer()).get('/profiles/me').expect(401);
+    });
 
-      mockProfilesService.getProfile.mockResolvedValue(expectedProfile);
+    it('should return 200 for owner and contain profile data', async () => {
+      const user = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(user);
+      await request(app.getHttpServer())
+        .post('/profiles/client')
+        .set(bearerAuth(token))
+        .send({})
+        .expect(201);
 
-      const result = await controller.getMyProfile(req);
+      const response = await request(app.getHttpServer())
+        .get('/profiles/me')
+        .set(bearerAuth(token))
+        .expect(200);
 
-      expect(mockProfilesService.getProfile).toHaveBeenCalledWith(
-        "user-1",
-        "CLIENT",
-      );
-      expect(result).toEqual(expectedProfile);
+      expect(response.body.user.id).toBe(user.id);
+    });
+
+    it('should return 404 when no profile exists', async () => {
+      const user = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(user);
+
+      await request(app.getHttpServer())
+        .get('/profiles/me')
+        .set(bearerAuth(token))
+        .expect(404);
     });
   });
 
-  describe("createClientProfile", () => {
-    it("should call service.createClientProfile with userId, dto and ip", async () => {
-      const req = mockRequest();
-      const dto = { avatarUrl: "http://avatar.com", preferences: { theme: "dark" } };
-      const expectedProfile = { id: "client-1" };
-
-      mockProfilesService.createClientProfile.mockResolvedValue(expectedProfile);
-
-      const result = await controller.createClientProfile(req, dto as any);
-
-      expect(mockProfilesService.createClientProfile).toHaveBeenCalledWith(
-        "user-1",
-        dto,
-        "127.0.0.1",
-      );
-      expect(result).toEqual(expectedProfile);
+  describe('POST /profiles/client', () => {
+    it('should return 401 without token', async () => {
+      await request(app.getHttpServer()).post('/profiles/client').send({}).expect(401);
     });
-  });
 
-  describe("updateClientProfile", () => {
-    it("should call service.updateClientProfile with userId, dto and ip", async () => {
-      const req = mockRequest();
-      const dto = { avatarUrl: "http://new.com" };
-      const expectedProfile = { id: "client-1" };
+    it('should return 403 for PROVIDER (role guard)', async () => {
+      const user = await createTestUser(prisma, { role: 'PROVIDER' });
+      const token = mintToken(user);
 
-      mockProfilesService.updateClientProfile.mockResolvedValue(expectedProfile);
-
-      const result = await controller.updateClientProfile(req, dto as any);
-
-      expect(mockProfilesService.updateClientProfile).toHaveBeenCalledWith(
-        "user-1",
-        dto,
-        "127.0.0.1",
-      );
-      expect(result).toEqual(expectedProfile);
+      await request(app.getHttpServer())
+        .post('/profiles/client')
+        .set(bearerAuth(token))
+        .send({})
+        .expect(403);
     });
-  });
 
-  describe("createProviderProfile", () => {
-    it("should call service.createProviderProfile with userId, dto and ip", async () => {
-      const req = mockRequest({ user: { sub: "user-1", role: "PROVIDER" } });
-      const dto = { bio: "Expert", hourlyRate: 50 };
-      const expectedProfile = { id: "provider-1" };
+    it('should return 201 for CLIENT and persist preferences', async () => {
+      const user = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(user);
 
-      mockProfilesService.createProviderProfile.mockResolvedValue(expectedProfile);
+      const response = await request(app.getHttpServer())
+        .post('/profiles/client')
+        .set(bearerAuth(token))
+        .send({ preferences: { theme: 'dark' } })
+        .expect(201);
 
-      const result = await controller.createProviderProfile(req, dto as any);
+      expect(response.body.preferences).toEqual({ theme: 'dark' });
 
-      expect(mockProfilesService.createProviderProfile).toHaveBeenCalledWith(
-        "user-1",
-        dto,
-        "127.0.0.1",
-      );
-      expect(result).toEqual(expectedProfile);
-    });
-  });
-
-  describe("updateProviderProfile", () => {
-    it("should call service.updateProviderProfile with userId, dto and ip", async () => {
-      const req = mockRequest({ user: { sub: "user-1", role: "PROVIDER" } });
-      const dto = { bio: "Updated bio" };
-      const expectedProfile = { id: "provider-1" };
-
-      mockProfilesService.updateProviderProfile.mockResolvedValue(expectedProfile);
-
-      const result = await controller.updateProviderProfile(req, dto as any);
-
-      expect(mockProfilesService.updateProviderProfile).toHaveBeenCalledWith(
-        "user-1",
-        dto,
-        "127.0.0.1",
-      );
-      expect(result).toEqual(expectedProfile);
-    });
-  });
-
-  describe("uploadAvatar", () => {
-    it("should call service.uploadAvatar with userId, role, file and ip", async () => {
-      const req = mockRequest();
-      const file = {
-        fieldname: "file",
-        originalname: "avatar.png",
-        mimetype: "image/png",
-        buffer: Buffer.from("content"),
-      } as Express.Multer.File;
-
-      mockProfilesService.uploadAvatar.mockResolvedValue({
-        avatar_url: "http://localhost:8080/api/storage/avatars/uuid.png",
+      const dbProfile = await prisma.clientProfile.findUnique({
+        where: { userId: user.id },
       });
-
-      const result = await controller.uploadAvatar(req, file);
-
-      expect(mockProfilesService.uploadAvatar).toHaveBeenCalledWith(
-        "user-1",
-        "CLIENT",
-        file,
-        "127.0.0.1",
-      );
-      expect(result.avatar_url).toBe(
-        "http://localhost:8080/api/storage/avatars/uuid.png",
-      );
+      expect(dbProfile?.preferences).toEqual({ theme: 'dark' });
     });
   });
 
-  describe("PublicProviderProfileController - getPublicProviderProfile", () => {
-    it("should call service.getPublicProviderProfile with providerProfileId", async () => {
-      const expectedProfile = {
-        id: "provider-1",
-        user: { complete_name: "João" },
-        services: [],
-      };
+  describe('POST /profiles/provider', () => {
+    it('should return 403 for CLIENT', async () => {
+      const user = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(user);
 
-      mockProfilesService.getPublicProviderProfile.mockResolvedValue(
-        expectedProfile,
-      );
+      await request(app.getHttpServer())
+        .post('/profiles/provider')
+        .set(bearerAuth(token))
+        .send({ bio: 'x' })
+        .expect(403);
+    });
 
-      const result =
-        await publicProfileController.getPublicProviderProfile("provider-1");
+    it('should return 201 for PROVIDER', async () => {
+      const user = await createTestUser(prisma, { role: 'PROVIDER' });
+      const token = mintToken(user);
 
-      expect(
-        mockProfilesService.getPublicProviderProfile,
-      ).toHaveBeenCalledWith("provider-1");
-      expect(result).toEqual(expectedProfile);
+      const response = await request(app.getHttpServer())
+        .post('/profiles/provider')
+        .set(bearerAuth(token))
+        .send({ bio: 'Eletricista', hourlyRate: 80 })
+        .expect(201);
+
+      expect(response.body.bio).toBe('Eletricista');
+      expect(response.body.hourly_rate).toBe(80);
+    });
+  });
+
+  describe('GET /providers/:providerId/profile (public)', () => {
+    it('should return 200 without authentication and not expose PII', async () => {
+      const user = await createTestUser(prisma, { role: 'PROVIDER' });
+      const token = mintToken(user);
+      const profileId = (
+        await request(app.getHttpServer())
+          .post('/profiles/provider')
+          .set(bearerAuth(token))
+          .send({ bio: 'Encanador' })
+          .expect(201)
+      ).body.id;
+
+      const response = await request(app.getHttpServer())
+        .get(`/providers/${profileId}/profile`)
+        .expect(200);
+
+      expect(response.body.id).toBe(profileId);
+      expect(response.body.user).not.toHaveProperty('email');
+      expect(response.body.user).not.toHaveProperty('phone');
+    });
+
+    it('should return 404 for nonexistent provider', async () => {
+      await request(app.getHttpServer())
+        .get('/providers/00000000-0000-0000-0000-000000000000/profile')
+        .expect(404);
     });
   });
 });

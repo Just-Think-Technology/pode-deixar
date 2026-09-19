@@ -9,7 +9,6 @@ import { PasswordService } from './password.service';
 import { LoginModule } from '../login/login.module';
 
 @Module({
-
   // --- Imports ---
 
   imports: [LoginModule],

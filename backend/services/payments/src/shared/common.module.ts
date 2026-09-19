@@ -8,7 +8,6 @@ const ResponseLoggerInterceptor =
   createResponseLoggerInterceptor("payments-service");
 
 @Module({
-
   // --- Providers ---
 
   providers: [GlobalExceptionFilter, ResponseLoggerInterceptor],
