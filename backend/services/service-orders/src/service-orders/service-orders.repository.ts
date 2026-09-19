@@ -191,33 +191,79 @@ export class ServiceOrdersRepository {
     });
   }
 
-  createCompletionNotification(userId: string, orderId: string) {
+  async existsRecent(opts: {
+    userId: string;
+    type: string;
+    title: string;
+    contractId?: string | null;
+    windowMs?: number;
+  }): Promise<boolean> {
+    const windowMs = opts.windowMs ?? 60000;
+    const since = new Date(Date.now() - windowMs);
+    const where: Record<string, unknown> = {
+      userId: opts.userId,
+      type: opts.type,
+      title: opts.title,
+      createdAt: { gte: since },
+    };
+    if (opts.contractId) {
+      where.contractId = opts.contractId;
+    }
+    const existing = await this.prisma.notification.findFirst({ where });
+    return Boolean(existing);
+  }
+
+  async notify(dto: {
+    userId: string;
+    type: string;
+    title: string;
+    message: string;
+    contractId?: string | null;
+  }) {
+    const isDuplicate = await this.existsRecent({
+      userId: dto.userId,
+      type: dto.type,
+      title: dto.title,
+      contractId: dto.contractId ?? null,
+      windowMs: 60000,
+    });
+    if (isDuplicate) {
+      return null;
+    }
     return this.prisma.notification.create({
       data: {
-        userId,
-        type: "SERVICE",
-        title: "Serviço concluído",
-        message: "Seu serviço foi concluído pelo prestador",
-        contractId: orderId,
+        userId: dto.userId,
+        type: dto.type as any,
+        title: dto.title,
+        message: dto.message,
+        contractId: dto.contractId ?? null,
       },
     });
   }
 
-  createStatusNotification(
+  async createCompletionNotification(userId: string, orderId: string) {
+    return this.notify({
+      userId,
+      type: "SERVICE",
+      title: "Serviço concluído",
+      message: "Seu serviço foi concluído pelo prestador",
+      contractId: orderId,
+    });
+  }
+
+  async createStatusNotification(
     userId: string,
     orderId: string,
     type: string,
     title: string,
     message: string,
   ) {
-    return this.prisma.notification.create({
-      data: {
-        userId,
-        type: type as any,
-        title,
-        message,
-        contractId: orderId,
-      },
+    return this.notify({
+      userId,
+      type,
+      title,
+      message,
+      contractId: orderId,
     });
   }
 
