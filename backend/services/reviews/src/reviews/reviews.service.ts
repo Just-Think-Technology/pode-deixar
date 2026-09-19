@@ -110,6 +110,25 @@ export class ReviewsService {
         ip,
       );
 
+      // Notify reviewee (provider) — deduped via existsRecent, failure must not block creation
+      try {
+        const orderForNotify = await this.repository.findOrderForNotification(
+          order.id,
+        );
+        const title = orderForNotify
+          ? `Nova avaliação para "${orderForNotify.title}"`
+          : "Nova avaliação";
+        await this.repository.notify({
+          userId: revieweeId,
+          type: "SERVICE",
+          title: "Nova avaliação",
+          message: title,
+          contractId: order.id,
+        });
+      } catch {
+        // Notification failure must not block review creation
+      }
+
       return this.formatReview(review);
     } catch (e: any) {
       if (e?.code === "P2002") {

@@ -8,7 +8,6 @@ import { AuthLoggerService } from '../shared/auth-logger.service';
 import { PasswordService } from '../password/password.service';
 
 @Module({
-
   // --- Controllers ---
 
   controllers: [RegisterController],

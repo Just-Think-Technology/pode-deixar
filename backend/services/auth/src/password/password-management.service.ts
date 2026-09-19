@@ -44,7 +44,11 @@ export class PasswordManagementService {
     const resetToken = uuidv4();
     const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
 
-    await this.repository.storePasswordResetToken(user.id, this.hashToken(resetToken), expiresAt);
+    await this.repository.storePasswordResetToken(
+      user.id,
+      this.hashToken(resetToken),
+      expiresAt,
+    );
 
     try {
       await this.emailService.sendPasswordReset(dto.email, resetToken);
@@ -70,7 +74,9 @@ export class PasswordManagementService {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const user = await this.repository.findUserByValidResetToken(this.hashToken(dto.token));
+    const user = await this.repository.findUserByValidResetToken(
+      this.hashToken(dto.token),
+    );
     if (!user) {
       this.authLogger.logSecurityEvent('password_reset_invalid_token', {
         token_suffix: dto.token.slice(-4),
@@ -117,12 +123,18 @@ export class PasswordManagementService {
     }
 
     const hashedNewPassword = await this.passwordService.hash(dto.newPassword);
-    await this.repository.updatePasswordAndClearRefresh(userId, hashedNewPassword);
+    await this.repository.updatePasswordAndClearRefresh(
+      userId,
+      hashedNewPassword,
+    );
     this.authLogger.logPasswordChange(userId, true);
 
     try {
       if (accessTokenJti) {
-        await this.repository.blacklistToken(accessTokenJti, new Date(Date.now() + ACCESS_TOKEN_BLACKLIST_TTL_MS));
+        await this.repository.blacklistToken(
+          accessTokenJti,
+          new Date(Date.now() + ACCESS_TOKEN_BLACKLIST_TTL_MS),
+        );
       }
     } catch (error) {
       if (

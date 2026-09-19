@@ -100,6 +100,19 @@ export class ProposalsService {
 
     this.logger.logProposalCreated(providerId, proposal.id, ip);
 
+    // Notify order owner about new proposal — deduped via existsRecent
+    try {
+      await this.repository.notify({
+        userId: order.clientId,
+        type: "SERVICE",
+        title: "Nova proposta",
+        message: `Nova proposta para "${order.title}"`,
+        contractId: order.id,
+      });
+    } catch {
+      // Notification failure must not block proposal creation
+    }
+
     return this.formatProposal(proposal);
   }
 
@@ -227,6 +240,19 @@ export class ProposalsService {
     );
 
     this.logger.logProposalAccepted(proposal.serviceOrderId, proposalId, ip);
+
+    // Notify provider that his proposal was accepted — deduped via existsRecent
+    try {
+      await this.repository.notify({
+        userId: proposal.providerId,
+        type: "SERVICE",
+        title: "Proposta aceita",
+        message: `Sua proposta para "${proposal.serviceOrder.title}" foi aceita`,
+        contractId: proposal.serviceOrderId,
+      });
+    } catch {
+      // Notification failure must not block acceptance
+    }
 
     return this.formatProposal(updatedProposal);
   }

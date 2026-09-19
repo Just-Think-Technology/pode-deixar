@@ -608,7 +608,41 @@ export class PaymentsService {
       "Confirmação via webhook mock",
     );
 
+    // Notify both client and provider — deduped via existsRecent, failure must not block webhook
+    await this.notifyPaymentConfirmed(payment.serviceOrderId);
+
     return { payment: transaction.payment };
+  }
+
+  /**
+   * Notifies client and provider about confirmed payment, using anti-duplicate existsRecent.
+   */
+  private async notifyPaymentConfirmed(serviceOrderId: string): Promise<void> {
+    try {
+      const order =
+        await this.repository.findServiceOrderForNotification(serviceOrderId);
+      if (!order) {
+        return;
+      }
+      const title = "Pagamento confirmado";
+      const message = `Pagamento confirmado para "${order.title}"`;
+      const recipients = [order.clientId, order.providerId].filter(
+        (id): id is string => Boolean(id),
+      );
+      // Avoid duplicate notify to same user
+      const unique = [...new Set(recipients)];
+      for (const userId of unique) {
+        await this.repository.notify({
+          userId,
+          type: "SERVICE",
+          title,
+          message,
+          contractId: order.id,
+        });
+      }
+    } catch {
+      // Notification failure must not block webhook processing
+    }
   }
 
   async handleGatewayWebhook(
@@ -775,6 +809,10 @@ export class PaymentsService {
       gateway.name,
       `Status do gateway: ${gatewayPayment.status}`,
     );
+
+    if (status === "PAID") {
+      await this.notifyPaymentConfirmed(payment.serviceOrderId);
+    }
 
     return { payment: transaction.payment };
   }

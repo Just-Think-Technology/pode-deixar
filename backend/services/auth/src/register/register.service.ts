@@ -48,7 +48,9 @@ export class RegisterService {
     const user = await this.createUserWithProfile(dto, {
       passwordHash,
       emailVerificationTokenHash: this.hashToken(emailVerificationToken),
-      emailVerificationExpires: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+      emailVerificationExpires: new Date(
+        Date.now() + VERIFICATION_TOKEN_TTL_MS,
+      ),
     });
 
     await this.sendVerificationEmail(dto.email, emailVerificationToken);
@@ -105,7 +107,11 @@ export class RegisterService {
 
   private async rotateVerificationToken(userId: string): Promise<string> {
     const emailVerificationToken = uuidv4();
-    await this.repository.updateVerificationToken(userId, this.hashToken(emailVerificationToken), new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS));
+    await this.repository.updateVerificationToken(
+      userId,
+      this.hashToken(emailVerificationToken),
+      new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
+    );
     return emailVerificationToken;
   }
 
@@ -129,7 +135,9 @@ export class RegisterService {
    * Rejects unknown, already-used, and expired tokens with distinct messages.
    */
   async verifyEmail(dto: VerifyEmailDto) {
-    const user = await this.repository.findUserByVerificationTokenHash(this.hashToken(dto.token));
+    const user = await this.repository.findUserByVerificationTokenHash(
+      this.hashToken(dto.token),
+    );
     if (!user) {
       this.authLogger.logEmailVerificationTokenFailure(
         dto.token,
