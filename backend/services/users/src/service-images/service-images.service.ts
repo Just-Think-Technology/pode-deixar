@@ -6,17 +6,17 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { MinioService } from "../storage/minio.service";
+import { ServiceImagesRepository } from "./service-images.repository";
+import { MinioService } from "@pode-deixar/storage";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { randomUUID } from "crypto";
 import { extname } from "path";
-import { validarArquivoImagem } from "@pode-deixar/validation";
+import { validateImageFile } from "@pode-deixar/validation";
 
 @Injectable()
 export class ServiceImagesService {
   constructor(
-    private prisma: PrismaService,
+    private repository: ServiceImagesRepository,
     private minio: MinioService,
     private usersLogger: UsersLoggerService,
   ) {}
@@ -24,9 +24,7 @@ export class ServiceImagesService {
   // --- Private Helpers ---
 
   private async getProviderProfileByUserId(userId: string) {
-    const profile = await this.prisma.providerProfile.findUnique({
-      where: { userId },
-    });
+    const profile = await this.repository.findProviderProfileByUserId(userId);
 
     if (!profile) {
       throw new NotFoundException("Perfil de prestador não encontrado");
@@ -39,9 +37,7 @@ export class ServiceImagesService {
     providerProfileId: string,
     serviceId: string,
   ) {
-    const service = await this.prisma.providerService.findUnique({
-      where: { id: serviceId },
-    });
+    const service = await this.repository.findProviderServiceById(serviceId);
 
     if (!service) {
       throw new NotFoundException("Serviço não encontrado");
@@ -89,7 +85,7 @@ export class ServiceImagesService {
   ) {
     await this.getProviderService(providerProfileId, serviceId);
 
-    validarArquivoImagem(file.originalname, file.buffer);
+    validateImageFile(file.originalname, file.buffer);
     const ext = extname(file.originalname).toLowerCase();
     const fileName = `${providerProfileId}/${serviceId}/${randomUUID()}${ext}`;
 
@@ -99,12 +95,7 @@ export class ServiceImagesService {
       file.mimetype,
     );
 
-    const image = await this.prisma.serviceImage.create({
-      data: {
-        providerServiceId: serviceId,
-        url,
-      },
-    });
+    const image = await this.repository.createServiceImage(serviceId, url);
 
     this.usersLogger.logServiceImageUploaded(
       providerProfileId,
@@ -119,10 +110,8 @@ export class ServiceImagesService {
   async list(providerProfileId: string, serviceId: string) {
     await this.getProviderService(providerProfileId, serviceId);
 
-    const images = await this.prisma.serviceImage.findMany({
-      where: { providerServiceId: serviceId },
-      orderBy: { createdAt: "desc" },
-    });
+    const images =
+      await this.repository.findServiceImagesByServiceId(serviceId);
 
     return images.map((img) => this.formatImage(img));
   }
@@ -135,9 +124,7 @@ export class ServiceImagesService {
   ) {
     await this.getProviderService(providerProfileId, serviceId);
 
-    const image = await this.prisma.serviceImage.findUnique({
-      where: { id: imageId },
-    });
+    const image = await this.repository.findServiceImageById(imageId);
 
     if (!image) {
       throw new NotFoundException("Imagem não encontrada");
@@ -150,9 +137,7 @@ export class ServiceImagesService {
     const fileName = this.minio.extractFileName(image.url);
     await this.minio.deleteFile(fileName);
 
-    await this.prisma.serviceImage.delete({
-      where: { id: imageId },
-    });
+    await this.repository.deleteServiceImage(imageId);
 
     this.usersLogger.logServiceImageDeleted(
       providerProfileId,

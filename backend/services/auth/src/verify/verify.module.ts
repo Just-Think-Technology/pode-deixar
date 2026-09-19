@@ -5,9 +5,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { VerifyController } from './verify.controller';
 import { VerifyService } from './verify.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@pode-deixar/prisma';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
+
+import { VerifyRepository } from './verify.repository';
 
 @Module({
 
@@ -31,7 +33,7 @@ import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
   // --- Providers ---
 
-  providers: [VerifyService, PrismaService, AuthLoggerService],
+  providers: [VerifyService, PrismaService, AuthLoggerService, VerifyRepository],
   exports: [VerifyService],
 })
 export class VerifyModule {}

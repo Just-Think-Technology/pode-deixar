@@ -2,8 +2,8 @@
 
 import { Module } from '@nestjs/common';
 import { PasswordManagementService } from './password-management.service';
+import { PasswordManagementRepository } from './password-management.repository';
 import { PasswordController } from './password.controller';
-import { PrismaService } from '../prisma/prisma.service';
 import { AuthLoggerService } from '../shared/auth-logger.service';
 import { PasswordService } from './password.service';
 import { LoginModule } from '../login/login.module';
@@ -22,7 +22,7 @@ import { LoginModule } from '../login/login.module';
 
   providers: [
     PasswordManagementService,
-    PrismaService,
+    PasswordManagementRepository,
     AuthLoggerService,
     PasswordService,
   ],

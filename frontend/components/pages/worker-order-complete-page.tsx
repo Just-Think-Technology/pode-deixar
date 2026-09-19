@@ -42,7 +42,11 @@ export default function WorkerOrderCompletePage({
   order,
   history,
 }: WorkerOrderCompletePageProps) {
-  const [photos, setPhotos] = useState<CompletionPhoto[]>([]);
+  // Evidence saved before this render (real API) hydrates the uploader;
+  // the mock starts empty and fills as photos upload in-session.
+  const [photos, setPhotos] = useState<CompletionPhoto[]>(
+    () => order.photos ?? [],
+  );
   const [observations, setObservations] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);

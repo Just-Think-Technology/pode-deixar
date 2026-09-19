@@ -2,7 +2,7 @@ FROM node:22-alpine AS build
 ARG NEXT_PUBLIC_BACKEND_URL
 ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
@@ -14,7 +14,7 @@ FROM node:22-alpine AS production
 WORKDIR /app
 # Cache do corepack em local legível por qualquer usuário (runtime roda como `node`)
 ENV COREPACK_HOME=/usr/local/share/corepack
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public

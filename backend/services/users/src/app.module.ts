@@ -6,27 +6,27 @@ import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
-import { PrismaModule } from "./prisma/prisma.module";
+import { PrismaModule } from "@pode-deixar/prisma";
 import { ProfilesModule } from "./profiles/profiles.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { ProviderServicesModule } from "./provider-services/provider-services.module";
 import { ServiceImagesModule } from "./service-images/service-images.module";
 import { CategoriesModule } from "./categories/categories.module";
-import { HealthModule } from "./health/health.module";
+import { HealthModule } from "@pode-deixar/prisma";
 import { SharedModule } from "./shared/shared.module";
 import { MinioModule } from "./storage/minio.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
-import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
+import { createResponseLoggerInterceptor } from "@pode-deixar/logger";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateSharedErrors,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Users field labels for validation error translation (user-facing, in Portuguese).
-const ROTULOS_USERS: RotulosCampos = {
+const USERS_FIELD_LABELS: FieldLabels = {
   title: "Título",
   description: "Descrição",
   fixedPrice: "Preço fixo",
@@ -44,7 +44,7 @@ const ROTULOS_USERS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string {
-  return traduzirErrosNucleo(errors, ROTULOS_USERS).join("; ");
+  return translateSharedErrors(errors, USERS_FIELD_LABELS).join("; ");
 }
 
 @Module({
@@ -107,7 +107,7 @@ function translateValidationErrors(errors: ValidationError[]): string {
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: ResponseLoggerInterceptor,
+      useClass: createResponseLoggerInterceptor("users-service"),
     },
   ],
 })

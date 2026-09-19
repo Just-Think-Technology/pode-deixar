@@ -6,24 +6,24 @@ import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
-import { PrismaModule } from "./prisma/prisma.module";
+import { PrismaModule } from "@pode-deixar/prisma";
 import { PaymentsModule } from "./payments/payments.module";
 import { GatewayModule } from "./gateway/gateway.module";
-import { HealthModule } from "./health/health.module";
+import { HealthModule } from "@pode-deixar/prisma";
 import { SharedModule } from "./shared/shared.module";
 import { CommonModule } from "./shared/common.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
-import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
+import { createResponseLoggerInterceptor } from "@pode-deixar/logger";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateSharedErrors,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Payments field labels (user-facing, in Portuguese); restriction messages live in the shared core.
-const ROTULOS_PAYMENTS: RotulosCampos = {
+const PAYMENTS_FIELD_LABELS: FieldLabels = {
   serviceOrderId: "ID do pedido",
   amount: "Valor",
   method: "Método de pagamento",
@@ -32,7 +32,7 @@ const ROTULOS_PAYMENTS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string[] {
-  return traduzirErrosNucleo(errors, ROTULOS_PAYMENTS);
+  return translateSharedErrors(errors, PAYMENTS_FIELD_LABELS);
 }
 
 @Module({
@@ -92,7 +92,7 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: ResponseLoggerInterceptor,
+      useClass: createResponseLoggerInterceptor("payments-service"),
     },
   ],
 })

@@ -6,22 +6,21 @@ import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
-import { PrismaModule } from "./prisma/prisma.module";
-import { HealthModule } from "./health/health.module";
+import { PrismaModule, HealthModule } from "@pode-deixar/prisma";
 import { SharedModule } from "./shared/shared.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
-import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
+import { createResponseLoggerInterceptor } from "@pode-deixar/logger";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateSharedErrors,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Reviews field labels for validation error translation (user-facing, in Portuguese).
-const ROTULOS_REVIEWS: RotulosCampos = {
+const REVIEWS_FIELD_LABELS: FieldLabels = {
   rating: "Nota",
   comment: "Comentário",
   serviceOrderId: "Pedido de serviço",
@@ -29,7 +28,7 @@ const ROTULOS_REVIEWS: RotulosCampos = {
 };
 
 function translateValidationErrors(errors: ValidationError[]): string {
-  return traduzirErrosNucleo(errors, ROTULOS_REVIEWS).join("; ");
+  return translateSharedErrors(errors, REVIEWS_FIELD_LABELS).join("; ");
 }
 
 @Module({
@@ -87,7 +86,7 @@ function translateValidationErrors(errors: ValidationError[]): string {
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: ResponseLoggerInterceptor,
+      useClass: createResponseLoggerInterceptor("reviews-service"),
     },
   ],
 })

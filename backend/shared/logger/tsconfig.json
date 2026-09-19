@@ -11,8 +11,10 @@
     "incremental": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "resolvePackageJsonExports": false,
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
-  "include": ["index.ts"]
+  "include": ["index.ts", "response-logger.interceptor.ts", "bootstrap.ts", "domain-logger.ts"]
 }

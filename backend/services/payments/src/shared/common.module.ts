@@ -2,7 +2,10 @@
 
 import { Module } from "@nestjs/common";
 import { GlobalExceptionFilter } from "./global-exception.filter";
-import { ResponseLoggerInterceptor } from "./response-logger.interceptor";
+import { createResponseLoggerInterceptor } from "@pode-deixar/logger";
+
+const ResponseLoggerInterceptor =
+  createResponseLoggerInterceptor("payments-service");
 
 @Module({
 

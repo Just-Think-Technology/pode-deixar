@@ -1,19 +1,11 @@
-// MinIO module — global object storage wiring
+// Storage module — S3-compatible object storage wiring (SeaweedFS)
+// Supports STORAGE_* env vars with MINIO_* fallback for backward compatibility
 
-import { Module, Global } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
-import { MinioService } from "./minio.service";
+import { StorageModule } from "@pode-deixar/storage";
+import { MinioStorageModule } from "@pode-deixar/storage";
 
-@Global()
-@Module({
-
-  // --- Imports ---
-
-  imports: [ConfigModule],
-
-  // --- Providers ---
-
-  providers: [MinioService],
-  exports: [MinioService],
-})
-export class MinioModule {}
+export const MinioModule = (StorageModule ?? MinioStorageModule).register({
+  bucketEnvVar: "STORAGE_SERVICE_IMAGES_BUCKET",
+  defaultBucket: "service-images",
+  global: true,
+});

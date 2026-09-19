@@ -6,8 +6,9 @@ import {
   ConflictException,
   BadRequestException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { MinioService } from "../storage/minio.service";
+import { ConfigService } from "@nestjs/config";
+import { ProfilesRepository } from "./profiles.repository";
+import { MinioService } from "@pode-deixar/storage";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateClientProfileDto } from "./dto/create-client-profile.dto";
 import { UpdateClientProfileDto } from "./dto/update-client-profile.dto";
@@ -16,34 +17,29 @@ import { UpdateProviderProfileDto } from "./dto/update-provider-profile.dto";
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { extname } from "path";
-import { validarArquivoImagem } from "@pode-deixar/validation";
+import { validateImageFile } from "@pode-deixar/validation";
 
 @Injectable()
 export class ProfilesService {
+  private readonly avatarBucket: string;
+
   constructor(
-    private prisma: PrismaService,
+    private repository: ProfilesRepository,
     private minio: MinioService,
     private usersLogger: UsersLoggerService,
-  ) {}
-
-  // --- Private Helpers ---
+    configService: ConfigService,
+  ) {
+    this.avatarBucket =
+      configService.get<string>("STORAGE_AVATARS_BUCKET") ||
+      configService.get<string>("MINIO_AVATARS_BUCKET") ||
+      "avatars";
+  }
 
   private async getUser(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        completeName: true,
-        email: true,
-        phone: true,
-        postalCode: true,
-        role: true,
-      },
-    });
+    const user = await this.repository.findUserById(userId);
     return user;
   }
 
-  // Formats client profile response; excludes PII (email, phone, postalCode).
   private formatClientProfile(profile: any, user: any) {
     return {
       id: profile.id,
@@ -62,7 +58,6 @@ export class ProfilesService {
     };
   }
 
-  // Formats provider profile response; excludes PII (email, phone, postalCode).
   private formatProviderProfile(profile: any, user: any) {
     return {
       id: profile.id,
@@ -87,8 +82,6 @@ export class ProfilesService {
     };
   }
 
-  // --- Public API ---
-
   async getProfile(userId: string, role: string) {
     const user = await this.getUser(userId);
     if (!user) {
@@ -96,9 +89,7 @@ export class ProfilesService {
     }
 
     if (role === "PROVIDER") {
-      const profile = await this.prisma.providerProfile.findUnique({
-        where: { userId },
-      });
+      const profile = await this.repository.findProviderProfileByUserId(userId);
       if (!profile) {
         throw new NotFoundException("Perfil de prestador não encontrado");
       }
@@ -107,9 +98,7 @@ export class ProfilesService {
     }
 
     if (role === "CLIENT") {
-      const profile = await this.prisma.clientProfile.findUnique({
-        where: { userId },
-      });
+      const profile = await this.repository.findClientProfileByUserId(userId);
       if (!profile) {
         throw new NotFoundException("Perfil de cliente não encontrado");
       }
@@ -125,9 +114,7 @@ export class ProfilesService {
     dto: CreateClientProfileDto,
     ip?: string,
   ) {
-    const existing = await this.prisma.clientProfile.findUnique({
-      where: { userId },
-    });
+    const existing = await this.repository.findClientProfileByUserId(userId);
     if (existing) {
       throw new ConflictException("Perfil de cliente já existe");
     }
@@ -139,12 +126,10 @@ export class ProfilesService {
       );
     }
 
-    const profile = await this.prisma.clientProfile.create({
-      data: {
-        userId,
-        avatarUrl: dto.avatarUrl,
-        preferences: dto.preferences || {},
-      },
+    const profile = await this.repository.createClientProfile({
+      userId,
+      avatarUrl: dto.avatarUrl,
+      preferences: dto.preferences || {},
     });
 
     this.usersLogger.logProfileCreated(userId, "CLIENT", ip);
@@ -156,9 +141,7 @@ export class ProfilesService {
     dto: UpdateClientProfileDto,
     ip?: string,
   ) {
-    const existing = await this.prisma.clientProfile.findUnique({
-      where: { userId },
-    });
+    const existing = await this.repository.findClientProfileByUserId(userId);
     if (!existing) {
       throw new NotFoundException("Perfil de cliente não encontrado");
     }
@@ -168,17 +151,14 @@ export class ProfilesService {
       throw new NotFoundException("Usuário não encontrado");
     }
 
-    const profile = await this.prisma.clientProfile.update({
-      where: { userId },
-      data: {
-        avatarUrl: dto.avatarUrl ?? existing.avatarUrl,
-        preferences:
-          dto.preferences !== undefined
-            ? dto.preferences
-            : existing.preferences === null
-              ? Prisma.JsonNull
-              : existing.preferences,
-      },
+    const profile = await this.repository.updateClientProfile(userId, {
+      avatarUrl: dto.avatarUrl ?? existing.avatarUrl,
+      preferences:
+        dto.preferences !== undefined
+          ? dto.preferences
+          : existing.preferences === null
+            ? Prisma.JsonNull
+            : existing.preferences,
     });
 
     this.usersLogger.logProfileUpdated(userId, "CLIENT", ip);
@@ -190,9 +170,7 @@ export class ProfilesService {
     dto: CreateProviderProfileDto,
     ip?: string,
   ) {
-    const existing = await this.prisma.providerProfile.findUnique({
-      where: { userId },
-    });
+    const existing = await this.repository.findProviderProfileByUserId(userId);
     if (existing) {
       throw new ConflictException("Perfil de prestador já existe");
     }
@@ -204,16 +182,14 @@ export class ProfilesService {
       );
     }
 
-    const profile = await this.prisma.providerProfile.create({
-      data: {
-        userId,
-        avatarUrl: dto.avatarUrl,
-        bio: dto.bio,
-        hourlyRate: dto.hourlyRate,
-        skills: dto.skills || [],
-        portfolio: dto.portfolio || [],
-        isAvailable: dto.isAvailable ?? true,
-      },
+    const profile = await this.repository.createProviderProfile({
+      userId,
+      avatarUrl: dto.avatarUrl,
+      bio: dto.bio,
+      hourlyRate: dto.hourlyRate,
+      skills: dto.skills || [],
+      portfolio: dto.portfolio || [],
+      isAvailable: dto.isAvailable ?? true,
     });
 
     this.usersLogger.logProfileCreated(userId, "PROVIDER", ip);
@@ -225,9 +201,7 @@ export class ProfilesService {
     dto: UpdateProviderProfileDto,
     ip?: string,
   ) {
-    const existing = await this.prisma.providerProfile.findUnique({
-      where: { userId },
-    });
+    const existing = await this.repository.findProviderProfileByUserId(userId);
     if (!existing) {
       throw new NotFoundException("Perfil de prestador não encontrado");
     }
@@ -237,21 +211,18 @@ export class ProfilesService {
       throw new NotFoundException("Usuário não encontrado");
     }
 
-    const profile = await this.prisma.providerProfile.update({
-      where: { userId },
-      data: {
-        avatarUrl: dto.avatarUrl ?? existing.avatarUrl,
-        bio: dto.bio ?? existing.bio,
-        hourlyRate: dto.hourlyRate ?? existing.hourlyRate,
-        skills: dto.skills !== undefined ? dto.skills : existing.skills,
-        portfolio:
-          dto.portfolio !== undefined
-            ? dto.portfolio
-            : existing.portfolio === null
-              ? Prisma.JsonNull
-              : existing.portfolio,
-        isAvailable: dto.isAvailable ?? existing.isAvailable,
-      },
+    const profile = await this.repository.updateProviderProfile(userId, {
+      avatarUrl: dto.avatarUrl ?? existing.avatarUrl,
+      bio: dto.bio ?? existing.bio,
+      hourlyRate: dto.hourlyRate ?? existing.hourlyRate,
+      skills: dto.skills !== undefined ? dto.skills : existing.skills,
+      portfolio:
+        dto.portfolio !== undefined
+          ? dto.portfolio
+          : existing.portfolio === null
+            ? Prisma.JsonNull
+            : existing.portfolio,
+      isAvailable: dto.isAvailable ?? existing.isAvailable,
     });
 
     this.usersLogger.logProfileUpdated(userId, "PROVIDER", ip);
@@ -270,73 +241,65 @@ export class ProfilesService {
     }
 
     if (role === "PROVIDER") {
-      const existingProfile = await this.prisma.providerProfile.findUnique({
-        where: { userId },
-      });
+      const existingProfile =
+        await this.repository.findProviderProfileByUserId(userId);
       if (!existingProfile) {
         throw new NotFoundException("Perfil de prestador não encontrado");
       }
 
-      validarArquivoImagem(file.originalname, file.buffer);
+      validateImageFile(file.originalname, file.buffer);
       const ext = extname(file.originalname).toLowerCase();
       const fileName = `${randomUUID()}${ext}`;
       const url = await this.minio.uploadFile(
         fileName,
         file.buffer,
         file.mimetype,
-        this.minio.avatarBucket,
+        this.avatarBucket,
       );
 
       if (existingProfile.avatarUrl) {
         const oldFileName = this.minio.extractFileName(
           existingProfile.avatarUrl,
-          this.minio.avatarBucket,
+          this.avatarBucket,
         );
         await this.minio
-          .deleteFile(oldFileName, this.minio.avatarBucket)
+          .deleteFile(oldFileName, this.avatarBucket)
           .catch(() => {});
       }
 
-      const profile = await this.prisma.providerProfile.update({
-        where: { userId },
-        data: { avatarUrl: url },
-      });
+      const profile = await this.repository.updateProviderAvatar(userId, url);
       this.usersLogger.logAvatarUploaded(userId, role, ip);
       return this.formatProviderProfile(profile, user);
     }
 
     if (role === "CLIENT") {
-      const existingProfile = await this.prisma.clientProfile.findUnique({
-        where: { userId },
-      });
+      const existingProfile =
+        await this.repository.findClientProfileByUserId(userId);
       if (!existingProfile) {
         throw new NotFoundException("Perfil de cliente não encontrado");
       }
 
-      validarArquivoImagem(file.originalname, file.buffer);
+      validateImageFile(file.originalname, file.buffer);
       const ext = extname(file.originalname).toLowerCase();
       const fileName = `${randomUUID()}${ext}`;
       const url = await this.minio.uploadFile(
         fileName,
         file.buffer,
         file.mimetype,
-        this.minio.avatarBucket,
+        this.avatarBucket,
       );
 
       if (existingProfile.avatarUrl) {
         const oldFileName = this.minio.extractFileName(
           existingProfile.avatarUrl,
-          this.minio.avatarBucket,
+          this.avatarBucket,
         );
         await this.minio
-          .deleteFile(oldFileName, this.minio.avatarBucket)
+          .deleteFile(oldFileName, this.avatarBucket)
           .catch(() => {});
       }
 
-      const profile = await this.prisma.clientProfile.update({
-        where: { userId },
-        data: { avatarUrl: url },
-      });
+      const profile = await this.repository.updateClientAvatar(userId, url);
       this.usersLogger.logAvatarUploaded(userId, role, ip);
       return this.formatClientProfile(profile, user);
     }
@@ -344,27 +307,10 @@ export class ProfilesService {
     throw new BadRequestException("Função inválida");
   }
 
-  // Returns a public profile view that never exposes PII (email, phone, postalCode).
   async getPublicProviderProfile(providerProfileId: string) {
     // Public profile must never expose PII, so select only id and name.
-    const profile = await this.prisma.providerProfile.findUnique({
-      where: { id: providerProfileId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            completeName: true,
-          },
-        },
-        services: {
-          where: { isActive: true },
-          orderBy: { createdAt: "desc" },
-          include: {
-            category: { select: { id: true, name: true, slug: true } },
-          },
-        },
-      },
-    });
+    const profile =
+      await this.repository.findPublicProviderProfile(providerProfileId);
 
     if (!profile) {
       throw new NotFoundException("Perfil de prestador não encontrado");

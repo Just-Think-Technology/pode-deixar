@@ -6,6 +6,8 @@ import { ApiError } from "@/api/client";
 import {
   completeWorkerOrder,
   deleteWorkerOrderPhoto,
+  getOrderPhotoViewUrl,
+  getWorkerOrderCompletion,
   getWorkerOrderDetail,
   uploadWorkerOrderPhoto,
 } from "@/api/worker/orders";
@@ -71,8 +73,32 @@ export async function getCompletionHistoryAction(
     return getMockCompletionHistoryWithFallback(orderId);
   }
 
-  // O backend ainda não expõe o histórico de conclusão (JTT-106 §7 do plano).
-  return null;
+  try {
+    return await withTokenRefresh((token) =>
+      getWorkerOrderCompletion(token, orderId),
+    );
+  } catch (err) {
+    // History only exists for COMPLETED orders; absence is not an error.
+    if (err instanceof ApiError && err.status === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+export async function resolveOrderPhotoUrlAction(
+  photoId: string,
+): Promise<string> {
+  // No shared server cache on purpose: presigned URLs grant
+  // bearer-independent access, so they must not leak across users.
+  // Callers cache per browser session instead.
+  const result = await withTokenRefresh((token) =>
+    getOrderPhotoViewUrl(token, photoId),
+  );
+  if (!result?.url) {
+    throw new Error("Não foi possível carregar a foto. Tente novamente.");
+  }
+  return result.url;
 }
 
 async function validateCompletionFile(file: File): Promise<void> {

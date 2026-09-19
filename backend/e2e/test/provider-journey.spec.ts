@@ -146,14 +146,29 @@ describe('Provider journey (cross-service e2e)', () => {
   });
 
   it('5. provider completes the service (orders)', async () => {
-    const order = (
+    const png1x1 = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    await request(apps.ordersApp.getHttpServer())
+      .post(`/services/me/${orderId}/completion-photos`)
+      .set(bearerAuth(providerToken))
+      .attach('file', png1x1, {
+        filename: 'foto.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+
+    const completed = (
       await request(apps.ordersApp.getHttpServer())
         .post(`/services/me/${orderId}/complete`)
         .set(bearerAuth(providerToken))
+        .send({ observations: 'Serviço concluído' })
         .expect(201)
     ).body;
 
-    expect(order.status).toBe('COMPLETED');
+    expect(completed.order_id).toBe(orderId);
+    expect(completed.completed_at).toBeDefined();
   });
 
   it('6. client generates payment and confirms via webhook (payments)', async () => {

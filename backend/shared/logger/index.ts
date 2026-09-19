@@ -2,18 +2,21 @@
 
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
-import fs from 'fs';
-import path from 'path';
+import fs = require('fs');
+import path = require('path');
 
 type PinoLogger = pino.Logger;
 export type LoggerWithEvent = PinoLogger & {
-  fatal(event: string, msg: string, ...args: any[]): void;
-  error(event: string, msg: string, ...args: any[]): void;
-  warn(event: string, msg: string, ...args: any[]): void;
-  info(event: string, msg: string, ...args: any[]): void;
-  debug(event: string, msg: string, ...args: any[]): void;
-  trace(event: string, msg: string, ...args: any[]): void;
+  fatal(event: string, msg: string, ...args: unknown[]): void;
+  error(event: string, msg: string, ...args: unknown[]): void;
+  warn(event: string, msg: string, ...args: unknown[]): void;
+  info(event: string, msg: string, ...args: unknown[]): void;
+  debug(event: string, msg: string, ...args: unknown[]): void;
+  trace(event: string, msg: string, ...args: unknown[]): void;
 };
+
+const DEFAULT_RETAIN_DAYS = 14;
+const MS_PER_DAY = 86400000;
 
 export interface LoggerOptions {
   retainDays?: number;
@@ -28,7 +31,7 @@ function formatDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function cleanupOldLogs(dir: string, retainDays = 14) {
+function cleanupOldLogs(dir: string, retainDays = DEFAULT_RETAIN_DAYS) {
   try {
     const files = fs.readdirSync(dir);
     const now = Date.now();
@@ -36,7 +39,8 @@ function cleanupOldLogs(dir: string, retainDays = 14) {
       const full = path.join(dir, f);
       try {
         const stat = fs.statSync(full);
-        if ((now - stat.mtimeMs) / 86400000 > retainDays) fs.unlinkSync(full);
+        if ((now - stat.mtimeMs) / MS_PER_DAY > retainDays)
+          fs.unlinkSync(full);
       } catch (e) {}
     }
   } catch (e) {}
@@ -71,28 +75,69 @@ function stripLineBreaks(value: unknown): unknown {
 
 const loggerCache = new Map<string, LoggerWithEvent>();
 
-export function createLogger(serviceName: string, featureName?: string, options: LoggerOptions = {}): LoggerWithEvent {
-  const key = `${serviceName}:${featureName ?? ''}`;
-  if (loggerCache.has(key)) return loggerCache.get(key)!;
+const REDACTED_PATHS = [
+  'password',
+  'senha',
+  'token',
+  'access_token',
+  'refresh_token',
+  'accessToken',
+  'refreshToken',
+  'secret',
+  'client_secret',
+  'authorization',
+  'headers.authorization',
+  'pan',
+  'card_number',
+  'cvv',
+  'cvc',
+  'cpf',
+  'pix',
+  '*.password',
+  '*.token',
+  '*.access_token',
+  '*.refresh_token',
+  '*.secret',
+  '*.card_number',
+  '*.cvv',
+  '*.cpf',
+];
 
-  const level = process.env.LOG_LEVEL || 'info';
-  const isProd = process.env.NODE_ENV === 'production';
-
-  const logsParentDir = options.logsParentDir ?? 'logs';
-  const currentDir = path.basename(__dirname) === 'dist' ? path.resolve(__dirname, '..') : __dirname;
-  const logsRoot = path.resolve(currentDir, '..', '..', logsParentDir, serviceName);
-  const isTest = process.env.NODE_ENV === 'test';
-  if (!isTest) ensureDir(logsRoot);
-
-  const date = formatDate(new Date());
+function resolveLogPaths(
+  serviceName: string,
+  featureName: string | undefined,
+  logsParentDir: string,
+) {
+  const currentDir =
+    path.basename(__dirname) === 'dist'
+      ? path.resolve(__dirname, '..')
+      : __dirname;
+  const logsRoot = path.resolve(
+    currentDir,
+    '..',
+    '..',
+    logsParentDir,
+    serviceName,
+  );
   const filePrefix = featureName ? `${featureName}` : `general`;
-  const filePath = path.join(logsRoot, `${date}-${filePrefix}.log`);
+  const filePath = path.join(
+    logsRoot,
+    `${formatDate(new Date())}-${filePrefix}.log`,
+  );
+  return { logsRoot, filePath };
+}
 
-  setImmediate(() => cleanupOldLogs(logsRoot, options.retainDays ?? 14));
-
+function buildStreams(
+  level: string,
+  isProd: boolean,
+  isTest: boolean,
+  logsRoot: string,
+  filePath: string,
+): pino.StreamEntry[] {
   const streams: pino.StreamEntry[] = [];
 
   if (!isTest) {
+    ensureDir(logsRoot);
     const fileStream = fs.createWriteStream(filePath, { flags: 'a' });
     const prettyFile = pinoPretty({
       colorize: false,
@@ -102,7 +147,6 @@ export function createLogger(serviceName: string, featureName?: string, options:
       sync: true,
     });
     streams.push({ level: level as pino.Level, stream: prettyFile });
-    setImmediate(() => cleanupOldLogs(logsRoot, options.retainDays ?? 14));
   }
 
   if (!isProd || isTest) {
@@ -117,54 +161,18 @@ export function createLogger(serviceName: string, featureName?: string, options:
     streams.push({ level: level as pino.Level, stream: prettyStdout });
   }
 
-  const baseLogger = pino(
-    {
-      level,
-      base: { service: serviceName },
-      timestamp: pino.stdTimeFunctions.isoTime,
-      formatters: {
-        level(label) { return { level: label } as any; },
-      },
-      // Secrets are redacted before serialization for PCI-DSS compliance; fast-redact (pino v8) rejects partial wildcards such as '*token*' at logger creation, so names are enumerated explicitly with '*.' variants for one nesting level.
-      redact: {
-        paths: [
-          'password',
-          'senha',
-          'token',
-          'access_token',
-          'refresh_token',
-          'accessToken',
-          'refreshToken',
-          'secret',
-          'client_secret',
-          'authorization',
-          'headers.authorization',
-          'pan',
-          'card_number',
-          'cvv',
-          'cvc',
-          'cpf',
-          'pix',
-          '*.password',
-          '*.token',
-          '*.access_token',
-          '*.refresh_token',
-          '*.secret',
-          '*.card_number',
-          '*.cvv',
-          '*.cpf',
-        ],
-        censor: '[REDACTED]',
-      },
-      serializers: { err: pino.stdSerializers.err },
-    },
-    pino.multistream(streams),
-  );
+  return streams;
+}
 
+function wrapWithEventSanitization(baseLogger: PinoLogger) {
   const proxyLogger = Object.create(baseLogger);
   const levelNames = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
   for (const lvl of levelNames) {
-    proxyLogger[lvl] = function (event: string | object, msg?: string, ...args: any[]) {
+    proxyLogger[lvl] = function (
+      event: string | object,
+      msg?: string,
+      ...args: unknown[]
+    ) {
       const sanitizedArgs = args.map((arg) => stripLineBreaks(arg));
       if (typeof event === 'string' && typeof msg === 'string') {
         return baseLogger[lvl](
@@ -174,16 +182,61 @@ export function createLogger(serviceName: string, featureName?: string, options:
         );
       }
       return baseLogger[lvl](
-        stripLineBreaks(event) as any,
-        (typeof msg === 'string' ? stripLineBreaks(msg) : msg) as any,
+        stripLineBreaks(event) as Record<string, unknown>,
+        (typeof msg === 'string' ? stripLineBreaks(msg) : msg) as
+          | string
+          | undefined,
         ...sanitizedArgs,
       );
     };
   }
+  return proxyLogger as unknown as LoggerWithEvent;
+}
 
-  const logger = proxyLogger as unknown as LoggerWithEvent;
+export function createLogger(serviceName: string, featureName?: string, options: LoggerOptions = {}): LoggerWithEvent {
+  const key = `${serviceName}:${featureName ?? ''}`;
+  if (loggerCache.has(key)) return loggerCache.get(key)!;
+
+  const level = process.env.LOG_LEVEL || 'info';
+  const isProd = process.env.NODE_ENV === 'production';
+  const isTest = process.env.NODE_ENV === 'test';
+  const retainDays = options.retainDays ?? DEFAULT_RETAIN_DAYS;
+  const { logsRoot, filePath } = resolveLogPaths(
+    serviceName,
+    featureName,
+    options.logsParentDir ?? 'logs',
+  );
+  setImmediate(() => cleanupOldLogs(logsRoot, retainDays));
+  const streams = buildStreams(level, isProd, isTest, logsRoot, filePath);
+
+  const baseLogger = pino(
+    {
+      level,
+      base: { service: serviceName },
+      timestamp: pino.stdTimeFunctions.isoTime,
+      formatters: {
+        level(label) {
+          return { level: label };
+        },
+      },
+      // Secrets are redacted before serialization for PCI-DSS compliance; fast-redact (pino v8) rejects partial wildcards such as '*token*' at logger creation, so names are enumerated explicitly with '*.' variants for one nesting level.
+      redact: {
+        paths: REDACTED_PATHS,
+        censor: '[REDACTED]',
+      },
+      serializers: { err: pino.stdSerializers.err },
+    },
+    pino.multistream(streams),
+  );
+
+  const logger = wrapWithEventSanitization(baseLogger);
   loggerCache.set(key, logger);
   return logger;
 }
+
+export { createResponseLoggerInterceptor } from './response-logger.interceptor';
+export { BaseDomainLogger } from './domain-logger';
+export { bootstrapService } from './bootstrap';
+export type { BootstrapServiceOptions } from './bootstrap';
 
 export default createLogger;

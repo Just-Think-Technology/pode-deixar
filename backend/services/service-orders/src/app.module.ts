@@ -6,25 +6,25 @@ import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
-import { PrismaModule } from "./prisma/prisma.module";
+import { PrismaModule } from "@pode-deixar/prisma";
 import { ServiceOrdersModule } from "./service-orders/service-orders.module";
 import { ProposalsModule } from "./proposals/proposals.module";
 import { CounterProposalsModule } from "./counter-proposals/counter-proposals.module";
 import { PhotosModule } from "./photos/photos.module";
-import { HealthModule } from "./health/health.module";
+import { HealthModule } from "@pode-deixar/prisma";
 import { SharedModule } from "./shared/shared.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
-import { ResponseLoggerInterceptor } from "./shared/response-logger.interceptor";
+import { createResponseLoggerInterceptor } from "@pode-deixar/logger";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { RedisThrottlerStorage } from "@pode-deixar/security";
 import {
-  traduzirErrosValidacao as traduzirErrosNucleo,
-  RotulosCampos,
+  translateValidationErrors as translateSharedErrors,
+  FieldLabels,
 } from "@pode-deixar/validation";
 
 // Service orders field labels (user-facing, in Portuguese); restriction messages live in the shared core.
-const ROTULOS_ORDERS: RotulosCampos = {
+const ORDERS_FIELD_LABELS: FieldLabels = {
   title: "Título",
   description: "Descrição",
   categoryId: "Categoria",
@@ -36,14 +36,14 @@ const ROTULOS_ORDERS: RotulosCampos = {
   estimatedDuration: "Duração estimada",
   serviceOrderId: "ID do pedido",
   proposalId: "ID da proposta",
+  observations: "Observações",
 };
 
 function translateValidationErrors(errors: ValidationError[]): string[] {
-  return traduzirErrosNucleo(errors, ROTULOS_ORDERS);
+  return translateSharedErrors(errors, ORDERS_FIELD_LABELS);
 }
 
 @Module({
-
   // --- Imports ---
 
   imports: [
@@ -100,7 +100,7 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: ResponseLoggerInterceptor,
+      useClass: createResponseLoggerInterceptor("services-service"),
     },
   ],
 })

@@ -1,0 +1,83 @@
+# Architecture
+
+## Service boundaries
+
+- 5 independent NestJS services (`auth` :3001, `users` :3002,
+  `service-orders` :3003, `payments` :3004, `reviews` :3005)
+- **No sync HTTP calls between services.** Integration happens through the
+  shared PostgreSQL database (single Prisma schema in `backend/prisma/`,
+  client generated once via `pnpm prisma:generate`)
+- External traffic enters through Caddy, which strips the `/api` prefix and
+  routes per path (`/api/auth/*` → auth, `/api/profiles/*` → users, …);
+  health endpoints keep the full path quirk documented in the Caddyfiles
+- Cross-service reads respect ownership at the reader
+  (see [Ownership](decisions/ownership-access.md)) — never bypass another
+  service's authorization by querying its tables directly for writes
+
+## Inside a service
+
+Feature folders (`profiles/`, `payments/`, …), each with
+controller / service / DTOs. For new code, strict layering:
+
+1. **Controller** — HTTP only: route, auth guard, DTO validation, status codes
+2. **Service** — business rules, orchestration, transaction boundaries
+3. **Repository** — Prisma access; controllers never touch Prisma,
+   services never embed raw queries outside repositories
+4. **DTO** on every input (class-validator, messages in Portuguese) +
+   Swagger decorator
+
+Pre-existing code predates the repository layer — do not retrofit it
+outside the task scope (see "Never do" 13 in AGENTS.md).
+
+## Docker images
+
+- **pnpm is pinned** — `backend/package.json` and `frontend/package.json`
+  declare `packageManager: pnpm@11.9.0`; every Dockerfile
+  (`backend/Dockerfile`, `backend/Dockerfile.dev`, `frontend/Dockerfile`)
+  must use `corepack prepare pnpm@11.9.0 --activate`, never
+  `pnpm@latest`. Bumps are atomic: update `packageManager` + all
+  Dockerfiles in the same PR.
+- **`CI=true` in compose** — `deploy/docker-compose.dev.yml` keeps `CI=true`
+  on `frontend` + backend services (`auth`, `users`, `service-orders`,
+  `payments`, `reviews`) for frozen-lockfile determinism (`pnpm install
+  --frozen-lockfile` fails when lock is stale) and to surface warnings as
+  errors locally like in CI; `staging` mirrors this (`CI=true`), `production`
+  relies on `NODE_ENV=production` (strict) and does not need `CI`.
+
+## Shared code
+
+- `backend/shared/` packages (`@pode-deixar/logger`, `@pode-deixar/email`,
+  `@pode-deixar/security`, `@pode-deixar/validation`) hold cross-service
+  concerns: logging, email, Helmet CSP (`getHelmetConfig()`), Redis throttler
+  storage, validation messages (`translateValidationErrors`), image validation
+  (`validateImageFile`), Prisma error mapping (`resolvePrismaError`),
+  auth guards (`JwtAuthGuard`, `RolesGuard`, `Roles`), token payload and
+  revocation checks (`assertTokenPayload`, `checkTokenRevocation`) and the
+  shared `GlobalExceptionFilter` (masks Prisma internals, generic 500)
+- **Auth guards (JWT + roles) live only in `@pode-deixar/security`.**
+  The auth service keeps specialized versions (IP logging on denial,
+  access-token type check, DB user lookup); users/service-orders/payments/
+  reviews use the shared guards, strategy helpers and exception filter
+- **Second-use rule:** code needed by a second service is extracted to
+  `backend/shared/` by the task creating the second usage — no third copy
+
+## Orthogonality
+
+Every piece of knowledge has a single authoritative representation.
+Concretely, for this monorepo:
+
+- **One home per logic:** shared concerns live in exactly one
+  `backend/shared/` package; service-specific logic lives in exactly one
+  service. No copies, no forks, no parallel implementations.
+- **Consume, don't copy:** services import `@pode-deixar/*` instead of
+  re-implementing guards, filters, validation, logging, email or storage.
+- **Specialize, don't fork:** service-specific behavior extends or wraps
+  shared code (e.g. auth's specialized guards) instead of duplicating it
+  with tweaks.
+- **Independent changes:** a change in one service or package must not
+  require coordinated edits elsewhere. Shared API/contract changes are
+  announced beforehand (see "Code standards" in AGENTS.md).
+- **No cross-imports between services** — services integrate only via
+  `@pode-deixar/*` or the shared database (see "Service boundaries").
+- **Shared core in English** (identifiers, comments); user-facing
+  Portuguese copy stays at the edges (DTO messages, emails, UI text).

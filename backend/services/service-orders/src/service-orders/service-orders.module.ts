@@ -8,15 +8,19 @@ import {
   PublicServiceOrdersController,
   ProviderReceivedOrdersController,
   ProviderOrderActionsController,
+  TrackingController,
 } from "./service-orders.controller";
-import { PrismaModule } from "../prisma/prisma.module";
+import { PrismaModule } from "@pode-deixar/prisma";
 import { SharedModule } from "../shared/shared.module";
+import { MinioModule } from "../storage/minio.module";
+
+import { ServiceOrdersRepository } from "./service-orders.repository";
+import { PhotosRepository } from "../photos/photos.repository";
 
 @Module({
-
   // --- Imports ---
 
-  imports: [PrismaModule, SharedModule],
+  imports: [PrismaModule, SharedModule, MinioModule],
 
   // --- Controllers ---
 
@@ -26,11 +30,12 @@ import { SharedModule } from "../shared/shared.module";
     PublicServiceOrdersController,
     ProviderReceivedOrdersController,
     ProviderOrderActionsController,
+    TrackingController,
   ],
 
   // --- Providers ---
 
-  providers: [ServiceOrdersService],
+  providers: [ServiceOrdersService, ServiceOrdersRepository, PhotosRepository],
   exports: [ServiceOrdersService],
 })
 export class ServiceOrdersModule {}

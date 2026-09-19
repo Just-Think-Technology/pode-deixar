@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import { PasswordManagementRepository } from './password-management.repository';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -16,10 +16,13 @@ import { PasswordService } from './password.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const ACCESS_TOKEN_BLACKLIST_TTL_MS = 15 * 60 * 1000;
+
 @Injectable()
 export class PasswordManagementService {
   constructor(
-    private prisma: PrismaService,
+    private repository: PasswordManagementRepository,
     private authLogger: AuthLoggerService,
     private emailService: EmailService,
     private passwordService: PasswordService,
@@ -28,9 +31,7 @@ export class PasswordManagementService {
   // --- Public API ---
 
   async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+    const user = await this.repository.findUserByEmail(dto.email);
     if (!user) {
       this.authLogger.logPasswordResetRequested(dto.email, false);
       return {
@@ -41,15 +42,9 @@ export class PasswordManagementService {
 
     // Only hash is stored; raw token travels by email (non-prod echo only).
     const resetToken = uuidv4();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordResetToken: this.hashToken(resetToken),
-        passwordResetExpires: expiresAt,
-      },
-    });
+    await this.repository.storePasswordResetToken(user.id, this.hashToken(resetToken), expiresAt);
 
     try {
       await this.emailService.sendPasswordReset(dto.email, resetToken);
@@ -75,12 +70,7 @@ export class PasswordManagementService {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        passwordResetToken: this.hashToken(dto.token),
-        passwordResetExpires: { gt: new Date() },
-      },
-    });
+    const user = await this.repository.findUserByValidResetToken(this.hashToken(dto.token));
     if (!user) {
       this.authLogger.logSecurityEvent('password_reset_invalid_token', {
         token_suffix: dto.token.slice(-4),
@@ -92,17 +82,7 @@ export class PasswordManagementService {
 
     const hashedPassword = await this.passwordService.hash(dto.newPassword);
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-        refreshToken: null,
-        failedLoginAttempts: 0,
-        lockoutUntil: null,
-      },
-    });
+    await this.repository.completePasswordReset(user.id, hashedPassword);
     this.authLogger.logPasswordResetComplete(user.email);
 
     return {
@@ -119,7 +99,7 @@ export class PasswordManagementService {
     dto: ChangePasswordDto,
     accessTokenJti?: string,
   ) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.repository.findUserById(userId);
     if (!user) {
       this.authLogger.logSecurityEvent('password_change_invalid_user', {
         userId,
@@ -137,20 +117,12 @@ export class PasswordManagementService {
     }
 
     const hashedNewPassword = await this.passwordService.hash(dto.newPassword);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedNewPassword, refreshToken: null },
-    });
+    await this.repository.updatePasswordAndClearRefresh(userId, hashedNewPassword);
     this.authLogger.logPasswordChange(userId, true);
 
     try {
       if (accessTokenJti) {
-        await this.prisma.tokenBlacklist.create({
-          data: {
-            jti: accessTokenJti,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-          },
-        });
+        await this.repository.blacklistToken(accessTokenJti, new Date(Date.now() + ACCESS_TOKEN_BLACKLIST_TTL_MS));
       }
     } catch (error) {
       if (

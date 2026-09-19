@@ -4,13 +4,15 @@
 FROM node:22-alpine AS base
 RUN apk update && apk add --no-cache openssl
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY shared/logger/package.json ./shared/logger/
 COPY shared/email/package.json ./shared/email/
 COPY shared/security/package.json ./shared/security/
 COPY shared/validation/package.json ./shared/validation/
+COPY shared/prisma/package.json ./shared/prisma/
+COPY shared/storage/package.json ./shared/storage/
 COPY services/auth/package.json ./services/auth/
 COPY services/users/package.json ./services/users/
 COPY services/service-orders/package.json ./services/service-orders/

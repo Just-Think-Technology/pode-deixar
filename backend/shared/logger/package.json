@@ -9,7 +9,17 @@
     "build": "tsc -b",
     "test": "cross-env NODE_ENV=test jest"
   },
+  "dependencies": {
+    "@nestjs/swagger": "^11.0.0",
+    "@pode-deixar/security": "workspace:*"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "rxjs": "^7.8.1"
+  },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.19.11",
     "cross-env": "^10.1.0",

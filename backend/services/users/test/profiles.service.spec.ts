@@ -1,9 +1,10 @@
 // Profiles tests — retrieval and update logic
 
 import { Test, TestingModule } from "@nestjs/testing";
+import { ConfigService } from "@nestjs/config";
 import { ProfilesService } from "../src/profiles/profiles.service";
-import { PrismaService } from "../src/prisma/prisma.service";
-import { MinioService } from "../src/storage/minio.service";
+import { ProfilesRepository } from "../src/profiles/profiles.repository";
+import { MinioService } from "@pode-deixar/storage";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
 import {
   NotFoundException,
@@ -58,20 +59,17 @@ describe("ProfilesService", () => {
     role: "PROVIDER",
   };
 
-  const mockPrisma = {
-    clientProfile: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-    providerProfile: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
+  const mockRepository = {
+    findUserById: jest.fn(),
+    findClientProfileByUserId: jest.fn(),
+    findProviderProfileByUserId: jest.fn(),
+    createClientProfile: jest.fn(),
+    updateClientProfile: jest.fn(),
+    createProviderProfile: jest.fn(),
+    updateProviderProfile: jest.fn(),
+    updateClientAvatar: jest.fn(),
+    updateProviderAvatar: jest.fn(),
+    findPublicProviderProfile: jest.fn(),
   };
 
   const mockLogger = {
@@ -92,9 +90,11 @@ describe("ProfilesService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfilesService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: ProfilesRepository, useValue: mockRepository },
         { provide: MinioService, useValue: mockMinio },
         { provide: UsersLoggerService, useValue: mockLogger },
+        // ProfilesService resolves its avatar bucket from config.
+        { provide: ConfigService, useValue: { get: () => undefined } },
       ],
     }).compile();
 
@@ -112,8 +112,8 @@ describe("ProfilesService", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.clientProfile.findUnique.mockResolvedValue(mockProfile);
+      mockRepository.findUserById.mockResolvedValue(mockUser);
+      mockRepository.findClientProfileByUserId.mockResolvedValue(mockProfile);
 
       const result = await service.getProfile("user-1", "CLIENT");
 
@@ -127,8 +127,8 @@ describe("ProfilesService", () => {
     });
 
     it("should throw NotFoundException when client profile not found", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
+      mockRepository.findUserById.mockResolvedValue(mockUser);
+      mockRepository.findClientProfileByUserId.mockResolvedValue(null);
 
       await expect(service.getProfile("user-1", "CLIENT")).rejects.toThrow(
         NotFoundException,
@@ -150,8 +150,8 @@ describe("ProfilesService", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      mockPrisma.user.findUnique.mockResolvedValue(mockProviderUser);
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(mockProfile);
+      mockRepository.findUserById.mockResolvedValue(mockProviderUser);
+      mockRepository.findProviderProfileByUserId.mockResolvedValue(mockProfile);
 
       const result = await service.getProfile("user-1", "PROVIDER");
 
@@ -161,7 +161,7 @@ describe("ProfilesService", () => {
     });
 
     it("should throw BadRequestException when role is invalid", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockRepository.findUserById.mockResolvedValue(mockUser);
 
       await expect(service.getProfile("user-1", "ADMIN")).rejects.toThrow(
         BadRequestException,
@@ -169,7 +169,7 @@ describe("ProfilesService", () => {
     });
 
     it("should throw NotFoundException when user not found", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockRepository.findUserById.mockResolvedValue(null);
 
       await expect(service.getProfile("user-1", "CLIENT")).rejects.toThrow(
         NotFoundException,
@@ -193,9 +193,9 @@ describe("ProfilesService", () => {
         preferences: { theme: "dark" },
       };
 
-      mockPrisma.clientProfile.findUnique.mockResolvedValue(existing);
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.clientProfile.update.mockResolvedValue(updated);
+      mockRepository.findClientProfileByUserId.mockResolvedValue(existing);
+      mockRepository.findUserById.mockResolvedValue(mockUser);
+      mockRepository.updateClientProfile.mockResolvedValue(updated);
 
       const result = await service.updateClientProfile(
         "user-1",
@@ -216,7 +216,7 @@ describe("ProfilesService", () => {
     });
 
     it("should throw NotFoundException when client profile not found", async () => {
-      mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
+      mockRepository.findClientProfileByUserId.mockResolvedValue(null);
 
       await expect(
         service.updateClientProfile("user-1", {}, "127.0.0.1"),
@@ -240,9 +240,9 @@ describe("ProfilesService", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(mockProviderUser);
-      mockPrisma.providerProfile.create.mockResolvedValue(mockProfile);
+      mockRepository.findProviderProfileByUserId.mockResolvedValue(null);
+      mockRepository.findUserById.mockResolvedValue(mockProviderUser);
+      mockRepository.createProviderProfile.mockResolvedValue(mockProfile);
 
       const result = await service.createProviderProfile(
         "user-1",
@@ -260,7 +260,7 @@ describe("ProfilesService", () => {
     });
 
     it("should throw ConflictException if profile already exists", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue({
+      mockRepository.findProviderProfileByUserId.mockResolvedValue({
         id: "existing",
       });
 
@@ -270,8 +270,8 @@ describe("ProfilesService", () => {
     });
 
     it("should throw BadRequestException if user is not a provider", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockRepository.findProviderProfileByUserId.mockResolvedValue(null);
+      mockRepository.findUserById.mockResolvedValue(mockUser);
 
       await expect(
         service.createProviderProfile("user-1", {}, "127.0.0.1"),
@@ -302,9 +302,9 @@ describe("ProfilesService", () => {
         skills: ["skill1", "skill2"],
       };
 
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(existing);
-      mockPrisma.user.findUnique.mockResolvedValue(mockProviderUser);
-      mockPrisma.providerProfile.update.mockResolvedValue(updated);
+      mockRepository.findProviderProfileByUserId.mockResolvedValue(existing);
+      mockRepository.findUserById.mockResolvedValue(mockProviderUser);
+      mockRepository.updateProviderProfile.mockResolvedValue(updated);
 
       const result = await service.updateProviderProfile(
         "user-1",
@@ -327,7 +327,7 @@ describe("ProfilesService", () => {
     });
 
     it("should throw NotFoundException when provider profile not found", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
+      mockRepository.findProviderProfileByUserId.mockResolvedValue(null);
 
       await expect(
         service.updateProviderProfile("user-1", {}, "127.0.0.1"),
@@ -356,9 +356,9 @@ describe("ProfilesService", () => {
       mockMinio.uploadFile.mockResolvedValue(expectedUrl);
       mockMinio.extractFileName.mockReturnValue("old-uuid.png");
       mockMinio.deleteFile.mockResolvedValue(undefined);
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.clientProfile.findUnique.mockResolvedValue(existing);
-      mockPrisma.clientProfile.update.mockResolvedValue(updated);
+      mockRepository.findUserById.mockResolvedValue(mockUser);
+      mockRepository.findClientProfileByUserId.mockResolvedValue(existing);
+      mockRepository.updateClientAvatar.mockResolvedValue(updated);
 
       const result = await service.uploadAvatar(
         "user-1",
@@ -408,9 +408,9 @@ describe("ProfilesService", () => {
       mockMinio.uploadFile.mockResolvedValue(expectedUrl);
       mockMinio.extractFileName.mockReturnValue("old-uuid.png");
       mockMinio.deleteFile.mockResolvedValue(undefined);
-      mockPrisma.user.findUnique.mockResolvedValue(mockProviderUser);
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(existing);
-      mockPrisma.providerProfile.update.mockResolvedValue(updated);
+      mockRepository.findUserById.mockResolvedValue(mockProviderUser);
+      mockRepository.findProviderProfileByUserId.mockResolvedValue(existing);
+      mockRepository.updateProviderAvatar.mockResolvedValue(updated);
 
       const result = await service.uploadAvatar(
         "user-1",
@@ -445,9 +445,9 @@ describe("ProfilesService", () => {
       mockMinio.uploadFile.mockResolvedValue(expectedUrl);
       mockMinio.extractFileName.mockReturnValue("old-uuid.png");
       mockMinio.deleteFile.mockResolvedValue(undefined);
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.clientProfile.findUnique.mockResolvedValue(existing);
-      mockPrisma.clientProfile.update.mockResolvedValue(updated);
+      mockRepository.findUserById.mockResolvedValue(mockUser);
+      mockRepository.findClientProfileByUserId.mockResolvedValue(existing);
+      mockRepository.updateClientAvatar.mockResolvedValue(updated);
 
       await service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1");
 
@@ -476,9 +476,9 @@ describe("ProfilesService", () => {
       };
 
       mockMinio.uploadFile.mockResolvedValue(expectedUrl);
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.clientProfile.findUnique.mockResolvedValue(existing);
-      mockPrisma.clientProfile.update.mockResolvedValue(updated);
+      mockRepository.findUserById.mockResolvedValue(mockUser);
+      mockRepository.findClientProfileByUserId.mockResolvedValue(existing);
+      mockRepository.updateClientAvatar.mockResolvedValue(updated);
 
       await service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1");
 
@@ -488,8 +488,8 @@ describe("ProfilesService", () => {
     // Covers the new magic-bytes validation — clients can forge
     // mimetype/extension, so the real content is verified.
     it("should throw BadRequestException when file content is not an image", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.clientProfile.findUnique.mockResolvedValue({
+      mockRepository.findUserById.mockResolvedValue(mockUser);
+      mockRepository.findClientProfileByUserId.mockResolvedValue({
         id: "client-1",
         userId: "user-1",
         avatarUrl: null,
@@ -507,8 +507,8 @@ describe("ProfilesService", () => {
     });
 
     it("should throw NotFoundException when profile does not exist", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
-      mockPrisma.clientProfile.findUnique.mockResolvedValue(null);
+      mockRepository.findUserById.mockResolvedValue(mockUser);
+      mockRepository.findClientProfileByUserId.mockResolvedValue(null);
 
       await expect(
         service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1"),
@@ -516,7 +516,7 @@ describe("ProfilesService", () => {
     });
 
     it("should throw NotFoundException when user does not exist", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockRepository.findUserById.mockResolvedValue(null);
 
       await expect(
         service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1"),
@@ -562,7 +562,7 @@ describe("ProfilesService", () => {
     };
 
     it("should return provider profile with services", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(mockProfile);
+      mockRepository.findPublicProviderProfile.mockResolvedValue(mockProfile);
 
       const result = await service.getPublicProviderProfile("provider-1");
 
@@ -576,28 +576,13 @@ describe("ProfilesService", () => {
       expect(result.services).toHaveLength(1);
       expect(result.services[0].title).toBe("Instalação de chuveiro");
       expect(result.services[0].fixed_price).toBe(150);
-      expect(mockPrisma.providerProfile.findUnique).toHaveBeenCalledWith({
-        where: { id: "provider-1" },
-        include: {
-          user: {
-            select: {
-              id: true,
-              completeName: true,
-            },
-          },
-          services: {
-            where: { isActive: true },
-            orderBy: { createdAt: "desc" },
-            include: {
-              category: { select: { id: true, name: true, slug: true } },
-            },
-          },
-        },
-      });
+      expect(mockRepository.findPublicProviderProfile).toHaveBeenCalledWith(
+        "provider-1",
+      );
     });
 
     it("should throw NotFoundException when provider profile not found", async () => {
-      mockPrisma.providerProfile.findUnique.mockResolvedValue(null);
+      mockRepository.findPublicProviderProfile.mockResolvedValue(null);
 
       await expect(
         service.getPublicProviderProfile("invalid-id"),

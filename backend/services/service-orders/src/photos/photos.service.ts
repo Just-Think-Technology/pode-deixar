@@ -6,11 +6,10 @@ import {
   ForbiddenException,
   NotFoundException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { MinioService } from "../storage/minio.service";
+import { PhotosRepository } from "./photos.repository";
+import { MinioService } from "@pode-deixar/storage";
 import sharp from "sharp";
-import * as crypto from "crypto";
-import { validarArquivoImagem } from "@pode-deixar/validation";
+import { validateImageFile } from "@pode-deixar/validation";
 
 // Pixel cap guards against decompression bombs while still covering phone
 // photos without exhausting worker memory.
@@ -19,20 +18,16 @@ const SHARP_PIXEL_LIMIT = 25_000_000;
 @Injectable()
 export class PhotosService {
   constructor(
-    private prisma: PrismaService,
+    private repository: PhotosRepository,
     private minio: MinioService,
   ) {}
-
-  // --- Public API ---
 
   async upload(
     orderId: string,
     clientId: string,
     files: Express.Multer.File[],
   ) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: orderId },
-    });
+    const order = await this.repository.findOrderById(orderId);
 
     if (!order) {
       throw new NotFoundException("Pedido não encontrado");
@@ -60,10 +55,10 @@ export class PhotosService {
       throw new BadRequestException("Máximo de 10 fotos por upload");
     }
 
-    // Canonical image validation (extension + magic bytes) in the shared
-    // package — same rule as the users avatar/service upload.
+    // Validação canônica de imagem (extensão + magic bytes) no pacote
+    // compartilhado — mesma regra do upload de avatar/serviço do users.
     for (const file of files) {
-      validarArquivoImagem(file.originalname, file.buffer);
+      validateImageFile(file.originalname, file.buffer);
     }
 
     const webpBuffers: Buffer[] = [];
@@ -85,56 +80,110 @@ export class PhotosService {
 
     // Enforce the quota and create rows in one transaction to prevent overruns
     // under concurrent uploads.
-    return this.prisma.$transaction(async (tx) => {
-      const existingCount = await tx.orderPhoto.count({
-        where: { serviceOrderId: orderId },
-      });
+    return this.repository.uploadPhotos(
+      orderId,
+      webpBuffers,
+      (fileName, buffer, mimeType) =>
+        this.minio.uploadFile(fileName, buffer, mimeType),
+    );
+  }
 
-      if (existingCount + files.length > 10) {
+  async uploadCompletion(
+    orderId: string,
+    providerId: string,
+    files: Express.Multer.File[],
+  ) {
+    const order = await this.repository.findOrderById(orderId);
+
+    if (!order) {
+      throw new NotFoundException("Pedido não encontrado");
+    }
+
+    if (order.providerId !== providerId) {
+      throw new ForbiddenException("Pedido não pertence a este prestador");
+    }
+
+    if (order.status !== "IN_PROGRESS") {
+      throw new BadRequestException(
+        "Só é possível enviar fotos para pedidos em andamento",
+      );
+    }
+
+    if (!Array.isArray(files) || files.length === 0) {
+      throw new BadRequestException("Nenhuma foto enviada");
+    }
+
+    if (files.length > 10) {
+      throw new BadRequestException("Máximo de 10 fotos por upload");
+    }
+
+    for (const file of files) {
+      validateImageFile(file.originalname, file.buffer);
+    }
+
+    const webpBuffers: Buffer[] = [];
+
+    for (const file of files) {
+      try {
+        const webpBuffer = await sharp(file.buffer, {
+          limitInputPixels: SHARP_PIXEL_LIMIT,
+        })
+          .webp({ quality: 80 })
+          .toBuffer();
+        webpBuffers.push(webpBuffer);
+      } catch {
         throw new BadRequestException(
-          "O pedido pode ter no máximo 10 fotos no total",
+          `Imagem inválida ou corrompida: "${file.originalname}"`,
         );
       }
+    }
 
-      const uploaded = [];
+    return this.repository.uploadPhotos(
+      orderId,
+      webpBuffers,
+      (fileName, buffer, mimeType) =>
+        this.minio.uploadFile(fileName, buffer, mimeType),
+    );
+  }
 
-      for (let i = 0; i < files.length; i++) {
-        // eslint-disable-next-line security/detect-object-injection -- numeric loop index, not a user-controlled key
-        const webpBuffer = webpBuffers[i];
-        const fileName = `${orderId}/${crypto.randomUUID()}.webp`;
+  async deleteCompletionPhoto(
+    orderId: string,
+    photoId: string,
+    providerId: string,
+  ) {
+    const order = await this.repository.findOrderById(orderId);
 
-        const url = await this.minio.uploadFile(
-          fileName,
-          webpBuffer,
-          "image/webp",
-        );
+    if (!order) {
+      throw new NotFoundException("Pedido não encontrado");
+    }
 
-        const photo = await tx.orderPhoto.create({
-          data: {
-            serviceOrderId: orderId,
-            url,
-          },
-        });
+    if (order.providerId !== providerId) {
+      throw new ForbiddenException("Pedido não pertence a este prestador");
+    }
 
-        uploaded.push({
-          id: photo.id,
-          // Private bucket, so expose the authenticated endpoint like the order detail does.
-          url: `/api/services/photos/${photo.id}/view`,
-          created_at: photo.createdAt,
-        });
-      }
+    if (order.status === "COMPLETED") {
+      throw new BadRequestException(
+        "Não é possível remover fotos de um serviço já concluído",
+      );
+    }
 
-      return uploaded;
-    });
+    const photo = await this.repository.findPhotoById(photoId);
+
+    if (!photo || photo.serviceOrderId !== orderId) {
+      throw new NotFoundException("Foto não encontrada");
+    }
+
+    const fileName = this.minio.extractFileName(photo.url);
+
+    await this.repository.deletePhoto(photoId);
+
+    await this.minio.deleteFile(fileName).catch(() => {});
+
+    return { id: photoId };
   }
 
   async getViewUrl(photoId: string, userId: string, role: string) {
-    const photo = await this.prisma.orderPhoto.findUnique({
-      where: { id: photoId },
-      include: {
-        serviceOrder: { select: { id: true, clientId: true } },
-      },
-    });
+    const photo = await this.repository.findPhotoWithOrderById(photoId);
 
     if (!photo || !photo.serviceOrder) {
       throw new NotFoundException("Foto não encontrada");
@@ -147,10 +196,14 @@ export class PhotosService {
     }
 
     if (role === "PROVIDER") {
-      const proposal = await this.prisma.proposal.findFirst({
-        where: { serviceOrderId: order.id, providerId: userId },
-        select: { id: true },
-      });
+      if (order.providerId === userId) {
+        return this.buildViewResponse(photo.url);
+      }
+
+      const proposal = await this.repository.findProposalForViewer(
+        order.id,
+        userId,
+      );
 
       if (proposal) {
         return this.buildViewResponse(photo.url);
@@ -159,8 +212,6 @@ export class PhotosService {
 
     throw new ForbiddenException("Acesso negado a esta foto");
   }
-
-  // --- Private Helpers ---
 
   private async buildViewResponse(storedUrl: string) {
     const fileName = this.minio.extractFileName(storedUrl);

@@ -4,8 +4,10 @@ import { Module } from "@nestjs/common";
 import { ProfilesService } from "./profiles.service";
 import { ProfilesController } from "./profiles.controller";
 import { PublicProviderProfileController } from "./public-provider-profile.controller";
-import { PrismaModule } from "../prisma/prisma.module";
+import { PrismaModule } from "@pode-deixar/prisma";
 import { SharedModule } from "../shared/shared.module";
+
+import { ProfilesRepository } from "./profiles.repository";
 
 @Module({
 
@@ -19,7 +21,7 @@ import { SharedModule } from "../shared/shared.module";
 
   // --- Providers ---
 
-  providers: [ProfilesService],
+  providers: [ProfilesService, ProfilesRepository],
   exports: [ProfilesService],
 })
 export class ProfilesModule {}

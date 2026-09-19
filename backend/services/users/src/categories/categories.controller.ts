@@ -10,6 +10,7 @@ import {
   Param,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -26,8 +27,6 @@ import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 @Controller("categories")
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
-
-  // --- Public API ---
 
   @Get()
   @ApiOperation({ summary: "List all categories" })
@@ -55,8 +54,6 @@ export class CategoriesController {
 @ApiBearerAuth()
 export class AdminCategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
-
-  // --- Public API ---
 
   @Post()
   @Roles("ADMIN")
@@ -88,7 +85,7 @@ export class AdminCategoriesController {
   @ApiResponse({ status: 409, description: "Name or slug conflict" })
   async update(
     @Request() req: any,
-    @Param("id") id: string,
+    @Param("id", ParseUUIDPipe) id: string,
     @Body() dto: UpdateCategoryDto,
   ): Promise<{
     id: string;
@@ -110,7 +107,7 @@ export class AdminCategoriesController {
     status: 409,
     description: "Category has linked services",
   })
-  async remove(@Request() req: any, @Param("id") id: string) {
+  async remove(@Request() req: any, @Param("id", ParseUUIDPipe) id: string) {
     await this.categoriesService.remove(id, req.ip);
     return { message: "Categoria excluída com sucesso" };
   }

@@ -11,7 +11,7 @@ import {
   Query,
   Request,
   UseGuards,
-  ParseIntPipe,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -23,6 +23,7 @@ import {
 import { ReviewsService } from "./reviews.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
+import { FindByProviderQueryDto } from "./dto/find-by-provider-query.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 
 @ApiTags("Reviews")
@@ -31,8 +32,6 @@ import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 @ApiBearerAuth()
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
-
-  // --- Public API ---
 
   @Post()
   @Roles("CLIENT", "PROVIDER")
@@ -93,7 +92,7 @@ export class ReviewsController {
   })
   async findByOrder(
     @Request() req: any,
-    @Param("orderId") orderId: string,
+    @Param("orderId", ParseUUIDPipe) orderId: string,
   ): Promise<
     {
       id: string;
@@ -130,7 +129,7 @@ export class ReviewsController {
   })
   async update(
     @Request() req: any,
-    @Param("reviewId") reviewId: string,
+    @Param("reviewId", ParseUUIDPipe) reviewId: string,
     @Body() dto: UpdateReviewDto,
   ): Promise<{
     id: string;
@@ -160,7 +159,10 @@ export class ReviewsController {
     status: 403,
     description: "User is not the review author",
   })
-  async remove(@Request() req: any, @Param("reviewId") reviewId: string) {
+  async remove(
+    @Request() req: any,
+    @Param("reviewId", ParseUUIDPipe) reviewId: string,
+  ) {
     const userId = req.user.sub;
     const ip = req.ip;
     return this.reviewsService.remove(userId, reviewId, ip);
@@ -172,8 +174,6 @@ export class ReviewsController {
 export class PublicReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
-  // --- Public API ---
-
   @Get()
   @ApiOperation({ summary: "List provider reviews (public)" })
   @ApiParam({ name: "providerId", description: "Provider ID" })
@@ -182,9 +182,9 @@ export class PublicReviewsController {
     description: "Provider review list returned successfully",
   })
   async findByProvider(
-    @Param("providerId") providerId: string,
-    @Query("limit", new ParseIntPipe({ optional: true })) limit?: number,
+    @Param("providerId", ParseUUIDPipe) providerId: string,
+    @Query() query?: FindByProviderQueryDto,
   ) {
-    return this.reviewsService.findByProvider(providerId, limit);
+    return this.reviewsService.findByProvider(providerId, query?.limit);
   }
 }

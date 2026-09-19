@@ -14,7 +14,7 @@ import {
   mockMinio,
   TestAppSetup,
 } from './test-setup';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaService } from "@pode-deixar/prisma";
 
 // --- Integration: Profiles ---
 
@@ -210,7 +210,7 @@ describe('Profiles (integration)', () => {
         .expect(200);
 
       expect(mockMinio.uploadFile).toHaveBeenCalled();
-      expect(response.body.avatar_url).toContain('http://minio.test/avatars/');
+      expect(response.body.avatar_url).toContain('/avatars/');
     });
 
     it('deve retornar 400 para tipo de arquivo inválido', async () => {

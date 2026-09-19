@@ -6,7 +6,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { ReviewsRepository } from "./reviews.repository";
 import { ReviewsLoggerService } from "../shared/reviews-logger.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
@@ -22,11 +22,9 @@ interface OrderForReview {
 @Injectable()
 export class ReviewsService {
   constructor(
-    private prisma: PrismaService,
+    private repository: ReviewsRepository,
     private logger: ReviewsLoggerService,
   ) {}
-
-  // --- Private Helpers ---
 
   private formatReview(review: {
     id: string;
@@ -50,27 +48,6 @@ export class ReviewsService {
     };
   }
 
-  private async recalculateRating(revieweeId: string, tx: any) {
-    const aggregate = await tx.review.aggregate({
-      where: { revieweeId },
-      _avg: { rating: true },
-      _count: { _all: true },
-    });
-
-    const rating = aggregate._avg.rating ?? 0;
-    const totalReviews = aggregate._count._all;
-
-    await tx.providerProfile.updateMany({
-      where: { userId: revieweeId },
-      data: { rating, totalReviews },
-    });
-
-    await tx.clientProfile.updateMany({
-      where: { userId: revieweeId },
-      data: { rating, totalReviews },
-    });
-  }
-
   private resolveReviewee(order: OrderForReview, reviewerId: string): string {
     if (order.clientId === reviewerId) {
       if (!order.providerId) {
@@ -86,12 +63,8 @@ export class ReviewsService {
     throw new ForbiddenException("Você não é parte deste pedido");
   }
 
-  // --- Public API ---
-
   async create(reviewerId: string, dto: CreateReviewDto, ip?: string) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: dto.serviceOrderId },
-    });
+    const order = await this.repository.findOrderById(dto.serviceOrderId);
 
     if (!order) {
       throw new NotFoundException("Pedido de serviço não encontrado");
@@ -101,9 +74,7 @@ export class ReviewsService {
       throw new BadRequestException("Só é possível avaliar pedidos concluídos");
     }
 
-    const payment = await this.prisma.payment.findFirst({
-      where: { serviceOrderId: order.id, status: "PAID" },
-    });
+    const payment = await this.repository.findPaidPaymentByOrderId(order.id);
 
     if (!payment) {
       throw new BadRequestException(
@@ -113,34 +84,22 @@ export class ReviewsService {
 
     const revieweeId = this.resolveReviewee(order, reviewerId);
 
-    const existingReview = await this.prisma.review.findUnique({
-      where: {
-        serviceOrderId_reviewerId: {
-          serviceOrderId: order.id,
-          reviewerId,
-        },
-      },
-    });
+    const existingReview = await this.repository.findReviewByOrderAndReviewer(
+      order.id,
+      reviewerId,
+    );
 
     if (existingReview) {
       throw new BadRequestException("Você já avaliou este pedido");
     }
 
     try {
-      const review = await this.prisma.$transaction(async (tx) => {
-        const created = await tx.review.create({
-          data: {
-            serviceOrderId: order.id,
-            reviewerId,
-            revieweeId,
-            rating: dto.rating,
-            comment: dto.comment ?? null,
-          },
-        });
-
-        await this.recalculateRating(revieweeId, tx);
-
-        return created;
+      const review = await this.repository.createReview({
+        serviceOrderId: order.id,
+        reviewerId,
+        revieweeId,
+        rating: dto.rating,
+        comment: dto.comment ?? null,
       });
 
       this.logger.logReviewCreated(
@@ -161,10 +120,7 @@ export class ReviewsService {
   }
 
   async findMine(reviewerId: string) {
-    const reviews = await this.prisma.review.findMany({
-      where: { reviewerId },
-      orderBy: { createdAt: "desc" },
-    });
+    const reviews = await this.repository.findReviewsByReviewer(reviewerId);
 
     return reviews.map((r) => this.formatReview(r));
   }
@@ -172,19 +128,16 @@ export class ReviewsService {
   // Public listing is capped to deter scraping.
   async findByProvider(providerId: string, limit?: number) {
     const take = Math.min(Math.max(limit ?? 50, 1), 50);
-    const reviews = await this.prisma.review.findMany({
-      where: { revieweeId: providerId },
-      orderBy: { createdAt: "desc" },
+    const reviews = await this.repository.findReviewsByReviewee(
+      providerId,
       take,
-    });
+    );
 
     return reviews.map((r) => this.formatReview(r));
   }
 
   async findByOrder(orderId: string, userId: string) {
-    const order = await this.prisma.serviceOrder.findUnique({
-      where: { id: orderId },
-    });
+    const order = await this.repository.findOrderById(orderId);
 
     if (!order) {
       throw new NotFoundException("Pedido de serviço não encontrado");
@@ -194,10 +147,7 @@ export class ReviewsService {
       throw new ForbiddenException("Você não é parte deste pedido");
     }
 
-    const reviews = await this.prisma.review.findMany({
-      where: { serviceOrderId: orderId },
-      orderBy: { createdAt: "desc" },
-    });
+    const reviews = await this.repository.findReviewsByOrder(orderId);
 
     return reviews.map((r) => this.formatReview(r));
   }
@@ -208,9 +158,7 @@ export class ReviewsService {
     dto: UpdateReviewDto,
     ip?: string,
   ) {
-    const review = await this.prisma.review.findUnique({
-      where: { id: reviewId },
-    });
+    const review = await this.repository.findReviewById(reviewId);
 
     if (!review) {
       throw new NotFoundException("Avaliação não encontrada");
@@ -233,19 +181,14 @@ export class ReviewsService {
       throw new BadRequestException("Informe ao menos um campo para atualizar");
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const edited = await tx.review.update({
-        where: { id: reviewId },
-        data: {
-          rating: dto.rating ?? review.rating,
-          comment: dto.comment !== undefined ? dto.comment : review.comment,
-        },
-      });
-
-      await this.recalculateRating(review.revieweeId, tx);
-
-      return edited;
-    });
+    const updated = await this.repository.updateReview(
+      reviewId,
+      review.revieweeId,
+      {
+        rating: dto.rating ?? review.rating,
+        comment: dto.comment !== undefined ? dto.comment : review.comment,
+      },
+    );
 
     this.logger.logReviewUpdated(reviewerId, reviewId, ip);
 
@@ -253,9 +196,7 @@ export class ReviewsService {
   }
 
   async remove(reviewerId: string, reviewId: string, ip?: string) {
-    const review = await this.prisma.review.findUnique({
-      where: { id: reviewId },
-    });
+    const review = await this.repository.findReviewById(reviewId);
 
     if (!review) {
       throw new NotFoundException("Avaliação não encontrada");
@@ -265,11 +206,7 @@ export class ReviewsService {
       throw new ForbiddenException("Você não pode excluir esta avaliação");
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.review.delete({ where: { id: reviewId } });
-
-      await this.recalculateRating(review.revieweeId, tx);
-    });
+    await this.repository.deleteReview(reviewId, review.revieweeId);
 
     this.logger.logReviewDeleted(reviewerId, reviewId, ip);
 
