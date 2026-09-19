@@ -147,6 +147,18 @@ jobs:
 
       - run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar_test;"
 
+      # prisma generate only builds the client — it does not create tables.
+      # Apply committed migrations to this job's databases before testing
+      # (auth uses pode_deixar_test; every other service uses its per-service
+      # database). Both datasource variables are required by schema.prisma.
+      - name: Apply Prisma migrations
+        run: |
+          for db in "pode_deixar_test_${{ matrix.service }}" "pode_deixar_test"; do
+            DATABASE_URL="postgresql://postgres:postgres@localhost:5432/${db}?schema=public" \
+            DIRECT_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/${db}?schema=public" \
+            pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
+          done
+
       # Shared workspace packages resolve via compiled dist (e.g. main:
       # dist/index.js) and install runs with --ignore-scripts, so rebuild
       # them before tests — otherwise a stale dist misses exports such as
