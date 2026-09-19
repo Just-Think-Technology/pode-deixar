@@ -133,6 +133,48 @@ export const MOCK_CLIENT_ORDERS: ClientOrder[] = [
       },
     ],
   },
+  {
+    id: "mock-notifications-order-001",
+    client_id: "mock-client-id",
+    provider_id: "mock-provider-id",
+    title: "Conserto de vazamento no chuveiro (notificações)",
+    description:
+      "Pedido isolado para E2E de notificações — evita interferência com os testes de propostas.",
+    category_id: "a1000000-0000-4000-8000-000000000004",
+    category: {
+      id: "a1000000-0000-4000-8000-000000000004",
+      name: "Hidráulica",
+      slug: "hidraulica",
+    },
+    budget_min: 80,
+    budget_max: 250,
+    address: {},
+    status: "OPEN",
+    created_at: "2026-07-12T10:00:00.000Z",
+    updated_at: "2026-07-12T10:00:00.000Z",
+    proposals: [
+      {
+        id: "mock-notifications-proposal-001",
+        provider_id: "mock-provider-id",
+        price: 180,
+        description:
+          "Posso realizar o reparo ainda esta semana, com garantia de 90 dias. (isolado)",
+        estimated_duration: "2 horas",
+        status: "PENDING",
+        created_at: "2026-07-12T09:00:00.000Z",
+      },
+      {
+        id: "mock-notifications-proposal-002",
+        provider_id: "mock-provider-id-2",
+        price: 220,
+        description:
+          "Atendimento no mesmo dia, incluindo troca da vedação e teste de pressão. (isolado)",
+        estimated_duration: "1 hora e 30 minutos",
+        status: "PENDING",
+        created_at: "2026-07-12T14:00:00.000Z",
+      },
+    ],
+  },
 ];
 
 function cloneOrders(): ClientOrder[] {
@@ -141,7 +183,7 @@ function cloneOrders(): ClientOrder[] {
 
 // Seed version — bump when MOCK_CLIENT_ORDERS changes so HMR-kept
 // globalThis state is re-cloned instead of serving a stale snapshot.
-const MOCK_ORDERS_VERSION = 1;
+const MOCK_ORDERS_VERSION = 2;
 
 type MockOrdersGlobal = typeof globalThis & {
   __podeDeixarMockClientOrders?: ClientOrder[];
