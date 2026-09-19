@@ -238,6 +238,19 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # Dependencies are installed with --ignore-scripts, so clean any stale
+      # output and compile workspace packages before testing: shared tests
+      # (e.g. email) load @pode-deixar/logger via dist/index.js, which
+      # requires its compiled ./response-logger.interceptor sibling.
+      - name: Build shared packages
+        run: |
+          rm -rf shared/*/dist
+          find shared -name '*.tsbuildinfo' -delete
+          pnpm --filter @pode-deixar/logger build
+          pnpm --filter @pode-deixar/email build
+          pnpm --filter @pode-deixar/security build
+          pnpm --filter @pode-deixar/validation build
+
       - run: pnpm run test:shared
 
   # Security now depends only on `quick`, same as `build` — they run in
