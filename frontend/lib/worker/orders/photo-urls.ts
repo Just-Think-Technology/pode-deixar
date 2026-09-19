@@ -4,6 +4,7 @@ import { isSafeImageUrl } from "@/lib/tracking/image";
 
 const VIEW_ENDPOINT_PREFIX = "/api/services/photos/";
 const VIEW_ENDPOINT_SUFFIX = "/view";
+const BLANK_PHOTO_URL = "about:blank";
 
 /**
  * Detects backend view-endpoint paths, which require a presigned URL
@@ -20,20 +21,29 @@ export function needsPhotoUrlResolution(url: string): boolean {
 
 /**
  * Picks the renderable image source for a completion photo.
+ * View endpoints are never renderable directly and must be replaced by
+ * their resolved storage URL; direct URLs render as-is.
  *
- * @param url - Original photo URL
+ * @param photoUrl - Original photo URL
  * @param resolvedUrl - Presigned URL fetched for view endpoints, if any
  * @returns Direct URL, resolved presigned URL, or blank fallback
  */
 export function getDisplayPhotoUrl(
-  url: string,
-  resolvedUrl: string | undefined,
+  photoUrl: string | null | undefined,
+  resolvedUrl: string | null | undefined,
 ): string {
-  if (isSafeImageUrl(url)) {
-    return url;
+  const sourceUrl = photoUrl?.trim() ?? "";
+  const resolved = resolvedUrl?.trim() ?? "";
+
+  // Direct browser-renderable URLs take precedence.
+  if (sourceUrl && !needsPhotoUrlResolution(sourceUrl)) {
+    return isSafeImageUrl(sourceUrl) ? sourceUrl : BLANK_PHOTO_URL;
   }
-  if (resolvedUrl && isSafeImageUrl(resolvedUrl)) {
-    return resolvedUrl;
+
+  // Backend view endpoints must be replaced by their resolved storage URL.
+  if (resolved && resolved !== BLANK_PHOTO_URL && isSafeImageUrl(resolved)) {
+    return resolved;
   }
-  return "about:blank";
+
+  return BLANK_PHOTO_URL;
 }
