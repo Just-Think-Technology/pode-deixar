@@ -6,7 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from "@pode-deixar/prisma";
-import { MinioService } from '@pode-deixar/storage';
+import { MinioService, StorageService } from '@pode-deixar/storage';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
 // --- Types ---
@@ -31,6 +31,10 @@ export const mockMinio = {
     (url: string, bucket?: string) =>
       url.split(`/${bucket ?? 'order-photos'}/`).pop() as string,
   ),
+  generateTemporaryUrl: jest.fn(
+    async (fileName: string, bucket?: string) =>
+      `http://minio.test/${bucket ?? 'order-photos'}/${fileName}?X-Amz-Signature=mock`,
+  ),
 };
 
 // --- App Lifecycle ---
@@ -43,6 +47,8 @@ export async function setupTestApp(): Promise<TestAppSetup> {
     ],
   })
     .overrideProvider(MinioService)
+    .useValue(mockMinio)
+    .overrideProvider(StorageService)
     .useValue(mockMinio)
     // Sensitive endpoints carry strict @Throttle; test flows share one IP and
     // would hit 429. Fake storage that never blocks — the real guard still runs.
