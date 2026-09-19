@@ -160,7 +160,10 @@ jobs:
       - name: Generate Prisma client
         run: |
           pnpm --filter @pode-deixar/prisma generate
-          test -f node_modules/.prisma/client/index.d.ts
+          # With pnpm the client lands inside the store package, not at
+          # node_modules/.prisma, so validate through Node resolution and
+          # fail early when the generated models are missing.
+          node -e "const fs=require('fs'),path=require('path'); const f=path.join(path.dirname(require.resolve('@prisma/client/package.json')),'..','..','.prisma/client/index.d.ts'); const s=fs.readFileSync(f,'utf8'); if(!s.includes('tokenBlacklist')) throw new Error('Prisma client was not generated at '+f); console.log('Prisma client OK:', f)"
 
       # prisma generate only builds the client — it does not create tables.
       # Apply committed migrations to this job's database before testing.
@@ -231,7 +234,10 @@ jobs:
       - name: Generate Prisma client
         run: |
           pnpm --filter @pode-deixar/prisma generate
-          test -f node_modules/.prisma/client/index.d.ts
+          # With pnpm the client lands inside the store package, not at
+          # node_modules/.prisma, so validate through Node resolution and
+          # fail early when the generated models are missing.
+          node -e "const fs=require('fs'),path=require('path'); const f=path.join(path.dirname(require.resolve('@prisma/client/package.json')),'..','..','.prisma/client/index.d.ts'); const s=fs.readFileSync(f,'utf8'); if(!s.includes('tokenBlacklist')) throw new Error('Prisma client was not generated at '+f); console.log('Prisma client OK:', f)"
 
       # Dependencies are installed with --ignore-scripts, so compile
       # workspace packages before loading the applications (same shared
