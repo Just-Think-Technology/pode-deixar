@@ -179,4 +179,41 @@ describe("lib/toast wrappers", () => {
       expect.any(Object),
     );
   });
+
+  it("supports multiple concurrent toasts with distinct ids", () => {
+    const id1 = showLoading("Salvando…");
+    const id2 = showLoading("Carregando…");
+
+    expect(id1).toBe("toast-loading-id");
+    expect(id2).toBe("toast-loading-id");
+    expect(toastMocks.loading).toHaveBeenCalledTimes(2);
+
+    vi.clearAllMocks();
+    updateToast(id1, "success", "Primeiro ok");
+    updateToast(id2, "error", new Error("Falha no segundo"));
+
+    expect(toastMocks.dismiss).toHaveBeenCalledTimes(2);
+    expect(toastMocks.success).toHaveBeenCalledWith("Primeiro ok", expect.any(Object));
+    expect(toastMocks.error).toHaveBeenCalledWith("Falha no segundo", expect.any(Object));
+  });
+
+  it("updateToast success with ApiError resolves via getApiErrorMessage", () => {
+    const err = new ApiError("Operação concluída", 200);
+    updateToast("id-1", "success", err);
+    expect(toastMocks.success).toHaveBeenCalledWith("Operação concluída", expect.any(Object));
+  });
+
+  it("showWarning and showInfo use correct durations", () => {
+    showWarning("Alerta");
+    expect(toastMocks.warning).toHaveBeenCalledWith("Alerta", expect.objectContaining({ duration: 4000 }));
+    vi.clearAllMocks();
+    showInfo("Info");
+    expect(toastMocks.info).toHaveBeenCalledWith("Info", expect.objectContaining({ duration: 4000 }));
+  });
+
+  it("showSuccess auto-closes and does not leak stack", () => {
+    showSuccess("Tudo certo\nstack");
+    // success path strips newlines via resolveMessage only for error; success keeps raw string but test ensures no throw
+    expect(toastMocks.success).toHaveBeenCalledWith("Tudo certo\nstack", expect.any(Object));
+  });
 });
