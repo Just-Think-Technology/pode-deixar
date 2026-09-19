@@ -58,7 +58,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       return false;
     }
     try {
-      const blacklisted = await this.repository.findBlacklistedToken(payload.jti);
+      const blacklisted = await this.repository.findBlacklistedToken(
+        payload.jti,
+      );
       return !!blacklisted;
     } catch (e: any) {
       if (e?.code !== 'P2021') throw e;

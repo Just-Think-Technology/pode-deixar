@@ -1,107 +1,122 @@
-// Provider finance tests — summary and items endpoints
+// Provider finance controller tests — HTTP status / guard / 403 via request(app)
 
-import { Test, TestingModule } from "@nestjs/testing";
-import { PaymentStatus } from "@prisma/client";
-import { ProviderFinanceController } from "../src/payments/provider-finance.controller";
-import { PaymentsService } from "../src/payments/payments.service";
+import { INestApplication } from '@nestjs/common';
+import request = require('supertest');
+import { App } from 'supertest/types';
+import {
+  setupTestApp,
+  teardownTestApp,
+  createTestUser,
+  createCategory,
+  mintToken,
+  bearerAuth,
+  TestAppSetup,
+} from './test-setup';
+import { PrismaService } from '@pode-deixar/prisma';
 
-// --- Tests ---
+describe('ProviderFinanceController (HTTP)', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaService;
 
-describe("ProviderFinanceController", () => {
-  let controller: ProviderFinanceController;
-  let service: {
-    getProviderFinanceSummary: jest.Mock;
-    getProviderFinanceItems: jest.Mock;
-    getProviderFinanceChart: jest.Mock;
-  };
-
-  beforeEach(async () => {
-    service = {
-      getProviderFinanceSummary: jest.fn(),
-      getProviderFinanceItems: jest.fn(),
-      getProviderFinanceChart: jest.fn(),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [ProviderFinanceController],
-      providers: [{ provide: PaymentsService, useValue: service }],
-    }).compile();
-
-    controller = module.get<ProviderFinanceController>(ProviderFinanceController);
+  beforeAll(async () => {
+    const setup: TestAppSetup = await setupTestApp();
+    app = setup.app;
+    prisma = setup.prisma;
   });
 
-  it("should be defined", () => {
-    expect(controller).toBeDefined();
+  afterAll(async () => {
+    await teardownTestApp(app, prisma);
   });
 
-  describe("summary", () => {
-    it("should forward the authenticated provider to the service", async () => {
-      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
-      const resumo = { currency: "BRL", toReceiveNet: 315 };
-      service.getProviderFinanceSummary.mockResolvedValue(resumo);
+  describe('GET /payments/provider/me/finance/summary', () => {
+    it('should return 401 without token', async () => {
+      await request(app.getHttpServer()).get('/payments/provider/me/finance/summary').expect(401);
+    });
 
-      const result = await controller.summary(req);
+    it('should return 403 for CLIENT role', async () => {
+      const user = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(user);
+      await request(app.getHttpServer())
+        .get('/payments/provider/me/finance/summary')
+        .set(bearerAuth(token))
+        .expect(403);
+    });
 
-      expect(service.getProviderFinanceSummary).toHaveBeenCalledWith("provider-1");
-      expect(result).toEqual(resumo);
+    it('should return 200 with finance summary for PROVIDER', async () => {
+      const user = await createTestUser(prisma, { role: 'PROVIDER' });
+      const token = mintToken(user);
+      const response = await request(app.getHttpServer())
+        .get('/payments/provider/me/finance/summary')
+        .set(bearerAuth(token))
+        .expect(200);
+
+      expect(response.body).toHaveProperty('currency', 'BRL');
+      expect(response.body).toHaveProperty('toReceiveNet');
+      expect(response.body).toHaveProperty('pendingNet');
     });
   });
 
-  describe("items", () => {
-    it("should forward the provider and status filter to the service", async () => {
-      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
-      const itens = [{ paymentId: "payment-1", paymentStatus: "PAID" }];
-      service.getProviderFinanceItems.mockResolvedValue(itens);
+  describe('GET /payments/provider/me/finance/items', () => {
+    it('should return 401 without token and 403 for CLIENT', async () => {
+      await request(app.getHttpServer()).get('/payments/provider/me/finance/items').expect(401);
 
-      const result = await controller.items(req, {
-        status: PaymentStatus.PAID,
-      });
-
-      expect(service.getProviderFinanceItems).toHaveBeenCalledWith(
-        "provider-1",
-        PaymentStatus.PAID,
-      );
-      expect(result).toEqual(itens);
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(client);
+      await request(app.getHttpServer())
+        .get('/payments/provider/me/finance/items')
+        .set(bearerAuth(token))
+        .expect(403);
     });
 
-    it("should call the service without a filter when status is not given", async () => {
-      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
-      service.getProviderFinanceItems.mockResolvedValue([]);
+    it('should return 200 with items array for PROVIDER and filter by status', async () => {
+      const user = await createTestUser(prisma, { role: 'PROVIDER' });
+      const token = mintToken(user);
 
-      await controller.items(req, {});
+      const response = await request(app.getHttpServer())
+        .get('/payments/provider/me/finance/items')
+        .set(bearerAuth(token))
+        .expect(200);
+      expect(Array.isArray(response.body)).toBe(true);
 
-      expect(service.getProviderFinanceItems).toHaveBeenCalledWith(
-        "provider-1",
-        undefined,
-      );
+      const filtered = await request(app.getHttpServer())
+        .get('/payments/provider/me/finance/items?status=PAID')
+        .set(bearerAuth(token))
+        .expect(200);
+      expect(Array.isArray(filtered.body)).toBe(true);
+    });
+  });
+
+  describe('GET /payments/provider/me/finance/chart', () => {
+    it('should return 401 without token and 403 for CLIENT', async () => {
+      await request(app.getHttpServer()).get('/payments/provider/me/finance/chart').expect(401);
+
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(client);
+      await request(app.getHttpServer())
+        .get('/payments/provider/me/finance/chart')
+        .set(bearerAuth(token))
+        .expect(403);
+    });
+
+    it('should return 200 with chart data for PROVIDER (default 6 months)', async () => {
+      const user = await createTestUser(prisma, { role: 'PROVIDER' });
+      const token = mintToken(user);
+
+      const response = await request(app.getHttpServer())
+        .get('/payments/provider/me/finance/chart')
+        .set(bearerAuth(token))
+        .expect(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBe(6);
+
+      const withMonths = await request(app.getHttpServer())
+        .get('/payments/provider/me/finance/chart?months=3')
+        .set(bearerAuth(token))
+        .expect(200);
+      expect(withMonths.body.length).toBe(3);
     });
   });
 
-  describe("chart", () => {
-    it("should forward the provider and month count to the service", async () => {
-      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
-      const dados = [{ month: "2026-03", netReceived: 0, feesRetained: 0 }];
-      service.getProviderFinanceChart.mockResolvedValue(dados);
-
-      const result = await controller.chart(req, { months: 6 });
-
-      expect(service.getProviderFinanceChart).toHaveBeenCalledWith(
-        "provider-1",
-        6,
-      );
-      expect(result).toEqual(dados);
-    });
-
-    it("should default to 6 months when the query is empty", async () => {
-      const req = { user: { sub: "provider-1", role: "PROVIDER" } };
-      service.getProviderFinanceChart.mockResolvedValue([]);
-
-      await controller.chart(req, {});
-
-      expect(service.getProviderFinanceChart).toHaveBeenCalledWith(
-        "provider-1",
-        6,
-      );
-    });
-  });
+  // Keep for backward compat with existing category helper unused variable
+  void createCategory;
 });

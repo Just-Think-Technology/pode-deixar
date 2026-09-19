@@ -1,90 +1,130 @@
-// Categories controller tests — listing and admin creation
+// Categories controller tests — HTTP status / guard / 403 via request(app)
 
-import { Test, TestingModule } from "@nestjs/testing";
-import { CategoriesController, AdminCategoriesController } from "../src/categories/categories.controller";
-import { CategoriesService } from "../src/categories/categories.service";
+import { INestApplication } from '@nestjs/common';
+import request = require('supertest');
+import { App } from 'supertest/types';
+import {
+  setupTestApp,
+  teardownTestApp,
+  createTestUser,
+  mintToken,
+  bearerAuth,
+  TestAppSetup,
+} from './test-setup';
+import { PrismaService } from '@pode-deixar/prisma';
 
-// --- Tests ---
+describe('CategoriesController (HTTP)', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaService;
 
-describe("CategoriesController", () => {
-  let controller: CategoriesController;
-  let adminController: AdminCategoriesController;
-
-  const mockCategoriesService = {
-    findAll: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    remove: jest.fn(),
-  };
-
-  const mockRequest = (overrides = {}) => ({
-    user: { sub: "admin-1", email: "admin@test.com", role: "ADMIN" },
-    ip: "127.0.0.1",
-    ...overrides,
+  beforeAll(async () => {
+    const setup: TestAppSetup = await setupTestApp();
+    app = setup.app;
+    prisma = setup.prisma;
   });
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [CategoriesController, AdminCategoriesController],
-      providers: [
-        { provide: CategoriesService, useValue: mockCategoriesService },
-      ],
-    }).compile();
-
-    controller = module.get<CategoriesController>(CategoriesController);
-    adminController = module.get<AdminCategoriesController>(AdminCategoriesController);
-    jest.clearAllMocks();
+  afterAll(async () => {
+    await teardownTestApp(app, prisma);
   });
 
-  describe("CategoriesController - findAll", () => {
-    it("should call service.findAll", async () => {
-      const expected = [{ id: "cat-1", name: "Elétrica", slug: "eletrica" }];
-      mockCategoriesService.findAll.mockResolvedValue(expected);
+  describe('GET /categories', () => {
+    it('should return 200 without authentication (public)', async () => {
+      const response = await request(app.getHttpServer()).get('/categories').expect(200);
+      expect(Array.isArray(response.body)).toBe(true);
+    });
 
-      const result = await controller.findAll();
+    it('should return list with public select only (no internal fields)', async () => {
+      const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      await prisma.category.create({ data: { name: `Cat ${suffix}`, slug: `cat-${suffix}` } });
 
-      expect(mockCategoriesService.findAll).toHaveBeenCalled();
-      expect(result).toEqual(expected);
+      const response = await request(app.getHttpServer()).get('/categories').expect(200);
+      const item = response.body.find((c: any) => c.slug === `cat-${suffix}`);
+      expect(item).toBeDefined();
+      expect(item).toHaveProperty('id');
+      expect(item).toHaveProperty('name');
+      expect(item).toHaveProperty('slug');
     });
   });
 
-  describe("AdminCategoriesController - create", () => {
-    it("should call service.create with dto and ip", async () => {
-      const req = mockRequest();
-      const dto = { name: "Teste", slug: "teste" };
-      const expected = { id: "new-id", ...dto };
-      mockCategoriesService.create.mockResolvedValue(expected);
+  describe('POST /categories (admin)', () => {
+    it('should return 401 without token', async () => {
+      await request(app.getHttpServer())
+        .post('/categories')
+        .send({ name: 'Teste', slug: 'teste' })
+        .expect(401);
+    });
 
-      const result = await adminController.create(req, dto as any);
+    it('should return 403 for non-admin role', async () => {
+      const user = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(user);
 
-      expect(mockCategoriesService.create).toHaveBeenCalledWith(dto, "127.0.0.1");
-      expect(result).toEqual(expected);
+      await request(app.getHttpServer())
+        .post('/categories')
+        .set(bearerAuth(token))
+        .send({ name: 'Teste', slug: 'teste-2' })
+        .expect(403);
+    });
+
+    it('should return 201 for ADMIN and persist category', async () => {
+      const admin = await createTestUser(prisma, { role: 'ADMIN' });
+      const token = mintToken(admin);
+      const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+      const response = await request(app.getHttpServer())
+        .post('/categories')
+        .set(bearerAuth(token))
+        .send({ name: `Admin Cat ${suffix}`, slug: `admin-cat-${suffix}` })
+        .expect(201);
+
+      expect(response.body.slug).toBe(`admin-cat-${suffix}`);
+
+      const db = await prisma.category.findUnique({ where: { id: response.body.id } });
+      expect(db?.name).toBe(`Admin Cat ${suffix}`);
+    });
+
+    it('should return 409 for duplicate name or slug', async () => {
+      const admin = await createTestUser(prisma, { role: 'ADMIN' });
+      const token = mintToken(admin);
+      const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+      await request(app.getHttpServer())
+        .post('/categories')
+        .set(bearerAuth(token))
+        .send({ name: `Dup ${suffix}`, slug: `dup-${suffix}` })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/categories')
+        .set(bearerAuth(token))
+        .send({ name: `Dup ${suffix}`, slug: `dup-${suffix}-other` })
+        .expect(409);
     });
   });
 
-  describe("AdminCategoriesController - update", () => {
-    it("should call service.update with id, dto and ip", async () => {
-      const req = mockRequest();
-      const dto = { name: "Atualizado" };
-      const expected = { id: "cat-1", name: "Atualizado" };
-      mockCategoriesService.update.mockResolvedValue(expected);
+  describe('PATCH /categories/:id (admin)', () => {
+    it('should return 401 without token and 403 for CLIENT', async () => {
+      await request(app.getHttpServer())
+        .patch('/categories/00000000-0000-0000-0000-000000000000')
+        .send({ name: 'X' })
+        .expect(401);
 
-      const result = await adminController.update(req, "cat-1", dto as any);
-
-      expect(mockCategoriesService.update).toHaveBeenCalledWith("cat-1", dto, "127.0.0.1");
-      expect(result).toEqual(expected);
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(client);
+      await request(app.getHttpServer())
+        .patch('/categories/00000000-0000-0000-0000-000000000000')
+        .set(bearerAuth(token))
+        .send({ name: 'X' })
+        .expect(403);
     });
-  });
 
-  describe("AdminCategoriesController - remove", () => {
-    it("should call service.remove with id and ip", async () => {
-      const req = mockRequest();
-      mockCategoriesService.remove.mockResolvedValue(undefined);
-
-      const result = await adminController.remove(req, "cat-1");
-
-      expect(mockCategoriesService.remove).toHaveBeenCalledWith("cat-1", "127.0.0.1");
-      expect(result).toEqual({ message: "Categoria excluída com sucesso" });
+    it('should return 404 for nonexistent category when admin', async () => {
+      const admin = await createTestUser(prisma, { role: 'ADMIN' });
+      const token = mintToken(admin);
+      await request(app.getHttpServer())
+        .patch('/categories/00000000-0000-0000-0000-000000000000')
+        .set(bearerAuth(token))
+        .send({ name: 'Atualizado' })
+        .expect(404);
     });
   });
 });

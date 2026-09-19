@@ -62,10 +62,7 @@ export class PaymentsController {
   @ApiResponse({ status: 201, description: "Payment registered (PENDING)" })
   @ApiResponse({ status: 400, description: "Invalid data" })
   @ApiResponse({ status: 403, description: "Order does not belong to client" })
-  create(
-    @Request() req: AuthenticatedRequest,
-    @Body() dto: CreatePaymentDto,
-  ) {
+  create(@Request() req: AuthenticatedRequest, @Body() dto: CreatePaymentDto) {
     return this.paymentsService.create(req.user.sub, dto);
   }
 

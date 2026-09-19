@@ -12,7 +12,6 @@ import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 import { VerifyRepository } from './verify.repository';
 
 @Module({
-
   // --- Imports ---
 
   imports: [
@@ -33,7 +32,12 @@ import { VerifyRepository } from './verify.repository';
 
   // --- Providers ---
 
-  providers: [VerifyService, PrismaService, AuthLoggerService, VerifyRepository],
+  providers: [
+    VerifyService,
+    PrismaService,
+    AuthLoggerService,
+    VerifyRepository,
+  ],
   exports: [VerifyService],
 })
 export class VerifyModule {}

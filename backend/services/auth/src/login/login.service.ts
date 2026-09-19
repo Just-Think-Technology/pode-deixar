@@ -143,7 +143,10 @@ export class LoginService {
 
     const accessToken = await this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user);
-    await this.repository.storeRefreshTokenHash(user.id, this.hashRefreshToken(refreshToken));
+    await this.repository.storeRefreshTokenHash(
+      user.id,
+      this.hashRefreshToken(refreshToken),
+    );
 
     this.authLogger.logLoginAttempt(email, true, ip);
 
@@ -177,7 +180,10 @@ export class LoginService {
 
       const hashedIncoming = this.hashRefreshToken(dto.refreshToken);
 
-      const user = await this.repository.findUserByIdAndRefreshToken(payload.sub, hashedIncoming);
+      const user = await this.repository.findUserByIdAndRefreshToken(
+        payload.sub,
+        hashedIncoming,
+      );
 
       if (!user) {
         await this.repository.clearRefreshTokenByUserId(payload.sub);
@@ -189,7 +195,10 @@ export class LoginService {
       const newAccessToken = await this.generateAccessToken(user);
       const newRefreshToken = await this.generateRefreshToken(user);
 
-      await this.repository.storeNewRefreshToken(user.id, this.hashRefreshToken(newRefreshToken));
+      await this.repository.storeNewRefreshToken(
+        user.id,
+        this.hashRefreshToken(newRefreshToken),
+      );
 
       this.authLogger.logTokenRefresh(user.id, true);
 
@@ -216,7 +225,10 @@ export class LoginService {
 
     try {
       if (accessTokenJti) {
-        await this.repository.blacklistToken(accessTokenJti, new Date(Date.now() + ACCESS_TOKEN_TTL_SECONDS * 1000));
+        await this.repository.blacklistToken(
+          accessTokenJti,
+          new Date(Date.now() + ACCESS_TOKEN_TTL_SECONDS * 1000),
+        );
       }
 
       await this.repository.pruneExpiredTokens();
@@ -281,7 +293,11 @@ export class LoginService {
   ): Promise<void> {
     const rawToken = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
-    await this.repository.updateVerificationHint(userId, this.hashToken(rawToken), expiresAt);
+    await this.repository.updateVerificationHint(
+      userId,
+      this.hashToken(rawToken),
+      expiresAt,
+    );
     try {
       await this.emailService.sendEmailVerification(email, rawToken);
     } catch (error) {
