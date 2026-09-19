@@ -4,7 +4,6 @@ import { Module } from '@nestjs/common';
 import { GlobalExceptionFilter } from './global-exception.filter';
 
 @Module({
-
   // --- Providers ---
 
   providers: [GlobalExceptionFilter],

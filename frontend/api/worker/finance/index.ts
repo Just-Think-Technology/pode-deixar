@@ -10,12 +10,6 @@ import type {
   WorkerFinanceSummary,
 } from "@/lib/worker/finance/types";
 import type { WorkerPaymentStatus } from "@/lib/worker/payments/types";
-import {
-  mockGetFinanceDashboard,
-  mockListFinanceItems,
-} from "@/mock/worker/finance";
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 const CHART_MONTHS_DEFAULT = 6;
 
 export const WORKER_FINANCE_ROUTES = {
@@ -67,10 +61,6 @@ function mapChartPoint(point: WorkerFinanceChartPoint): WorkerFinanceChartPoint 
 export async function getWorkerFinanceDashboard(
   accessToken: string,
 ): Promise<WorkerFinanceDashboard> {
-  if (USE_MOCK) {
-    return mockGetFinanceDashboard();
-  }
-
   const [summary, items, monthlyChart] = await Promise.all([
     apiFetchAuth<WorkerFinanceSummary>(
       WORKER_FINANCE_ROUTES.summary,
@@ -99,10 +89,6 @@ export function listWorkerFinanceItems(
   accessToken: string,
   status?: WorkerPaymentStatus,
 ): Promise<WorkerFinanceItem[]> {
-  if (USE_MOCK) {
-    return Promise.resolve(mockListFinanceItems(status));
-  }
-
   return apiFetchAuth<ProviderFinanceItemResponse[]>(
     itemsPath(status),
     accessToken,

@@ -5,7 +5,6 @@ import * as argon2 from 'argon2';
 
 @Injectable()
 export class PasswordService {
-
   // --- Public API ---
 
   async hash(password: string): Promise<string> {

@@ -34,9 +34,7 @@ export class ProviderFinanceController {
     status: 200,
     description: "Financial summary returned successfully",
   })
-  async summary(
-    @Request() req: AuthenticatedRequest,
-  ): Promise<{
+  async summary(@Request() req: AuthenticatedRequest): Promise<{
     currency: string;
     feeRate: number;
     pendingNet: number;

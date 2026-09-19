@@ -9,9 +9,6 @@ import type {
   WorkerAgendaEvent,
   WorkerAgendaRange,
 } from "@/lib/worker/agenda/types";
-import { getMockAgendaEvents } from "@/mock/worker/agenda";
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 async function withTokenRefresh<T>(
   fn: (token: string) => Promise<T>,
@@ -38,9 +35,5 @@ async function withTokenRefresh<T>(
 export async function getAgendaEventsAction(
   range: WorkerAgendaRange,
 ): Promise<WorkerAgendaEvent[]> {
-  if (USE_MOCK) {
-    return getMockAgendaEvents(range);
-  }
-
   return withTokenRefresh((token) => getAgendaEvents(token, range));
 }

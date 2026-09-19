@@ -31,13 +31,13 @@ export class NotificationsRepository {
     return this.prisma.notification.count({ where });
   }
 
-  findNotificationForRecipient(notificationId: string, userId: string) {
+  findNotificationForRecipient(notificationId: number, userId: string) {
     return this.prisma.notification.findFirst({
       where: { id: notificationId, recipient: userId },
     });
   }
 
-  markNotificationAsRead(notificationId: string) {
+  markNotificationAsRead(notificationId: number) {
     return this.prisma.notification.update({
       where: { id: notificationId },
       data: { read: true },

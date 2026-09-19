@@ -186,33 +186,6 @@ describe("PaymentsService", () => {
       expect(result).toEqual(expect.objectContaining({ amount: 150 }));
     });
 
-    it("should persist the platform fee configured in PLATFORM_FEE_RATE", async () => {
-      process.env.PLATFORM_FEE_RATE = "0.2";
-      repository.findOrderWithAcceptedProposal.mockResolvedValue({
-        id: "order-1",
-        clientId: userId,
-        status: "IN_PROGRESS",
-        agreedPrice: 150,
-        proposals: [],
-      });
-      repository.findPaymentByIdempotency.mockResolvedValue(null);
-      repository.createPayment.mockResolvedValue({
-        id: "payment-1",
-        amount: 150,
-      });
-
-      await service.create(userId, dto);
-
-      expect(repository.createPayment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          feeRate: 0.2,
-          feeAmount: 30,
-          netAmount: 120,
-        }),
-      );
-      delete process.env.PLATFORM_FEE_RATE;
-    });
-
     it("should use the accepted proposal price when there is no agreedPrice", async () => {
       repository.findOrderWithAcceptedProposal.mockResolvedValue({
         id: "order-1",

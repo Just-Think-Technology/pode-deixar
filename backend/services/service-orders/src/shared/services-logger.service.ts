@@ -1,6 +1,5 @@
 // Services logger — scoped audit event helpers
 
-
 import { Injectable } from "@nestjs/common";
 import { BaseDomainLogger } from "@pode-deixar/logger";
 

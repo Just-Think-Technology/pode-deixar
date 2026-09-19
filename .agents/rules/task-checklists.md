@@ -3,6 +3,15 @@
 Pick the matching type before coding. All types also follow the
 [Security baseline](../AGENTS.md#security-baseline).
 
+## TDD — red → green → refactor
+
+- [ ] **Red first:** commit a failing test (or `pnpm test` proof) before any
+      production code — implement the minimal green after the red commit;
+      PR review must show the red→green sequence (see CI check below)
+- [ ] Keep unit specs on seams/mappers (pure functions), integration specs on
+      HTTP+DB via `request(app)` — no repository tautologies
+- [ ] E2E `test:e2e` covers the vertical slice when a new journey is added
+
 ## New endpoint
 
 - [ ] DTO with class-validator (messages in Portuguese) + Swagger decorator
@@ -45,3 +54,13 @@ Pick the matching type before coding. All types also follow the
 - [ ] Compose entries (dev + prod), Caddy handles (dev + prod), health endpoint
 - [ ] CI: add the service to `lint`/`test` chains and the `quick`/`build` jobs
 - [ ] **Update AGENTS.md** (tree, ports, commands) — self-maintenance rule
+
+## CI verification (TDD red → green)
+
+- PR history must contain a red commit (failing `pnpm test` / `vitest` proof)
+  before the green implementation commit. Reviewers verify the sequence;
+  CI enforces the green state via `quick` (`lint` + `typecheck` + `test`)
+  and `e2e`/`deep` jobs — a missing red commit fails review, not the build.
+- Documented in [.agents/security/ci-pipeline.md](security/ci-pipeline.md#tdd-red-green).
+  Optional local check: `bash scripts/check-red-commit.sh <base>` validates
+  that the first test-only commit precedes the first implementation commit.

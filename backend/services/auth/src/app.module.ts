@@ -46,7 +46,6 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
 }
 
 @Module({
-
   // --- Imports ---
 
   imports: [

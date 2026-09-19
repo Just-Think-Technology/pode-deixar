@@ -7,7 +7,6 @@ import { PaymentGatewayFactory } from "./payment-gateway.factory";
 
 @Global()
 @Module({
-
   // --- Providers ---
 
   providers: [MercadoPagoGateway, MockPaymentGateway, PaymentGatewayFactory],

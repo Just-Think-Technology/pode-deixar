@@ -15,7 +15,6 @@ import { TokenBlacklistRepository } from '../jwt/token-blacklist.repository';
 import { JWT_AUDIENCE, JWT_ISSUER } from '../jwt/jwt.constants';
 
 @Module({
-
   // --- Imports ---
 
   imports: [
