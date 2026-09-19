@@ -7,14 +7,6 @@ import type {
   SubmitReviewResult,
   TrackingRole,
 } from "@/lib/tracking/types";
-import {
-  getMockContractTracking,
-  mockFinishService,
-  mockStartService,
-  mockSubmitReview,
-} from "@/mock/tracking";
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export const TRACKING_ROUTES = {
   detail: (orderId: string) => `/services/${orderId}/tracking`,
@@ -30,14 +22,6 @@ export function getContractTracking(
   orderId: string,
   role: TrackingRole,
 ): Promise<ContractTracking> {
-  if (USE_MOCK) {
-    const tracking = getMockContractTracking(orderId, role);
-    if (!tracking) {
-      throw new Error("Contratação não encontrada.");
-    }
-    return Promise.resolve(tracking);
-  }
-
   return apiFetchAuth<ContractTracking>(
     TRACKING_ROUTES.detail(orderId),
     accessToken,
@@ -49,10 +33,6 @@ export function startTrackedService(
   accessToken: string,
   orderId: string,
 ): Promise<ContractTracking> {
-  if (USE_MOCK) {
-    return Promise.resolve(mockStartService(orderId));
-  }
-
   return apiFetchAuth<ContractTracking>(
     TRACKING_ROUTES.start(orderId),
     accessToken,
@@ -65,12 +45,6 @@ export function finishTrackedService(
   orderId: string,
   input: { photos: File[]; observations: string | null },
 ): Promise<ContractTracking> {
-  if (USE_MOCK) {
-    return Promise.resolve(
-      mockFinishService(orderId, input.photos.length, input.observations),
-    );
-  }
-
   // Single-shot conclusion with evidence: the backend converts to webp and
   // stores in object storage, so files go as multipart (apiFetchAuth skips
   // the JSON content type for FormData).
@@ -112,10 +86,6 @@ export function submitTrackedReview(
   orderId: string,
   input: SubmitReviewInput,
 ): Promise<SubmitReviewResult> {
-  if (USE_MOCK) {
-    return Promise.resolve(mockSubmitReview(orderId, input));
-  }
-
   return apiFetchAuth<SubmitReviewResult>(
     TRACKING_ROUTES.createReview,
     accessToken,

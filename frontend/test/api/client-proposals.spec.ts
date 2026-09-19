@@ -1,4 +1,4 @@
-// Client proposals API spec — mock mode and accept/reject fetchers
+// Client proposals API spec — accept/reject fetchers
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
@@ -13,12 +13,8 @@ function jsonResponse(data: unknown, status = 200) {
   })
 }
 
-// USE_MOCK is read at module load: reimport on every test with the right env.
-// ApiError also comes from the reloaded module — the statically imported class
-// would be a different identity after resetModules and break instanceof.
-async function loadProposalsApi(useMock: boolean) {
+async function loadProposalsApi() {
   vi.resetModules()
-  vi.stubEnv('NEXT_PUBLIC_USE_MOCK', useMock ? 'true' : '')
   vi.stubEnv('NEXT_PUBLIC_BACKEND_URL', 'http://api.test')
   vi.stubGlobal('fetch', fetchMock)
   const api = await import('@/api/client/proposals')
@@ -37,7 +33,7 @@ describe('api/client/proposals (integration)', () => {
   })
 
   it('accept sends POST to the accept route with Bearer and returns the proposal', async () => {
-    const api = await loadProposalsApi(false)
+    const api = await loadProposalsApi()
     fetchMock.mockResolvedValue(
       jsonResponse({ id: 'p1', status: 'ACCEPTED' }),
     )
@@ -57,7 +53,7 @@ describe('api/client/proposals (integration)', () => {
   })
 
   it('reject sends POST to the decline route', async () => {
-    const api = await loadProposalsApi(false)
+    const api = await loadProposalsApi()
     fetchMock.mockResolvedValue(
       jsonResponse({ id: 'p1', status: 'REJECTED' }),
     )
@@ -72,7 +68,7 @@ describe('api/client/proposals (integration)', () => {
   })
 
   it('propagates backend errors as ApiError', async () => {
-    const api = await loadProposalsApi(false)
+    const api = await loadProposalsApi()
     fetchMock.mockResolvedValue(
       jsonResponse({ message: 'Proposta não encontrada' }, 404),
     )
@@ -82,18 +78,5 @@ describe('api/client/proposals (integration)', () => {
     expect(err).toBeInstanceOf(api.ApiError)
     expect(err.status).toBe(404)
     expect(err.message).toBe('Proposta não encontrada')
-  })
-
-  it('uses the local mock without calling fetch when USE_MOCK=true', async () => {
-    const api = await loadProposalsApi(true)
-
-    const result = await api.acceptProposal(
-      'tok-abc',
-      'mock-client-proposal-001',
-    )
-
-    expect(fetchMock).not.toHaveBeenCalled()
-    expect(result.id).toBe('mock-client-proposal-001')
-    expect(result.status).toBe('ACCEPTED')
   })
 })
