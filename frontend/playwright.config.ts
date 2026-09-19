@@ -1,9 +1,10 @@
-// Playwright config — E2E projects against the mock-backed dev server
+// Playwright config — E2E against real backend by default; mock mode opt-in via E2E_USE_MOCK
 
 import { defineConfig, devices } from "@playwright/test";
 
 const E2E_PORT = 3100;
 const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
+const E2E_USE_MOCK = process.env.E2E_USE_MOCK === "true";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -28,7 +29,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       ...process.env,
-      NEXT_PUBLIC_USE_MOCK: "true",
+      ...(E2E_USE_MOCK ? { NEXT_PUBLIC_USE_MOCK: "true" } : {}),
       NEXT_E2E: "true",
       PORT: String(E2E_PORT),
     },
