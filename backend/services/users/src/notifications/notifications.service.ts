@@ -15,12 +15,12 @@ export class NotificationsService {
   // recipient to prevent forged notifications to third parties.
   async create(userId: string, dto: CreateNotificationDto) {
     const notification = await this.repository.createNotification({
-      recipient: userId,
+      userId,
       type: dto.type,
       title: dto.title,
       message: dto.message,
-      relatedId: dto.relatedId,
-      relatedType: dto.relatedType,
+      conversationId: (dto as any).conversationId ?? (dto as any).relatedId ?? null,
+      contractId: (dto as any).contractId ?? null,
     });
     this.logger.log(`Notification created: ${notification.id} for ${userId}`);
     return notification;
@@ -32,9 +32,9 @@ export class NotificationsService {
     page = 1,
     limit = 20,
   ) {
-    const where: any = { recipient };
+    const where: any = { userId: recipient };
     if (isRead !== undefined) {
-      where.read = isRead;
+      where.isRead = isRead;
     }
     const { skip } = toSkipTake({ page, limit });
     const [items, total] = await Promise.all([
