@@ -9,7 +9,7 @@ export function getApiErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return "Ocorreu um erro inesperado. Tente novamente.";
+  return "Ocorreu um erro inesperado. Verifique sua conexão e tente novamente — se persistir, contate o suporte.";
 }
 
 // Message keywords mapping backend field names to form fields.

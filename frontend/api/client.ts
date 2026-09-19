@@ -59,8 +59,8 @@ export async function apiFetch<T>(
             : res.status === 401
               ? "Sessão expirada. Faça login novamente."
               : res.status === 403
-                ? "Você não tem permissão para realizar esta ação."
-                : "Erro na requisição";
+                ? "Você não tem permissão para realizar esta ação. Se precisar, faça login com o perfil correto."
+                : "Não foi possível completar. Verifique sua conexão e tente novamente — se persistir, contate o suporte.";
       throw new ApiError(message, res.status, data);
     }
 
