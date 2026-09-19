@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PrismaService } from "@pode-deixar/prisma";
 import { NotificationsRepository } from "../src/notifications/notifications.repository";
+import { NotificationType } from "@prisma/client";
 
 describe("NotificationsRepository", () => {
   let repository: NotificationsRepository;
@@ -9,9 +10,9 @@ describe("NotificationsRepository", () => {
     notification: {
       create: jest.fn(),
       findMany: jest.fn(),
-      count: jest.fn(),
       findFirst: jest.fn(),
-      update: jest.fn(),
+      updateMany: jest.fn(),
+      count: jest.fn(),
     },
   };
 
@@ -27,71 +28,115 @@ describe("NotificationsRepository", () => {
     jest.clearAllMocks();
   });
 
-  it("creates a notification for the authenticated recipient", async () => {
-    mockPrisma.notification.create.mockResolvedValue({ id: "notif-1" });
+  it("creates a notification with CONVERSATION type", async () => {
+    mockPrisma.notification.create.mockResolvedValue({
+      id: "n1",
+      type: NotificationType.CONVERSATION,
+    });
 
-    await repository.createNotification({
-      recipient: "user-autenticado",
-      type: "NEW_MESSAGE",
-      title: "Olá",
-      message: "Teste",
-      relatedId: undefined,
-      relatedType: undefined,
+    const result = await repository.create({
+      userId: "u1",
+      type: NotificationType.CONVERSATION,
+      title: "Nova mensagem",
+      message: "Carlos: oi",
+      conversationId: "c1",
     });
 
     expect(mockPrisma.notification.create).toHaveBeenCalledWith({
       data: {
-        recipient: "user-autenticado",
-        type: "NEW_MESSAGE",
-        title: "Olá",
-        message: "Teste",
-        relatedId: undefined,
-        relatedType: undefined,
+        userId: "u1",
+        type: NotificationType.CONVERSATION,
+        title: "Nova mensagem",
+        message: "Carlos: oi",
+        conversationId: "c1",
+        contractId: null,
       },
     });
+    expect(result.type).toBe(NotificationType.CONVERSATION);
   });
 
-  it("lists notifications by recipient ordered by creation", async () => {
-    mockPrisma.notification.findMany.mockResolvedValue([]);
-    const where = { recipient: "user-1" };
+  it("lists only owner notifications ordered desc", async () => {
+    mockPrisma.notification.findMany.mockResolvedValue([
+      { id: "n1", contractId: "c1" },
+    ]);
 
-    await repository.findNotificationsByRecipient(where, 0, 20);
-
+    const list = await repository.findByUser("u1");
     expect(mockPrisma.notification.findMany).toHaveBeenCalledWith({
-      where,
+      where: { userId: "u1" },
       orderBy: { createdAt: "desc" },
-      skip: 0,
-      take: 20,
+    });
+    expect(list[0].contractId).toBe("c1");
+
+    mockPrisma.notification.findMany.mockResolvedValue([]);
+    expect(await repository.findByUser("u2")).toEqual([]);
+  });
+
+  it("filters by type and isRead", async () => {
+    mockPrisma.notification.findMany.mockResolvedValue([]);
+    await repository.findByUser("u1", {
+      type: NotificationType.SERVICE,
+      isRead: false,
+    });
+    expect(mockPrisma.notification.findMany).toHaveBeenCalledWith({
+      where: { userId: "u1", type: NotificationType.SERVICE, isRead: false },
+      orderBy: { createdAt: "desc" },
     });
   });
 
-  it("counts notifications by recipient", async () => {
-    mockPrisma.notification.count.mockResolvedValue(2);
-    const where = { recipient: "user-1", read: false };
-
-    await repository.countNotificationsByRecipient(where);
-
-    expect(mockPrisma.notification.count).toHaveBeenCalledWith({ where });
+  it("marks a notification as read scoped to user", async () => {
+    mockPrisma.notification.updateMany.mockResolvedValue({ count: 1 });
+    await repository.markRead("n1", "u1");
+    expect(mockPrisma.notification.updateMany).toHaveBeenCalledWith({
+      where: { id: "n1", userId: "u1" },
+      data: { isRead: true, readAt: expect.any(Date) },
+    });
   });
 
-  it("finds a notification scoped to its recipient", async () => {
-    mockPrisma.notification.findFirst.mockResolvedValue({ id: "notif-1" });
+  it("marks all unread as read", async () => {
+    mockPrisma.notification.updateMany.mockResolvedValue({ count: 2 });
+    await repository.markAllRead("u1");
+    expect(mockPrisma.notification.updateMany).toHaveBeenCalledWith({
+      where: { userId: "u1", isRead: false },
+      data: { isRead: true, readAt: expect.any(Date) },
+    });
+  });
 
-    await repository.findNotificationForRecipient("notif-1", "user-1");
+  it("counts unread notifications", async () => {
+    mockPrisma.notification.count.mockResolvedValue(3);
+    const count = await repository.countUnread("u1");
+    expect(mockPrisma.notification.count).toHaveBeenCalledWith({
+      where: { userId: "u1", isRead: false },
+    });
+    expect(count).toBe(3);
+  });
 
+  it("checks recent duplicate within 60s window", async () => {
+    mockPrisma.notification.findFirst.mockResolvedValue({ id: "n1" });
+    const exists = await repository.existsRecent({
+      userId: "u1",
+      type: NotificationType.SERVICE,
+      title: "Proposta aceita",
+      contractId: "c1",
+      windowMs: 60000,
+    });
+    expect(exists).toBe(true);
     expect(mockPrisma.notification.findFirst).toHaveBeenCalledWith({
-      where: { id: "notif-1", recipient: "user-1" },
+      where: {
+        userId: "u1",
+        type: NotificationType.SERVICE,
+        title: "Proposta aceita",
+        contractId: "c1",
+        createdAt: { gte: expect.any(Date) },
+      },
     });
-  });
 
-  it("marks a notification as read", async () => {
-    mockPrisma.notification.update.mockResolvedValue({ id: "notif-1" });
-
-    await repository.markNotificationAsRead("notif-1");
-
-    expect(mockPrisma.notification.update).toHaveBeenCalledWith({
-      where: { id: "notif-1" },
-      data: { read: true },
+    mockPrisma.notification.findFirst.mockResolvedValue(null);
+    const notExists = await repository.existsRecent({
+      userId: "u1",
+      type: NotificationType.SERVICE,
+      title: "Outro",
+      contractId: "c2",
     });
+    expect(notExists).toBe(false);
   });
 });
