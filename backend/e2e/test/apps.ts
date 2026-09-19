@@ -209,11 +209,20 @@ export async function createTestUser(
 
 export function mintToken(user: { id: string; email: string; role: string }) {
   const secret = process.env.JWT_ACCESS_SECRET || 'test-access-secret';
-  return new JwtService({ secret }).sign({
-    sub: user.id,
-    email: user.email,
-    role: user.role,
-  });
+  const { randomUUID } = require('crypto');
+  return new JwtService({ secret }).sign(
+    {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      jti: randomUUID(),
+      type: 'access',
+    },
+    {
+      issuer: 'pode-deixar-auth',
+      audience: 'pode-deixar',
+    },
+  );
 }
 
 export const bearerAuth = (token: string) => ({
