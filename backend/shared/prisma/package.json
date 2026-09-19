@@ -4,10 +4,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm run generate && tsc",
     "dev": "tsc --watch",
     "lint": "eslint src --ext .ts",
     "test": "cross-env NODE_ENV=test jest",
+    "generate": "prisma generate --schema=../../prisma/schema.prisma",
     "prisma:generate": "prisma generate --schema=../../prisma/schema.prisma"
   },
   "dependencies": {

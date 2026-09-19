@@ -86,8 +86,9 @@ export type ContractTracking = {
   startedAt: string | null;
   address: TrackingAddress;
   grossAmount: number | null;
-  feeAmount: number | null;
-  netAmount: number | null;
+  // Omitted by the backend for CLIENT (AppSec role redaction), so optional.
+  feeAmount?: number | null;
+  netAmount?: number | null;
   proposal: TrackingProposal | null;
   payment: TrackingPayment;
   evidence: TrackingEvidence | null;

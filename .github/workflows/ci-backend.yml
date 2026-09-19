@@ -140,9 +140,43 @@ jobs:
         env:
           PGPASSWORD: postgres
 
-      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
-
       - run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar_test;"
+
+      # Export the database URLs once so every later step (migrations,
+      # builds, tests) inherits them: the service test scripts only set
+      # NODE_ENV, but schema.prisma requires both variables. Auth uses the
+      # shared database; every other service uses its per-service database.
+      - name: Configure test database
+        run: |
+          if [ "${{ matrix.service }}" = "auth" ]; then
+            DB_NAME="pode_deixar_test"
+          else
+            DB_NAME="pode_deixar_test_${{ matrix.service }}"
+          fi
+
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/${DB_NAME}?schema=public" >> "$GITHUB_ENV"
+          echo "DIRECT_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/${DB_NAME}?schema=public" >> "$GITHUB_ENV"
+
+      - name: Generate Prisma client
+        run: |
+          pnpm --filter @pode-deixar/prisma generate
+          # With pnpm the client lands inside the store package, not at
+          # node_modules/.prisma, so validate through Node resolution and
+          # fail early when the generated models are missing.
+          node -e "const fs=require('fs'),path=require('path'); const f=path.join(path.dirname(require.resolve('@prisma/client/package.json')),'..','..','.prisma/client/index.d.ts'); const s=fs.readFileSync(f,'utf8'); if(!s.includes('tokenBlacklist')) throw new Error('Prisma client was not generated at '+f); console.log('Prisma client OK:', f)"
+
+      # prisma generate only builds the client — it does not create tables.
+      # Apply committed migrations to this job's database before testing.
+      - name: Apply Prisma migrations
+        run: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
+
+      # Shared workspace packages resolve via compiled dist (e.g. main:
+      # dist/index.js) and install runs with --ignore-scripts, so rebuild
+      # them before tests — otherwise a stale dist misses exports such as
+      # createResponseLoggerInterceptor and app init fails. Prisma builds
+      # first: logger imports security, which imports prisma, so relying on
+      # any other order is fragile.
+      - run: pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/storage build
 
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
 
@@ -150,7 +184,11 @@ jobs:
 
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} typecheck
 
-      - run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
+      # DATABASE_URL/DIRECT_DATABASE_URL come from the Configure test
+      # database step via $GITHUB_ENV — the test script itself only sets
+      # NODE_ENV, but PrismaService requires both variables at runtime.
+      - name: Run service tests
+        run: pnpm run --filter @pode-deixar/${{ matrix.service }} test
 
   # Cross-service e2e journey (users → orders → payments → reviews in the
   # same database, as in production). Standalone job without matrix.
@@ -193,11 +231,43 @@ jobs:
 
       - run: locale-gen pt_BR.UTF-8 2>/dev/null || true
 
-      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - name: Generate Prisma client
+        run: |
+          pnpm --filter @pode-deixar/prisma generate
+          # With pnpm the client lands inside the store package, not at
+          # node_modules/.prisma, so validate through Node resolution and
+          # fail early when the generated models are missing.
+          node -e "const fs=require('fs'),path=require('path'); const f=path.join(path.dirname(require.resolve('@prisma/client/package.json')),'..','..','.prisma/client/index.d.ts'); const s=fs.readFileSync(f,'utf8'); if(!s.includes('tokenBlacklist')) throw new Error('Prisma client was not generated at '+f); console.log('Prisma client OK:', f)"
+
+      # Dependencies are installed with --ignore-scripts, so compile
+      # workspace packages before loading the applications (same shared
+      # build as the quick job; e2e additionally imports @pode-deixar/storage
+      # directly, so prisma/storage are included too). Prisma builds first:
+      # logger imports security, which imports prisma.
+      - run: pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/storage build
+
+      - name: Create E2E test database
+        run: |
+          PGPASSWORD=postgres psql \
+            -h localhost \
+            -U postgres \
+            -c 'CREATE DATABASE pode_deixar_test_e2e;'
+
+      - name: Apply Prisma migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_e2e?schema=public
+          DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_e2e?schema=public
+        run: |
+          pnpm exec prisma migrate deploy \
+            --schema=prisma/schema.prisma
 
       - run: pnpm run --filter @pode-deixar/e2e typecheck
 
-      - run: pnpm run test:e2e
+      - name: Run E2E tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_e2e?schema=public
+          DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_e2e?schema=public
+        run: pnpm run test:e2e
 
   # Regression tests for shared packages (logger/email/security).
   # Unit-only tests; no Postgres. The `quick` job runs per service.
@@ -225,6 +295,20 @@ jobs:
           cache-dependency-path: backend/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Dependencies are installed with --ignore-scripts, so clean any stale
+      # output and compile workspace packages before testing: shared tests
+      # (e.g. email) load @pode-deixar/logger via dist/index.js, which
+      # requires its compiled ./response-logger.interceptor sibling.
+      - name: Build shared packages
+        run: |
+          rm -rf shared/*/dist
+          find shared -name '*.tsbuildinfo' -delete
+          pnpm --filter @pode-deixar/prisma build
+          pnpm --filter @pode-deixar/logger build
+          pnpm --filter @pode-deixar/email build
+          pnpm --filter @pode-deixar/security build
+          pnpm --filter @pode-deixar/validation build
 
       - run: pnpm run test:shared
 

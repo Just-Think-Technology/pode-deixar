@@ -20,6 +20,7 @@ export const TRACKING_ROUTES = {
   detail: (orderId: string) => `/services/${orderId}/tracking`,
   start: (orderId: string) => `/services/me/${orderId}/start`,
   finish: (orderId: string) => `/services/me/${orderId}/finish`,
+  photoView: (photoId: string) => `/services/photos/${photoId}/view`,
   createReview: "/reviews",
   orderReviews: (orderId: string) => `/reviews/service-order/${orderId}`,
 } as const;
@@ -62,12 +63,23 @@ export function startTrackedService(
 export function finishTrackedService(
   accessToken: string,
   orderId: string,
-  input: { photoCount: number; observations: string | null },
+  input: { photos: File[]; observations: string | null },
 ): Promise<ContractTracking> {
   if (USE_MOCK) {
     return Promise.resolve(
-      mockFinishService(orderId, input.photoCount, input.observations),
+      mockFinishService(orderId, input.photos.length, input.observations),
     );
+  }
+
+  // Single-shot conclusion with evidence: the backend converts to webp and
+  // stores in object storage, so files go as multipart (apiFetchAuth skips
+  // the JSON content type for FormData).
+  const formData = new FormData();
+  for (const photo of input.photos) {
+    formData.append("photos", photo);
+  }
+  if (input.observations != null) {
+    formData.append("observations", input.observations);
   }
 
   return apiFetchAuth<ContractTracking>(
@@ -75,11 +87,23 @@ export function finishTrackedService(
     accessToken,
     {
       method: "POST",
-      body: JSON.stringify({
-        photoCount: input.photoCount,
-        observations: input.observations,
-      }),
+      body: formData,
     },
+  );
+}
+
+export type PhotoViewResponse = {
+  url: string;
+};
+
+export function getEvidencePhotoViewUrl(
+  accessToken: string,
+  photoId: string,
+): Promise<PhotoViewResponse> {
+  return apiFetchAuth<PhotoViewResponse>(
+    TRACKING_ROUTES.photoView(photoId),
+    accessToken,
+    { method: "GET" },
   );
 }
 
