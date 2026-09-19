@@ -228,9 +228,28 @@ jobs:
       # logger imports security, which imports prisma.
       - run: pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/storage build
 
+      - name: Create E2E test database
+        run: |
+          PGPASSWORD=postgres psql \
+            -h localhost \
+            -U postgres \
+            -c 'CREATE DATABASE pode_deixar_test_e2e;'
+
+      - name: Apply Prisma migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_e2e?schema=public
+          DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_e2e?schema=public
+        run: |
+          pnpm exec prisma migrate deploy \
+            --schema=prisma/schema.prisma
+
       - run: pnpm run --filter @pode-deixar/e2e typecheck
 
-      - run: pnpm run test:e2e
+      - name: Run E2E tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_e2e?schema=public
+          DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pode_deixar_test_e2e?schema=public
+        run: pnpm run test:e2e
 
   # Regression tests for shared packages (logger/email/security).
   # Unit-only tests; no Postgres. The `quick` job runs per service.
