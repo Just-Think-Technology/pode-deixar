@@ -8,6 +8,7 @@
     "dev": "tsc --watch",
     "lint": "eslint src --ext .ts",
     "test": "cross-env NODE_ENV=test jest",
+    "generate": "prisma generate --schema=../../prisma/schema.prisma",
     "prisma:generate": "prisma generate --schema=../../prisma/schema.prisma"
   },
   "dependencies": {

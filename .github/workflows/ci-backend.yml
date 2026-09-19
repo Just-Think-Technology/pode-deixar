@@ -140,15 +140,20 @@ jobs:
         env:
           PGPASSWORD: postgres
 
-      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - name: Generate Prisma client
+        run: |
+          pnpm --filter @pode-deixar/prisma generate
+          test -f node_modules/.prisma/client/index.d.ts
 
       - run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar_test;"
 
       # Shared workspace packages resolve via compiled dist (e.g. main:
       # dist/index.js) and install runs with --ignore-scripts, so rebuild
       # them before tests — otherwise a stale dist misses exports such as
-      # createResponseLoggerInterceptor and app init fails.
-      - run: pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/storage build
+      # createResponseLoggerInterceptor and app init fails. Prisma builds
+      # first: logger imports security, which imports prisma, so relying on
+      # any other order is fragile.
+      - run: pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/storage build
 
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
 
@@ -199,13 +204,17 @@ jobs:
 
       - run: locale-gen pt_BR.UTF-8 2>/dev/null || true
 
-      - run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - name: Generate Prisma client
+        run: |
+          pnpm --filter @pode-deixar/prisma generate
+          test -f node_modules/.prisma/client/index.d.ts
 
       # Dependencies are installed with --ignore-scripts, so compile
       # workspace packages before loading the applications (same shared
       # build as the quick job; e2e additionally imports @pode-deixar/storage
-      # directly, so prisma/storage are included too).
-      - run: pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/storage build
+      # directly, so prisma/storage are included too). Prisma builds first:
+      # logger imports security, which imports prisma.
+      - run: pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/storage build
 
       - run: pnpm run --filter @pode-deixar/e2e typecheck
 
@@ -246,6 +255,7 @@ jobs:
         run: |
           rm -rf shared/*/dist
           find shared -name '*.tsbuildinfo' -delete
+          pnpm --filter @pode-deixar/prisma build
           pnpm --filter @pode-deixar/logger build
           pnpm --filter @pode-deixar/email build
           pnpm --filter @pode-deixar/security build
