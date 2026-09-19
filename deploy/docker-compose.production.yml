@@ -11,7 +11,7 @@ services:
   auth:
     build:
       context: ../backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
       target: auth-build
     cap_drop:
       - ALL
@@ -31,7 +31,7 @@ services:
   users:
     build:
       context: ../backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
       target: users-build
     cap_drop:
       - ALL
@@ -50,7 +50,7 @@ services:
   service-orders:
     build:
       context: ../backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
       target: service-orders-build
     cap_drop:
       - ALL
@@ -69,7 +69,7 @@ services:
   payments:
     build:
       context: ../backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
       target: payments-build
     cap_drop:
       - ALL
@@ -85,7 +85,7 @@ services:
   reviews:
     build:
       context: ../backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
       target: reviews-build
     cap_drop:
       - ALL

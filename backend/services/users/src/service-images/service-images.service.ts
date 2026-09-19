@@ -10,7 +10,7 @@ import { ServiceImagesRepository } from "./service-images.repository";
 import { MinioService } from "@pode-deixar/storage";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { randomUUID } from "crypto";
-import { extname } from "path";
+import sharp from "sharp";
 import { validateImageFile } from "@pode-deixar/validation";
 
 @Injectable()
@@ -86,13 +86,24 @@ export class ServiceImagesService {
     await this.getProviderService(providerProfileId, serviceId);
 
     validateImageFile(file.originalname, file.buffer);
-    const ext = extname(file.originalname).toLowerCase();
-    const fileName = `${providerProfileId}/${serviceId}/${randomUUID()}${ext}`;
+
+    let sanitizedBuffer: Buffer;
+    try {
+      sanitizedBuffer = await sharp(file.buffer, {
+        limitInputPixels: 25_000_000,
+      })
+        .webp({ quality: 80 })
+        .toBuffer();
+    } catch {
+      throw new BadRequestException("Arquivo de imagem inválido");
+    }
+
+    const fileName = `${providerProfileId}/${serviceId}/${randomUUID()}.webp`;
 
     const url = await this.minio.uploadFile(
       fileName,
-      file.buffer,
-      file.mimetype,
+      sanitizedBuffer,
+      "image/webp",
     );
 
     const image = await this.repository.createServiceImage(serviceId, url);

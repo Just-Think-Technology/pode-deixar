@@ -13,6 +13,7 @@ import {
   Request,
   ParseUUIDPipe,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import {
   ApiTags,
   ApiOperation,
@@ -106,6 +107,7 @@ export class ProviderSearchController {
 @ApiTags("Provider Services (Public)")
 @Controller("providers/:providerId/services")
 @ApiBearerAuth()
+@Throttle({ default: { limit: 30, ttl: 60000 } })
 export class PublicProviderServicesController {
   constructor(
     private readonly providerServicesService: ProviderServicesService,
