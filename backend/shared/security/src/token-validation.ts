@@ -16,9 +16,9 @@ export function assertTokenPayload(payload: TokenPayload | null | undefined) {
   }
 }
 
-// Token revocation check against blacklist. Absence of the blacklist table
-// (P2021) means the service runs without token revocation storage, so the
-// token is accepted; any other lookup failure is re-thrown.
+// Token revocation check against blacklist. Fail-closed: if the blacklist
+// table is missing (P2021) the revocation check cannot be performed, so the
+// token is rejected rather than accepted.
 export async function checkTokenRevocation(
   findBlacklisted: (jti: string) => Promise<unknown>,
   jti: string | undefined,
@@ -27,13 +27,9 @@ export async function checkTokenRevocation(
     return;
   }
 
-  try {
-    const blacklisted = await findBlacklisted(jti);
+  const blacklisted = await findBlacklisted(jti);
 
-    if (blacklisted) {
-      throw new UnauthorizedException("Token revogado");
-    }
-  } catch (e: unknown) {
-    if ((e as { code?: unknown })?.code !== "P2021") throw e;
+  if (blacklisted) {
+    throw new UnauthorizedException("Token revogado");
   }
 }
