@@ -708,3 +708,18 @@ When making a design decision, prioritize:
 8. **Scope** — Is the change limited to what the task requires?
 
 Clean Code is not about following arbitrary rules or minimizing line count. It is about making the system easier to understand and safer to evolve.
+
+---
+
+## Pragmatism
+
+Be pragmatic — deliver value, not architecture for its own sake.
+
+- **YAGNI:** do not build for hypothetical futures; implement what the task requires today.
+- **KISS:** the simplest solution that satisfies the requirement wins over a clever or generic one.
+- **Real problem first:** abstraction, optimization, and indirection only when there is a concrete, measured need (reuse, testability, performance).
+- **Scope discipline:** touch only what the task needs; log unrelated improvements as suggestions, not code.
+- **Shipping over perfection:** a small, tested, reviewed increment beats a perfect design that never lands. Iterate.
+- **Cost awareness:** weigh infra, cognitive, and maintenance cost (e.g., K8s vs Compose, new lib vs existing) before adopting.
+
+Pragmatism does not excuse shortcuts that create technical debt — it distinguishes necessary complexity from premature complexity.
