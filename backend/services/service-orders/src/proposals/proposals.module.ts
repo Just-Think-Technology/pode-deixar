@@ -13,7 +13,6 @@ import { SharedModule } from "../shared/shared.module";
 import { ProposalsRepository } from "./proposals.repository";
 
 @Module({
-
   // --- Imports ---
 
   imports: [PrismaModule, SharedModule],

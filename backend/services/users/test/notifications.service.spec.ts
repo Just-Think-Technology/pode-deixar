@@ -1,24 +1,21 @@
-// Notifications tests — delivery logic
+// Notifications service tests — notify dedup, list, markRead, markAllRead, countUnread
 
 import { Test, TestingModule } from "@nestjs/testing";
-import { validate } from "class-validator";
-import { plainToInstance } from "class-transformer";
+import { NotFoundException } from "@nestjs/common";
+import { NotificationType } from "@prisma/client";
 import { NotificationsService } from "../src/notifications/notifications.service";
 import { NotificationsRepository } from "../src/notifications/notifications.repository";
-import { CreateNotificationDto } from "../src/notifications/dto/create-notification.dto";
 
-// --- Tests ---
-// Anti-forgery coverage: the recipient is always the authenticated user;
-// the client-supplied value is ignored.
 describe("NotificationsService", () => {
   let service: NotificationsService;
 
   const mockRepository = {
-    createNotification: jest.fn(),
-    findNotificationsByRecipient: jest.fn(),
-    countNotificationsByRecipient: jest.fn(),
-    findNotificationForRecipient: jest.fn(),
-    markNotificationAsRead: jest.fn(),
+    create: jest.fn(),
+    findByUser: jest.fn(),
+    markRead: jest.fn(),
+    markAllRead: jest.fn(),
+    countUnread: jest.fn(),
+    existsRecent: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,43 +30,102 @@ describe("NotificationsService", () => {
     jest.clearAllMocks();
   });
 
-  it("should force recipient to the authenticated user, ignoring dto value", async () => {
-    mockRepository.createNotification.mockResolvedValue({ id: "notif-1" });
+  it("does not create duplicate SERVICE event within 60s", async () => {
+    mockRepository.existsRecent.mockResolvedValue(true);
 
-    await service.create("user-autenticado", {
-      recipient: "outra-vitima",
-      type: "NEW_MESSAGE",
-      title: "Olá",
-      message: "Teste",
-    } as CreateNotificationDto);
+    const result = await service.notify({
+      userId: "u1",
+      type: NotificationType.SERVICE,
+      title: "Proposta aceita",
+      message: "Pedido 123",
+      contractId: "c1",
+    });
 
-    expect(mockRepository.createNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ recipient: "user-autenticado" }),
+    expect(result).toBeNull();
+    expect(mockRepository.create).not.toHaveBeenCalled();
+    expect(mockRepository.existsRecent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "u1",
+        type: NotificationType.SERVICE,
+        title: "Proposta aceita",
+        contractId: "c1",
+        windowMs: 60000,
+      }),
     );
   });
 
-  it("should reject invalid notification payload", async () => {
-    const dto = plainToInstance(CreateNotificationDto, {
-      recipient: "nao-uuid",
-      type: "TIPO_FALSO",
-      title: "x".repeat(201),
-      message: 123,
+  it("creates notification when no recent duplicate", async () => {
+    mockRepository.existsRecent.mockResolvedValue(false);
+    mockRepository.create.mockResolvedValue({ id: "n1" });
+
+    const result = await service.notify({
+      userId: "u1",
+      type: NotificationType.SERVICE,
+      title: "Proposta aceita",
+      message: "Pedido 123",
+      contractId: "c1",
     });
 
-    const errors = await validate(dto);
-
-    expect(errors.length).toBeGreaterThan(0);
+    expect(mockRepository.create).toHaveBeenCalledWith({
+      userId: "u1",
+      type: NotificationType.SERVICE,
+      title: "Proposta aceita",
+      message: "Pedido 123",
+      conversationId: null,
+      contractId: "c1",
+    });
+    expect(result).toEqual({ id: "n1" });
   });
 
-  it("should accept valid notification payload", async () => {
-    const dto = plainToInstance(CreateNotificationDto, {
-      type: "BUDGET",
-      title: "Novo orçamento",
-      message: "Você recebeu um orçamento",
+  it("lists notifications filtered by user", async () => {
+    mockRepository.findByUser.mockResolvedValue([{ id: "n1" }]);
+    const list = await service.list("u1", { type: NotificationType.SERVICE });
+    expect(mockRepository.findByUser).toHaveBeenCalledWith("u1", {
+      type: NotificationType.SERVICE,
     });
+    expect(list).toEqual([{ id: "n1" }]);
+  });
 
-    const errors = await validate(dto);
+  it("throws NotFound if markRead affects 0 rows", async () => {
+    mockRepository.markRead.mockResolvedValue({ count: 0 });
+    await expect(service.markRead("u1", "n-missing")).rejects.toThrow(
+      NotFoundException,
+    );
+  });
 
-    expect(errors).toHaveLength(0);
+  it("marks read when notification belongs to user", async () => {
+    mockRepository.markRead.mockResolvedValue({ count: 1 });
+    const res = await service.markRead("u1", "n1");
+    expect(res).toEqual({ count: 1 });
+    expect(mockRepository.markRead).toHaveBeenCalledWith("n1", "u1");
+  });
+
+  it("marks all as read", async () => {
+    mockRepository.markAllRead.mockResolvedValue({ count: 3 });
+    const res = await service.markAllRead("u1");
+    expect(mockRepository.markAllRead).toHaveBeenCalledWith("u1");
+    expect(res).toEqual({ count: 3 });
+  });
+
+  it("counts unread", async () => {
+    mockRepository.countUnread.mockResolvedValue(2);
+    const count = await service.countUnread("u1");
+    expect(count).toBe(2);
+    expect(mockRepository.countUnread).toHaveBeenCalledWith("u1");
+  });
+
+  it("supports CONVERSATION dedup with conversationId", async () => {
+    mockRepository.existsRecent.mockResolvedValue(false);
+    mockRepository.create.mockResolvedValue({ id: "n2" });
+    await service.notify({
+      userId: "u1",
+      type: NotificationType.CONVERSATION,
+      title: "Nova mensagem",
+      message: "oi",
+      conversationId: "conv1",
+    });
+    expect(mockRepository.existsRecent).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: "conv1" }),
+    );
   });
 });

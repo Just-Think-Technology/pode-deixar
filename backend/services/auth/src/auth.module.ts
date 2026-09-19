@@ -7,7 +7,6 @@ import { PasswordModule } from './password/password.module';
 import { VerifyModule } from './verify/verify.module';
 
 @Module({
-
   // --- Imports ---
 
   imports: [LoginModule, RegisterModule, PasswordModule, VerifyModule],

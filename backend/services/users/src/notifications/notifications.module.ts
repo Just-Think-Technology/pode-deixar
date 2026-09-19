@@ -8,7 +8,6 @@ import { PrismaModule } from "@pode-deixar/prisma";
 import { NotificationsRepository } from "./notifications.repository";
 
 @Module({
-
   // --- Imports ---
 
   imports: [PrismaModule],

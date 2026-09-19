@@ -5,11 +5,19 @@ import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({
+  position = "top-right",
+  richColors = true,
+  closeButton = true,
+  ...props
+}: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
   return (
     <Sonner
+      position={position}
+      richColors={richColors}
+      closeButton={closeButton}
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       icons={{

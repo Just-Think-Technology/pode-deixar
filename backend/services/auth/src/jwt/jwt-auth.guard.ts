@@ -8,7 +8,6 @@ const logger = getLogger('jwt');
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-
   // --- Public API ---
 
   handleRequest(
@@ -24,7 +23,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         const req = context.switchToHttp().getRequest();
         const ip = req.headers?.['x-forwarded-for'] || req.ip;
         const reason = e instanceof Error ? e.message : String(e);
-        logger.warn('auth.jwt', `Unauthorized access attempt from ${ip} - ${reason}`);
+        logger.warn(
+          'auth.jwt',
+          `Unauthorized access attempt from ${ip} - ${reason}`,
+        );
       } catch {}
       throw e;
     }
