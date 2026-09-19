@@ -27,6 +27,11 @@ export function getAreaForRole(role: PublicRole): AppArea {
   return role === "CLIENT" ? "client" : "worker";
 }
 
+/**
+ * UNSAFE: client-side only, does not verify signature — never use for
+ * authorization decisions. Kept for legacy UI helpers; authoritative role
+ * comes from backend `verifyAccessToken()`.
+ */
 export function decodeAccessTokenRole(token: string): PublicRole | null {
   try {
     const payload = token.split(".")[1];

@@ -20,6 +20,7 @@ export class TokenBlacklistRepository {
         email: true,
         role: true,
         emailVerified: true,
+        isActive: true,
       },
     });
   }

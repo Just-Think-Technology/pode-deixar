@@ -4,7 +4,10 @@ import helmet from 'helmet';
 
 export function getHelmetConfig() {
   const isProd = process.env.NODE_ENV === 'production';
-  const allowedOrigin = process.env.ALLOWED_ORIGINS?.split(',')[0] || 'http://localhost:3000';
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean) ?? [];
+  const connectSrc = ["'self'", ...(allowedOrigins.length ? allowedOrigins : ['http://localhost:3000'])];
 
   return helmet({
     contentSecurityPolicy: {
@@ -18,7 +21,7 @@ export function getHelmetConfig() {
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:', 'https:'],
         fontSrc: ["'self'", 'data:'],
-        connectSrc: ["'self'", allowedOrigin],
+        connectSrc,
         frameSrc: ["'none'"],
         workerSrc: ["'self'", 'blob:'],
         manifestSrc: ["'self'"],
