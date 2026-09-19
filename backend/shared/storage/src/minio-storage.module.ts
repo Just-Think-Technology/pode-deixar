@@ -1,11 +1,12 @@
 import { DynamicModule, Module } from "@nestjs/common";
 import {
-  MINIO_STORAGE_OPTIONS,
-  MinioService,
-  MinioStorageOptions,
-} from "./minio.service";
+  STORAGE_OPTIONS,
+  StorageService,
+  StorageOptions,
+} from "./storage.service";
 
-export interface MinioModuleOptions extends MinioStorageOptions {
+export type MinioStorageOptions = StorageOptions;
+export interface MinioModuleOptions extends StorageOptions {
   global?: boolean;
 }
 
@@ -16,10 +17,15 @@ export class MinioStorageModule {
       module: MinioStorageModule,
       global: options.global ?? false,
       providers: [
-        { provide: MINIO_STORAGE_OPTIONS, useValue: options },
-        MinioService,
+        { provide: STORAGE_OPTIONS, useValue: options },
+        StorageService,
       ],
-      exports: [MinioService],
+      exports: [StorageService],
     };
   }
 }
+
+// New naming (preferred)
+export const StorageModule = MinioStorageModule;
+export type StorageModuleOptions = MinioModuleOptions;
+export { STORAGE_OPTIONS };

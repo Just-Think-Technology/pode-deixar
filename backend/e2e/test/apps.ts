@@ -7,7 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 import request from 'supertest';
 import { AppModule as UsersAppModule } from '../../services/users/src/app.module';
-import { MinioService as SharedMinioService } from '@pode-deixar/storage';
+import { MinioService as SharedMinioService, StorageService as SharedStorageService } from '@pode-deixar/storage';
 import { AppModule as OrdersAppModule } from '../../services/service-orders/src/app.module';
 import { AppModule as PaymentsAppModule } from '../../services/payments/src/app.module';
 import { AppModule as ReviewsAppModule } from '../../services/reviews/src/app.module';
@@ -34,22 +34,28 @@ export const mockEmail = {
   sendPasswordReset: jest.fn(async () => true),
 };
 
-// --- MinIO stub ---
-// The real MinioServices connect on onModuleInit — unfeasible without MinIO.
+// --- Storage stub (SeaweedFS S3, MINIO alias kept for backward compat) ---
+// The real StorageService connects on onModuleInit — unfeasible without SeaweedFS.
 // The e2e journey uploads no files; the stub only unblocks boot.
 
 export const mockMinio = {
   avatarBucket: 'avatars',
   uploadFile: jest.fn(
     async (fileName: string, _buffer: Buffer, _mime: string, bucket?: string) =>
-      `http://minio.test/${bucket ?? 'bucket'}/${fileName}`,
+      `http://seaweedfs.test/${bucket ?? 'bucket'}/${fileName}`,
   ),
   deleteFile: jest.fn(async (_fileName: string, _bucket?: string) => undefined),
   extractFileName: jest.fn(
     (url: string, bucket?: string) =>
       url.split(`/${bucket ?? 'bucket'}/`).pop() as string,
   ),
+  generateTemporaryUrl: jest.fn(
+    async (fileName: string, bucket?: string) =>
+      `http://seaweedfs.test/${bucket ?? 'bucket'}/${fileName}?X-Amz-Signature=mock`,
+  ),
 };
+
+export const mockStorage = mockMinio;
 
 // --- Boot ---
 
@@ -65,6 +71,8 @@ async function bootApp(
   });
   if (minioClass) {
     builder = builder.overrideProvider(minioClass).useValue(mockMinio);
+    // Also override StorageService alias (MinioService === StorageService)
+    builder = builder.overrideProvider(SharedStorageService).useValue(mockMinio);
   }
   // Sensitive endpoints carry strict @Throttle (5 req/min); e2e journeys share
   // one IP and would hit 429. Fake storage that never blocks — the real
