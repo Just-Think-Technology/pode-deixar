@@ -52,13 +52,13 @@ describe("checkTokenRevocation", () => {
     ).rejects.toThrow("Token revogado");
   });
 
-  it("aceita token quando a tabela não existe (P2021)", async () => {
+  it("rejeita token quando a tabela não existe (P2021) — fail-closed", async () => {
     const erro = Object.assign(new Error("tabela ausente"), { code: "P2021" });
     await expect(
       checkTokenRevocation(async () => {
         throw erro;
       }, "j1"),
-    ).resolves.toBeUndefined();
+    ).rejects.toBe(erro);
   });
 
   it("relança qualquer outro erro de lookup", async () => {

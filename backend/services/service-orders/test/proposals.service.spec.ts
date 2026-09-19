@@ -240,7 +240,11 @@ describe("ProposalsService", () => {
       mockRepository.findOrderById.mockResolvedValue(mockServiceOrder);
       mockRepository.findProposalsByOrder.mockResolvedValue([mockProposal]);
 
-      const result = await service.findByServiceOrder("order-1");
+      const result = await service.findByServiceOrder(
+        "order-1",
+        mockServiceOrder.clientId,
+        "CLIENT",
+      );
 
       expect(result).toHaveLength(1);
       expect(result[0].service_order_id).toBe("order-1");
@@ -253,7 +257,7 @@ describe("ProposalsService", () => {
       mockRepository.findOrderById.mockResolvedValue(null);
 
       await expect(
-        service.findByServiceOrder("nonexistent"),
+        service.findByServiceOrder("nonexistent", "user-1", "CLIENT"),
       ).rejects.toThrow(NotFoundException);
     });
   });
