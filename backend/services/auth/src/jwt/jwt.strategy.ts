@@ -43,9 +43,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const user = await this.repository.findUserById(payload.sub);
 
-    if (!user) {
-      logger.error('auth.validate', `User not found for id ${payload.sub}`);
-      throw new UnauthorizedException('Usuário não encontrado');
+    if (!user || !user.isActive) {
+      logger.error(
+        'auth.validate',
+        `User not found or inactive for id ${payload.sub}`,
+      );
+      throw new UnauthorizedException('Usuário não encontrado ou inativo');
     }
 
     return { ...user, jti: payload.jti };
@@ -57,19 +60,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!payload.jti) {
       return false;
     }
-    try {
-      const blacklisted = await this.repository.findBlacklistedToken(
-        payload.jti,
-      );
-      return !!blacklisted;
-    } catch (e: any) {
-      if (e?.code !== 'P2021') throw e;
-      this.authLogger.logSecurityEvent('token_blacklist_table_missing', {
-        userId: payload.sub,
-        message:
-          'token_blacklist table missing, access token accepted without revocation check',
-      });
-      return false;
-    }
+    const blacklisted = await this.repository.findBlacklistedToken(payload.jti);
+    return !!blacklisted;
   }
 }
