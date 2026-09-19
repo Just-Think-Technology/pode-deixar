@@ -144,6 +144,12 @@ jobs:
 
       - run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE pode_deixar_test;"
 
+      # Shared workspace packages resolve via compiled dist (e.g. main:
+      # dist/index.js) and install runs with --ignore-scripts, so rebuild
+      # them before tests — otherwise a stale dist misses exports such as
+      # createResponseLoggerInterceptor and app init fails.
+      - run: pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/storage build
+
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
 
       - run: locale-gen pt_BR.UTF-8 2>/dev/null || true
