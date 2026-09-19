@@ -1,7 +1,7 @@
 // purpose: Root layout — global metadata, ToProvider, font setup
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -28,7 +28,7 @@ export default function RootLayout({
             <body className={`${poppins.className} font-sans antialiased`}>
                 <TooltipProvider>
                     {children}
-                    <Toaster richColors position="top-center" />
+                    <Toaster richColors position="top-right" closeButton />
                 </TooltipProvider>
             </body>
         </html>
