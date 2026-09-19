@@ -8,7 +8,7 @@ import {
   Body,
   Query,
   UseGuards,
-  ParseUUIDPipe,
+  ParseIntPipe,
   Patch,
 } from "@nestjs/common";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
@@ -49,7 +49,7 @@ export class NotificationsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("CLIENT", "PROVIDER", "ADMIN")
   markAsRead(
-    @Param("id", ParseUUIDPipe) id: string,
+    @Param("id", ParseIntPipe) id: number,
     @User("sub") userId: string,
   ) {
     return this.notificationsService.markAsRead(id, userId);

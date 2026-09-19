@@ -44,7 +44,7 @@ export class NotificationsService {
     return { items, total, page, totalPages: Math.ceil(total / limit) };
   }
 
-  async markAsRead(notificationId: string, userId: string) {
+  async markAsRead(notificationId: number, userId: string) {
     // Only the recipient may mark the notification as read.
     const notification = await this.repository.findNotificationForRecipient(
       notificationId,
