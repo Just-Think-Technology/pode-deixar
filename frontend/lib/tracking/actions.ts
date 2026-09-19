@@ -8,6 +8,7 @@ import { ApiError } from "@/api/client";
 import {
   finishTrackedService,
   getContractTracking,
+  getEvidencePhotoViewUrl,
   startTrackedService,
   submitTrackedReview,
 } from "@/api/tracking";
@@ -22,7 +23,7 @@ import type {
   SubmitReviewResult,
   TrackingRole,
 } from "@/lib/tracking/types";
-import { validateReviewInput } from "@/lib/tracking/validation";
+import { validateFinishInput, validateReviewInput } from "@/lib/tracking/validation";
 import {
   getMockContractTracking,
   mockFinishService,
@@ -84,9 +85,10 @@ export async function getContractTrackingAction(
   }
 
   try {
-    return await withTokenRefresh((token) =>
-      getContractTracking(token, orderId, role),
-    );
+    return await withTokenRefresh(async (token) => {
+      const tracking = await getContractTracking(token, orderId, role);
+      return resolveEvidencePhotoUrls(token, tracking);
+    });
   } catch (err) {
     if (
       err instanceof ApiError &&
@@ -96,6 +98,34 @@ export async function getContractTrackingAction(
     }
     throw err;
   }
+}
+
+// The backend exposes evidence photos as authenticated view endpoints
+// (/api/services/photos/:id/view) returning { url: presigned }. Resolve them
+// server-side so <img> receives directly renderable https URLs. Failures keep
+// the original URL instead of breaking the whole tracking load.
+async function resolveEvidencePhotoUrls(
+  token: string,
+  tracking: ContractTracking,
+): Promise<ContractTracking> {
+  const photos = tracking.evidence?.photos;
+  if (!photos || photos.length === 0) {
+    return tracking;
+  }
+  const resolved = await Promise.all(
+    photos.map(async (photo) => {
+      try {
+        const { url } = await getEvidencePhotoViewUrl(token, photo.id);
+        return { ...photo, url };
+      } catch {
+        return photo;
+      }
+    }),
+  );
+  return {
+    ...tracking,
+    evidence: tracking.evidence ? { ...tracking.evidence, photos: resolved } : null,
+  };
 }
 
 export async function startServiceAction(
@@ -118,22 +148,27 @@ export async function startServiceAction(
 
 export async function finishServiceAction(
   orderId: string,
-  photoCount: number,
+  photos: File[],
   observations: string,
 ): Promise<ContractTracking> {
   await requireTrackingRole("PROVIDER");
 
   const normalized = observations.trim() ? observations.trim() : null;
+  const validation = validateFinishInput(photos, normalized);
+  if (!validation.ok) {
+    const firstError = Object.values(validation.errors)[0];
+    throw new Error(firstError ?? "Não foi possível concluir o serviço.");
+  }
 
   if (USE_MOCK) {
-    const tracking = mockFinishService(orderId, photoCount, normalized);
+    const tracking = mockFinishService(orderId, photos.length, normalized);
     revalidateTracking(orderId);
     return tracking;
   }
 
   const tracking = await withTokenRefresh((token) =>
     finishTrackedService(token, orderId, {
-      photoCount,
+      photos,
       observations: normalized,
     }),
   );
