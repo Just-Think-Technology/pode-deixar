@@ -191,21 +191,20 @@ export class ServiceOrdersRepository {
     });
   }
 
-  createCompletionNotification(recipient: string, orderId: string) {
+  createCompletionNotification(userId: string, orderId: string) {
     return this.prisma.notification.create({
       data: {
-        recipient,
-        type: "ORDER_COMPLETED",
+        userId,
+        type: "SERVICE",
         title: "Serviço concluído",
         message: "Seu serviço foi concluído pelo prestador",
-        relatedId: orderId,
-        relatedType: "service_order",
+        contractId: orderId,
       },
     });
   }
 
   createStatusNotification(
-    recipient: string,
+    userId: string,
     orderId: string,
     type: string,
     title: string,
@@ -213,12 +212,11 @@ export class ServiceOrdersRepository {
   ) {
     return this.prisma.notification.create({
       data: {
-        recipient,
-        type,
+        userId,
+        type: type as any,
         title,
         message,
-        relatedId: orderId,
-        relatedType: "service_order",
+        contractId: orderId,
       },
     });
   }
