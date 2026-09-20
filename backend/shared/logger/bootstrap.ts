@@ -38,6 +38,9 @@ export async function bootstrapService(
     logger: false,
   });
 
+  // Explicit body limit — defense-in-depth for DoS (uploads use multipart, not JSON)
+  app.getHttpAdapter().getInstance().use(require('express').json({ limit: '100kb' }));
+
   app.use(getHelmetConfig());
 
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(

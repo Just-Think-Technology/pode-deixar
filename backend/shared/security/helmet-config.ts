@@ -17,6 +17,7 @@ export function getHelmetConfig() {
         formAction: ["'self'"],
         frameAncestors: ["'none'"],
         objectSrc: ["'none'"],
+        // unsafe-inline kept for Next.js hydration + shadcn inline styles; validated inline styles only (chart.tsx sanitizeColor) — migrate to nonce per-request when proxy/middleware nonce infra lands
         scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:', 'https:'],
