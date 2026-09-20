@@ -125,11 +125,26 @@ export class ProposalsService {
     return proposals.map((p) => this.formatProposalWithOrder(p));
   }
 
-  async findByServiceOrder(serviceOrderId: string) {
+  async findByServiceOrder(
+    serviceOrderId: string,
+    callerUserId: string,
+    callerRole: string,
+  ) {
     const order = await this.repository.findOrderById(serviceOrderId);
 
     if (!order) {
       throw new NotFoundException("Pedido de serviço não encontrado");
+    }
+
+    if (callerRole !== "ADMIN" && order.clientId !== callerUserId) {
+      const callerProposals =
+        await this.repository.findProposalsByOrder(serviceOrderId);
+      const isParticipant = callerProposals.some(
+        (p) => p.providerId === callerUserId,
+      );
+      if (!isParticipant) {
+        throw new ForbiddenException("Acesso negado a este pedido");
+      }
     }
 
     const proposals =
