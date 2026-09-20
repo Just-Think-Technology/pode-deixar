@@ -41,6 +41,8 @@ import {
   updateAuthSessionUser,
 } from "@/lib/auth/session.server";
 
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+
 function mapProfileResponseToUserProfile(profile: ProfileResponse): UserProfile {
   return {
     id: profile.user.id,
@@ -61,6 +63,26 @@ function mapProfileResponseToUserProfile(profile: ProfileResponse): UserProfile 
     rating: profile.rating,
     total_reviews: profile.total_reviews,
     is_available: profile.is_available,
+  };
+}
+
+function buildMockProfile(sessionUser: {
+  id: string;
+  complete_name: string;
+  email: string;
+  phone?: string;
+  postal_code?: string;
+}): UserProfile {
+  return {
+    id: sessionUser.id,
+    complete_name: sessionUser.complete_name,
+    email: sessionUser.email,
+    role: "PROVIDER",
+    phone: sessionUser.phone ?? "(11) 99999-9999",
+    postal_code: sessionUser.postal_code ?? "12345-678",
+    email_verified: true,
+    created_at: new Date().toISOString(),
+    last_login_at: new Date().toISOString(),
   };
 }
 
@@ -115,8 +137,38 @@ async function withTokenRefresh<T>(
 }
 
 export async function getWorkerProfileAction(): Promise<{ user: UserProfile }> {
-  const profile = await withTokenRefresh((token) => getWorkerProfile(token));
-  return { user: mapProfileResponseToUserProfile(profile) };
+  try {
+    const profile = await withTokenRefresh((token) => getWorkerProfile(token));
+    return { user: mapProfileResponseToUserProfile(profile) };
+  } catch (err) {
+    if (!USE_MOCK) throw err;
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
+      const session = await getAuthSession();
+      return {
+        user: buildMockProfile({
+          id: session?.user.id ?? "mock-user-id",
+          complete_name: session?.user.complete_name ?? "Usuário",
+          email: session?.user.email ?? "usuario@example.com",
+        }),
+      };
+    }
+    throw err;
+  }
+}
+
+function buildStubProfile(
+  current: UserProfile,
+  payload: UpdateWorkerProfilePayload,
+  emailChanged: boolean,
+): UserProfile {
+  return {
+    ...current,
+    complete_name: payload.complete_name,
+    email: payload.email,
+    phone: payload.phone,
+    postal_code: payload.postal_code,
+    email_verified: emailChanged ? false : current.email_verified,
+  };
 }
 
 export async function updateWorkerProfileAction(
@@ -128,14 +180,31 @@ export async function updateWorkerProfileAction(
   let message = "Perfil atualizado com sucesso.";
   let updatedUser = currentProfile;
 
-  if (currentProfile.profile_id) {
-    const response = await withTokenRefresh((token) => updateWorkerProfile(token, payload));
-    updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
-    message = "Perfil atualizado com sucesso.";
-  } else {
-    const response = await withTokenRefresh((token) => createWorkerProfile(token, payload));
-    updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
-    message = "Perfil profissional criado com sucesso!";
+  try {
+    if (currentProfile.profile_id) {
+      const response = await withTokenRefresh((token) => updateWorkerProfile(token, payload));
+      updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
+      message = "Perfil atualizado com sucesso.";
+    } else {
+      const response = await withTokenRefresh((token) => createWorkerProfile(token, payload));
+      updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
+      message = "Perfil profissional criado com sucesso!";
+    }
+  } catch (err) {
+    if (!USE_MOCK) throw err;
+    if (err instanceof ApiError && (err.status === 501 || err.status === 503)) {
+      const stubPayload: UpdateWorkerProfilePayload = {
+        complete_name: currentProfile.complete_name,
+        email: currentProfile.email,
+        phone: currentProfile.phone,
+        postal_code: currentProfile.postal_code,
+        biography: payload.bio ?? currentProfile.bio ?? "",
+      };
+      updatedUser = buildStubProfile(currentProfile, stubPayload, false);
+      message = "Perfil atualizado localmente. A sincronização com o servidor estará disponível em breve.";
+    } else {
+      throw err;
+    }
   }
 
   await updateAuthSessionUser({
@@ -147,29 +216,84 @@ export async function updateWorkerProfileAction(
 }
 
 export async function deleteWorkerAccountAction(): Promise<void> {
-  await withTokenRefresh((token) => deleteWorkerAccount(token));
+  try {
+    await withTokenRefresh((token) => deleteWorkerAccount(token));
+  } catch (err) {
+    if (!USE_MOCK) throw err;
+    if (!(err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503))) {
+      throw err;
+    }
+  }
+
   await clearAuthSession();
 }
 
 export async function createServiceAction(
   payload: CreateServicePayload,
 ): Promise<CreateServiceResponse> {
-  return withTokenRefresh((token) => createWorkerService(token, payload));
+  try {
+    return await withTokenRefresh((token) => createWorkerService(token, payload));
+  } catch (err) {
+    if (!USE_MOCK) throw err;
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
+      return {
+        message: "Serviço cadastrado com sucesso!",
+        service: {
+          id: crypto.randomUUID(),
+          provider_profile_id: "mock-profile-id",
+          title: payload.title,
+          description: payload.description,
+          fixed_price: payload.fixedPrice,
+          category: payload.category,
+          images: [],
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      };
+    }
+    throw err;
+  }
 }
 
 export async function getWorkerServicesAction(): Promise<ServicesListResponse> {
-  return withTokenRefresh((token) => getWorkerServices(token));
+  try {
+    return await withTokenRefresh((token) => getWorkerServices(token));
+  } catch (err) {
+    if (!USE_MOCK) throw err;
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
+      const { MOCK_SERVICES } = await import("@/mock/worker/services");
+      return MOCK_SERVICES;
+    }
+    throw err;
+  }
 }
 
 export async function updateServiceAction(
   serviceId: string,
   payload: UpdateServicePayload,
 ): Promise<void> {
-  await withTokenRefresh((token) => updateWorkerService(token, serviceId, payload));
+  try {
+    await withTokenRefresh((token) => updateWorkerService(token, serviceId, payload));
+  } catch (err) {
+    if (!USE_MOCK) throw err;
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
+      return;
+    }
+    throw err;
+  }
 }
 
 export async function deleteServiceAction(
   serviceId: string,
 ): Promise<void> {
-  await withTokenRefresh((token) => deleteWorkerService(token, serviceId));
+  try {
+    await withTokenRefresh((token) => deleteWorkerService(token, serviceId));
+  } catch (err) {
+    if (!USE_MOCK) throw err;
+    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
+      return;
+    }
+    throw err;
+  }
 }

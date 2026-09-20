@@ -9,6 +9,13 @@ import type {
   CreateServiceOrderPayload,
   ServiceOrder,
 } from "@/lib/client/quote/types";
+import {
+  getMockClientOrderById,
+  getMockClientOrders,
+} from "@/mock/client/orders";
+import { mockCreateServiceOrder } from "@/mock/client/service-orders";
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export const SERVICE_ORDERS_ROUTES = {
   me: "/services/me",
@@ -19,6 +26,10 @@ export function createServiceOrder(
   accessToken: string,
   payload: CreateServiceOrderPayload,
 ) {
+  if (USE_MOCK) {
+    return Promise.resolve(mockCreateServiceOrder(payload));
+  }
+
   return apiFetchAuth<ServiceOrder>(SERVICE_ORDERS_ROUTES.me, accessToken, {
     method: "POST",
     body: JSON.stringify({
@@ -34,6 +45,10 @@ export function createServiceOrder(
 }
 
 export function getMyServiceOrders(accessToken: string) {
+  if (USE_MOCK) {
+    return Promise.resolve(getMockClientOrders());
+  }
+
   return apiFetchAuth<ClientOrdersListResponse>(
     SERVICE_ORDERS_ROUTES.me,
     accessToken,
@@ -45,6 +60,10 @@ export function getMyServiceOrderById(
   accessToken: string,
   orderId: string,
 ): Promise<ClientOrder | null> {
+  if (USE_MOCK) {
+    return Promise.resolve(getMockClientOrderById(orderId));
+  }
+
   return apiFetchAuth<ClientOrder>(
     SERVICE_ORDERS_ROUTES.byId(orderId),
     accessToken,

@@ -13,6 +13,9 @@ import type {
   SearchProfessionalsPayload,
   SearchProfessionalsResponse,
 } from "@/lib/client/search/types";
+import { mockSearchProfessionals } from "@/mock/client/search";
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export async function searchProfessionalsAction(
   payload: SearchProfessionalsPayload,
@@ -36,6 +39,13 @@ export async function searchProfessionalsAction(
       return searchProfessionals(payload, refreshed.access_token);
     }
 
+    if (
+      err instanceof ApiError &&
+      (err.status === 404 || err.status === 501 || err.status === 503)
+    ) {
+      if (!USE_MOCK) throw err;
+      return mockSearchProfessionals(payload);
+    }
     throw err;
   }
 }

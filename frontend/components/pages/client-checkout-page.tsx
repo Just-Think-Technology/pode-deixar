@@ -40,7 +40,10 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { getApiErrorMessage } from "@/lib/auth/errors";
 import type { ClientOrder } from "@/lib/client/orders/types";
-import { startCheckoutAction } from "@/lib/client/payments/actions";
+import {
+  confirmPaymentMockAction,
+  startCheckoutAction,
+} from "@/lib/client/payments/actions";
 import {
   formatPaymentAmount,
   getPaymentMethodLabel,
@@ -60,6 +63,8 @@ import {
   isPixCharge,
 } from "@/lib/client/payments/types";
 import { cn } from "@/lib/utils";
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 type ClientCheckoutPageProps = {
   order: ClientOrder;
@@ -99,6 +104,7 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
     {},
   );
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [charge, setCharge] = useState<ChargeResponse | null>(null);
 
@@ -164,6 +170,22 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
       toast.success("Código Pix copiado.");
     } catch {
       toast.error("Não foi possível copiar o código.");
+    }
+  };
+
+  const handleSimulatePaid = async () => {
+    if (!payment) return;
+    setConfirming(true);
+    try {
+      await confirmPaymentMockAction(payment.id, order.id);
+      toast.success("Pagamento confirmado!");
+      router.push(
+        `/client/orders/${order.id}/checkout/confirmation?paymentId=${payment.id}`,
+      );
+    } catch (err) {
+      toast.error(getApiErrorMessage(err));
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -519,6 +541,26 @@ export default function ClientCheckoutPage({ order }: ClientCheckoutPageProps) {
               <Separator />
 
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                {USE_MOCK ? (
+                  <Button
+                    type="button"
+                    onClick={handleSimulatePaid}
+                    disabled={confirming}
+                    className="gap-2"
+                  >
+                    {confirming ? (
+                      <>
+                        <Spinner className="size-4" />
+                        Confirmando…
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="size-4" />
+                        Simular confirmação de pagamento
+                      </>
+                    )}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"

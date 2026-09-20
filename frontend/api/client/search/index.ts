@@ -1,6 +1,7 @@
-// Client search API — professional search —
+// Client search API — professional search with mock fallback
 
 import { apiFetchAuth, ApiError } from "@/api/client";
+import { mockSearchProfessionals } from "@/mock/client/search";
 import type {
   ProviderSearchResult,
   SearchProfessionalsPayload,
@@ -8,6 +9,8 @@ import type {
 } from "@/lib/client/search/types";
 
 export type { SearchProfessionalsPayload, SearchProfessionalsResponse };
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 type SearchProvidersApiResponse = {
   data: ProviderSearchResult[];
@@ -45,6 +48,10 @@ export async function searchProfessionals(
   payload: SearchProfessionalsPayload,
   accessToken: string,
 ): Promise<SearchProfessionalsResponse> {
+  if (USE_MOCK) {
+    return mockSearchProfessionals(payload);
+  }
+
   if (!accessToken) {
     throw new ApiError("Sessão expirada. Faça login novamente.", 401);
   }

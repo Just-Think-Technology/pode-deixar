@@ -1,4 +1,4 @@
-// Tracking actions — contract lookup and transitions —
+// Tracking actions — contract lookup and transitions with mock fallback
 
 "use server";
 
@@ -23,10 +23,15 @@ import type {
   SubmitReviewResult,
   TrackingRole,
 } from "@/lib/tracking/types";
+import { validateFinishInput, validateReviewInput } from "@/lib/tracking/validation";
 import {
-  validateFinishInput,
-  validateReviewInput,
-} from "@/lib/tracking/validation";
+  getMockContractTracking,
+  mockFinishService,
+  mockStartService,
+  mockSubmitReview,
+} from "@/mock/tracking";
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 async function withTokenRefresh<T>(
   fn: (token: string) => Promise<T>,
@@ -75,6 +80,10 @@ export async function getContractTrackingAction(
   orderId: string,
   role: TrackingRole,
 ): Promise<ContractTracking | null> {
+  if (USE_MOCK) {
+    return getMockContractTracking(orderId, role);
+  }
+
   try {
     return await withTokenRefresh(async (token) => {
       const tracking = await getContractTracking(token, orderId, role);
@@ -124,6 +133,12 @@ export async function startServiceAction(
 ): Promise<ContractTracking> {
   await requireTrackingRole("PROVIDER");
 
+  if (USE_MOCK) {
+    const tracking = mockStartService(orderId);
+    revalidateTracking(orderId);
+    return tracking;
+  }
+
   const tracking = await withTokenRefresh((token) =>
     startTrackedService(token, orderId),
   );
@@ -143,6 +158,12 @@ export async function finishServiceAction(
   if (!validation.ok) {
     const firstError = Object.values(validation.errors)[0];
     throw new Error(firstError ?? "Não foi possível concluir o serviço.");
+  }
+
+  if (USE_MOCK) {
+    const tracking = mockFinishService(orderId, photos.length, normalized);
+    revalidateTracking(orderId);
+    return tracking;
   }
 
   const tracking = await withTokenRefresh((token) =>
@@ -171,6 +192,12 @@ export async function submitReviewAction(
     rating: input.rating,
     ...(input.comment?.trim() ? { comment: input.comment.trim() } : {}),
   };
+
+  if (USE_MOCK) {
+    const review = mockSubmitReview(orderId, payload);
+    revalidateTracking(orderId);
+    return review;
+  }
 
   const review = await withTokenRefresh((token) =>
     submitTrackedReview(token, orderId, payload),

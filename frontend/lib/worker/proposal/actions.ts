@@ -1,4 +1,4 @@
-// Worker proposal actions — proposal list and secure detail
+// Worker proposal actions — proposal list and secure detail with mock fallback
 
 "use server";
 
@@ -9,6 +9,12 @@ import {
   refreshAuthSession,
 } from "@/lib/auth/session.server";
 import type { WorkerProposal } from "@/lib/worker/proposal/types";
+import {
+  getMockProposalById,
+  getMockProposals,
+} from "@/mock/worker/proposals";
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 async function withTokenRefresh<T>(
   fn: (token: string) => Promise<T>,
@@ -33,7 +39,25 @@ async function withTokenRefresh<T>(
 }
 
 export async function getMyProposalsAction(): Promise<WorkerProposal[]> {
-  return withTokenRefresh((token) => getMyProposals(token));
+  if (USE_MOCK) {
+    return getMockProposals();
+  }
+
+  try {
+    return await withTokenRefresh((token) => getMyProposals(token));
+  } catch (err) {
+    if (!USE_MOCK) throw err;
+    if (
+      err instanceof ApiError &&
+      (err.status === 404 ||
+        err.status === 501 ||
+        err.status === 502 ||
+        err.status === 503)
+    ) {
+      return getMockProposals();
+    }
+    throw err;
+  }
 }
 
 /**
@@ -43,6 +67,24 @@ export async function getMyProposalsAction(): Promise<WorkerProposal[]> {
 export async function getMyProposalByIdAction(
   proposalId: string,
 ): Promise<WorkerProposal | null> {
-  const proposals = await withTokenRefresh((token) => getMyProposals(token));
-  return proposals.find((proposal) => proposal.id === proposalId) ?? null;
+  if (USE_MOCK) {
+    return getMockProposalById(proposalId);
+  }
+
+  try {
+    const proposals = await withTokenRefresh((token) => getMyProposals(token));
+    return proposals.find((proposal) => proposal.id === proposalId) ?? null;
+  } catch (err) {
+    if (!USE_MOCK) throw err;
+    if (
+      err instanceof ApiError &&
+      (err.status === 404 ||
+        err.status === 501 ||
+        err.status === 502 ||
+        err.status === 503)
+    ) {
+      return getMockProposalById(proposalId);
+    }
+    throw err;
+  }
 }
