@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 import { login } from "@/api/login";
 import { register } from "@/api/register";
+import { resendVerification } from "@/api/register/resend-verification";
 
 import {
     assertLoginRole,
@@ -344,8 +345,7 @@ function useRegisterHandler(authRole: AuthRole, publicRole: PublicRole) {
         }
 
         const data = await register(payload);
-        toast.success(data.message);
-        router.push(role.postRegisterLoginHref);
+        return { data, email: payload.email };
     };
 }
 
@@ -487,6 +487,7 @@ export function WorkerLoginForm() {
 
 export function ClientRegisterForm() {
     const role = authRoleConfig.client;
+    const router = useRouter();
     const {
         loading,
         error,
@@ -494,16 +495,45 @@ export function ClientRegisterForm() {
         wrapSubmit,
         setFieldErrors,
     } = useAuthFormSubmit();
+    const [pendingResendEmail, setPendingResendEmail] = useState<string | null>(null);
+    const [resendCooldown, setResendCooldown] = useState(0);
     const registerHandler = useRegisterHandler("client", "CLIENT");
 
     const onSubmit = wrapSubmit(async (form) => {
         try {
-            await registerHandler(form);
+            const { data, email } = await registerHandler(form);
+            if (data.emailSent === false) {
+                setPendingResendEmail(email);
+                toast.warning("Conta criada, mas o email demorou — verifique spam ou reenvie.", {
+                    description: "Clique em Reenviar verificação abaixo.",
+                    duration: 6000,
+                });
+                return;
+            }
+            toast.success(data.message);
+            router.push(role.postRegisterLoginHref);
         } catch (err) {
             if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });
+
+    const handleResend = async () => {
+        if (!pendingResendEmail || resendCooldown > 0) return;
+        try {
+            await resendVerification({ email: pendingResendEmail });
+            toast.success("Se o email existir, um novo link foi enviado.");
+            setResendCooldown(60);
+            const id = setInterval(() => {
+                setResendCooldown((c) => {
+                    if (c <= 1) { clearInterval(id); return 0; }
+                    return c - 1;
+                });
+            }, 1000);
+        } catch (err) {
+            toast.error(getApiErrorMessage(err));
+        }
+    };
 
     return (
         <AuthFormShell
@@ -579,6 +609,22 @@ export function ClientRegisterForm() {
                     loading={loading}
                     error={error}
                 />
+                {pendingResendEmail && (
+                    <div className="mt-4 text-center">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleResend}
+                            disabled={resendCooldown > 0}
+                            className="w-full"
+                        >
+                            {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar verificação"}
+                        </Button>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                            Email pendente para {pendingResendEmail}
+                        </p>
+                    </div>
+                )}
             </form>
         </AuthFormShell>
     );
@@ -586,6 +632,7 @@ export function ClientRegisterForm() {
 
 export function WorkerRegisterForm() {
     const role = authRoleConfig.worker;
+    const router = useRouter();
     const {
         loading,
         error,
@@ -593,16 +640,45 @@ export function WorkerRegisterForm() {
         wrapSubmit,
         setFieldErrors,
     } = useAuthFormSubmit();
+    const [pendingResendEmail, setPendingResendEmail] = useState<string | null>(null);
+    const [resendCooldown, setResendCooldown] = useState(0);
     const registerHandler = useRegisterHandler("worker", "PROVIDER");
 
     const onSubmit = wrapSubmit(async (form) => {
         try {
-            await registerHandler(form);
+            const { data, email } = await registerHandler(form);
+            if (data.emailSent === false) {
+                setPendingResendEmail(email);
+                toast.warning("Conta criada, mas o email demorou — verifique spam ou reenvie.", {
+                    description: "Clique em Reenviar verificação abaixo.",
+                    duration: 6000,
+                });
+                return;
+            }
+            toast.success(data.message);
+            router.push(role.postRegisterLoginHref);
         } catch (err) {
             if (!handleValidationError(err, setFieldErrors))
                 throw err;
         }
     });
+
+    const handleResend = async () => {
+        if (!pendingResendEmail || resendCooldown > 0) return;
+        try {
+            await resendVerification({ email: pendingResendEmail });
+            toast.success("Se o email existir, um novo link foi enviado.");
+            setResendCooldown(60);
+            const id = setInterval(() => {
+                setResendCooldown((c) => {
+                    if (c <= 1) { clearInterval(id); return 0; }
+                    return c - 1;
+                });
+            }, 1000);
+        } catch (err) {
+            toast.error(getApiErrorMessage(err));
+        }
+    };
 
     return (
         <AuthFormShell
@@ -678,6 +754,22 @@ export function WorkerRegisterForm() {
                     loading={loading}
                     error={error}
                 />
+                {pendingResendEmail && (
+                    <div className="mt-4 text-center">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleResend}
+                            disabled={resendCooldown > 0}
+                            className="w-full"
+                        >
+                            {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : "Reenviar verificação"}
+                        </Button>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                            Email pendente para {pendingResendEmail}
+                        </p>
+                    </div>
+                )}
             </form>
         </AuthFormShell>
     );
