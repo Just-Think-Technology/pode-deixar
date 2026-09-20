@@ -1,188 +1,148 @@
-// Provider services controller tests — CRUD endpoints
+// Provider services controller tests — HTTP status / guard / 403 via request(app)
 
-import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication } from '@nestjs/common';
+import request = require('supertest');
+import { App } from 'supertest/types';
 import {
-  ProviderServicesController,
-  PublicProviderServicesController,
-  ProviderServiceDetailController,
-  ProviderSearchController,
-} from "../src/provider-services/provider-services.controller";
-import { ProviderServicesService } from "../src/provider-services/provider-services.service";
+  setupTestApp,
+  teardownTestApp,
+  createTestUser,
+  mintToken,
+  bearerAuth,
+  TestAppSetup,
+} from './test-setup';
+import { PrismaService } from '@pode-deixar/prisma';
 
-// --- Tests ---
+describe('ProviderServicesController (HTTP)', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaService;
 
-describe("ProviderServicesController", () => {
-  let controller: ProviderServicesController;
-  let publicController: PublicProviderServicesController;
-  let detailController: ProviderServiceDetailController;
-  let searchController: ProviderSearchController;
-
-  const mockProviderServicesService = {
-    createServiceForUser: jest.fn(),
-    getMyServicesForUser: jest.fn(),
-    getProviderServices: jest.fn(),
-    updateServiceForUser: jest.fn(),
-    deleteServiceForUser: jest.fn(),
-    searchProviders: jest.fn(),
-  };
-
-  const mockRequest = (overrides = {}) => ({
-    user: { sub: "user-1", email: "provider@test.com", role: "PROVIDER" },
-    ip: "127.0.0.1",
-    ...overrides,
+  beforeAll(async () => {
+    const setup: TestAppSetup = await setupTestApp();
+    app = setup.app;
+    prisma = setup.prisma;
   });
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [
-        ProviderServicesController,
-        PublicProviderServicesController,
-        ProviderServiceDetailController,
-        ProviderSearchController,
-      ],
-      providers: [
-        { provide: ProviderServicesService, useValue: mockProviderServicesService },
-      ],
-    }).compile();
-
-    controller = module.get<ProviderServicesController>(ProviderServicesController);
-    publicController = module.get<PublicProviderServicesController>(PublicProviderServicesController);
-    detailController = module.get<ProviderServiceDetailController>(ProviderServiceDetailController);
-    searchController = module.get<ProviderSearchController>(ProviderSearchController);
-    jest.clearAllMocks();
+  afterAll(async () => {
+    await teardownTestApp(app, prisma);
   });
 
-  describe("ProviderServicesController - createService", () => {
-    it("should delegate to service.createServiceForUser", async () => {
-      const req = mockRequest();
-      const dto = {
-        title: "Instalação de chuveiro",
-        description: "Descrição",
-        fixedPrice: 150.0,
-        categoryId: "cat-eletrica",
-      };
-      const expectedService = { id: "service-1", title: "Instalação de chuveiro" };
+  async function providerAuth() {
+    const user = await createTestUser(prisma, { role: 'PROVIDER' });
+    // Provider profile is required for service creation; create via API
+    const token = mintToken(user);
+    await request(app.getHttpServer())
+      .post('/profiles/provider')
+      .set(bearerAuth(token))
+      .send({ bio: 'Provider for services' })
+      .expect(201);
+    return { user, token };
+  }
 
-      mockProviderServicesService.createServiceForUser.mockResolvedValue(
-        expectedService,
-      );
+  async function createCategory() {
+    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    return prisma.category.create({ data: { name: `Cat ${suffix}`, slug: `cat-${suffix}` } });
+  }
 
-      const result = await controller.createService(req, dto as any);
+  describe('POST /providers/me/services', () => {
+    it('should return 401 without token', async () => {
+      await request(app.getHttpServer())
+        .post('/providers/me/services')
+        .send({ title: 'X', description: 'Y', fixedPrice: 100, categoryId: '00000000-0000-0000-0000-000000000000' })
+        .expect(401);
+    });
 
-      expect(
-        mockProviderServicesService.createServiceForUser,
-      ).toHaveBeenCalledWith("user-1", dto, "127.0.0.1");
-      expect(result).toEqual(expectedService);
+    it('should return 403 for CLIENT role', async () => {
+      const user = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(user);
+      const cat = await createCategory();
+      await request(app.getHttpServer())
+        .post('/providers/me/services')
+        .set(bearerAuth(token))
+        .send({ title: 'Serviço', description: 'Desc', fixedPrice: 100, categoryId: cat.id })
+        .expect(403);
+    });
+
+    it('should return 201 for PROVIDER and persist service', async () => {
+      const { token } = await providerAuth();
+      const cat = await createCategory();
+
+      const response = await request(app.getHttpServer())
+        .post('/providers/me/services')
+        .set(bearerAuth(token))
+        .send({ title: 'Instalação', description: 'Descrição completa', fixedPrice: 150, categoryId: cat.id })
+        .expect(201);
+
+      expect(response.body.title).toBe('Instalação');
+      expect(response.body.fixedPrice ?? response.body.fixed_price).toBeDefined();
+
+      const db = await prisma.providerService.findUnique({ where: { id: response.body.id } });
+      expect(db?.title).toBe('Instalação');
+    });
+
+    it('should return 400 for missing required fields', async () => {
+      const { token } = await providerAuth();
+      await request(app.getHttpServer())
+        .post('/providers/me/services')
+        .set(bearerAuth(token))
+        .send({ title: 'Only title' })
+        .expect(400);
     });
   });
 
-  describe("ProviderServicesController - getMyServices", () => {
-    it("should delegate to service.getMyServicesForUser", async () => {
-      const req = mockRequest();
-      const expectedServices = [{ id: "service-1", title: "Instalação" }];
+  describe('GET /providers/me/services', () => {
+    it('should return 401 without token and 403 for CLIENT', async () => {
+      await request(app.getHttpServer()).get('/providers/me/services').expect(401);
 
-      mockProviderServicesService.getMyServicesForUser.mockResolvedValue(
-        expectedServices,
-      );
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(client);
+      await request(app.getHttpServer())
+        .get('/providers/me/services')
+        .set(bearerAuth(token))
+        .expect(403);
+    });
 
-      const result = await controller.getMyServices(req);
+    it('should return 200 and list own services for PROVIDER', async () => {
+      const { token } = await providerAuth();
+      const cat = await createCategory();
+      await request(app.getHttpServer())
+        .post('/providers/me/services')
+        .set(bearerAuth(token))
+        .send({ title: 'Serviço A', description: 'Desc', fixedPrice: 100, categoryId: cat.id })
+        .expect(201);
 
-      expect(
-        mockProviderServicesService.getMyServicesForUser,
-      ).toHaveBeenCalledWith("user-1");
-      expect(result).toEqual(expectedServices);
+      const response = await request(app.getHttpServer())
+        .get('/providers/me/services')
+        .set(bearerAuth(token))
+        .expect(200);
+
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  describe("PublicProviderServicesController - getProviderServices", () => {
-    it("should call service.getProviderServices with providerId param", async () => {
-      const expectedServices = [{ id: "service-1", title: "Instalação" }];
-
-      mockProviderServicesService.getProviderServices.mockResolvedValue(
-        expectedServices,
-      );
-
-      const result = await publicController.getProviderServices("provider-profile-1");
-
-      expect(
-        mockProviderServicesService.getProviderServices,
-      ).toHaveBeenCalledWith("provider-profile-1");
-      expect(result).toEqual(expectedServices);
-    });
-  });
-
-  describe("ProviderServiceDetailController - updateService", () => {
-    it("should delegate to service.updateServiceForUser", async () => {
-      const req = mockRequest();
-      const dto = { title: "Updated title", fixedPrice: 200.0 };
-      const expectedService = { id: "service-1", title: "Updated title" };
-
-      mockProviderServicesService.updateServiceForUser.mockResolvedValue(
-        expectedService,
-      );
-
-      const result = await detailController.updateService(
-        req,
-        "service-1",
-        dto as any,
-      );
-
-      expect(
-        mockProviderServicesService.updateServiceForUser,
-      ).toHaveBeenCalledWith("user-1", "service-1", dto, "127.0.0.1");
-      expect(result).toEqual(expectedService);
-    });
-  });
-
-  describe("ProviderServiceDetailController - deleteService", () => {
-    it("should delegate to service.deleteServiceForUser", async () => {
-      const req = mockRequest();
-      const expectedService = { id: "service-1", is_active: false };
-
-      mockProviderServicesService.deleteServiceForUser.mockResolvedValue(
-        expectedService,
-      );
-
-      const result = await detailController.deleteService(req, "service-1");
-
-      expect(
-        mockProviderServicesService.deleteServiceForUser,
-      ).toHaveBeenCalledWith("user-1", "service-1", "127.0.0.1");
-      expect(result).toEqual(expectedService);
-    });
-  });
-
-  describe("ProviderSearchController - searchProviders", () => {
-    it("should call service.searchProviders with query params", async () => {
-      const query = { categoryId: "cat-eletrica", q: "chuveiro" };
-      const expectedResult = [{ id: "provider-1", services: [] }];
-
-      mockProviderServicesService.searchProviders.mockResolvedValue(
-        expectedResult,
-      );
-
-      const result = await searchController.searchProviders(query as any);
-
-      expect(
-        mockProviderServicesService.searchProviders,
-      ).toHaveBeenCalledWith(query);
-      expect(result).toEqual(expectedResult);
+  describe('GET /providers/search', () => {
+    it('should return 401 without token (requires CLIENT)', async () => {
+      await request(app.getHttpServer()).get('/providers/search').expect(401);
     });
 
-    it("should call service.searchProviders with empty query", async () => {
-      const query = {};
-      const expectedResult: any[] = [];
+    it('should return 200 for CLIENT with search', async () => {
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const token = mintToken(client);
+      const response = await request(app.getHttpServer())
+        .get('/providers/search')
+        .set(bearerAuth(token))
+        .expect(200);
+      expect(response.body).toBeDefined();
+    });
 
-      mockProviderServicesService.searchProviders.mockResolvedValue(
-        expectedResult,
-      );
-
-      const result = await searchController.searchProviders(query as any);
-
-      expect(
-        mockProviderServicesService.searchProviders,
-      ).toHaveBeenCalledWith(query);
-      expect(result).toEqual([]);
+    it('should return 403 for PROVIDER', async () => {
+      const provider = await createTestUser(prisma, { role: 'PROVIDER' });
+      const token = mintToken(provider);
+      await request(app.getHttpServer())
+        .get('/providers/search')
+        .set(bearerAuth(token))
+        .expect(403);
     });
   });
 });

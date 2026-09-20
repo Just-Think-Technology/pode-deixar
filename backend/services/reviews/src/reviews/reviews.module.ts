@@ -12,7 +12,6 @@ import { SharedModule } from "../shared/shared.module";
 import { ReviewsRepository } from "./reviews.repository";
 
 @Module({
-
   // --- Imports ---
 
   imports: [PrismaModule, SharedModule],

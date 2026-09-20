@@ -14,7 +14,6 @@ import { SharedModule } from "../shared/shared.module";
 import { ProviderServicesRepository } from "./provider-services.repository";
 
 @Module({
-
   // --- Imports ---
 
   imports: [PrismaModule, SharedModule],

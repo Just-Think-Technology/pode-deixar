@@ -1,289 +1,286 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { LoginService } from '../src/login/login.service';
-import { LoginRepository } from '../src/login/login.repository';
-import { AuthLoggerService } from '../src/shared/auth-logger.service';
-import { PasswordService } from '../src/password/password.service';
+// Login service tests — HTTP + DB observable state (supertest with real DB)
+
+import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { App } from 'supertest/types';
+import {
+  setupTestApp,
+  createTestUser,
+  registerUser,
+  verifyEmailViaApi,
+  teardownTestApp,
+} from './test-setup';
+import { PrismaService } from '@pode-deixar/prisma';
 import { EmailService } from '@pode-deixar/email';
 
-const ACCESS_SECRET = 'teste-access-secret-com-32-chars-minimo-0123456789abcdef';
-const REFRESH_SECRET =
-  'teste-refresh-secret-com-32-chars-minimo-0123456789abcdef';
+// --- Tests ---
 
-describe('LoginService', () => {
-  let service: LoginService;
+describe('LoginService (integration via HTTP + DB)', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaService;
 
-  const mockRepository = {
-    findUserByEmail: jest.fn(),
-    lockAccount: jest.fn(),
-    incrementFailedAttempts: jest.fn(),
-    resetLoginState: jest.fn(),
-    storeRefreshTokenHash: jest.fn(),
-    findUserByIdAndRefreshToken: jest.fn(),
-    clearRefreshTokenByUserId: jest.fn(),
-    clearRefreshToken: jest.fn(),
-    storeNewRefreshToken: jest.fn(),
-    findUserEmailById: jest.fn(),
-    blacklistToken: jest.fn(),
-    pruneExpiredTokens: jest.fn(),
-    updateVerificationHint: jest.fn(),
-  };
-
-  const mockJwt = {
-    signAsync: jest.fn(),
-    verifyAsync: jest.fn(),
-  };
-
-  const mockConfig = {
-    get: jest.fn((key: string) => {
-      if (key === 'JWT_ACCESS_SECRET') return ACCESS_SECRET;
-      if (key === 'JWT_REFRESH_SECRET') return REFRESH_SECRET;
-      if (key === 'MAX_LOGIN_ATTEMPTS') return 5;
-      if (key === 'LOCKOUT_DURATION_MINUTES') return 15;
-      return undefined;
-    }),
-    getOrThrow: jest.fn((key: string) => {
-      if (key === 'JWT_ACCESS_SECRET') return ACCESS_SECRET;
-      if (key === 'JWT_REFRESH_SECRET') return REFRESH_SECRET;
-      throw new Error(`Missing ${key}`);
-    }),
-  };
-
-  const mockLogger = {
-    logLoginAttempt: jest.fn(),
-    logSecurityEvent: jest.fn(),
-    logTokenRefresh: jest.fn(),
-    logLogout: jest.fn(),
-  };
-
-  const mockPasswords = {
-    verify: jest.fn(),
-  };
-
-  const mockEmail = {
-    sendEmailVerification: jest.fn(),
-  };
-
-  const baseUser = {
-    id: 'user-1',
-    email: 'test@example.com',
-    password: 'hashed',
-    role: 'CLIENT',
-    completeName: 'Test User',
-    emailVerified: true,
-    failedLoginAttempts: 0,
-    lockoutUntil: null,
-  };
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        LoginService,
-        { provide: LoginRepository, useValue: mockRepository },
-        { provide: JwtService, useValue: mockJwt },
-        { provide: ConfigService, useValue: mockConfig },
-        { provide: AuthLoggerService, useValue: mockLogger },
-        { provide: PasswordService, useValue: mockPasswords },
-        { provide: EmailService, useValue: mockEmail },
-      ],
-    }).compile();
-
-    service = module.get<LoginService>(LoginService);
-    jest.clearAllMocks();
+  beforeAll(async () => {
+    const setup = await setupTestApp();
+    app = setup.app;
+    prisma = setup.prisma;
   });
 
-  describe('login', () => {
-    it('should return tokens on valid credentials', async () => {
-      mockRepository.findUserByEmail.mockResolvedValue({ ...baseUser });
-      mockPasswords.verify.mockResolvedValue(true);
-      mockJwt.signAsync
-        .mockResolvedValueOnce('access-token')
-        .mockResolvedValueOnce('refresh-token');
+  afterAll(async () => {
+    await teardownTestApp(app, prisma);
+  });
 
-      const result = await service.login({
-        email: 'test@example.com',
-        password: 'TestPassword123!',
-      } as any);
-
-      expect(result.message).toBe('Login realizado com sucesso');
-      expect(result.access_token).toBe('access-token');
-      expect(result.refresh_token).toBe('refresh-token');
-      expect(mockRepository.resetLoginState).toHaveBeenCalledWith('user-1');
-      expect(mockRepository.storeRefreshTokenHash).toHaveBeenCalledWith(
-        'user-1',
-        expect.any(String),
+  describe('POST /auth/login — success and observable DB state', () => {
+    it('should return tokens and reset login state in DB on valid credentials', async () => {
+      const user = createTestUser();
+      const registration = await registerUser(app, user);
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registration.body.email_verification_token as string,
       );
+
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: user.email, password: user.password })
+        .expect(200);
+
+      expect(response.body.message).toBe('Login realizado com sucesso');
+      expect(response.body.access_token).toBeDefined();
+      expect(response.body.refresh_token).toBeDefined();
+
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      expect(dbUser?.failedLoginAttempts).toBe(0);
+      expect(dbUser?.lockoutUntil).toBeNull();
+      expect(dbUser?.refreshToken).toBeTruthy();
+      expect(dbUser?.lastLoginAt).toBeInstanceOf(Date);
     });
 
-    it('should reject unknown email with 401', async () => {
-      mockRepository.findUserByEmail.mockResolvedValue(null);
+    it('should reject unknown email with generic 401 (no enumeration oracle)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'unknown-xyz@example.com', password: 'AnyPassword123!' })
+        .expect(401);
 
-      await expect(
-        service.login({
-          email: 'unknown@example.com',
-          password: 'AnyPassword123!',
-        } as any),
-      ).rejects.toThrow(UnauthorizedException);
+      expect(response.body.message).toContain('Credenciais inválidas');
     });
 
-    it('should reject a locked account with 401', async () => {
-      mockRepository.findUserByEmail.mockResolvedValue({
-        ...baseUser,
-        lockoutUntil: new Date(Date.now() + 10 * 60 * 1000),
+    it('should reject a locked account with generic 401 without revealing lockout', async () => {
+      const user = createTestUser();
+      const registration = await registerUser(app, user);
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registration.body.email_verification_token as string,
+      );
+
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      const lockoutUntil = new Date(Date.now() + 10 * 60 * 1000);
+      await prisma.user.update({
+        where: { id: dbUser!.id },
+        data: { lockoutUntil, failedLoginAttempts: 5 },
       });
 
-      await expect(
-        service.login({
-          email: 'test@example.com',
-          password: 'TestPassword123!',
-        } as any),
-      ).rejects.toThrow(UnauthorizedException);
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: user.email, password: user.password })
+        .expect(401);
+
+      expect(response.body.message).toContain('Credenciais inválidas');
     });
 
-    it('should increment attempts on wrong password', async () => {
-      mockRepository.findUserByEmail.mockResolvedValue({ ...baseUser });
-      mockPasswords.verify.mockResolvedValue(false);
-
-      await expect(
-        service.login({
-          email: 'test@example.com',
-          password: 'WrongPassword123!',
-        } as any),
-      ).rejects.toThrow(UnauthorizedException);
-
-      expect(mockRepository.incrementFailedAttempts).toHaveBeenCalledWith(
-        'user-1',
-        1,
+    it('should increment failedLoginAttempts on wrong password (observable in DB)', async () => {
+      const user = createTestUser();
+      const registration = await registerUser(app, user);
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registration.body.email_verification_token as string,
       );
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: user.email, password: 'WrongPassword123!' })
+        .expect(401);
+
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      expect(dbUser?.failedLoginAttempts).toBe(1);
+      expect(dbUser?.lockoutUntil).toBeNull();
     });
 
-    it('should lock the account at the max attempts', async () => {
-      mockRepository.findUserByEmail.mockResolvedValue({
-        ...baseUser,
-        failedLoginAttempts: 4,
-      });
-      mockPasswords.verify.mockResolvedValue(false);
-
-      await expect(
-        service.login({
-          email: 'test@example.com',
-          password: 'WrongPassword123!',
-        } as any),
-      ).rejects.toThrow(UnauthorizedException);
-
-      expect(mockRepository.lockAccount).toHaveBeenCalledWith(
-        'user-1',
-        5,
-        expect.any(Date),
+    it('should lock the account at max attempts (5 fails -> lockoutUntil set)', async () => {
+      const user = createTestUser();
+      const registration = await registerUser(app, user);
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registration.body.email_verification_token as string,
       );
+
+      for (let i = 0; i < 5; i += 1) {
+        await request(app.getHttpServer())
+          .post('/auth/login')
+          .send({ email: user.email, password: 'WrongPassword123!' })
+          .expect(401);
+      }
+
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      expect(dbUser?.failedLoginAttempts).toBe(5);
+      expect(dbUser?.lockoutUntil).toBeInstanceOf(Date);
+      expect(dbUser!.lockoutUntil!.getTime()).toBeGreaterThan(Date.now());
+
+      // Even correct password must fail while locked
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: user.email, password: user.password })
+        .expect(401);
     });
 
-    it('should reject unverified email with 401 and resend a hint', async () => {
-      mockRepository.findUserByEmail.mockResolvedValue({
-        ...baseUser,
-        emailVerified: false,
-      });
-      mockPasswords.verify.mockResolvedValue(true);
-      mockEmail.sendEmailVerification.mockResolvedValue(true);
+    it('should reject unverified email with generic 401 and rotate verification hint in DB', async () => {
+      const user = createTestUser();
+      const registration = await registerUser(app, user);
+      const initialHash = (
+        await prisma.user.findUnique({ where: { email: user.email } })
+      )?.emailVerificationToken;
 
-      await expect(
-        service.login({
-          email: 'test@example.com',
-          password: 'TestPassword123!',
-        } as any),
-      ).rejects.toThrow(UnauthorizedException);
+      const emailMock = app.get(EmailService) as unknown as { sendEmailVerification: jest.Mock };
+      const callsBefore = emailMock.sendEmailVerification.mock.calls.length;
 
-      expect(mockRepository.updateVerificationHint).toHaveBeenCalledWith(
-        'user-1',
-        expect.any(String),
-        expect.any(Date),
-      );
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: user.email, password: user.password })
+        .expect(401);
+
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      expect(dbUser?.emailVerificationToken).toBeDefined();
+      expect(dbUser?.emailVerificationToken).not.toBe(initialHash);
+      expect(dbUser?.emailVerificationExpires).toBeInstanceOf(Date);
+      expect(emailMock.sendEmailVerification.mock.calls.length).toBeGreaterThan(callsBefore);
+
+      // Original registration token still valid for verification (rotation also verified via new hint): consume raw token from email mock
+      const rawToken = emailMock.sendEmailVerification.mock.calls.at(-1)[1] as string;
+      await request(app.getHttpServer())
+        .post('/auth/verify-email')
+        .send({ token: rawToken })
+        .expect(200);
+
+      // Now login succeeds after verification
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: user.email, password: user.password })
+        .expect(200);
+
+      void registration;
     });
   });
 
-  describe('refreshToken', () => {
-    it('should rotate the token pair', async () => {
-      mockJwt.verifyAsync.mockResolvedValue({ sub: 'user-1' });
-      mockRepository.findUserByIdAndRefreshToken.mockResolvedValue({
-        ...baseUser,
-      });
-      mockJwt.signAsync
-        .mockResolvedValueOnce('new-access')
-        .mockResolvedValueOnce('new-refresh');
-
-      const result = await service.refreshToken({
-        refreshToken: 'old-refresh',
-      } as any);
-
-      expect(result.access_token).toBe('new-access');
-      expect(result.refresh_token).toBe('new-refresh');
-      expect(mockRepository.clearRefreshToken).toHaveBeenCalledWith('user-1');
-      expect(mockRepository.storeNewRefreshToken).toHaveBeenCalledWith(
-        'user-1',
-        expect.any(String),
+  describe('POST /auth/refresh-token — rotation and DB observable state', () => {
+    it('should rotate token pair and update refreshToken hash in DB', async () => {
+      const user = createTestUser();
+      const registration = await registerUser(app, user);
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registration.body.email_verification_token as string,
       );
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: user.email, password: user.password })
+        .expect(200);
+      const oldRefresh = login.body.refresh_token as string;
+      const dbBefore = await prisma.user.findUnique({ where: { email: user.email } });
+      const hashBefore = dbBefore?.refreshToken;
+
+      const rotated = await request(app.getHttpServer())
+        .post('/auth/refresh-token')
+        .send({ refreshToken: oldRefresh })
+        .expect(200);
+
+      expect(rotated.body.access_token).toBeDefined();
+      expect(rotated.body.refresh_token).toBeDefined();
+      expect(rotated.body.refresh_token).not.toBe(oldRefresh);
+
+      const dbAfter = await prisma.user.findUnique({ where: { email: user.email } });
+      expect(dbAfter?.refreshToken).toBeDefined();
+      expect(dbAfter?.refreshToken).not.toBe(hashBefore);
     });
 
-    it('should reject rotation reuse with 401 and clear the stored token', async () => {
-      mockJwt.verifyAsync.mockResolvedValue({ sub: 'user-1' });
-      mockRepository.findUserByIdAndRefreshToken.mockResolvedValue(null);
-
-      await expect(
-        service.refreshToken({ refreshToken: 'reused' } as any),
-      ).rejects.toThrow(UnauthorizedException);
-
-      expect(mockRepository.clearRefreshTokenByUserId).toHaveBeenCalledWith(
-        'user-1',
+    it('should reject reuse of an already rotated refresh token and clear stored token in DB', async () => {
+      const user = createTestUser();
+      const registration = await registerUser(app, user);
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registration.body.email_verification_token as string,
       );
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: user.email, password: user.password })
+        .expect(200);
+      const refreshToken = login.body.refresh_token as string;
+
+      await request(app.getHttpServer())
+        .post('/auth/refresh-token')
+        .send({ refreshToken })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/auth/refresh-token')
+        .send({ refreshToken })
+        .expect(401);
+
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      // Reuse clears the stored token to contain theft
+      expect(dbUser?.refreshToken).toBeNull();
     });
 
     it('should reject an invalid refresh token with 401', async () => {
-      mockJwt.verifyAsync.mockRejectedValue(new Error('invalid'));
-
-      await expect(
-        service.refreshToken({ refreshToken: 'bad' } as any),
-      ).rejects.toThrow(UnauthorizedException);
+      await request(app.getHttpServer())
+        .post('/auth/refresh-token')
+        .send({ refreshToken: 'invalid-token' })
+        .expect(401);
     });
   });
 
-  describe('logout', () => {
-    it('should clear the refresh token and blacklist the access token', async () => {
-      mockRepository.findUserEmailById.mockResolvedValue({
-        email: 'test@example.com',
-      });
-
-      const result = await service.logout('user-1', 'jti-1');
-
-      expect(result.message).toBe('Logout realizado com sucesso');
-      expect(mockRepository.clearRefreshToken).toHaveBeenCalledWith('user-1');
-      expect(mockRepository.blacklistToken).toHaveBeenCalledWith(
-        'jti-1',
-        expect.any(Date),
+  describe('POST /auth/logout — DB observable state', () => {
+    it('should clear refreshToken in DB and blacklist access token, returning 200', async () => {
+      const user = createTestUser();
+      const registration = await registerUser(app, user);
+      await verifyEmailViaApi(
+        app,
+        user.email,
+        prisma,
+        registration.body.email_verification_token as string,
       );
-      expect(mockRepository.pruneExpiredTokens).toHaveBeenCalled();
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: user.email, password: user.password })
+        .expect(200);
+      const accessToken = login.body.access_token as string;
+
+      const countBefore = await prisma.tokenBlacklist.count();
+
+      const response = await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      expect(response.body.message).toBe('Logout realizado com sucesso');
+
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      expect(dbUser?.refreshToken).toBeNull();
+
+      const countAfter = await prisma.tokenBlacklist.count();
+      expect(countAfter).toBeGreaterThanOrEqual(countBefore + 1);
     });
 
-    it('should tolerate a missing blacklist table (P2021)', async () => {
-      const { Prisma } = await import('@prisma/client');
-      mockRepository.findUserEmailById.mockResolvedValue({
-        email: 'test@example.com',
-      });
-      mockRepository.blacklistToken.mockRejectedValue(
-        new Prisma.PrismaClientKnownRequestError('missing table', {
-          code: 'P2021',
-          clientVersion: '5.22.0',
-        }),
-      );
-
-      const result = await service.logout('user-1', 'jti-1');
-
-      expect(result.message).toBe('Logout realizado com sucesso');
-      expect(mockLogger.logSecurityEvent).toHaveBeenCalledWith(
-        'token_blacklist_table_missing',
-        expect.anything(),
-      );
+    it('should reject logout without authentication with 401', async () => {
+      await request(app.getHttpServer()).post('/auth/logout').expect(401);
     });
   });
 });

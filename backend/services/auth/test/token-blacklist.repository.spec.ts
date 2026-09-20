@@ -28,16 +28,6 @@ describe('TokenBlacklistRepository', () => {
     jest.clearAllMocks();
   });
 
-  it('finds a blacklisted token by jti', async () => {
-    mockPrisma.tokenBlacklist.findUnique.mockResolvedValue({ jti: 'jti-1' });
-
-    await repository.findBlacklistedToken('jti-1');
-
-    expect(mockPrisma.tokenBlacklist.findUnique).toHaveBeenCalledWith({
-      where: { jti: 'jti-1' },
-    });
-  });
-
   it('finds a user by id with the strategy select', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
 

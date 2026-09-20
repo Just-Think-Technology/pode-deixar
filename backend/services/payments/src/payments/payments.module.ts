@@ -9,7 +9,6 @@ import { PaymentLoggerService } from "./payment-logger.service";
 import { PaymentsRepository } from "./payments.repository";
 
 @Module({
-
   // --- Controllers ---
 
   controllers: [PaymentsController, ProviderFinanceController],

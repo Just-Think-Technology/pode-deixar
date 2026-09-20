@@ -8,7 +8,6 @@ const ResponseLoggerInterceptor =
   createResponseLoggerInterceptor("reviews-service");
 
 @Module({
-
   // --- Providers ---
 
   providers: [GlobalExceptionFilter, ResponseLoggerInterceptor],

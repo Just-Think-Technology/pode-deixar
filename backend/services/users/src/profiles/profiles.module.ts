@@ -10,7 +10,6 @@ import { SharedModule } from "../shared/shared.module";
 import { ProfilesRepository } from "./profiles.repository";
 
 @Module({
-
   // --- Imports ---
 
   imports: [PrismaModule, SharedModule],

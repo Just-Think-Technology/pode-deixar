@@ -26,3 +26,17 @@
 - **Dockerfile scan:** Hadolint
 
 A consolidated summary fails the pipeline if any job fails.
+
+## TDD red → green
+
+- Backend `quick` runs `lint` + `typecheck` + `test` per service; frontend
+  `quick`/`deep` run `lint`, `test:unit`, `build`, `typecheck`, `test:e2e`.
+  A failing `test` blocks merge — the green state is CI-enforced.
+- The **red commit** (failing test before implementation) is review-enforced:
+  `task-checklists.md` requires a proof commit before the green commit.
+  Reviewers check `git log --stat` for the red→green sequence; CI does not
+  auto-reject missing red, but the pipeline would have failed on the red
+  commit if it were pushed alone (test failure), which is the intended signal.
+- Optional script `scripts/check-red-commit.sh` (if present) can be wired as a
+  non-blocking CI step: it asserts the first commit touching `**/*.spec.*`
+  precedes the first commit touching the implementation path.
