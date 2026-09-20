@@ -111,7 +111,7 @@ function AuthFormShell({
     );
 }
 
-function EmailField({ error }: { error?: string }) {
+function EmailField({ error, disabled }: { error?: string; disabled?: boolean }) {
     return (
         <Field>
             <FieldLabel htmlFor="email">E-mail</FieldLabel>
@@ -126,6 +126,7 @@ function EmailField({ error }: { error?: string }) {
                     placeholder="seu@email.com"
                     className="h-11 pl-9"
                     aria-invalid={!!error}
+                    disabled={disabled}
                 />
             </div>
             <FieldError message={error} />
@@ -136,12 +137,14 @@ function EmailField({ error }: { error?: string }) {
 export function PasswordField({
     autoComplete,
     error,
+    disabled,
     name = "password",
     label = "Senha",
     placeholder = "Digite sua senha",
 }: {
     autoComplete: "current-password" | "new-password";
     error?: string;
+    disabled?: boolean;
     name?: string;
     label?: string;
     placeholder?: string;
@@ -162,6 +165,7 @@ export function PasswordField({
                     placeholder={placeholder}
                     className="h-11 pl-9"
                     aria-invalid={!!error}
+                    disabled={disabled}
                 />
             </div>
             <FieldError message={error} />
@@ -169,7 +173,7 @@ export function PasswordField({
     );
 }
 
-function PostalCodeField({ error }: { error?: string }) {
+function PostalCodeField({ error, disabled }: { error?: string; disabled?: boolean }) {
     return (
         <Field>
             <FieldLabel htmlFor="postal_code">CEP</FieldLabel>
@@ -183,6 +187,7 @@ function PostalCodeField({ error }: { error?: string }) {
                     placeholder="12345-678"
                     className="h-11 pl-9"
                     aria-invalid={!!error}
+                    disabled={disabled}
                 />
             </div>
             <FieldError message={error} />
@@ -397,15 +402,16 @@ export function ClientLoginForm() {
         >
             <form className="space-y-6" onSubmit={onSubmit}>
                 <FieldGroup>
-                    <EmailField error={fieldErrors.email} />
+                    <EmailField error={fieldErrors.email} disabled={loading} />
                     <PasswordField
                         autoComplete="current-password"
                         error={fieldErrors.password}
+                        disabled={loading}
                     />
                     <RememberMeField />
                 </FieldGroup>
                 <AuthFormActions
-                    submitLabel="Entrar"
+                    submitLabel={role.loginLabel}
                     loading={loading}
                     error={error}
                 />
@@ -453,15 +459,16 @@ export function WorkerLoginForm() {
         >
             <form className="space-y-6" onSubmit={onSubmit}>
                 <FieldGroup>
-                    <EmailField error={fieldErrors.email} />
+                    <EmailField error={fieldErrors.email} disabled={loading} />
                     <PasswordField
                         autoComplete="current-password"
                         error={fieldErrors.password}
+                        disabled={loading}
                     />
                     <RememberMeField />
                 </FieldGroup>
                 <AuthFormActions
-                    submitLabel="Entrar"
+                    submitLabel={role.loginLabel}
                     loading={loading}
                     error={error}
                 />
@@ -520,10 +527,11 @@ export function ClientRegisterForm() {
                             autoComplete="name"
                             placeholder="Seu nome"
                             aria-invalid={!!fieldErrors.complete_name}
+                            disabled={loading}
                         />
                         <FieldError message={fieldErrors.complete_name} />
                     </Field>
-                    <EmailField error={fieldErrors.email} />
+                    <EmailField error={fieldErrors.email} disabled={loading} />
                     <Field>
                         <FieldLabel htmlFor="phone">Telefone</FieldLabel>
                         <div className="relative">
@@ -537,14 +545,16 @@ export function ClientRegisterForm() {
                                 placeholder="(11) 99999-9999"
                                 className="h-11 pl-9"
                                 aria-invalid={!!fieldErrors.phone}
+                                disabled={loading}
                             />
                         </div>
                         <FieldError message={fieldErrors.phone} />
                     </Field>
-                    <PostalCodeField error={fieldErrors.postal_code} />
+                    <PostalCodeField error={fieldErrors.postal_code} disabled={loading} />
                     <PasswordField
                         autoComplete="new-password"
                         error={fieldErrors.password}
+                        disabled={loading}
                     />
                     <Field>
                         <FieldLabel htmlFor="confirm-password">
@@ -559,6 +569,7 @@ export function ClientRegisterForm() {
                             placeholder="Confirme sua senha"
                             className="h-11"
                             aria-invalid={!!fieldErrors["confirm-password"]}
+                            disabled={loading}
                         />
                         <FieldError message={fieldErrors["confirm-password"]} />
                     </Field>
@@ -615,10 +626,11 @@ export function WorkerRegisterForm() {
                             autoComplete="name"
                             placeholder="Seu nome"
                             aria-invalid={!!fieldErrors.complete_name}
+                            disabled={loading}
                         />
                         <FieldError message={fieldErrors.complete_name} />
                     </Field>
-                    <EmailField error={fieldErrors.email} />
+                    <EmailField error={fieldErrors.email} disabled={loading} />
                     <Field>
                         <FieldLabel htmlFor="phone">Telefone</FieldLabel>
                         <div className="relative">
@@ -632,14 +644,16 @@ export function WorkerRegisterForm() {
                                 placeholder="(11) 99999-9999"
                                 className="h-11 pl-9"
                                 aria-invalid={!!fieldErrors.phone}
+                                disabled={loading}
                             />
                         </div>
                         <FieldError message={fieldErrors.phone} />
                     </Field>
-                    <PostalCodeField error={fieldErrors.postal_code} />
+                    <PostalCodeField error={fieldErrors.postal_code} disabled={loading} />
                     <PasswordField
                         autoComplete="new-password"
                         error={fieldErrors.password}
+                        disabled={loading}
                     />
                     <Field>
                         <FieldLabel htmlFor="confirm-password">
@@ -654,6 +668,7 @@ export function WorkerRegisterForm() {
                             placeholder="Confirme sua senha"
                             className="h-11"
                             aria-invalid={!!fieldErrors["confirm-password"]}
+                            disabled={loading}
                         />
                         <FieldError message={fieldErrors["confirm-password"]} />
                     </Field>

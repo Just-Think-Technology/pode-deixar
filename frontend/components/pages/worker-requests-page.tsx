@@ -77,6 +77,7 @@ export default function WorkerRequestsPage({
                   </div>
                   <Badge
                     variant="outline"
+                    title={getRequestStatusLabel(request.status)}
                     className={cn(
                       STATUS_BADGE_CLASS[request.status] ??
                         "border-slate-200 bg-slate-50 text-slate-700",
@@ -115,7 +116,7 @@ export default function WorkerRequestsPage({
                       "w-full",
                     )}
                   >
-                    Ver e responder
+                    Ver detalhes
                   </Link>
                 </CardFooter>
               </Card>

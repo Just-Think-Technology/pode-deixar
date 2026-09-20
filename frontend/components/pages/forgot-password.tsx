@@ -55,11 +55,18 @@ export function ForgotPasswordForm() {
                 <form className="space-y-6 bg-card/95 shadow-sm p-6 rounded-lg" onSubmit={handleForgotPassword}>
                     <div className="flex flex-col gap-2">
                         <Label className="text-sm font-medium text-foreground" htmlFor="email">E-mail</Label>
-                        <Input className="h-11 pl-9" id="email" name="email" type="email" required autoComplete="email" placeholder="digite seu e-mail" disabled={loading} />
+                        <Input className="h-11 pl-9" id="email" name="email" type="email" required autoComplete="email" placeholder="seu@email.com" disabled={loading} />
                     </div>
                     <Button type="submit" className="w-full h-11" disabled={loading}>
                         {loading ? "Aguarde..." : "Enviar"}
                     </Button>
+                    <p className="text-center text-xs text-muted-foreground">
+                        Não recebeu? Verifique spam ou{" "}
+                        <Link href="/help" className="font-medium text-primary hover:underline">
+                            fale com suporte
+                        </Link>
+                        .
+                    </p>
                 </form>
             </main>
         </AuthBackground>

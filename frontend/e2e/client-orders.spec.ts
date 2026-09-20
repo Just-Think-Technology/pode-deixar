@@ -24,7 +24,7 @@ test.describe("Client requests (JTT-79)", () => {
     ).toBeVisible();
     await expect(page.getByText("2 propostas").first()).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "Ver propostas" }).first(),
+      page.getByRole("link", { name: "Ver detalhes" }).first(),
     ).toBeVisible();
   });
 
