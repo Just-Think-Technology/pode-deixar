@@ -167,8 +167,8 @@ describe("lib/toast wrappers", () => {
   it("showError handles unknown with generic fallback", () => {
     showError(null);
     expect(toastMocks.error).toHaveBeenCalledWith(
-      "Ocorreu um erro inesperado. Tente novamente.",
-      expect.any(Object),
+      "Ocorreu um erro inesperado. Verifique sua conexão e tente novamente — se persistir, contate o suporte.",
+      expect.objectContaining({ duration: 5000 }),
     );
   });
 
