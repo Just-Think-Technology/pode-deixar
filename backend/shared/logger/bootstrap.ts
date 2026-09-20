@@ -38,6 +38,15 @@ export async function bootstrapService(
     logger: false,
   });
 
+  // API versioning — all controller routes are served under /api/v1; health
+  // probes stay at /health (+ /health/ready, /health/live) for Caddy
+  // (handle /api/v1/*/health* → strip to /health) and direct k8s probes.
+  // Documented choice: health excluded from prefix; alternative would version it
+  // as /api/v1/health and require Caddy health handles to strip /api/v1 only.
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['health', 'health/ready', 'health/live'],
+  });
+
   // Explicit body limit — defense-in-depth for DoS (uploads use multipart, not JSON)
   app.getHttpAdapter().getInstance().use(require('express').json({ limit: '100kb' }));
 
