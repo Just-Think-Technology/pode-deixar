@@ -422,7 +422,7 @@ export class ServiceOrdersService {
 
     this.loggerService.logServiceOrderCancelled(userId, orderId, ip);
 
-    // Notify counterpart
+    // Notify counterpart — uses SERVICE type with anti-duplicate existsRecent
     try {
       const counterpartId =
         role === "CLIENT" ? existing.providerId : existing.clientId;
@@ -430,7 +430,7 @@ export class ServiceOrdersService {
         await this.repository.createStatusNotification(
           counterpartId,
           orderId,
-          "ORDER_CANCELLED",
+          "SERVICE",
           "Contratação cancelada",
           "A contratação foi cancelada",
         );
@@ -511,7 +511,7 @@ export class ServiceOrdersService {
         await this.repository.createStatusNotification(
           orderForNotify.clientId,
           orderId,
-          "ORDER_STARTED",
+          "SERVICE",
           "Serviço iniciado",
           "O prestador iniciou o serviço",
         );

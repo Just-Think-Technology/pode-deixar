@@ -41,6 +41,7 @@ model User {
   updatedAt               DateTime           @updatedAt @map("updated_at")
   clientProfile           ClientProfile?
   providerProfile         ProviderProfile?
+  notifications           Notification[]
 
   @@map("users")
 }
@@ -314,18 +315,25 @@ model TokenBlacklist {
   @@map("token_blacklist")
 }
 
-model Notification {
-  id        Int      @id @default(autoincrement())
-  recipient String   @map("recipient")
-  type      String   @map("type")
-  title     String   @map("title")
-  message   String   @map("message")
-  relatedId String?  @map("related_id")
-  relatedType String? @map("related_type")
-  read      Boolean  @default(false) @map("read")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+enum NotificationType {
+  CONVERSATION
+  SERVICE
+}
 
-  @@unique([recipient, read, createdAt])
+model Notification {
+  id             String           @id @default(cuid()) @map("id")
+  userId         String           @map("user_id")
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           NotificationType @map("type")
+  title          String           @map("title")
+  message        String           @db.Text @map("message")
+  isRead         Boolean          @default(false) @map("is_read")
+  conversationId String?          @map("conversation_id")
+  contractId     String?          @map("contract_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  readAt         DateTime?        @map("read_at")
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, type])
   @@map("notifications")
 }

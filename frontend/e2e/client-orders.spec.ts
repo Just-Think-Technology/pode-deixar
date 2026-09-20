@@ -20,7 +20,7 @@ test.describe("Client requests (JTT-79)", () => {
     ).toBeVisible();
 
     await expect(
-      page.getByText("Conserto de vazamento no chuveiro"),
+      page.getByText("Conserto de vazamento no chuveiro").first(),
     ).toBeVisible();
     await expect(page.getByText("2 propostas").first()).toBeVisible();
     await expect(
