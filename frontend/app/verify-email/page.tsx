@@ -93,14 +93,21 @@ function ResendVerificationForm({
   );
 }
 
+function resolveLoginHref(role?: string | null): string {
+    if (role === "PROVIDER" || role === "worker") return "/login/worker";
+    return "/login/client";
+}
+
 function VerifyEmailContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
+    const roleParam = searchParams.get("role");
 
     const [status, setStatus] = useState<VerifyStatus>(token ? "loading" : "idle");
     const [message, setMessage] = useState<string | null>(null);
     const [resendLoading, setResendLoading] = useState(false);
+    const [verifiedRole, setVerifiedRole] = useState<string | null>(roleParam);
 
     const runVerify = useCallback(async (verifyToken: string) => {
         setStatus("loading");
@@ -110,14 +117,16 @@ function VerifyEmailContent() {
             setStatus("success");
             setMessage(data.message);
             toast.success(data.message);
-            setTimeout(() => router.push("/login/client"), 2000);
+            const loginRole = (data as { role?: string }).role ?? roleParam;
+            if (loginRole) setVerifiedRole(loginRole);
+            setTimeout(() => router.push(resolveLoginHref(loginRole)), 2000);
         } catch (err) {
             setStatus("error");
             const msg = getApiErrorMessage(err);
             setMessage(msg);
             toast.error(msg);
         }
-    }, [router]);
+    }, [router, roleParam]);
 
     useEffect(() => {
         if (token) {
@@ -201,7 +210,7 @@ function VerifyEmailContent() {
                         />
 
                         <p className="text-center text-sm text-muted-foreground">
-                            <Link href="/login/client" className="font-semibold text-primary hover:underline">
+                            <Link href={resolveLoginHref(verifiedRole)} className="font-semibold text-primary hover:underline">
                                 Ir para login
                             </Link>
                         </p>

@@ -64,8 +64,11 @@ export class EmailService {
     }
   }
 
-  async sendEmailVerification(email: string, token: string): Promise<boolean> {
-    const verificationUrl = `${this.configService.get<string>('FRONTEND_URL')}/verify-email?token=${encodeURIComponent(token)}`;
+  async sendEmailVerification(email: string, token: string, role?: string): Promise<boolean> {
+    const baseUrl = `${this.configService.get<string>('FRONTEND_URL')}/verify-email?token=${encodeURIComponent(token)}`;
+    const verificationUrl = role
+      ? `${baseUrl}&role=${encodeURIComponent(role)}`
+      : baseUrl;
 
     return this.sendMail({
       to: email,
