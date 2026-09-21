@@ -9,7 +9,7 @@ vi.mock('@/lib/auth/session.server', () => ({
   getAccessToken: vi.fn(),
 }))
 vi.mock('@/api/client', () => ({
-  getApiBaseUrl: () => 'https://api.test',
+  getApiBaseUrl: () => 'https://api.test/api/v1',
 }))
 
 import { getAccessToken } from '@/lib/auth/session.server'
@@ -73,7 +73,7 @@ describe('Image actions resource-ID allowlist', () => {
     await deleteServiceImageAction(UUID, UUID)
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
-      `https://api.test/providers/me/services/${UUID}/images/${UUID}`,
+      `https://api.test/api/v1/providers/me/services/${UUID}/images/${UUID}`,
     )
   })
 
@@ -85,7 +85,7 @@ describe('Image actions resource-ID allowlist', () => {
   it('encodes special chars so mock- ids cannot smuggle path separators', async () => {
     await deleteServiceImageAction('mock-svc-001', 'mock-a/b')
     expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
-      'https://api.test/providers/me/services/mock-svc-001/images/mock-a%2Fb',
+      'https://api.test/api/v1/providers/me/services/mock-svc-001/images/mock-a%2Fb',
     )
   })
 })

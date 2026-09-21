@@ -45,7 +45,7 @@ describe('api/client/proposals (integration)', () => {
     const result = await api.acceptProposal('tok-abc', 'p1')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://api.test/proposals/p1/accept',
+      'http://api.test/api/v1/proposals/p1/accept',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -65,7 +65,7 @@ describe('api/client/proposals (integration)', () => {
     const result = await api.rejectProposal('tok-abc', 'p1')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://api.test/proposals/p1/reject',
+      'http://api.test/api/v1/proposals/p1/reject',
       expect.objectContaining({ method: 'POST' }),
     )
     expect(result).toEqual({ id: 'p1', status: 'REJECTED' })

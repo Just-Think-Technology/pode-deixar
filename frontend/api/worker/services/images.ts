@@ -1,6 +1,6 @@
 // Worker service images API — image upload fetcher
 
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth, getApiBaseUrl } from "@/api/client";
 import type { ServiceImage } from "@/lib/auth/types";
 
 export async function uploadServiceImage(
@@ -11,8 +11,7 @@ export async function uploadServiceImage(
   const formData = new FormData();
   formData.append("file", file);
 
-  const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  const res = await fetch(`${baseUrl}/providers/me/services/${serviceId}/images`, {
+  const res = await fetch(`${getApiBaseUrl()}/providers/me/services/${serviceId}/images`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,

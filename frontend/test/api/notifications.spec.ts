@@ -55,7 +55,7 @@ describe("api/notifications (integration)", () => {
     await getNotifications("tok");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://api.test/notifications",
+      "http://api.test/api/v1/notifications",
       expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer tok" }) }),
     );
   });
@@ -67,7 +67,7 @@ describe("api/notifications (integration)", () => {
     const result = await countUnread("tok-123");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://api.test/notifications/unread-count",
+      "http://api.test/api/v1/notifications/unread-count",
       expect.objectContaining({
         method: "GET",
         headers: expect.objectContaining({ Authorization: "Bearer tok-123" }),
@@ -82,7 +82,7 @@ describe("api/notifications (integration)", () => {
 
     await markNotificationRead("tok", "notif-1");
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://api.test/notifications/notif-1/read",
+      "http://api.test/api/v1/notifications/notif-1/read",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({ Authorization: "Bearer tok" }),
@@ -93,7 +93,7 @@ describe("api/notifications (integration)", () => {
     fetchMock.mockResolvedValue(jsonResponse({ count: 1 }));
     await markRead("tok", "notif-2");
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://api.test/notifications/notif-2/read",
+      "http://api.test/api/v1/notifications/notif-2/read",
       expect.any(Object),
     );
   });
@@ -105,7 +105,7 @@ describe("api/notifications (integration)", () => {
     await markAllRead("tok");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://api.test/notifications/read-all",
+      "http://api.test/api/v1/notifications/read-all",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({ Authorization: "Bearer tok" }),

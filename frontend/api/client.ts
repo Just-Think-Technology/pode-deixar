@@ -2,19 +2,27 @@
 
 const FETCH_TIMEOUT = 10_000;
 
+export const API_PREFIX = '/api/v1';
+
 export function getApiBaseUrl(): string {
   const internalUrl = process.env.BACKEND_INTERNAL_URL;
   const publicUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   // Prefer internal Docker network URL in RSC/actions (server-side)
-  const baseUrl =
+  const rawBaseUrl =
     typeof window === "undefined" && internalUrl ? internalUrl : publicUrl;
 
-  if (!baseUrl) {
+  if (!rawBaseUrl) {
     throw new Error(
       "NEXT_PUBLIC_BACKEND_URL não está definida no .env",
     );
   }
-  return baseUrl;
+  // Normalize: strip trailing slash and legacy /api or /api/v1 suffix to avoid
+  // duplication (e.g. http://localhost:8080/api -> http://localhost:8080/api/v1)
+  const normalized = rawBaseUrl
+    .replace(/\/+$/, '')
+    .replace(/\/api\/v1$/, '')
+    .replace(/\/api$/, '');
+  return `${normalized}${API_PREFIX}`;
 }
 
 export class ApiError extends Error {
