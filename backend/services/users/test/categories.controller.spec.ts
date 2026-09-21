@@ -29,7 +29,7 @@ describe('CategoriesController (HTTP)', () => {
 
   describe('GET /categories', () => {
     it('should return 200 without authentication (public)', async () => {
-      const response = await request(app.getHttpServer()).get('/categories').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/v1/categories').expect(200);
       expect(Array.isArray(response.body)).toBe(true);
     });
 
@@ -37,7 +37,7 @@ describe('CategoriesController (HTTP)', () => {
       const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
       await prisma.category.create({ data: { name: `Cat ${suffix}`, slug: `cat-${suffix}` } });
 
-      const response = await request(app.getHttpServer()).get('/categories').expect(200);
+      const response = await request(app.getHttpServer()).get('/api/v1/categories').expect(200);
       const item = response.body.find((c: any) => c.slug === `cat-${suffix}`);
       expect(item).toBeDefined();
       expect(item).toHaveProperty('id');
@@ -49,7 +49,7 @@ describe('CategoriesController (HTTP)', () => {
   describe('POST /categories (admin)', () => {
     it('should return 401 without token', async () => {
       await request(app.getHttpServer())
-        .post('/categories')
+        .post('/api/v1/categories')
         .send({ name: 'Teste', slug: 'teste' })
         .expect(401);
     });
@@ -59,7 +59,7 @@ describe('CategoriesController (HTTP)', () => {
       const token = mintToken(user);
 
       await request(app.getHttpServer())
-        .post('/categories')
+        .post('/api/v1/categories')
         .set(bearerAuth(token))
         .send({ name: 'Teste', slug: 'teste-2' })
         .expect(403);
@@ -71,7 +71,7 @@ describe('CategoriesController (HTTP)', () => {
       const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
       const response = await request(app.getHttpServer())
-        .post('/categories')
+        .post('/api/v1/categories')
         .set(bearerAuth(token))
         .send({ name: `Admin Cat ${suffix}`, slug: `admin-cat-${suffix}` })
         .expect(201);
@@ -88,13 +88,13 @@ describe('CategoriesController (HTTP)', () => {
       const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
       await request(app.getHttpServer())
-        .post('/categories')
+        .post('/api/v1/categories')
         .set(bearerAuth(token))
         .send({ name: `Dup ${suffix}`, slug: `dup-${suffix}` })
         .expect(201);
 
       await request(app.getHttpServer())
-        .post('/categories')
+        .post('/api/v1/categories')
         .set(bearerAuth(token))
         .send({ name: `Dup ${suffix}`, slug: `dup-${suffix}-other` })
         .expect(409);
@@ -104,14 +104,14 @@ describe('CategoriesController (HTTP)', () => {
   describe('PATCH /categories/:id (admin)', () => {
     it('should return 401 without token and 403 for CLIENT', async () => {
       await request(app.getHttpServer())
-        .patch('/categories/00000000-0000-0000-0000-000000000000')
+        .patch('/api/v1/categories/00000000-0000-0000-0000-000000000000')
         .send({ name: 'X' })
         .expect(401);
 
       const client = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(client);
       await request(app.getHttpServer())
-        .patch('/categories/00000000-0000-0000-0000-000000000000')
+        .patch('/api/v1/categories/00000000-0000-0000-0000-000000000000')
         .set(bearerAuth(token))
         .send({ name: 'X' })
         .expect(403);
@@ -121,7 +121,7 @@ describe('CategoriesController (HTTP)', () => {
       const admin = await createTestUser(prisma, { role: 'ADMIN' });
       const token = mintToken(admin);
       await request(app.getHttpServer())
-        .patch('/categories/00000000-0000-0000-0000-000000000000')
+        .patch('/api/v1/categories/00000000-0000-0000-0000-000000000000')
         .set(bearerAuth(token))
         .send({ name: 'Atualizado' })
         .expect(404);

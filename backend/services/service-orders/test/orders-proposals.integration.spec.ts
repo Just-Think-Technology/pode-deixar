@@ -55,7 +55,7 @@ describe('Orders & Proposals (integration)', () => {
 
   async function createOrder(token: string, categoryId: string) {
     return request(app.getHttpServer())
-      .post('/services/me')
+      .post('/api/v1/services/me')
       .set(bearerAuth(token))
       .send({
         title: 'Consertar vazamento',
@@ -81,7 +81,7 @@ describe('Orders & Proposals (integration)', () => {
       const { token } = await clientAuth();
 
       await request(app.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .set(bearerAuth(token))
         .send({})
         .expect(400);
@@ -96,13 +96,13 @@ describe('Orders & Proposals (integration)', () => {
       };
 
       await request(app.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .send(dto)
         .expect(401);
 
       const { token } = await providerAuth();
       await request(app.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .set(bearerAuth(token))
         .send(dto)
         .expect(403);
@@ -117,7 +117,7 @@ describe('Orders & Proposals (integration)', () => {
       await createOrder(token, cat.id);
 
       const response = await request(app.getHttpServer())
-        .get('/services/me')
+        .get('/api/v1/services/me')
         .set(bearerAuth(token))
         .expect(200);
 
@@ -134,7 +134,7 @@ describe('Orders & Proposals (integration)', () => {
       const orderId = (await createOrder(client.token, cat.id)).body.id;
 
       const response = await request(app.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(bearerAuth(provider.token))
         .send({
           serviceOrderId: orderId,
@@ -160,13 +160,13 @@ describe('Orders & Proposals (integration)', () => {
       };
 
       await request(app.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(headers)
         .send(dto)
         .expect(201);
 
       await request(app.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(headers)
         .send(dto)
         .expect(400);
@@ -177,7 +177,7 @@ describe('Orders & Proposals (integration)', () => {
       const provider = await providerAuth();
 
       await request(app.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(bearerAuth(client.token))
         .send({
           serviceOrderId: '00000000-0000-0000-0000-000000000000',
@@ -187,7 +187,7 @@ describe('Orders & Proposals (integration)', () => {
         .expect(403);
 
       await request(app.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(bearerAuth(provider.token))
         .send({
           serviceOrderId: '00000000-0000-0000-0000-000000000000',
@@ -207,7 +207,7 @@ describe('Orders & Proposals (integration)', () => {
 
       const proposalId = (
         await request(app.getHttpServer())
-          .post('/proposals')
+          .post('/api/v1/proposals')
           .set(bearerAuth(provider.token))
           .send({
             serviceOrderId: orderId,
@@ -218,7 +218,7 @@ describe('Orders & Proposals (integration)', () => {
       ).body.id;
 
       const response = await request(app.getHttpServer())
-        .post(`/proposals/${proposalId}/accept`)
+        .post(`/api/v1/proposals/${proposalId}/accept`)
         .set(bearerAuth(client.token))
         .expect(201);
 
@@ -234,7 +234,7 @@ describe('Orders & Proposals (integration)', () => {
 
       const proposalId = (
         await request(app.getHttpServer())
-          .post('/proposals')
+          .post('/api/v1/proposals')
           .set(bearerAuth(provider.token))
           .send({
             serviceOrderId: orderId,
@@ -245,7 +245,7 @@ describe('Orders & Proposals (integration)', () => {
       ).body.id;
 
       await request(app.getHttpServer())
-        .post(`/proposals/${proposalId}/accept`)
+        .post(`/api/v1/proposals/${proposalId}/accept`)
         .set(bearerAuth(intruder.token))
         .expect(403);
     });
@@ -258,7 +258,7 @@ describe('Orders & Proposals (integration)', () => {
       const orderId = (await createOrder(token, cat.id)).body.id;
 
       const response = await request(app.getHttpServer())
-        .post(`/services/me/${orderId}/photos`)
+        .post(`/api/v1/services/me/${orderId}/photos`)
         .set(bearerAuth(token))
         .attach('photos', PNG_1X1, {
           filename: 'local.png',
@@ -278,7 +278,7 @@ describe('Orders & Proposals (integration)', () => {
       const { token } = await clientAuth();
 
       await request(app.getHttpServer())
-        .post('/services/me/00000000-0000-0000-0000-000000000000/photos')
+        .post('/api/v1/services/me/00000000-0000-0000-0000-000000000000/photos')
         .set(bearerAuth(token))
         .attach('photos', PNG_1X1, {
           filename: 'local.png',

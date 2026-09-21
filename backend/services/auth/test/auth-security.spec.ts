@@ -58,7 +58,7 @@ describe('Security and Edge Cases', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, email: "'; DROP TABLE users; --" })
         .expect(400);
 
@@ -67,7 +67,7 @@ describe('Security and Edge Cases', () => {
 
     it('should reject SQL injection payload in email during login', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: "' OR '1'='1", password: 'AnyPassword123!' })
         .expect(400);
 
@@ -82,7 +82,7 @@ describe('Security and Edge Cases', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, complete_name: '<script>alert("XSS")</script>' })
         .expect(400);
 
@@ -99,7 +99,7 @@ describe('Security and Edge Cases', () => {
         const user = createTestUser();
 
         const response = await request(app.getHttpServer())
-          .post('/auth/register')
+          .post('/api/v1/auth/register')
           .send({ ...user, password: weakPassword })
           .expect(400);
 
@@ -117,7 +117,7 @@ describe('Security and Edge Cases', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, complete_name: 'a'.repeat(1_000) })
         .expect(400);
 
@@ -129,7 +129,7 @@ describe('Security and Edge Cases', () => {
       const validName = "José María O'Connor-Smith";
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, complete_name: validName })
         .expect(201);
 
@@ -140,7 +140,7 @@ describe('Security and Edge Cases', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, phone: '', postal_code: '' })
         .expect(400);
 
@@ -151,7 +151,7 @@ describe('Security and Edge Cases', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({
           complete_name: user.complete_name,
           email: user.email,
@@ -173,7 +173,7 @@ describe('Security and Edge Cases', () => {
       'should reject malformed token "%s" with 401',
       async (token) => {
         const response = await request(app.getHttpServer())
-          .post('/auth/logout')
+          .post('/api/v1/auth/logout')
           .set('Authorization', `Bearer ${token}`)
           .expect(401);
 
@@ -188,7 +188,7 @@ describe('Security and Edge Cases', () => {
         '.wrong-signature';
 
       const response = await request(app.getHttpServer())
-        .post('/auth/logout')
+        .post('/api/v1/auth/logout')
         .set('Authorization', tokenWithBadSig) // intentionally no "Bearer " prefix to test raw header rejection
         .expect(401);
 

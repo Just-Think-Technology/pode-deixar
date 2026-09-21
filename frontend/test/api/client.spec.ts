@@ -37,8 +37,18 @@ describe('api/client (HTTP integration)', () => {
   })
 
   describe('getApiBaseUrl()', () => {
-    it('uses NEXT_PUBLIC_BACKEND_URL in the browser', () => {
-      expect(getApiBaseUrl()).toBe('http://api.test')
+    it('uses NEXT_PUBLIC_BACKEND_URL in the browser with /api/v1 prefix', () => {
+      expect(getApiBaseUrl()).toBe('http://api.test/api/v1')
+    })
+
+    it('normalizes legacy /api suffix to /api/v1', () => {
+      vi.stubEnv('NEXT_PUBLIC_BACKEND_URL', 'http://api.test/api')
+      expect(getApiBaseUrl()).toBe('http://api.test/api/v1')
+    })
+
+    it('normalizes legacy /api/v1 suffix without duplication', () => {
+      vi.stubEnv('NEXT_PUBLIC_BACKEND_URL', 'http://api.test/api/v1')
+      expect(getApiBaseUrl()).toBe('http://api.test/api/v1')
     })
 
     it('throws an error when the URL is not set', () => {
@@ -58,12 +68,23 @@ describe('api/client (HTTP integration)', () => {
 
       expect(data).toEqual({ id: '1' })
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://api.test/services/me',
+        'http://api.test/api/v1/services/me',
         expect.objectContaining({
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
           }),
         }),
+      )
+    })
+
+    it('calls /api/v1/auth/login with versioned prefix', async () => {
+      fetchMock.mockResolvedValue(jsonResponse({ accessToken: 'tok' }))
+
+      await apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({}) })
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/auth/login'),
+        expect.any(Object),
       )
     })
 
@@ -73,7 +94,7 @@ describe('api/client (HTTP integration)', () => {
       await apiFetch('/x', { headers: { 'X-Custom': '1' } })
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://api.test/x',
+        'http://api.test/api/v1/x',
         expect.objectContaining({
           headers: expect.objectContaining({ 'X-Custom': '1' }),
         }),
@@ -88,7 +109,7 @@ describe('api/client (HTTP integration)', () => {
       await apiFetch('/upload', { method: 'POST', body })
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://api.test/upload',
+        'http://api.test/api/v1/upload',
         expect.objectContaining({ method: 'POST' }),
       )
       const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
@@ -184,7 +205,7 @@ describe('api/client (HTTP integration)', () => {
       await apiFetchAuth('/services/me', 'tok-abc', { method: 'GET' })
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://api.test/services/me',
+        'http://api.test/api/v1/services/me',
         expect.objectContaining({
           method: 'GET',
           headers: expect.objectContaining({

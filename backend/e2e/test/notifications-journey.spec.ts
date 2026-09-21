@@ -50,7 +50,7 @@ describe('Notifications journey (Task 8)', () => {
 
   async function getNotifications(token: string, query = '') {
     const res = await request(apps.usersApp.getHttpServer())
-      .get(`/notifications${query}`)
+      .get(`/api/v1/notifications${query}`)
       .set(bearerAuth(token))
       .expect(200);
     return res.body as Array<{
@@ -67,7 +67,7 @@ describe('Notifications journey (Task 8)', () => {
   it('1. nova proposta → cliente receives SERVICE notification', async () => {
     const order = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .set(bearerAuth(clientToken))
         .send({
           title: 'Instalação de ar condicionado',
@@ -80,7 +80,7 @@ describe('Notifications journey (Task 8)', () => {
 
     const proposal = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(bearerAuth(providerToken))
         .send({
           serviceOrderId: orderId,
@@ -108,7 +108,7 @@ describe('Notifications journey (Task 8)', () => {
 
   it('2. proposta aceita → provider receives SERVICE notification with anti-duplicate', async () => {
     await request(apps.ordersApp.getHttpServer())
-      .post(`/proposals/${proposalId}/accept`)
+      .post(`/api/v1/proposals/${proposalId}/accept`)
       .set(bearerAuth(clientToken))
       .expect(201);
 
@@ -130,7 +130,7 @@ describe('Notifications journey (Task 8)', () => {
   it('3. pagamento confirmado → ambos (client + provider) receive SERVICE notification and duplicate webhook is deduped', async () => {
     const payment = (
       await request(apps.paymentsApp.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(clientToken))
         .send({
           serviceOrderId: orderId,
@@ -144,7 +144,7 @@ describe('Notifications journey (Task 8)', () => {
 
     const eventId = `evt_notif_journey_${Date.now()}`;
     await request(apps.paymentsApp.getHttpServer())
-      .post('/payments/webhook')
+      .post('/api/v1/payments/webhook')
       .set('x-webhook-key', 'test-webhook-key')
       .send({
         paymentId,
@@ -171,7 +171,7 @@ describe('Notifications journey (Task 8)', () => {
 
     // Duplicate webhook with same eventId must not create second notification (existsRecent + idempotent)
     await request(apps.paymentsApp.getHttpServer())
-      .post('/payments/webhook')
+      .post('/api/v1/payments/webhook')
       .set('x-webhook-key', 'test-webhook-key')
       .send({
         paymentId,
@@ -191,7 +191,7 @@ describe('Notifications journey (Task 8)', () => {
 
   it('4. serviço iniciado → cliente receives SERVICE notification', async () => {
     const started = await request(apps.ordersApp.getHttpServer())
-      .post(`/services/me/${orderId}/start`)
+      .post(`/api/v1/services/me/${orderId}/start`)
       .set(bearerAuth(providerToken))
       .expect(201);
     expect(started.body.startedAt).toBeDefined();
@@ -205,7 +205,7 @@ describe('Notifications journey (Task 8)', () => {
 
     // Idempotent second start must not duplicate due to existsRecent
     await request(apps.ordersApp.getHttpServer())
-      .post(`/services/me/${orderId}/start`)
+      .post(`/api/v1/services/me/${orderId}/start`)
       .set(bearerAuth(providerToken))
       .expect(201);
     const clientNotifs2 = await getNotifications(clientToken);
@@ -221,7 +221,7 @@ describe('Notifications journey (Task 8)', () => {
       'base64',
     );
     const finished = await request(apps.ordersApp.getHttpServer())
-      .post(`/services/me/${orderId}/finish`)
+      .post(`/api/v1/services/me/${orderId}/finish`)
       .set(bearerAuth(providerToken))
       .field('observations', 'Concluído com sucesso')
       .attach('photos', png1x1, { filename: 'foto.png', contentType: 'image/png' })
@@ -239,7 +239,7 @@ describe('Notifications journey (Task 8)', () => {
   it('6. avaliação → provider receives SERVICE notification and is isolated per user', async () => {
     const review = (
       await request(apps.reviewsApp.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(clientToken))
         .send({
           serviceOrderId: orderId,

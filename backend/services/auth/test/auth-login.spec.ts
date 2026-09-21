@@ -41,7 +41,7 @@ describe('POST /auth/login', () => {
       );
 
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(200);
 
@@ -68,7 +68,7 @@ describe('POST /auth/login', () => {
       );
 
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password, rememberMe: true })
         .expect(200);
 
@@ -90,7 +90,7 @@ describe('POST /auth/login', () => {
       );
 
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: 'WrongPassword123!' })
         .expect(401);
 
@@ -99,7 +99,7 @@ describe('POST /auth/login', () => {
 
     it('should reject non-existent email with 401', async () => {
       await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: 'nonexistent@example.com', password: 'AnyPassword123!' })
         .expect(401);
     });
@@ -108,7 +108,7 @@ describe('POST /auth/login', () => {
   describe('Validation cases', () => {
     it('should reject invalid email format with 400', async () => {
       await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: 'invalid-email', password: 'AnyPassword123!' })
         .expect(400);
     });
@@ -117,7 +117,7 @@ describe('POST /auth/login', () => {
       const user = createTestUser();
 
       await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email })
         .expect(400);
     });

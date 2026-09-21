@@ -33,7 +33,7 @@ describe('POST /auth/logout', () => {
     const { accessToken } = await registerAndLogin(app, user, prisma);
 
     const response = await request(app.getHttpServer())
-      .post('/auth/logout')
+      .post('/api/v1/auth/logout')
       .set(bearerAuth(accessToken))
       .expect(200);
 
@@ -44,14 +44,14 @@ describe('POST /auth/logout', () => {
   });
 
   it('should reject logout without authentication with 401', async () => {
-    const response = await request(app.getHttpServer()).post('/auth/logout').expect(401);
+    const response = await request(app.getHttpServer()).post('/api/v1/auth/logout').expect(401);
 
     expect(response.body).toHaveProperty('message');
   });
 
   it('should reject logout with an invalid token with 401', async () => {
     const response = await request(app.getHttpServer())
-      .post('/auth/logout')
+      .post('/api/v1/auth/logout')
       .set('Authorization', 'Bearer invalid-token')
       .expect(401);
 

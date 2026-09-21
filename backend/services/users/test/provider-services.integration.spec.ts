@@ -47,7 +47,7 @@ describe('ProviderServices (integration)', () => {
     const { user, token } = await providerAuth();
     const profile = (
       await request(app.getHttpServer())
-        .post('/profiles/provider')
+        .post('/api/v1/profiles/provider')
         .set(bearerAuth(token))
         .send({ bio: 'Prestador' })
         .expect(201)
@@ -61,7 +61,7 @@ describe('ProviderServices (integration)', () => {
       const cat = await category();
 
       const response = await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(bearerAuth(token))
         .send({
           title: 'Instalação de chuveiro',
@@ -81,7 +81,7 @@ describe('ProviderServices (integration)', () => {
       const { token } = await providerWithProfile();
 
       await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(bearerAuth(token))
         .send({})
         .expect(400);
@@ -97,13 +97,13 @@ describe('ProviderServices (integration)', () => {
       };
 
       await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .send(dto)
         .expect(401);
 
       const client = await createTestUser(prisma, { role: 'CLIENT' });
       await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(bearerAuth(mintToken(client)))
         .send(dto)
         .expect(403);
@@ -123,13 +123,13 @@ describe('ProviderServices (integration)', () => {
       };
 
       await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(headers)
         .send(dto)
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get('/providers/me/services')
+        .get('/api/v1/providers/me/services')
         .set(headers)
         .expect(200);
 
@@ -144,7 +144,7 @@ describe('ProviderServices (integration)', () => {
       const cat = await category();
 
       await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(bearerAuth(token))
         .send({
           title: 'Serviço público',
@@ -155,7 +155,7 @@ describe('ProviderServices (integration)', () => {
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get(`/providers/${profileId}/services`)
+        .get(`/api/v1/providers/${profileId}/services`)
         .expect(200);
 
       expect(response.body).toHaveLength(1);
@@ -164,7 +164,7 @@ describe('ProviderServices (integration)', () => {
 
     it('deve retornar 404 para prestador inexistente', async () => {
       await request(app.getHttpServer())
-        .get('/providers/00000000-0000-0000-0000-000000000000/services')
+        .get('/api/v1/providers/00000000-0000-0000-0000-000000000000/services')
         .expect(404);
     });
   });
@@ -177,7 +177,7 @@ describe('ProviderServices (integration)', () => {
 
       const created = (
         await request(app.getHttpServer())
-          .post('/providers/me/services')
+          .post('/api/v1/providers/me/services')
           .set(headers)
           .send({
             title: 'Antes',
@@ -189,7 +189,7 @@ describe('ProviderServices (integration)', () => {
       ).body;
 
       const response = await request(app.getHttpServer())
-        .patch(`/providers/me/services/${created.id}`)
+        .patch(`/api/v1/providers/me/services/${created.id}`)
         .set(headers)
         .send({ title: 'Depois', fixedPrice: 180 })
         .expect(200);
@@ -205,7 +205,7 @@ describe('ProviderServices (integration)', () => {
 
       const created = (
         await request(app.getHttpServer())
-          .post('/providers/me/services')
+          .post('/api/v1/providers/me/services')
           .set(bearerAuth(first.token))
           .send({
             title: 'Alheio',
@@ -217,7 +217,7 @@ describe('ProviderServices (integration)', () => {
       ).body;
 
       await request(app.getHttpServer())
-        .patch(`/providers/me/services/${created.id}`)
+        .patch(`/api/v1/providers/me/services/${created.id}`)
         .set(bearerAuth(second.token))
         .send({ title: 'Invadido' })
         .expect(403);
@@ -232,7 +232,7 @@ describe('ProviderServices (integration)', () => {
 
       const created = (
         await request(app.getHttpServer())
-          .post('/providers/me/services')
+          .post('/api/v1/providers/me/services')
           .set(headers)
           .send({
             title: 'Temporário',
@@ -245,7 +245,7 @@ describe('ProviderServices (integration)', () => {
 
       const deleted = (
         await request(app.getHttpServer())
-          .delete(`/providers/me/services/${created.id}`)
+          .delete(`/api/v1/providers/me/services/${created.id}`)
           .set(headers)
           .expect(200)
       ).body;
@@ -254,7 +254,7 @@ describe('ProviderServices (integration)', () => {
       // Gone from the public listing, which only shows active ones
       const publicList = (
         await request(app.getHttpServer())
-          .get(`/providers/${profileId}/services`)
+          .get(`/api/v1/providers/${profileId}/services`)
           .expect(200)
       ).body;
       expect(

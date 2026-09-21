@@ -46,7 +46,7 @@ describe('api/worker/orders (integration)', () => {
     const result = await api.uploadWorkerOrderPhoto('tok-abc', 'order-1', body)
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://api.test/services/me/order-1/completion-photos',
+      'http://api.test/api/v1/services/me/order-1/completion-photos',
       expect.objectContaining({ method: 'POST' }),
     )
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
@@ -96,7 +96,7 @@ describe('api/worker/orders (integration)', () => {
     const result = await api.getWorkerOrderCompletion('tok-abc', 'order-1')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://api.test/services/me/order-1/completion',
+      'http://api.test/api/v1/services/me/order-1/completion',
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({
@@ -116,7 +116,7 @@ describe('api/worker/orders (integration)', () => {
     const result = await api.getOrderPhotoViewUrl('tok-abc', 'photo-1')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://api.test/services/photos/photo-1/view',
+      'http://api.test/api/v1/services/photos/photo-1/view',
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer tok-abc',

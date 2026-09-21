@@ -55,7 +55,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
   it('1. client creates order → OPEN', async () => {
     const order = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .set(bearerAuth(clientToken))
         .send({
           title: 'Reparo hidráulico completo',
@@ -79,7 +79,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
   it('2. provider proposes → PENDING', async () => {
     const proposal = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(bearerAuth(providerToken))
         .send({
           serviceOrderId: orderId,
@@ -101,7 +101,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
   it('3. client accepts proposal → IN_PROGRESS', async () => {
     const accepted = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/proposals/${proposalId}/accept`)
+        .post(`/api/v1/proposals/${proposalId}/accept`)
         .set(bearerAuth(clientToken))
         .expect(201)
     ).body;
@@ -116,13 +116,13 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
 
   it('4. complete without any photo → 400', async () => {
     await request(apps.ordersApp.getHttpServer())
-      .post(`/services/me/${orderId}/complete`)
+      .post(`/api/v1/services/me/${orderId}/complete`)
       .set(bearerAuth(providerToken))
       .send({ observations: 'Tentativa sem foto' })
       .expect(400);
 
     await request(apps.ordersApp.getHttpServer())
-      .post(`/services/me/${orderId}/finish`)
+      .post(`/api/v1/services/me/${orderId}/finish`)
       .set(bearerAuth(providerToken))
       .send({ observations: 'Tentativa finish sem foto' })
       .expect(400);
@@ -131,7 +131,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
   it('5. provider uploads PNG evidence → stored as webp + view URL', async () => {
     const uploaded = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/services/me/${orderId}/completion-photos`)
+        .post(`/api/v1/services/me/${orderId}/completion-photos`)
         .set(bearerAuth(providerToken))
         .attach('photos', PNG_1X1, { filename: 'evidencia.png', contentType: 'image/png' })
         .expect(201)
@@ -169,7 +169,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
   it('6. provider completes with observations → COMPLETED + history shape', async () => {
     const completed = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/services/me/${orderId}/complete`)
+        .post(`/api/v1/services/me/${orderId}/complete`)
         .set(bearerAuth(providerToken))
         .send({ observations: 'Serviço concluído com troca de registro' })
         .expect(201)
@@ -195,7 +195,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
   it('7. GET /services/me/:orderId/completion → history for owner, 403 for outsider', async () => {
     const asProvider = (
       await request(apps.ordersApp.getHttpServer())
-        .get(`/services/me/${orderId}/completion`)
+        .get(`/api/v1/services/me/${orderId}/completion`)
         .set(bearerAuth(providerToken))
         .expect(200)
     ).body;
@@ -205,7 +205,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
 
     const asClient = (
       await request(apps.ordersApp.getHttpServer())
-        .get(`/services/me/${orderId}/completion`)
+        .get(`/api/v1/services/me/${orderId}/completion`)
         .set(bearerAuth(clientToken))
         .expect(200)
     ).body;
@@ -213,18 +213,18 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
     expect(asClient.photos[0].id).toBe(photoId);
 
     await request(apps.ordersApp.getHttpServer())
-      .get(`/services/me/${orderId}/completion`)
+      .get(`/api/v1/services/me/${orderId}/completion`)
       .set(bearerAuth(outsiderToken))
       .expect(403);
 
     await request(apps.ordersApp.getHttpServer())
-      .get(`/services/me/${orderId}/completion`)
+      .get(`/api/v1/services/me/${orderId}/completion`)
       .expect(401);
 
     // Non-completed order → 404 history
     const openOrderId = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .set(bearerAuth(clientToken))
         .send({
           title: 'Outro serviço ainda aberto',
@@ -235,7 +235,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
     ).body.id as string;
 
     await request(apps.ordersApp.getHttpServer())
-      .get(`/services/me/${openOrderId}/completion`)
+      .get(`/api/v1/services/me/${openOrderId}/completion`)
       .set(bearerAuth(clientToken))
       .expect(404);
   });
@@ -243,7 +243,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
   it('8. GET /services/photos/:photoId/view → presigned URL, 403 for outsider', async () => {
     const asProvider = (
       await request(apps.ordersApp.getHttpServer())
-        .get(`/services/photos/${photoId}/view`)
+        .get(`/api/v1/services/photos/${photoId}/view`)
         .set(bearerAuth(providerToken))
         .expect(200)
     ).body;
@@ -251,19 +251,19 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
 
     const asClient = (
       await request(apps.ordersApp.getHttpServer())
-        .get(`/services/photos/${photoId}/view`)
+        .get(`/api/v1/services/photos/${photoId}/view`)
         .set(bearerAuth(clientToken))
         .expect(200)
     ).body;
     expect(asClient.url).toContain('X-Amz-Signature=mock');
 
     await request(apps.ordersApp.getHttpServer())
-      .get(`/services/photos/${photoId}/view`)
+      .get(`/api/v1/services/photos/${photoId}/view`)
       .set(bearerAuth(outsiderToken))
       .expect(403);
 
     await request(apps.ordersApp.getHttpServer())
-      .get(`/services/photos/${photoId}/view`)
+      .get(`/api/v1/services/photos/${photoId}/view`)
       .expect(401);
 
     expect(mockMinio.generateTemporaryUrl).toHaveBeenCalled();
@@ -272,7 +272,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
   it('9. GET /services/:orderId/tracking → evidence when COMPLETED', async () => {
     const tracking = (
       await request(apps.ordersApp.getHttpServer())
-        .get(`/services/${orderId}/tracking`)
+        .get(`/api/v1/services/${orderId}/tracking`)
         .set(bearerAuth(clientToken))
         .expect(200)
     ).body;
@@ -284,20 +284,20 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
     expect(tracking.evidence.completedAt).toBeDefined();
 
     await request(apps.ordersApp.getHttpServer())
-      .get(`/services/${orderId}/tracking`)
+      .get(`/api/v1/services/${orderId}/tracking`)
       .set(bearerAuth(outsiderToken))
       .expect(403);
   });
 
   it('10. idempotency: second complete → 400, photo upload after COMPLETED → 400', async () => {
     await request(apps.ordersApp.getHttpServer())
-      .post(`/services/me/${orderId}/complete`)
+      .post(`/api/v1/services/me/${orderId}/complete`)
       .set(bearerAuth(providerToken))
       .send({ observations: 'segunda tentativa' })
       .expect(400);
 
     await request(apps.ordersApp.getHttpServer())
-      .post(`/services/me/${orderId}/completion-photos`)
+      .post(`/api/v1/services/me/${orderId}/completion-photos`)
       .set(bearerAuth(providerToken))
       .attach('photos', PNG_1X1, { filename: 'extra.png', contentType: 'image/png' })
       .expect(400);

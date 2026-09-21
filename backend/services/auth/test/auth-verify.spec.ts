@@ -42,7 +42,7 @@ describe('GET /auth/verify', () => {
       const tokens = await registerAndLogin(app, user, prisma);
 
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth(tokens.accessToken))
         .expect(200);
 
@@ -63,7 +63,7 @@ describe('GET /auth/verify', () => {
       const tokens = await registerAndLogin(app, user, prisma);
 
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth(tokens.accessToken))
         .expect(200);
 
@@ -80,7 +80,7 @@ describe('GET /auth/verify', () => {
       const adminAccessToken = adminTokens.body.access_token as string;
 
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth(adminAccessToken))
         .expect(200);
 
@@ -99,7 +99,7 @@ describe('GET /auth/verify', () => {
       await prisma.user.delete({ where: { email: user.email } });
 
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth(tokens.accessToken))
         .expect(200);
 
@@ -129,7 +129,7 @@ describe('GET /auth/verify', () => {
       );
 
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth(expiredToken))
         .expect(200);
 
@@ -158,7 +158,7 @@ describe('GET /auth/verify', () => {
       );
 
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth(fakeToken))
         .expect(200);
 
@@ -170,7 +170,7 @@ describe('GET /auth/verify', () => {
 
     it('should return authorized false for a malformed token', async () => {
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth('not-a-valid-jwt-token'))
         .expect(200);
 
@@ -179,7 +179,7 @@ describe('GET /auth/verify', () => {
 
     it('should return authorized false when no Authorization header is provided', async () => {
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .expect(200);
 
       expect(response.body).toEqual({
@@ -198,7 +198,7 @@ describe('GET /auth/verify', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth(tokens.accessToken))
         .expect(200);
 
@@ -215,7 +215,7 @@ describe('GET /auth/verify', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth(tokens.accessToken))
         .expect(200);
 
@@ -238,7 +238,7 @@ describe('GET /auth/verify', () => {
       }
 
       const response = await request(app.getHttpServer())
-        .get('/auth/verify')
+        .get('/api/v1/auth/verify')
         .set(bearerAuth(tokens.accessToken))
         .expect(200);
 

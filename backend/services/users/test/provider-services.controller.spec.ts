@@ -32,7 +32,7 @@ describe('ProviderServicesController (HTTP)', () => {
     // Provider profile is required for service creation; create via API
     const token = mintToken(user);
     await request(app.getHttpServer())
-      .post('/profiles/provider')
+      .post('/api/v1/profiles/provider')
       .set(bearerAuth(token))
       .send({ bio: 'Provider for services' })
       .expect(201);
@@ -47,7 +47,7 @@ describe('ProviderServicesController (HTTP)', () => {
   describe('POST /providers/me/services', () => {
     it('should return 401 without token', async () => {
       await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .send({ title: 'X', description: 'Y', fixedPrice: 100, categoryId: '00000000-0000-0000-0000-000000000000' })
         .expect(401);
     });
@@ -57,7 +57,7 @@ describe('ProviderServicesController (HTTP)', () => {
       const token = mintToken(user);
       const cat = await createCategory();
       await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(bearerAuth(token))
         .send({ title: 'Serviço', description: 'Desc', fixedPrice: 100, categoryId: cat.id })
         .expect(403);
@@ -68,7 +68,7 @@ describe('ProviderServicesController (HTTP)', () => {
       const cat = await createCategory();
 
       const response = await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(bearerAuth(token))
         .send({ title: 'Instalação', description: 'Descrição completa', fixedPrice: 150, categoryId: cat.id })
         .expect(201);
@@ -83,7 +83,7 @@ describe('ProviderServicesController (HTTP)', () => {
     it('should return 400 for missing required fields', async () => {
       const { token } = await providerAuth();
       await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(bearerAuth(token))
         .send({ title: 'Only title' })
         .expect(400);
@@ -92,12 +92,12 @@ describe('ProviderServicesController (HTTP)', () => {
 
   describe('GET /providers/me/services', () => {
     it('should return 401 without token and 403 for CLIENT', async () => {
-      await request(app.getHttpServer()).get('/providers/me/services').expect(401);
+      await request(app.getHttpServer()).get('/api/v1/providers/me/services').expect(401);
 
       const client = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(client);
       await request(app.getHttpServer())
-        .get('/providers/me/services')
+        .get('/api/v1/providers/me/services')
         .set(bearerAuth(token))
         .expect(403);
     });
@@ -106,13 +106,13 @@ describe('ProviderServicesController (HTTP)', () => {
       const { token } = await providerAuth();
       const cat = await createCategory();
       await request(app.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(bearerAuth(token))
         .send({ title: 'Serviço A', description: 'Desc', fixedPrice: 100, categoryId: cat.id })
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get('/providers/me/services')
+        .get('/api/v1/providers/me/services')
         .set(bearerAuth(token))
         .expect(200);
 
@@ -123,14 +123,14 @@ describe('ProviderServicesController (HTTP)', () => {
 
   describe('GET /providers/search', () => {
     it('should return 401 without token (requires CLIENT)', async () => {
-      await request(app.getHttpServer()).get('/providers/search').expect(401);
+      await request(app.getHttpServer()).get('/api/v1/providers/search').expect(401);
     });
 
     it('should return 200 for CLIENT with search', async () => {
       const client = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(client);
       const response = await request(app.getHttpServer())
-        .get('/providers/search')
+        .get('/api/v1/providers/search')
         .set(bearerAuth(token))
         .expect(200);
       expect(response.body).toBeDefined();
@@ -140,7 +140,7 @@ describe('ProviderServicesController (HTTP)', () => {
       const provider = await createTestUser(prisma, { role: 'PROVIDER' });
       const token = mintToken(provider);
       await request(app.getHttpServer())
-        .get('/providers/search')
+        .get('/api/v1/providers/search')
         .set(bearerAuth(token))
         .expect(403);
     });

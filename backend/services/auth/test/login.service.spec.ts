@@ -41,7 +41,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
       );
 
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(200);
 
@@ -58,7 +58,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
 
     it('should reject unknown email with generic 401 (no enumeration oracle)', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: 'unknown-xyz@example.com', password: 'AnyPassword123!' })
         .expect(401);
 
@@ -83,7 +83,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(401);
 
@@ -101,7 +101,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
       );
 
       await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: 'WrongPassword123!' })
         .expect(401);
 
@@ -122,7 +122,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
 
       for (let i = 0; i < 5; i += 1) {
         await request(app.getHttpServer())
-          .post('/auth/login')
+          .post('/api/v1/auth/login')
           .send({ email: user.email, password: 'WrongPassword123!' })
           .expect(401);
       }
@@ -134,7 +134,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
 
       // Even correct password must fail while locked
       await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(401);
     });
@@ -150,7 +150,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
       const callsBefore = emailMock.sendEmailVerification.mock.calls.length;
 
       await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(401);
 
@@ -163,13 +163,13 @@ describe('LoginService (integration via HTTP + DB)', () => {
       // Original registration token still valid for verification (rotation also verified via new hint): consume raw token from email mock
       const rawToken = emailMock.sendEmailVerification.mock.calls.at(-1)[1] as string;
       await request(app.getHttpServer())
-        .post('/auth/verify-email')
+        .post('/api/v1/auth/verify-email')
         .send({ token: rawToken })
         .expect(200);
 
       // Now login succeeds after verification
       await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(200);
 
@@ -188,7 +188,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
         registration.body.email_verification_token as string,
       );
       const login = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(200);
       const oldRefresh = login.body.refresh_token as string;
@@ -196,7 +196,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
       const hashBefore = dbBefore?.refreshToken;
 
       const rotated = await request(app.getHttpServer())
-        .post('/auth/refresh-token')
+        .post('/api/v1/auth/refresh-token')
         .send({ refreshToken: oldRefresh })
         .expect(200);
 
@@ -219,18 +219,18 @@ describe('LoginService (integration via HTTP + DB)', () => {
         registration.body.email_verification_token as string,
       );
       const login = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(200);
       const refreshToken = login.body.refresh_token as string;
 
       await request(app.getHttpServer())
-        .post('/auth/refresh-token')
+        .post('/api/v1/auth/refresh-token')
         .send({ refreshToken })
         .expect(200);
 
       await request(app.getHttpServer())
-        .post('/auth/refresh-token')
+        .post('/api/v1/auth/refresh-token')
         .send({ refreshToken })
         .expect(401);
 
@@ -241,7 +241,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
 
     it('should reject an invalid refresh token with 401', async () => {
       await request(app.getHttpServer())
-        .post('/auth/refresh-token')
+        .post('/api/v1/auth/refresh-token')
         .send({ refreshToken: 'invalid-token' })
         .expect(401);
     });
@@ -258,7 +258,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
         registration.body.email_verification_token as string,
       );
       const login = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: user.email, password: user.password })
         .expect(200);
       const accessToken = login.body.access_token as string;
@@ -266,7 +266,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
       const countBefore = await prisma.tokenBlacklist.count();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/logout')
+        .post('/api/v1/auth/logout')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -280,7 +280,7 @@ describe('LoginService (integration via HTTP + DB)', () => {
     });
 
     it('should reject logout without authentication with 401', async () => {
-      await request(app.getHttpServer()).post('/auth/logout').expect(401);
+      await request(app.getHttpServer()).post('/api/v1/auth/logout').expect(401);
     });
   });
 });

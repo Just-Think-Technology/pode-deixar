@@ -29,20 +29,20 @@ describe('ProfilesController (HTTP)', () => {
 
   describe('GET /profiles/me', () => {
     it('should return 401 without token (guard)', async () => {
-      await request(app.getHttpServer()).get('/profiles/me').expect(401);
+      await request(app.getHttpServer()).get('/api/v1/profiles/me').expect(401);
     });
 
     it('should return 200 for owner and contain profile data', async () => {
       const user = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(user);
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(bearerAuth(token))
         .send({})
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get('/profiles/me')
+        .get('/api/v1/profiles/me')
         .set(bearerAuth(token))
         .expect(200);
 
@@ -54,7 +54,7 @@ describe('ProfilesController (HTTP)', () => {
       const token = mintToken(user);
 
       await request(app.getHttpServer())
-        .get('/profiles/me')
+        .get('/api/v1/profiles/me')
         .set(bearerAuth(token))
         .expect(404);
     });
@@ -62,7 +62,7 @@ describe('ProfilesController (HTTP)', () => {
 
   describe('POST /profiles/client', () => {
     it('should return 401 without token', async () => {
-      await request(app.getHttpServer()).post('/profiles/client').send({}).expect(401);
+      await request(app.getHttpServer()).post('/api/v1/profiles/client').send({}).expect(401);
     });
 
     it('should return 403 for PROVIDER (role guard)', async () => {
@@ -70,7 +70,7 @@ describe('ProfilesController (HTTP)', () => {
       const token = mintToken(user);
 
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(bearerAuth(token))
         .send({})
         .expect(403);
@@ -81,7 +81,7 @@ describe('ProfilesController (HTTP)', () => {
       const token = mintToken(user);
 
       const response = await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(bearerAuth(token))
         .send({ preferences: { theme: 'dark' } })
         .expect(201);
@@ -101,7 +101,7 @@ describe('ProfilesController (HTTP)', () => {
       const token = mintToken(user);
 
       await request(app.getHttpServer())
-        .post('/profiles/provider')
+        .post('/api/v1/profiles/provider')
         .set(bearerAuth(token))
         .send({ bio: 'x' })
         .expect(403);
@@ -112,7 +112,7 @@ describe('ProfilesController (HTTP)', () => {
       const token = mintToken(user);
 
       const response = await request(app.getHttpServer())
-        .post('/profiles/provider')
+        .post('/api/v1/profiles/provider')
         .set(bearerAuth(token))
         .send({ bio: 'Eletricista', hourlyRate: 80 })
         .expect(201);
@@ -128,14 +128,14 @@ describe('ProfilesController (HTTP)', () => {
       const token = mintToken(user);
       const profileId = (
         await request(app.getHttpServer())
-          .post('/profiles/provider')
+          .post('/api/v1/profiles/provider')
           .set(bearerAuth(token))
           .send({ bio: 'Encanador' })
           .expect(201)
       ).body.id;
 
       const response = await request(app.getHttpServer())
-        .get(`/providers/${profileId}/profile`)
+        .get(`/api/v1/providers/${profileId}/profile`)
         .expect(200);
 
       expect(response.body.id).toBe(profileId);
@@ -145,7 +145,7 @@ describe('ProfilesController (HTTP)', () => {
 
     it('should return 404 for nonexistent provider', async () => {
       await request(app.getHttpServer())
-        .get('/providers/00000000-0000-0000-0000-000000000000/profile')
+        .get('/api/v1/providers/00000000-0000-0000-0000-000000000000/profile')
         .expect(404);
     });
   });

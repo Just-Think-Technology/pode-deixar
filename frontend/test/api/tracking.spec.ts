@@ -45,7 +45,7 @@ describe('api/tracking', () => {
     const result = await api.getContractTracking('tok', 'o1', 'CLIENT')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://api.test/services/o1/tracking',
+      'http://api.test/api/v1/services/o1/tracking',
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({ Authorization: 'Bearer tok' }),
@@ -61,7 +61,7 @@ describe('api/tracking', () => {
     await api.startTrackedService('tok', 'o1')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://api.test/services/me/o1/start',
+      'http://api.test/api/v1/services/me/o1/start',
       expect.objectContaining({ method: 'POST' }),
     )
   })
@@ -77,7 +77,7 @@ describe('api/tracking', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe('http://api.test/services/me/o1/finish')
+    expect(url).toBe('http://api.test/api/v1/services/me/o1/finish')
     expect(init.method).toBe('POST')
     expect(init.body).toBeInstanceOf(FormData)
     const body = init.body as FormData
@@ -112,7 +112,7 @@ describe('api/tracking', () => {
     const result = await api.getEvidencePhotoViewUrl('tok', 'photo-1')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://api.test/services/photos/photo-1/view',
+      'http://api.test/api/v1/services/photos/photo-1/view',
       expect.objectContaining({ method: 'GET' }),
     )
     expect(result).toEqual({ url: 'https://storage.test/signed.webp' })

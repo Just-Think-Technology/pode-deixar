@@ -30,14 +30,14 @@ describe('ProviderFinanceController (HTTP)', () => {
 
   describe('GET /payments/provider/me/finance/summary', () => {
     it('should return 401 without token', async () => {
-      await request(app.getHttpServer()).get('/payments/provider/me/finance/summary').expect(401);
+      await request(app.getHttpServer()).get('/api/v1/payments/provider/me/finance/summary').expect(401);
     });
 
     it('should return 403 for CLIENT role', async () => {
       const user = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(user);
       await request(app.getHttpServer())
-        .get('/payments/provider/me/finance/summary')
+        .get('/api/v1/payments/provider/me/finance/summary')
         .set(bearerAuth(token))
         .expect(403);
     });
@@ -46,7 +46,7 @@ describe('ProviderFinanceController (HTTP)', () => {
       const user = await createTestUser(prisma, { role: 'PROVIDER' });
       const token = mintToken(user);
       const response = await request(app.getHttpServer())
-        .get('/payments/provider/me/finance/summary')
+        .get('/api/v1/payments/provider/me/finance/summary')
         .set(bearerAuth(token))
         .expect(200);
 
@@ -58,12 +58,12 @@ describe('ProviderFinanceController (HTTP)', () => {
 
   describe('GET /payments/provider/me/finance/items', () => {
     it('should return 401 without token and 403 for CLIENT', async () => {
-      await request(app.getHttpServer()).get('/payments/provider/me/finance/items').expect(401);
+      await request(app.getHttpServer()).get('/api/v1/payments/provider/me/finance/items').expect(401);
 
       const client = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(client);
       await request(app.getHttpServer())
-        .get('/payments/provider/me/finance/items')
+        .get('/api/v1/payments/provider/me/finance/items')
         .set(bearerAuth(token))
         .expect(403);
     });
@@ -73,13 +73,13 @@ describe('ProviderFinanceController (HTTP)', () => {
       const token = mintToken(user);
 
       const response = await request(app.getHttpServer())
-        .get('/payments/provider/me/finance/items')
+        .get('/api/v1/payments/provider/me/finance/items')
         .set(bearerAuth(token))
         .expect(200);
       expect(Array.isArray(response.body)).toBe(true);
 
       const filtered = await request(app.getHttpServer())
-        .get('/payments/provider/me/finance/items?status=PAID')
+        .get('/api/v1/payments/provider/me/finance/items?status=PAID')
         .set(bearerAuth(token))
         .expect(200);
       expect(Array.isArray(filtered.body)).toBe(true);
@@ -88,12 +88,12 @@ describe('ProviderFinanceController (HTTP)', () => {
 
   describe('GET /payments/provider/me/finance/chart', () => {
     it('should return 401 without token and 403 for CLIENT', async () => {
-      await request(app.getHttpServer()).get('/payments/provider/me/finance/chart').expect(401);
+      await request(app.getHttpServer()).get('/api/v1/payments/provider/me/finance/chart').expect(401);
 
       const client = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(client);
       await request(app.getHttpServer())
-        .get('/payments/provider/me/finance/chart')
+        .get('/api/v1/payments/provider/me/finance/chart')
         .set(bearerAuth(token))
         .expect(403);
     });
@@ -103,14 +103,14 @@ describe('ProviderFinanceController (HTTP)', () => {
       const token = mintToken(user);
 
       const response = await request(app.getHttpServer())
-        .get('/payments/provider/me/finance/chart')
+        .get('/api/v1/payments/provider/me/finance/chart')
         .set(bearerAuth(token))
         .expect(200);
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body.length).toBe(6);
 
       const withMonths = await request(app.getHttpServer())
-        .get('/payments/provider/me/finance/chart?months=3')
+        .get('/api/v1/payments/provider/me/finance/chart?months=3')
         .set(bearerAuth(token))
         .expect(200);
       expect(withMonths.body.length).toBe(3);

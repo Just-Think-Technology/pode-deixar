@@ -46,7 +46,7 @@ describe('POST /auth/verify-email', () => {
       const { email, token } = await registerAndGetToken();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/verify-email')
+        .post('/api/v1/auth/verify-email')
         .send({ token })
         .expect(200);
 
@@ -60,7 +60,7 @@ describe('POST /auth/verify-email', () => {
   describe('Failure cases', () => {
     it('should reject an invalid token with 400', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/verify-email')
+        .post('/api/v1/auth/verify-email')
         .send({ token: 'invalid-token' })
         .expect(400);
 
@@ -69,7 +69,7 @@ describe('POST /auth/verify-email', () => {
 
     it('should reject a missing token with 400', async () => {
       await request(app.getHttpServer())
-        .post('/auth/verify-email')
+        .post('/api/v1/auth/verify-email')
         .send({})
         .expect(400);
     });
@@ -84,7 +84,7 @@ describe('POST /auth/verify-email', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .post('/auth/verify-email')
+        .post('/api/v1/auth/verify-email')
         .send({ token })
         .expect(400);
 
