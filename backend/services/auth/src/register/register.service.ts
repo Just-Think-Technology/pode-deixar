@@ -53,15 +53,25 @@ export class RegisterService {
       ),
     });
 
-    await this.sendVerificationEmail(
+    const emailSent = await this.trySendVerificationEmail(
       dto.email,
       emailVerificationToken,
       dto.role,
     );
     this.authLogger.logRegistration(dto.email, dto.role, ip);
 
+    // Surface delivery failure so UI can offer "Reenviar" — keep 201 to
+    // avoid leaking SMTP state, but tell caller email is pending.
+    if (!emailSent) {
+      this.authLogger.logSecurityEvent('email_send_failed_first_attempt', {
+        email: dto.email,
+        role: dto.role,
+      });
+    }
+
     return {
       message: SIGNUP_RESPONSE_MESSAGE,
+      emailSent,
       user: {
         id: user.id,
         complete_name: user.completeName,
@@ -127,8 +137,8 @@ export class RegisterService {
     email: string,
     token: string,
     role?: string,
-  ): Promise<void> {
-    await this.trySendVerificationEmail(email, token, role);
+  ): Promise<boolean> {
+    return this.trySendVerificationEmail(email, token, role);
   }
 
   private devOnlyVerificationToken(token: string) {
@@ -213,17 +223,28 @@ export class RegisterService {
     token: string,
     role?: string,
   ): Promise<boolean> {
-    try {
-      await this.emailService.sendEmailVerification(email, token, role);
-      return true;
-    } catch (error) {
-      this.authLogger.logSecurityEvent('email_send_failed', {
-        email,
-        type: 'verification',
-        error: error.message,
-      });
-      return false;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await this.emailService.sendEmailVerification(email, token, role);
+        if (attempt > 1) {
+          this.authLogger.logSecurityEvent('email_send_retry_success', {
+            email,
+            attempt,
+          });
+        }
+        return true;
+      } catch (error) {
+        this.authLogger.logSecurityEvent('email_send_failed', {
+          email,
+          type: 'verification',
+          attempt,
+          error: (error as Error).message,
+        });
+        if (attempt === 2) return false;
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+      }
     }
+    return false;
   }
 
   // --- Private Helpers ---
