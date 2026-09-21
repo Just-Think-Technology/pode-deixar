@@ -50,7 +50,7 @@ describe('Notifications journey (Task 8)', () => {
 
   async function getNotifications(token: string, query = '') {
     const res = await request(apps.usersApp.getHttpServer())
-      .get(`/notifications${query}`)
+      .get(`/api/v1/notifications${query}`)
       .set(bearerAuth(token))
       .expect(200);
     return res.body as Array<{
