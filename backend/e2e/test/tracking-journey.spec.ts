@@ -51,7 +51,7 @@ describe('Tracking journey (JTT-105)', () => {
 
     const order = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .set(bearerAuth(clientToken))
         .send({
           title: 'Troca da torneira',
@@ -64,21 +64,21 @@ describe('Tracking journey (JTT-105)', () => {
 
     const proposalId = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(bearerAuth(providerToken))
         .send({ serviceOrderId: orderId, price: 180, description: 'Faço hoje' })
         .expect(201)
     ).body.id as string;
 
     await request(apps.ordersApp.getHttpServer())
-      .post(`/proposals/${proposalId}/accept`)
+      .post(`/api/v1/proposals/${proposalId}/accept`)
       .set(bearerAuth(clientToken))
       .expect(201);
 
     // Create payment so tracking can show PAID later
     const payment = (
       await request(apps.paymentsApp.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(clientToken))
         .send({
           serviceOrderId: orderId,
@@ -90,7 +90,7 @@ describe('Tracking journey (JTT-105)', () => {
     ).body;
 
     await request(apps.paymentsApp.getHttpServer())
-      .post('/payments/webhook')
+      .post('/api/v1/payments/webhook')
       .set('x-webhook-key', 'test-webhook-key')
       .send({
         paymentId: payment.id,
@@ -104,7 +104,7 @@ describe('Tracking journey (JTT-105)', () => {
 
   it('2. GET /services/:orderId/tracking returns 403 for stranger', async () => {
     await request(apps.ordersApp.getHttpServer())
-      .get(`/services/${orderId}/tracking`)
+      .get(`/api/v1/services/${orderId}/tracking`)
       .set(bearerAuth(strangerToken))
       .expect(403);
   });
@@ -112,7 +112,7 @@ describe('Tracking journey (JTT-105)', () => {
   it('3. tracking returns consolidated view, fee redacted for CLIENT', async () => {
     const asProvider = (
       await request(apps.ordersApp.getHttpServer())
-        .get(`/services/${orderId}/tracking`)
+        .get(`/api/v1/services/${orderId}/tracking`)
         .set(bearerAuth(providerToken))
         .expect(200)
     ).body;
@@ -126,7 +126,7 @@ describe('Tracking journey (JTT-105)', () => {
 
     const asClient = (
       await request(apps.ordersApp.getHttpServer())
-        .get(`/services/${orderId}/tracking`)
+        .get(`/api/v1/services/${orderId}/tracking`)
         .set(bearerAuth(clientToken))
         .expect(200)
     ).body;
@@ -139,7 +139,7 @@ describe('Tracking journey (JTT-105)', () => {
   it('4. provider start transitions SCHEDULED → IN_PROGRESS', async () => {
     const started = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/services/me/${orderId}/start`)
+        .post(`/api/v1/services/me/${orderId}/start`)
         .set(bearerAuth(providerToken))
         .expect(201)
     ).body;
@@ -149,7 +149,7 @@ describe('Tracking journey (JTT-105)', () => {
     // Idempotent second call
     const started2 = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/services/me/${orderId}/start`)
+        .post(`/api/v1/services/me/${orderId}/start`)
         .set(bearerAuth(providerToken))
         .expect(201)
     ).body;
@@ -164,7 +164,7 @@ describe('Tracking journey (JTT-105)', () => {
 
     const finished = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/services/me/${orderId}/finish`)
+        .post(`/api/v1/services/me/${orderId}/finish`)
         .set(bearerAuth(providerToken))
         .field('observations', 'Concluído com sucesso')
         .attach('photos', png1x1, { filename: 'foto.png', contentType: 'image/png' })
@@ -181,7 +181,7 @@ describe('Tracking journey (JTT-105)', () => {
     const category = await createCategory(apps.prisma);
     const order2 = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .set(bearerAuth(clientToken))
         .send({
           title: 'Desentupimento',
@@ -194,7 +194,7 @@ describe('Tracking journey (JTT-105)', () => {
 
     const cancelled = (
       await request(apps.ordersApp.getHttpServer())
-        .delete(`/services/me/${orderId2}`)
+        .delete(`/api/v1/services/me/${orderId2}`)
         .set(bearerAuth(clientToken))
         .send({ cancelReason: 'Mudança de planos' })
         .expect(200)
@@ -204,7 +204,7 @@ describe('Tracking journey (JTT-105)', () => {
 
     const tracking = (
       await request(apps.ordersApp.getHttpServer())
-        .get(`/services/${orderId2}/tracking`)
+        .get(`/api/v1/services/${orderId2}/tracking`)
         .set(bearerAuth(clientToken))
         .expect(200)
     ).body;

@@ -89,6 +89,7 @@ async function bootApp(
     });
   const moduleFixture: TestingModule = await builder.compile();
   const app = moduleFixture.createNestApplication();
+  app.setGlobalPrefix('api/v1', { exclude: ['health', 'health/ready', 'health/live'] });
   await app.init();
   return app;
 }
@@ -170,6 +171,7 @@ export async function bootAuthApp(): Promise<INestApplication> {
     .compile();
 
   const app = moduleFixture.createNestApplication();
+  app.setGlobalPrefix('api/v1', { exclude: ['health', 'health/ready', 'health/live'] });
   await app.init();
   return app;
 }

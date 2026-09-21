@@ -53,7 +53,7 @@ describe('PhotosController (HTTP)', () => {
     it('should return 401 without token', async () => {
       const { order } = await clientWithOrder();
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/photos`)
+        .post(`/api/v1/services/me/${order.id}/photos`)
         .expect(401);
     });
 
@@ -63,7 +63,7 @@ describe('PhotosController (HTTP)', () => {
       const token = mintToken(provider);
 
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/photos`)
+        .post(`/api/v1/services/me/${order.id}/photos`)
         .set(bearerAuth(token))
         .attach('photos', PNG_1X1, { filename: 'foto.png', contentType: 'image/png' })
         .expect(403);
@@ -72,7 +72,7 @@ describe('PhotosController (HTTP)', () => {
     it('should return 400 when no files sent', async () => {
       const { token, order } = await clientWithOrder();
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/photos`)
+        .post(`/api/v1/services/me/${order.id}/photos`)
         .set(bearerAuth(token))
         .expect(400);
     });
@@ -82,7 +82,7 @@ describe('PhotosController (HTTP)', () => {
       const intruder = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(intruder);
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/photos`)
+        .post(`/api/v1/services/me/${order.id}/photos`)
         .set(bearerAuth(token))
         .attach('photos', PNG_1X1, { filename: 'foto.png', contentType: 'image/png' })
         .expect(403);
@@ -91,7 +91,7 @@ describe('PhotosController (HTTP)', () => {
     it('should return 201 and persist photo for owner client with valid png', async () => {
       const { token, order } = await clientWithOrder();
       const response = await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/photos`)
+        .post(`/api/v1/services/me/${order.id}/photos`)
         .set(bearerAuth(token))
         .attach('photos', PNG_1X1, { filename: 'foto.png', contentType: 'image/png' })
         .expect(201);
@@ -106,7 +106,7 @@ describe('PhotosController (HTTP)', () => {
     it('should return 400 for invalid file type (magic-byte validation)', async () => {
       const { token, order } = await clientWithOrder();
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/photos`)
+        .post(`/api/v1/services/me/${order.id}/photos`)
         .set(bearerAuth(token))
         .attach('photos', Buffer.from('not-an-image'), { filename: 'doc.txt', contentType: 'text/plain' })
         .expect(400);
@@ -116,7 +116,7 @@ describe('PhotosController (HTTP)', () => {
   describe('GET /services/photos/:photoId/view', () => {
     it('should return 401 without token', async () => {
       await request(app.getHttpServer())
-        .get('/services/photos/00000000-0000-0000-0000-000000000000/view')
+        .get('/api/v1/services/photos/00000000-0000-0000-0000-000000000000/view')
         .expect(401);
     });
 
@@ -124,7 +124,7 @@ describe('PhotosController (HTTP)', () => {
       const user = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(user);
       await request(app.getHttpServer())
-        .get('/services/photos/00000000-0000-0000-0000-000000000000/view')
+        .get('/api/v1/services/photos/00000000-0000-0000-0000-000000000000/view')
         .set(bearerAuth(token))
         .expect(404);
     });

@@ -53,7 +53,7 @@ describe('Payments (integration)', () => {
 
   async function createPayment(token: string, serviceOrderId: string) {
     return request(app.getHttpServer())
-      .post('/payments')
+      .post('/api/v1/payments')
       .set(bearerAuth(token))
       .send({ serviceOrderId, method: 'PIX', scheduledAt })
       .expect(201);
@@ -73,7 +73,7 @@ describe('Payments (integration)', () => {
       const { token } = await clientWithOrder();
 
       await request(app.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(token))
         .send({})
         .expect(400);
@@ -84,7 +84,7 @@ describe('Payments (integration)', () => {
       const intruder = await createTestUser(prisma, { role: 'CLIENT' });
 
       await request(app.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .send({
           serviceOrderId: owner.order.id,
           method: 'PIX',
@@ -93,7 +93,7 @@ describe('Payments (integration)', () => {
         .expect(401);
 
       await request(app.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(mintToken(intruder)))
         .send({
           serviceOrderId: owner.order.id,
@@ -107,7 +107,7 @@ describe('Payments (integration)', () => {
       const { token } = await clientWithOrder();
 
       await request(app.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(token))
         .send({
           serviceOrderId: '00000000-0000-0000-0000-000000000000',
@@ -124,7 +124,7 @@ describe('Payments (integration)', () => {
       await createPayment(token, order.id);
 
       const response = await request(app.getHttpServer())
-        .get('/payments')
+        .get('/api/v1/payments')
         .set(bearerAuth(token))
         .expect(200);
 
@@ -139,13 +139,13 @@ describe('Payments (integration)', () => {
         .body.id as string;
 
       const response = await request(app.getHttpServer())
-        .get(`/payments/${paymentId}/status`)
+        .get(`/api/v1/payments/${paymentId}/status`)
         .set(bearerAuth(owner.token))
         .expect(200);
       expect(response.body.status).toBe('PENDING');
 
       await request(app.getHttpServer())
-        .get(`/payments/${paymentId}/status`)
+        .get(`/api/v1/payments/${paymentId}/status`)
         .set(bearerAuth(mintToken(intruder)))
         .expect(403);
     });
@@ -154,7 +154,7 @@ describe('Payments (integration)', () => {
       const { token } = await clientWithOrder();
 
       await request(app.getHttpServer())
-        .get('/payments/not-a-uuid/status')
+        .get('/api/v1/payments/not-a-uuid/status')
         .set(bearerAuth(token))
         .expect(400);
     });
@@ -177,7 +177,7 @@ describe('Payments (integration)', () => {
       const paymentId = (await createPayment(token, order.id)).body.id as string;
 
       const response = await request(app.getHttpServer())
-        .post('/payments/webhook')
+        .post('/api/v1/payments/webhook')
         .set('x-webhook-key', 'test-webhook-key')
         .send(webhookDto(paymentId, `evt_${Date.now()}_a`))
         .expect(201);
@@ -192,13 +192,13 @@ describe('Payments (integration)', () => {
       const headers = { 'x-webhook-key': 'test-webhook-key' };
 
       await request(app.getHttpServer())
-        .post('/payments/webhook')
+        .post('/api/v1/payments/webhook')
         .set(headers)
         .send(webhookDto(paymentId, eventId))
         .expect(201);
 
       const duplicate = await request(app.getHttpServer())
-        .post('/payments/webhook')
+        .post('/api/v1/payments/webhook')
         .set(headers)
         .send(webhookDto(paymentId, eventId))
         .expect(201);
@@ -208,7 +208,7 @@ describe('Payments (integration)', () => {
 
     it('deve retornar 403 com chave inválida e 404 para pagamento inexistente', async () => {
       await request(app.getHttpServer())
-        .post('/payments/webhook')
+        .post('/api/v1/payments/webhook')
         .set('x-webhook-key', 'wrong-key')
         .send(
           webhookDto(
@@ -219,7 +219,7 @@ describe('Payments (integration)', () => {
         .expect(403);
 
       await request(app.getHttpServer())
-        .post('/payments/webhook')
+        .post('/api/v1/payments/webhook')
         .set('x-webhook-key', 'test-webhook-key')
         .send(
           webhookDto(

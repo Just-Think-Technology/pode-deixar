@@ -64,7 +64,7 @@ describe('Client journey (cross-service e2e)', () => {
 
     const registered = (
       await request(authApp.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send(dto)
         .expect(201)
     ).body;
@@ -76,7 +76,7 @@ describe('Client journey (cross-service e2e)', () => {
     // Duplicate email gets the same generic response (anti-enumeration)
     const duplicate = (
       await request(authApp.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send(dto)
         .expect(201)
     ).body;
@@ -91,13 +91,13 @@ describe('Client journey (cross-service e2e)', () => {
     expect(rawToken).toBeDefined();
 
     await request(authApp.getHttpServer())
-      .post('/auth/verify-email')
+      .post('/api/v1/auth/verify-email')
       .send({ token: rawToken })
       .expect(200);
 
     const logged = (
       await request(authApp.getHttpServer())
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: dto.email, password: dto.password })
         .expect(200)
     ).body;
@@ -110,7 +110,7 @@ describe('Client journey (cross-service e2e)', () => {
     // integration proof via shared data, driven with the auth token.
     const profile = (
       await request(apps.usersApp.getHttpServer())
-        .get('/profiles/me')
+        .get('/api/v1/profiles/me')
         .set(bearerAuth(accessToken))
         .expect(200)
     ).body;
@@ -120,7 +120,7 @@ describe('Client journey (cross-service e2e)', () => {
 
     const updated = (
       await request(apps.usersApp.getHttpServer())
-        .patch('/profiles/client')
+        .patch('/api/v1/profiles/client')
         .set(bearerAuth(accessToken))
         .send({ preferences: { theme: 'dark' } })
         .expect(200)
@@ -133,7 +133,7 @@ describe('Client journey (cross-service e2e)', () => {
 
     const order = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .set(bearerAuth(accessToken))
         .send({
           title: 'Pintura da sala',
@@ -153,7 +153,7 @@ describe('Client journey (cross-service e2e)', () => {
 
     const proposalId = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(bearerAuth(providerToken))
         .send({
           serviceOrderId: orderId,
@@ -165,7 +165,7 @@ describe('Client journey (cross-service e2e)', () => {
 
     const accepted = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/proposals/${proposalId}/accept`)
+        .post(`/api/v1/proposals/${proposalId}/accept`)
         .set(bearerAuth(accessToken))
         .expect(201)
     ).body;
@@ -177,7 +177,7 @@ describe('Client journey (cross-service e2e)', () => {
       'base64',
     );
     await request(apps.ordersApp.getHttpServer())
-      .post(`/services/me/${orderId}/completion-photos`)
+      .post(`/api/v1/services/me/${orderId}/completion-photos`)
       .set(bearerAuth(providerToken))
       .attach('file', png1x1, {
         filename: 'foto.png',
@@ -187,7 +187,7 @@ describe('Client journey (cross-service e2e)', () => {
 
     const completed = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/services/me/${orderId}/complete`)
+        .post(`/api/v1/services/me/${orderId}/complete`)
         .set(bearerAuth(providerToken))
         .send({ observations: 'Serviço realizado' })
         .expect(201)
@@ -199,7 +199,7 @@ describe('Client journey (cross-service e2e)', () => {
   it('5. client pays via PIX and confirms (payments)', async () => {
     const payment = (
       await request(apps.paymentsApp.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(accessToken))
         .send({
           serviceOrderId: orderId,
@@ -213,7 +213,7 @@ describe('Client journey (cross-service e2e)', () => {
 
     const confirmed = (
       await request(apps.paymentsApp.getHttpServer())
-        .post('/payments/webhook')
+        .post('/api/v1/payments/webhook')
         .set('x-webhook-key', 'test-webhook-key')
         .send({
           paymentId,
@@ -231,7 +231,7 @@ describe('Client journey (cross-service e2e)', () => {
   it('6. client reviews the service (reviews)', async () => {
     const review = (
       await request(apps.reviewsApp.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(accessToken))
         .send({
           serviceOrderId: orderId,
@@ -246,7 +246,7 @@ describe('Client journey (cross-service e2e)', () => {
 
     const mine = (
       await request(apps.reviewsApp.getHttpServer())
-        .get('/reviews/me')
+        .get('/api/v1/reviews/me')
         .set(bearerAuth(accessToken))
         .expect(200)
     ).body;

@@ -44,7 +44,7 @@ describe('PaymentsController (HTTP)', () => {
     it('should return 401 without token', async () => {
       const { order } = await clientWithOrder();
       await request(app.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .send({ serviceOrderId: order.id, method: 'PIX', scheduledAt })
         .expect(401);
     });
@@ -54,7 +54,7 @@ describe('PaymentsController (HTTP)', () => {
       const intruder = await createTestUser(prisma, { role: 'CLIENT' });
       const token = mintToken(intruder);
       await request(app.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(token))
         .send({ serviceOrderId: owner.order.id, method: 'PIX', scheduledAt })
         .expect(403);
@@ -63,7 +63,7 @@ describe('PaymentsController (HTTP)', () => {
     it('should return 201 for owner and persist payment with PENDING', async () => {
       const { token, order } = await clientWithOrder();
       const response = await request(app.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(token))
         .send({ serviceOrderId: order.id, method: 'PIX', scheduledAt })
         .expect(201);
@@ -77,7 +77,7 @@ describe('PaymentsController (HTTP)', () => {
     it('should return 400 for missing required fields', async () => {
       const { token } = await clientWithOrder();
       await request(app.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(token))
         .send({})
         .expect(400);
@@ -86,7 +86,7 @@ describe('PaymentsController (HTTP)', () => {
     it('should return 404 for nonexistent order', async () => {
       const { token } = await clientWithOrder();
       await request(app.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(token))
         .send({ serviceOrderId: '00000000-0000-0000-0000-000000000000', method: 'PIX', scheduledAt })
         .expect(404);
@@ -99,16 +99,16 @@ describe('PaymentsController (HTTP)', () => {
       const intruder = await createTestUser(prisma, { role: 'CLIENT' });
       const paymentId = (
         await request(app.getHttpServer())
-          .post('/payments')
+          .post('/api/v1/payments')
           .set(bearerAuth(owner.token))
           .send({ serviceOrderId: owner.order.id, method: 'PIX', scheduledAt })
           .expect(201)
       ).body.id as string;
 
-      await request(app.getHttpServer()).get(`/payments/${paymentId}/status`).expect(401);
+      await request(app.getHttpServer()).get(`/api/v1/payments/${paymentId}/status`).expect(401);
 
       await request(app.getHttpServer())
-        .get(`/payments/${paymentId}/status`)
+        .get(`/api/v1/payments/${paymentId}/status`)
         .set(bearerAuth(mintToken(intruder)))
         .expect(403);
     });
@@ -117,14 +117,14 @@ describe('PaymentsController (HTTP)', () => {
       const { token, order } = await clientWithOrder();
       const paymentId = (
         await request(app.getHttpServer())
-          .post('/payments')
+          .post('/api/v1/payments')
           .set(bearerAuth(token))
           .send({ serviceOrderId: order.id, method: 'PIX', scheduledAt })
           .expect(201)
       ).body.id as string;
 
       const response = await request(app.getHttpServer())
-        .get(`/payments/${paymentId}/status`)
+        .get(`/api/v1/payments/${paymentId}/status`)
         .set(bearerAuth(token))
         .expect(200);
 
@@ -135,7 +135,7 @@ describe('PaymentsController (HTTP)', () => {
     it('should return 400 for invalid UUID', async () => {
       const { token } = await clientWithOrder();
       await request(app.getHttpServer())
-        .get('/payments/not-a-uuid/status')
+        .get('/api/v1/payments/not-a-uuid/status')
         .set(bearerAuth(token))
         .expect(400);
     });
@@ -146,14 +146,14 @@ describe('PaymentsController (HTTP)', () => {
       const { token, order } = await clientWithOrder();
       const paymentId = (
         await request(app.getHttpServer())
-          .post('/payments')
+          .post('/api/v1/payments')
           .set(bearerAuth(token))
           .send({ serviceOrderId: order.id, method: 'PIX', scheduledAt })
           .expect(201)
       ).body.id as string;
 
       await request(app.getHttpServer())
-        .post('/payments/webhook')
+        .post('/api/v1/payments/webhook')
         .set('x-webhook-key', 'wrong-key')
         .send({
           paymentId,
@@ -169,14 +169,14 @@ describe('PaymentsController (HTTP)', () => {
       const { token, order } = await clientWithOrder();
       const paymentId = (
         await request(app.getHttpServer())
-          .post('/payments')
+          .post('/api/v1/payments')
           .set(bearerAuth(token))
           .send({ serviceOrderId: order.id, method: 'PIX', scheduledAt })
           .expect(201)
       ).body.id as string;
 
       await request(app.getHttpServer())
-        .post('/payments/webhook')
+        .post('/api/v1/payments/webhook')
         .set('x-webhook-key', 'test-webhook-key-controller')
         .send({ paymentId, eventId: 'evt_123', externalId: 'tx_123', amount: 150 })
         .expect(400);

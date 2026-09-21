@@ -94,7 +94,7 @@ describe('Photos (integration)', () => {
 
       const orderId = (
         await request(app.getHttpServer())
-          .post('/services/me')
+          .post('/api/v1/services/me')
           .set(bearerAuth(client.token))
           .send({
             title: 'Foto pedido',
@@ -105,7 +105,7 @@ describe('Photos (integration)', () => {
       ).body.id as string;
 
       const response = await request(app.getHttpServer())
-        .post(`/services/me/${orderId}/photos`)
+        .post(`/api/v1/services/me/${orderId}/photos`)
         .set(bearerAuth(client.token))
         .attach('photos', PNG_1X1, { filename: 'local.png', contentType: 'image/png' })
         .expect(201);
@@ -121,7 +121,7 @@ describe('Photos (integration)', () => {
 
       const orderId = (
         await request(app.getHttpServer())
-          .post('/services/me')
+          .post('/api/v1/services/me')
           .set(bearerAuth(client.token))
           .send({
             title: 'Limite fotos',
@@ -137,7 +137,7 @@ describe('Photos (integration)', () => {
         filename: `foto-${Math.random().toString(36).slice(2)}.png`,
       }));
       let req = request(app.getHttpServer())
-        .post(`/services/me/${orderId}/photos`)
+        .post(`/api/v1/services/me/${orderId}/photos`)
         .set(bearerAuth(client.token));
       for (const f of attach10) {
         req = req.attach('photos', f.buffer, { filename: f.filename, contentType: 'image/png' });
@@ -146,7 +146,7 @@ describe('Photos (integration)', () => {
 
       // 11th photo should exceed total limit → 400
       await request(app.getHttpServer())
-        .post(`/services/me/${orderId}/photos`)
+        .post(`/api/v1/services/me/${orderId}/photos`)
         .set(bearerAuth(client.token))
         .attach('photos', PNG_1X1, { filename: 'extra.png', contentType: 'image/png' })
         .expect(400);
@@ -158,7 +158,7 @@ describe('Photos (integration)', () => {
 
       const orderId = (
         await request(app.getHttpServer())
-          .post('/services/me')
+          .post('/api/v1/services/me')
           .set(bearerAuth(client.token))
           .send({
             title: 'Magic bytes',
@@ -169,7 +169,7 @@ describe('Photos (integration)', () => {
       ).body.id as string;
 
       await request(app.getHttpServer())
-        .post(`/services/me/${orderId}/photos`)
+        .post(`/api/v1/services/me/${orderId}/photos`)
         .set(bearerAuth(client.token))
         .attach('photos', Buffer.from('not-an-image-content'), {
           filename: 'fake.png',
@@ -185,7 +185,7 @@ describe('Photos (integration)', () => {
 
       const orderId = (
         await request(app.getHttpServer())
-          .post('/services/me')
+          .post('/api/v1/services/me')
           .set(bearerAuth(client.token))
           .send({
             title: 'Auth foto',
@@ -196,18 +196,18 @@ describe('Photos (integration)', () => {
       ).body.id as string;
 
       await request(app.getHttpServer())
-        .post(`/services/me/${orderId}/photos`)
+        .post(`/api/v1/services/me/${orderId}/photos`)
         .attach('photos', PNG_1X1, { filename: 'a.png', contentType: 'image/png' })
         .expect(401);
 
       await request(app.getHttpServer())
-        .post(`/services/me/${orderId}/photos`)
+        .post(`/api/v1/services/me/${orderId}/photos`)
         .set(bearerAuth(intruder.token))
         .attach('photos', PNG_1X1, { filename: 'a.png', contentType: 'image/png' })
         .expect(403);
 
       await request(app.getHttpServer())
-        .post('/services/me/00000000-0000-0000-0000-000000000000/photos')
+        .post('/api/v1/services/me/00000000-0000-0000-0000-000000000000/photos')
         .set(bearerAuth(client.token))
         .attach('photos', PNG_1X1, { filename: 'a.png', contentType: 'image/png' })
         .expect(404);
@@ -224,7 +224,7 @@ describe('Photos (integration)', () => {
 
       // Provider upload completion photo (multipart)
       const uploaded = await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/completion-photos`)
+        .post(`/api/v1/services/me/${order.id}/completion-photos`)
         .set(bearerAuth(provider.token))
         .attach('photos', PNG_1X1, { filename: 'evidencia.png', contentType: 'image/png' })
         .expect(201);
@@ -234,20 +234,20 @@ describe('Photos (integration)', () => {
 
       // View presigned URL (owner client, provider owner, or ADMIN; provider has proposal)
       const viewAsProvider = await request(app.getHttpServer())
-        .get(`/services/photos/${photoId}/view`)
+        .get(`/api/v1/services/photos/${photoId}/view`)
         .set(bearerAuth(provider.token))
         .expect(200);
       expect(viewAsProvider.body.url).toContain('X-Amz-Signature=mock');
 
       const viewAsClient = await request(app.getHttpServer())
-        .get(`/services/photos/${photoId}/view`)
+        .get(`/api/v1/services/photos/${photoId}/view`)
         .set(bearerAuth(client.token))
         .expect(200);
       expect(viewAsClient.body.url).toContain('X-Amz-Signature=mock');
 
       // Delete completion photo (provider owner)
       await request(app.getHttpServer())
-        .delete(`/services/me/${order.id}/completion-photos/${photoId}`)
+        .delete(`/api/v1/services/me/${order.id}/completion-photos/${photoId}`)
         .set(bearerAuth(provider.token))
         .expect(200);
 
@@ -255,7 +255,7 @@ describe('Photos (integration)', () => {
 
       // After delete, view should be 404
       await request(app.getHttpServer())
-        .get(`/services/photos/${photoId}/view`)
+        .get(`/api/v1/services/photos/${photoId}/view`)
         .set(bearerAuth(provider.token))
         .expect(404);
     });
@@ -270,7 +270,7 @@ describe('Photos (integration)', () => {
       const order = await hireOrderForCompletion(client.user.id, provider.user.id, cat.id);
 
       const uploaded = await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/completion-photos`)
+        .post(`/api/v1/services/me/${order.id}/completion-photos`)
         .set(bearerAuth(provider.token))
         .attach('photos', PNG_1X1, { filename: 'evidencia2.png', contentType: 'image/png' })
         .expect(201);
@@ -279,18 +279,18 @@ describe('Photos (integration)', () => {
 
       // Outsider client not owner → 403
       await request(app.getHttpServer())
-        .get(`/services/photos/${photoId}/view`)
+        .get(`/api/v1/services/photos/${photoId}/view`)
         .set(bearerAuth(outsiderClient.token))
         .expect(403);
 
       // Outsider provider without proposal → 403
       await request(app.getHttpServer())
-        .delete(`/services/me/${order.id}/completion-photos/${photoId}`)
+        .delete(`/api/v1/services/me/${order.id}/completion-photos/${photoId}`)
         .set(bearerAuth(outsiderProvider.token))
         .expect(403);
 
       // Unauthenticated → 401
-      await request(app.getHttpServer()).get(`/services/photos/${photoId}/view`).expect(401);
+      await request(app.getHttpServer()).get(`/api/v1/services/photos/${photoId}/view`).expect(401);
     });
   });
 });

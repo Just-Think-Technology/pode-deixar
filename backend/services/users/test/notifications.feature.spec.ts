@@ -50,7 +50,7 @@ describe('Notifications (integration)', () => {
       const { token, user } = await clientAuth();
 
       const response = await request(app.getHttpServer())
-        .post('/notifications')
+        .post('/api/v1/notifications')
         .set(bearerAuth(token))
         .send({
           type: 'BUDGET',
@@ -71,7 +71,7 @@ describe('Notifications (integration)', () => {
       const other = await createTestUser(prisma, { role: 'CLIENT' });
 
       const response = await request(app.getHttpServer())
-        .post('/notifications')
+        .post('/api/v1/notifications')
         .set(bearerAuth(token))
         .send({
           recipient: other.id,
@@ -87,7 +87,7 @@ describe('Notifications (integration)', () => {
 
     it('should return 401 without token', async () => {
       await request(app.getHttpServer())
-        .post('/notifications')
+        .post('/api/v1/notifications')
         .send({
           type: 'BUDGET',
           title: 'x',
@@ -103,7 +103,7 @@ describe('Notifications (integration)', () => {
       const intruder = await clientAuth();
 
       await request(app.getHttpServer())
-        .post('/notifications')
+        .post('/api/v1/notifications')
         .set(bearerAuth(owner.token))
         .send({
           type: 'BUDGET',
@@ -113,7 +113,7 @@ describe('Notifications (integration)', () => {
         .expect(201);
 
       const ownerList = await request(app.getHttpServer())
-        .get('/notifications')
+        .get('/api/v1/notifications')
         .set(bearerAuth(owner.token))
         .expect(200);
 
@@ -121,7 +121,7 @@ describe('Notifications (integration)', () => {
       expect(ownerList.body.items.every((n: any) => n.recipient === owner.user.id)).toBe(true);
 
       const intruderList = await request(app.getHttpServer())
-        .get('/notifications')
+        .get('/api/v1/notifications')
         .set(bearerAuth(intruder.token))
         .expect(200);
 
@@ -136,7 +136,7 @@ describe('Notifications (integration)', () => {
 
       const created = (
         await request(app.getHttpServer())
-          .post('/notifications')
+          .post('/api/v1/notifications')
           .set(bearerAuth(token))
           .send({
             type: 'BUDGET',
@@ -148,25 +148,25 @@ describe('Notifications (integration)', () => {
 
       // Initially unread => appears in lido=false, not in lido=true
       const unread = await request(app.getHttpServer())
-        .get('/notifications?lido=false')
+        .get('/api/v1/notifications?lido=false')
         .set(bearerAuth(token))
         .expect(200);
       expect(unread.body.items.some((n: any) => n.id === created.id)).toBe(true);
 
       const readEmpty = await request(app.getHttpServer())
-        .get('/notifications?lido=true')
+        .get('/api/v1/notifications?lido=true')
         .set(bearerAuth(token))
         .expect(200);
       expect(readEmpty.body.items.some((n: any) => n.id === created.id)).toBe(false);
 
       // Mark as read then it moves to lido=true
       await request(app.getHttpServer())
-        .patch(`/notifications/${created.id}/read`)
+        .patch(`/api/v1/notifications/${created.id}/read`)
         .set(bearerAuth(token))
         .expect(200);
 
       const readNow = await request(app.getHttpServer())
-        .get('/notifications?lido=true')
+        .get('/api/v1/notifications?lido=true')
         .set(bearerAuth(token))
         .expect(200);
       expect(readNow.body.items.some((n: any) => n.id === created.id)).toBe(true);
@@ -176,7 +176,7 @@ describe('Notifications (integration)', () => {
       const { token } = await clientAuth();
 
       await request(app.getHttpServer())
-        .post('/notifications')
+        .post('/api/v1/notifications')
         .set(bearerAuth(token))
         .send({
           type: 'BUDGET',
@@ -186,7 +186,7 @@ describe('Notifications (integration)', () => {
         .expect(201);
 
       await request(app.getHttpServer())
-        .post('/notifications')
+        .post('/api/v1/notifications')
         .set(bearerAuth(token))
         .send({
           type: 'NEW_MESSAGE',
@@ -196,7 +196,7 @@ describe('Notifications (integration)', () => {
         .expect(201);
 
       const list = await request(app.getHttpServer())
-        .get('/notifications')
+        .get('/api/v1/notifications')
         .set(bearerAuth(token))
         .expect(200);
 
@@ -215,7 +215,7 @@ describe('Notifications (integration)', () => {
 
       const created = (
         await request(app.getHttpServer())
-          .post('/notifications')
+          .post('/api/v1/notifications')
           .set(bearerAuth(token))
           .send({
             type: 'BUDGET',
@@ -226,7 +226,7 @@ describe('Notifications (integration)', () => {
       ).body;
 
       const patched = await request(app.getHttpServer())
-        .patch(`/notifications/${created.id}/read`)
+        .patch(`/api/v1/notifications/${created.id}/read`)
         .set(bearerAuth(token))
         .expect(200);
 
@@ -240,7 +240,7 @@ describe('Notifications (integration)', () => {
 
       const created = (
         await request(app.getHttpServer())
-          .post('/notifications')
+          .post('/api/v1/notifications')
           .set(bearerAuth(owner.token))
           .send({
             type: 'BUDGET',
@@ -251,14 +251,14 @@ describe('Notifications (integration)', () => {
       ).body;
 
       await request(app.getHttpServer())
-        .patch(`/notifications/${created.id}/read`)
+        .patch(`/api/v1/notifications/${created.id}/read`)
         .set(bearerAuth(intruder.token))
         .expect(400);
     });
 
     it('should return 401 without token for read', async () => {
       await request(app.getHttpServer())
-        .patch('/notifications/00000000-0000-0000-0000-000000000000/read')
+        .patch('/api/v1/notifications/00000000-0000-0000-0000-000000000000/read')
         .expect(401);
     });
   });

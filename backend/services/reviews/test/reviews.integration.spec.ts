@@ -53,7 +53,7 @@ describe('Reviews (integration)', () => {
       );
 
       const response = await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(clientToken))
         .send({
           serviceOrderId: order.id,
@@ -77,7 +77,7 @@ describe('Reviews (integration)', () => {
       );
 
       const response = await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(providerToken))
         .send({ serviceOrderId: order.id, rating: 4 })
         .expect(201);
@@ -97,13 +97,13 @@ describe('Reviews (integration)', () => {
       const dto = { serviceOrderId: order.id, rating: 5 };
 
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(headers)
         .send(dto)
         .expect(201);
 
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(headers)
         .send(dto)
         .expect(400);
@@ -119,7 +119,7 @@ describe('Reviews (integration)', () => {
       );
 
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(mintToken(outsider)))
         .send({ serviceOrderId: order.id, rating: 5 })
         .expect(403);
@@ -135,7 +135,7 @@ describe('Reviews (integration)', () => {
       const headers = bearerAuth(clientToken);
 
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(headers)
         .send({
           serviceOrderId: '00000000-0000-0000-0000-000000000000',
@@ -144,7 +144,7 @@ describe('Reviews (integration)', () => {
         .expect(404);
 
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(headers)
         .send({ serviceOrderId: order.id, rating: 6 })
         .expect(400);
@@ -161,13 +161,13 @@ describe('Reviews (integration)', () => {
       );
 
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(clientToken))
         .send({ serviceOrderId: order.id, rating: 5 })
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get('/reviews/me')
+        .get('/api/v1/reviews/me')
         .set(bearerAuth(clientToken))
         .expect(200);
 
@@ -187,19 +187,19 @@ describe('Reviews (integration)', () => {
       );
 
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(clientToken))
         .send({ serviceOrderId: order.id, rating: 5 })
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get(`/reviews/service-order/${order.id}`)
+        .get(`/api/v1/reviews/service-order/${order.id}`)
         .set(bearerAuth(clientToken))
         .expect(200);
       expect(response.body).toHaveLength(1);
 
       await request(app.getHttpServer())
-        .get(`/reviews/service-order/${order.id}`)
+        .get(`/api/v1/reviews/service-order/${order.id}`)
         .set(bearerAuth(mintToken(outsider)))
         .expect(403);
     });
@@ -216,14 +216,14 @@ describe('Reviews (integration)', () => {
 
       const reviewId = (
         await request(app.getHttpServer())
-          .post('/reviews')
+          .post('/api/v1/reviews')
           .set(bearerAuth(clientToken))
           .send({ serviceOrderId: order.id, rating: 3 })
           .expect(201)
       ).body.id as string;
 
       const response = await request(app.getHttpServer())
-        .patch(`/reviews/${reviewId}`)
+        .patch(`/api/v1/reviews/${reviewId}`)
         .set(bearerAuth(clientToken))
         .send({ rating: 4, comment: 'Melhorou no final' })
         .expect(200);

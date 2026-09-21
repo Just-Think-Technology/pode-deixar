@@ -87,6 +87,7 @@ export async function setupTestApp(): Promise<TestAppSetup> {
     .compile();
 
   const app = moduleFixture.createNestApplication();
+  app.setGlobalPrefix('api/v1', { exclude: ['health', 'health/ready', 'health/live'] });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -108,7 +109,7 @@ export async function registerUser(
   user: TestUser,
 ): Promise<request.Response> {
   return request(app.getHttpServer())
-    .post('/auth/register')
+    .post('/api/v1/auth/register')
     .send(user)
     .expect(201);
 }
@@ -136,7 +137,7 @@ export async function verifyEmailViaApi(
   }
 
   await request(app.getHttpServer())
-    .post('/auth/verify-email')
+    .post('/api/v1/auth/verify-email')
     .send({ token: rawToken })
     .expect(200);
 }
@@ -147,7 +148,7 @@ export async function loginUser(
   password: string,
 ): Promise<request.Response> {
   return request(app.getHttpServer())
-    .post('/auth/login')
+    .post('/api/v1/auth/login')
     .send({ email, password })
     .expect(200);
 }

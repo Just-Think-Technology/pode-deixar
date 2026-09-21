@@ -61,14 +61,14 @@ describe('Provider journey (cross-service e2e)', () => {
 
     // The client also needs a profile to exist in the ecosystem
     await request(apps.usersApp.getHttpServer())
-      .post('/profiles/client')
+      .post('/api/v1/profiles/client')
       .set(clientHeaders)
       .send({})
       .expect(201);
 
     const profile = (
       await request(apps.usersApp.getHttpServer())
-        .post('/profiles/provider')
+        .post('/api/v1/profiles/provider')
         .set(providerHeaders)
         .send({ bio: 'Eletricista experiente', hourlyRate: 80 })
         .expect(201)
@@ -78,7 +78,7 @@ describe('Provider journey (cross-service e2e)', () => {
 
     const service = (
       await request(apps.usersApp.getHttpServer())
-        .post('/providers/me/services')
+        .post('/api/v1/providers/me/services')
         .set(providerHeaders)
         .send({
           title: 'Instalação de chuveiro',
@@ -94,7 +94,7 @@ describe('Provider journey (cross-service e2e)', () => {
   it('2. client creates an order (orders)', async () => {
     const order = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/services/me')
+        .post('/api/v1/services/me')
         .set(bearerAuth(clientToken))
         .send({
           title: 'Chuveiro queimado',
@@ -112,7 +112,7 @@ describe('Provider journey (cross-service e2e)', () => {
   it('3. provider sends a proposal (orders)', async () => {
     const proposal = (
       await request(apps.ordersApp.getHttpServer())
-        .post('/proposals')
+        .post('/api/v1/proposals')
         .set(bearerAuth(providerToken))
         .send({
           serviceOrderId: orderId,
@@ -129,7 +129,7 @@ describe('Provider journey (cross-service e2e)', () => {
   it('4. client accepts the proposal (orders)', async () => {
     const accepted = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/proposals/${proposalId}/accept`)
+        .post(`/api/v1/proposals/${proposalId}/accept`)
         .set(bearerAuth(clientToken))
         .expect(201)
     ).body;
@@ -138,7 +138,7 @@ describe('Provider journey (cross-service e2e)', () => {
 
     const order = (
       await request(apps.ordersApp.getHttpServer())
-        .get(`/services/me/${orderId}`)
+        .get(`/api/v1/services/me/${orderId}`)
         .set(bearerAuth(clientToken))
         .expect(200)
     ).body;
@@ -151,7 +151,7 @@ describe('Provider journey (cross-service e2e)', () => {
       'base64',
     );
     await request(apps.ordersApp.getHttpServer())
-      .post(`/services/me/${orderId}/completion-photos`)
+      .post(`/api/v1/services/me/${orderId}/completion-photos`)
       .set(bearerAuth(providerToken))
       .attach('file', png1x1, {
         filename: 'foto.png',
@@ -161,7 +161,7 @@ describe('Provider journey (cross-service e2e)', () => {
 
     const completed = (
       await request(apps.ordersApp.getHttpServer())
-        .post(`/services/me/${orderId}/complete`)
+        .post(`/api/v1/services/me/${orderId}/complete`)
         .set(bearerAuth(providerToken))
         .send({ observations: 'Serviço concluído' })
         .expect(201)
@@ -174,7 +174,7 @@ describe('Provider journey (cross-service e2e)', () => {
   it('6. client generates payment and confirms via webhook (payments)', async () => {
     const payment = (
       await request(apps.paymentsApp.getHttpServer())
-        .post('/payments')
+        .post('/api/v1/payments')
         .set(bearerAuth(clientToken))
         .send({
           serviceOrderId: orderId,
@@ -188,7 +188,7 @@ describe('Provider journey (cross-service e2e)', () => {
 
     const confirmed = (
       await request(apps.paymentsApp.getHttpServer())
-        .post('/payments/webhook')
+        .post('/api/v1/payments/webhook')
         .set('x-webhook-key', 'test-webhook-key')
         .send({
           paymentId,
@@ -206,7 +206,7 @@ describe('Provider journey (cross-service e2e)', () => {
   it('7. client reviews and the rating reflects on the profile (reviews → users)', async () => {
     const review = (
       await request(apps.reviewsApp.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(clientToken))
         .send({
           serviceOrderId: orderId,
@@ -223,7 +223,7 @@ describe('Provider journey (cross-service e2e)', () => {
     // on the SAME table the users-service reads.
     const profile = (
       await request(apps.usersApp.getHttpServer())
-        .get(`/providers/${providerProfileId}/profile`)
+        .get(`/api/v1/providers/${providerProfileId}/profile`)
         .expect(200)
     ).body;
 

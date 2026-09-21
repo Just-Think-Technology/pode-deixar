@@ -51,7 +51,7 @@ describe('Profiles (integration)', () => {
       const { token } = await clientAuth();
 
       const response = await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(bearerAuth(token))
         .send({ preferences: { theme: 'dark' } })
         .expect(201);
@@ -66,13 +66,13 @@ describe('Profiles (integration)', () => {
       const headers = bearerAuth(token);
 
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(headers)
         .send({})
         .expect(201);
 
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(headers)
         .send({})
         .expect(409);
@@ -80,7 +80,7 @@ describe('Profiles (integration)', () => {
 
     it('deve retornar 401 sem token', async () => {
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .send({})
         .expect(401);
     });
@@ -89,7 +89,7 @@ describe('Profiles (integration)', () => {
       const { token } = await providerAuth();
 
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(bearerAuth(token))
         .send({})
         .expect(403);
@@ -101,13 +101,13 @@ describe('Profiles (integration)', () => {
       const { token } = await clientAuth();
 
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(bearerAuth(token))
         .send({ preferences: { theme: 'light' } })
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get('/profiles/me')
+        .get('/api/v1/profiles/me')
         .set(bearerAuth(token))
         .expect(200);
 
@@ -118,7 +118,7 @@ describe('Profiles (integration)', () => {
       const { token } = await clientAuth();
 
       await request(app.getHttpServer())
-        .get('/profiles/me')
+        .get('/api/v1/profiles/me')
         .set(bearerAuth(token))
         .expect(404);
     });
@@ -130,13 +130,13 @@ describe('Profiles (integration)', () => {
       const headers = bearerAuth(token);
 
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(headers)
         .send({})
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .patch('/profiles/client')
+        .patch('/api/v1/profiles/client')
         .set(headers)
         .send({ preferences: { theme: 'dark', lang: 'pt-BR' } })
         .expect(200);
@@ -153,7 +153,7 @@ describe('Profiles (integration)', () => {
       const { token } = await providerAuth();
 
       const response = await request(app.getHttpServer())
-        .post('/profiles/provider')
+        .post('/api/v1/profiles/provider')
         .set(bearerAuth(token))
         .send({ bio: 'Eletricista', hourlyRate: 80, skills: ['eletrica'] })
         .expect(201);
@@ -167,7 +167,7 @@ describe('Profiles (integration)', () => {
       const { token } = await clientAuth();
 
       await request(app.getHttpServer())
-        .post('/profiles/provider')
+        .post('/api/v1/profiles/provider')
         .set(bearerAuth(token))
         .send({ bio: 'x' })
         .expect(403);
@@ -177,7 +177,7 @@ describe('Profiles (integration)', () => {
       const { token } = await providerAuth();
 
       await request(app.getHttpServer())
-        .post('/profiles/provider')
+        .post('/api/v1/profiles/provider')
         .set(bearerAuth(token))
         .send({ hourlyRate: 'caro' })
         .expect(400);
@@ -190,7 +190,7 @@ describe('Profiles (integration)', () => {
       const headers = bearerAuth(token);
 
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(headers)
         .send({})
         .expect(201);
@@ -201,7 +201,7 @@ describe('Profiles (integration)', () => {
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
       ]);
       const response = await request(app.getHttpServer())
-        .patch('/profiles/avatar')
+        .patch('/api/v1/profiles/avatar')
         .set(headers)
         .attach('file', pngReal, {
           filename: 'avatar.png',
@@ -218,13 +218,13 @@ describe('Profiles (integration)', () => {
       const headers = bearerAuth(token);
 
       await request(app.getHttpServer())
-        .post('/profiles/client')
+        .post('/api/v1/profiles/client')
         .set(headers)
         .send({})
         .expect(201);
 
       await request(app.getHttpServer())
-        .patch('/profiles/avatar')
+        .patch('/api/v1/profiles/avatar')
         .set(headers)
         .attach('file', Buffer.from('not-an-image'), {
           filename: 'doc.txt',
@@ -239,14 +239,14 @@ describe('Profiles (integration)', () => {
       const { token } = await providerAuth();
       const profileId = (
         await request(app.getHttpServer())
-          .post('/profiles/provider')
+          .post('/api/v1/profiles/provider')
           .set(bearerAuth(token))
           .send({ bio: 'Encanador' })
           .expect(201)
       ).body.id;
 
       const response = await request(app.getHttpServer())
-        .get(`/providers/${profileId}/profile`)
+        .get(`/api/v1/providers/${profileId}/profile`)
         .expect(200);
 
       expect(response.body.id).toBe(profileId);
@@ -256,7 +256,7 @@ describe('Profiles (integration)', () => {
 
     it('deve retornar 404 para perfil inexistente', async () => {
       await request(app.getHttpServer())
-        .get('/providers/00000000-0000-0000-0000-000000000000/profile')
+        .get('/api/v1/providers/00000000-0000-0000-0000-000000000000/profile')
         .expect(404);
     });
   });

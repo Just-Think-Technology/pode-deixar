@@ -31,7 +31,7 @@ describe('ReviewsController (HTTP)', () => {
   describe('POST /reviews', () => {
     it('should return 401 without token', async () => {
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .send({ serviceOrderId: '00000000-0000-0000-0000-000000000000', rating: 5 })
         .expect(401);
     });
@@ -43,7 +43,7 @@ describe('ReviewsController (HTTP)', () => {
       const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
 
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(mintToken(intruder)))
         .send({ serviceOrderId: order.id, rating: 5, comment: 'Ótimo' })
         .expect(403);
@@ -55,7 +55,7 @@ describe('ReviewsController (HTTP)', () => {
       const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
 
       const response = await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(mintToken(client)))
         .send({ serviceOrderId: order.id, rating: 5, comment: 'Excelente serviço' })
         .expect(201);
@@ -72,7 +72,7 @@ describe('ReviewsController (HTTP)', () => {
       const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
 
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(mintToken(client)))
         .send({ serviceOrderId: order.id, rating: 6 })
         .expect(400);
@@ -81,19 +81,19 @@ describe('ReviewsController (HTTP)', () => {
 
   describe('GET /reviews/me', () => {
     it('should return 401 without token and 200 with reviews for owner', async () => {
-      await request(app.getHttpServer()).get('/reviews/me').expect(401);
+      await request(app.getHttpServer()).get('/api/v1/reviews/me').expect(401);
 
       const client = await createTestUser(prisma, { role: 'CLIENT' });
       const provider = await createTestUser(prisma, { role: 'PROVIDER' });
       const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(mintToken(client)))
         .send({ serviceOrderId: order.id, rating: 4 })
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get('/reviews/me')
+        .get('/api/v1/reviews/me')
         .set(bearerAuth(mintToken(client)))
         .expect(200);
 
@@ -110,7 +110,7 @@ describe('ReviewsController (HTTP)', () => {
       const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
 
       await request(app.getHttpServer())
-        .get(`/reviews/service-order/${order.id}`)
+        .get(`/api/v1/reviews/service-order/${order.id}`)
         .set(bearerAuth(mintToken(intruder)))
         .expect(403);
     });
@@ -120,13 +120,13 @@ describe('ReviewsController (HTTP)', () => {
       const provider = await createTestUser(prisma, { role: 'PROVIDER' });
       const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(mintToken(client)))
         .send({ serviceOrderId: order.id, rating: 5 })
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get(`/reviews/service-order/${order.id}`)
+        .get(`/api/v1/reviews/service-order/${order.id}`)
         .set(bearerAuth(mintToken(client)))
         .expect(200);
 
@@ -142,20 +142,20 @@ describe('ReviewsController (HTTP)', () => {
       const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
       const reviewId = (
         await request(app.getHttpServer())
-          .post('/reviews')
+          .post('/api/v1/reviews')
           .set(bearerAuth(mintToken(client)))
           .send({ serviceOrderId: order.id, rating: 5 })
           .expect(201)
       ).body.id as string;
 
       await request(app.getHttpServer())
-        .patch(`/reviews/${reviewId}`)
+        .patch(`/api/v1/reviews/${reviewId}`)
         .set(bearerAuth(mintToken(intruder)))
         .send({ rating: 4 })
         .expect(403);
 
       await request(app.getHttpServer())
-        .delete(`/reviews/${reviewId}`)
+        .delete(`/api/v1/reviews/${reviewId}`)
         .set(bearerAuth(mintToken(intruder)))
         .expect(403);
     });
@@ -166,20 +166,20 @@ describe('ReviewsController (HTTP)', () => {
       const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
       const reviewId = (
         await request(app.getHttpServer())
-          .post('/reviews')
+          .post('/api/v1/reviews')
           .set(bearerAuth(mintToken(client)))
           .send({ serviceOrderId: order.id, rating: 5 })
           .expect(201)
       ).body.id as string;
 
       await request(app.getHttpServer())
-        .patch(`/reviews/${reviewId}`)
+        .patch(`/api/v1/reviews/${reviewId}`)
         .set(bearerAuth(mintToken(client)))
         .send({ rating: 4 })
         .expect(200);
 
       await request(app.getHttpServer())
-        .delete(`/reviews/${reviewId}`)
+        .delete(`/api/v1/reviews/${reviewId}`)
         .set(bearerAuth(mintToken(client)))
         .expect(200);
 
@@ -194,13 +194,13 @@ describe('ReviewsController (HTTP)', () => {
       const provider = await createTestUser(prisma, { role: 'PROVIDER' });
       const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
       await request(app.getHttpServer())
-        .post('/reviews')
+        .post('/api/v1/reviews')
         .set(bearerAuth(mintToken(client)))
         .send({ serviceOrderId: order.id, rating: 5 })
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .get(`/reviews/provider/${provider.id}`)
+        .get(`/api/v1/reviews/provider/${provider.id}`)
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
@@ -208,7 +208,7 @@ describe('ReviewsController (HTTP)', () => {
     });
 
     it('should return 400 for invalid provider UUID', async () => {
-      await request(app.getHttpServer()).get('/reviews/provider/not-a-uuid').expect(400);
+      await request(app.getHttpServer()).get('/api/v1/reviews/provider/not-a-uuid').expect(400);
     });
   });
 });

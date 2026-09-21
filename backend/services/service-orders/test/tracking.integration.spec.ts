@@ -55,7 +55,7 @@ describe('Tracking (integration)', () => {
 
   async function createOrderAsClient(token: string, categoryId: string) {
     return request(app.getHttpServer())
-      .post('/services/me')
+      .post('/api/v1/services/me')
       .set(bearerAuth(token))
       .send({
         title: 'Serviço tracking',
@@ -112,14 +112,14 @@ describe('Tracking (integration)', () => {
 
       const proposalId = (
         await request(app.getHttpServer())
-          .post('/proposals')
+          .post('/api/v1/proposals')
           .set(bearerAuth(provider.token))
           .send({ serviceOrderId: orderId, price: 180, description: 'Faço' })
           .expect(201)
       ).body.id as string;
 
       await request(app.getHttpServer())
-        .post(`/proposals/${proposalId}/accept`)
+        .post(`/api/v1/proposals/${proposalId}/accept`)
         .set(bearerAuth(client.token))
         .expect(201);
 
@@ -136,7 +136,7 @@ describe('Tracking (integration)', () => {
 
       const asProvider = (
         await request(app.getHttpServer())
-          .get(`/services/${orderId}/tracking`)
+          .get(`/api/v1/services/${orderId}/tracking`)
           .set(bearerAuth(provider.token))
           .expect(200)
       ).body;
@@ -148,7 +148,7 @@ describe('Tracking (integration)', () => {
 
       const asClient = (
         await request(app.getHttpServer())
-          .get(`/services/${orderId}/tracking`)
+          .get(`/api/v1/services/${orderId}/tracking`)
           .set(bearerAuth(client.token))
           .expect(200)
       ).body;
@@ -166,11 +166,11 @@ describe('Tracking (integration)', () => {
       const orderId = (await createOrderAsClient(client.token, cat.id)).body.id as string;
 
       await request(app.getHttpServer())
-        .get(`/services/${orderId}/tracking`)
+        .get(`/api/v1/services/${orderId}/tracking`)
         .set(bearerAuth(outsider.token))
         .expect(403);
 
-      await request(app.getHttpServer()).get(`/services/${orderId}/tracking`).expect(401);
+      await request(app.getHttpServer()).get(`/api/v1/services/${orderId}/tracking`).expect(401);
     });
   });
 
@@ -194,7 +194,7 @@ describe('Tracking (integration)', () => {
 
       const first = (
         await request(app.getHttpServer())
-          .post(`/services/me/${order.id}/start`)
+          .post(`/api/v1/services/me/${order.id}/start`)
           .set(bearerAuth(provider.token))
           .expect(201)
       ).body;
@@ -203,7 +203,7 @@ describe('Tracking (integration)', () => {
 
       const second = (
         await request(app.getHttpServer())
-          .post(`/services/me/${order.id}/start`)
+          .post(`/api/v1/services/me/${order.id}/start`)
           .set(bearerAuth(provider.token))
           .expect(201)
       ).body;
@@ -231,7 +231,7 @@ describe('Tracking (integration)', () => {
       });
 
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/start`)
+        .post(`/api/v1/services/me/${order.id}/start`)
         .set(bearerAuth(stranger.token))
         .expect(403);
     });
@@ -257,7 +257,7 @@ describe('Tracking (integration)', () => {
 
       // Must start before finish
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/start`)
+        .post(`/api/v1/services/me/${order.id}/start`)
         .set(bearerAuth(provider.token))
         .expect(201);
 
@@ -265,7 +265,7 @@ describe('Tracking (integration)', () => {
 
       const finished = (
         await request(app.getHttpServer())
-          .post(`/services/me/${order.id}/finish`)
+          .post(`/api/v1/services/me/${order.id}/finish`)
           .set(bearerAuth(provider.token))
           .field('observations', 'Concluído com sucesso')
           .attach('photos', PNG_1X1, { filename: 'foto.png', contentType: 'image/png' })
@@ -297,12 +297,12 @@ describe('Tracking (integration)', () => {
       });
 
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/start`)
+        .post(`/api/v1/services/me/${order.id}/start`)
         .set(bearerAuth(provider.token))
         .expect(201);
 
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/finish`)
+        .post(`/api/v1/services/me/${order.id}/finish`)
         .set(bearerAuth(provider.token))
         .send({ observations: 'sem foto' })
         .expect(400);
@@ -318,7 +318,7 @@ describe('Tracking (integration)', () => {
 
       const cancelled = (
         await request(app.getHttpServer())
-          .delete(`/services/me/${orderId}`)
+          .delete(`/api/v1/services/me/${orderId}`)
           .set(bearerAuth(client.token))
           .send({ cancelReason: 'Mudança de planos' })
           .expect(200)
@@ -328,7 +328,7 @@ describe('Tracking (integration)', () => {
 
       const tracking = (
         await request(app.getHttpServer())
-          .get(`/services/${orderId}/tracking`)
+          .get(`/api/v1/services/${orderId}/tracking`)
           .set(bearerAuth(client.token))
           .expect(200)
       ).body;
@@ -346,7 +346,7 @@ describe('Tracking (integration)', () => {
       const orderId = (await createOrderAsClient(client.token, cat.id)).body.id as string;
 
       await request(app.getHttpServer())
-        .delete(`/services/me/${orderId}`)
+        .delete(`/api/v1/services/me/${orderId}`)
         .set(bearerAuth(intruder.token))
         .send({ cancelReason: 'tentativa' })
         .expect(403);
@@ -372,7 +372,7 @@ describe('Tracking (integration)', () => {
       });
 
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/start`)
+        .post(`/api/v1/services/me/${order.id}/start`)
         .set(bearerAuth(provider.token))
         .expect(201);
 
@@ -382,7 +382,7 @@ describe('Tracking (integration)', () => {
       expect(startEvents.length).toBeGreaterThanOrEqual(1);
 
       await request(app.getHttpServer())
-        .post(`/services/me/${order.id}/finish`)
+        .post(`/api/v1/services/me/${order.id}/finish`)
         .set(bearerAuth(provider.token))
         .field('observations', 'ok')
         .attach('photos', PNG_1X1, { filename: 'foto.png', contentType: 'image/png' })
@@ -396,7 +396,7 @@ describe('Tracking (integration)', () => {
       // Timeline for cancel on a separate order
       const orderId2 = (await createOrderAsClient(client.token, cat.id)).body.id as string;
       await request(app.getHttpServer())
-        .delete(`/services/me/${orderId2}`)
+        .delete(`/api/v1/services/me/${orderId2}`)
         .set(bearerAuth(client.token))
         .send({ cancelReason: 'timeline check' })
         .expect(200);

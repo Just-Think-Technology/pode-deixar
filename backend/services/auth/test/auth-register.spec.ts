@@ -34,7 +34,7 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send(user)
         .expect(201);
 
@@ -52,7 +52,7 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send(user)
         .expect(201);
 
@@ -70,7 +70,7 @@ describe('POST /auth/register', () => {
       const user = createProviderUser();
 
       await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send(user)
         .expect(201);
 
@@ -94,12 +94,12 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       const first = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send(user)
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send(user)
         .expect(201);
 
@@ -111,12 +111,12 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       const first = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send(user)
         .expect(201);
       const oldToken = first.body.email_verification_token as string;
 
-      await request(app.getHttpServer()).post('/auth/register').send(user).expect(201);
+      await request(app.getHttpServer()).post('/api/v1/auth/register').send(user).expect(201);
 
       // The database stores the hash (never the raw token); the raw token only
       // goes in the email.
@@ -133,7 +133,7 @@ describe('POST /auth/register', () => {
 
       // The rotated token verifies end to end.
       await request(app.getHttpServer())
-        .post('/auth/verify-email')
+        .post('/api/v1/auth/verify-email')
         .send({ token: rawToken })
         .expect(200);
     });
@@ -144,7 +144,7 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, email: 'invalid-email' })
         .expect(400);
 
@@ -155,7 +155,7 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, password: 'weak' })
         .expect(400);
     });
@@ -164,7 +164,7 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ email: user.email, password: user.password })
         .expect(400);
     });
@@ -173,7 +173,7 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, role: 'INVALID_ROLE' })
         .expect(400);
     });
@@ -182,7 +182,7 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, phone: '' })
         .expect(400);
     });
@@ -191,7 +191,7 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, postal_code: '' })
         .expect(400);
     });
@@ -200,7 +200,7 @@ describe('POST /auth/register', () => {
       const user = createTestUser();
 
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/v1/auth/register')
         .send({ ...user, confirm_password: 'DifferentPassword123!' })
         .expect(400);
 

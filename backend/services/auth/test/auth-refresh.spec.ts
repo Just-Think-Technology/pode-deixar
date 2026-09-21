@@ -32,7 +32,7 @@ describe('POST /auth/refresh-token', () => {
     const { refreshToken } = await registerAndLogin(app, user, prisma);
 
     const response = await request(app.getHttpServer())
-      .post('/auth/refresh-token')
+      .post('/api/v1/auth/refresh-token')
       .send({ refreshToken })
       .expect(200);
 
@@ -49,25 +49,25 @@ describe('POST /auth/refresh-token', () => {
 
     // First use — valid
     await request(app.getHttpServer())
-      .post('/auth/refresh-token')
+      .post('/api/v1/auth/refresh-token')
       .send({ refreshToken })
       .expect(200);
 
     // Second use of the same token — must be rejected
     await request(app.getHttpServer())
-      .post('/auth/refresh-token')
+      .post('/api/v1/auth/refresh-token')
       .send({ refreshToken })
       .expect(401);
   });
 
   it('should reject an invalid refresh token with 401', async () => {
     await request(app.getHttpServer())
-      .post('/auth/refresh-token')
+      .post('/api/v1/auth/refresh-token')
       .send({ refreshToken: 'invalid-token' })
       .expect(401);
   });
 
   it('should reject a missing refresh token with 400', async () => {
-    await request(app.getHttpServer()).post('/auth/refresh-token').send({}).expect(400);
+    await request(app.getHttpServer()).post('/api/v1/auth/refresh-token').send({}).expect(400);
   });
 });

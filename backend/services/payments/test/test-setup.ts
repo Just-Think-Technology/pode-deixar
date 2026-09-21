@@ -41,6 +41,7 @@ export async function setupTestApp(): Promise<TestAppSetup> {
     .compile();
 
   const app = moduleFixture.createNestApplication();
+  app.setGlobalPrefix('api/v1', { exclude: ['health', 'health/ready', 'health/live'] });
   await app.init();
 
   const prisma = moduleFixture.get(PrismaService);
