@@ -40,7 +40,7 @@ frontend/
 
 * No sync HTTP between services — integration is via the shared PostgreSQL
   (single Prisma schema in `backend/prisma/`); the frontend reaches services
-  through the Caddy gateway (`/api/*`)
+  through the Caddy gateway (`/api/v1/*`, legacy `/api/*` with `Deprecation`/`Sunset` until `2026-12-31` — see [.agents/decisions/api-versioning.md](.agents/decisions/api-versioning.md) and [docs/API.md](docs/API.md))
 * Auth guards (`JwtAuthGuard`, `RolesGuard`, `Roles`), the global exception
   filter, token payload/revocation helpers and validation core live only in
   `@pode-deixar/security` / `@pode-deixar/validation`; the auth service keeps
@@ -190,6 +190,7 @@ new service): [.agents/rules/task-checklists.md](.agents/rules/task-checklists.m
 * [Order photos](.agents/decisions/order-photos.md) — SeaweedFS S3, webp via sharp, limits, dedicated upload endpoint
 * [Payments](.agents/decisions/payments.md) — PIX/credit-card status, tokenization path, webhook idempotency, structured logging
 * [Database](.agents/decisions/database.md) — least-privilege role
+* [API versioning](.agents/decisions/api-versioning.md) — URL `v1` via `/api/v1/*`, legacy `/api/*` with `Deprecation`/`Sunset` until `2026-12-31`, `v2` on breaking changes
 
 ## Deploy
 
