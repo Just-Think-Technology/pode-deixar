@@ -53,20 +53,20 @@ describe('Notifications (integration)', () => {
         .post('/api/v1/notifications')
         .set(bearerAuth(token))
         .send({
-          type: 'BUDGET',
+          type: 'CONVERSATION',
           title: 'Novo orçamento',
           message: 'Você recebeu um orçamento',
         })
         .expect(201);
 
       expect(response.body.id).toBeDefined();
-      expect(response.body.type).toBe('BUDGET');
+      expect(response.body.type).toBe('CONVERSATION');
       expect(response.body.title).toBe('Novo orçamento');
-      expect(response.body.recipient).toBe(user.id);
-      expect(response.body.read).toBe(false);
+      expect(response.body.userId).toBe(user.id);
+      expect(response.body.isRead).toBe(false);
     });
 
-    it('should ignore forged recipient and force authenticated user', async () => {
+    it('should ignore forged userId and force authenticated user', async () => {
       const { token, user } = await clientAuth();
       const other = await createTestUser(prisma, { role: 'CLIENT' });
 
@@ -74,22 +74,22 @@ describe('Notifications (integration)', () => {
         .post('/api/v1/notifications')
         .set(bearerAuth(token))
         .send({
-          recipient: other.id,
-          type: 'NEW_MESSAGE',
+          userId: other.id,
+          type: 'SERVICE',
           title: 'Olá',
           message: 'Teste anti-forgery',
         })
         .expect(201);
 
-      expect(response.body.recipient).toBe(user.id);
-      expect(response.body.recipient).not.toBe(other.id);
+      expect(response.body.userId).toBe(user.id);
+      expect(response.body.userId).not.toBe(other.id);
     });
 
     it('should return 401 without token', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/notifications')
         .send({
-          type: 'BUDGET',
+          type: 'CONVERSATION',
           title: 'x',
           message: 'y',
         })
@@ -106,7 +106,7 @@ describe('Notifications (integration)', () => {
         .post('/api/v1/notifications')
         .set(bearerAuth(owner.token))
         .send({
-          type: 'BUDGET',
+          type: 'CONVERSATION',
           title: 'Privada do dono',
           message: 'so dono vê',
         })
@@ -118,7 +118,7 @@ describe('Notifications (integration)', () => {
         .expect(200);
 
       expect(ownerList.body.items.length).toBeGreaterThanOrEqual(1);
-      expect(ownerList.body.items.every((n: any) => n.recipient === owner.user.id)).toBe(true);
+      expect(ownerList.body.items.every((n: any) => n.userId === owner.user.id)).toBe(true);
 
       const intruderList = await request(app.getHttpServer())
         .get('/api/v1/notifications')
@@ -139,37 +139,37 @@ describe('Notifications (integration)', () => {
           .post('/api/v1/notifications')
           .set(bearerAuth(token))
           .send({
-            type: 'BUDGET',
+            type: 'CONVERSATION',
             title: 'Filtro lido',
-            message: 'teste lido=false',
+            message: 'teste isRead=false',
           })
           .expect(201)
       ).body;
 
-      // Initially unread => appears in lido=false, not in lido=true
-      const unread = await request(app.getHttpServer())
-        .get('/api/v1/notifications?lido=false')
+      // Initially unisRead => appears in isRead=false, not in isRead=true
+      const unisRead = await request(app.getHttpServer())
+        .get('/api/v1/notifications?isRead=false')
         .set(bearerAuth(token))
         .expect(200);
-      expect(unread.body.items.some((n: any) => n.id === created.id)).toBe(true);
+      expect(unisRead.body.items.some((n: any) => n.id === created.id)).toBe(true);
 
-      const readEmpty = await request(app.getHttpServer())
-        .get('/api/v1/notifications?lido=true')
+      const isReadEmpty = await request(app.getHttpServer())
+        .get('/api/v1/notifications?isRead=true')
         .set(bearerAuth(token))
         .expect(200);
-      expect(readEmpty.body.items.some((n: any) => n.id === created.id)).toBe(false);
+      expect(isReadEmpty.body.items.some((n: any) => n.id === created.id)).toBe(false);
 
-      // Mark as read then it moves to lido=true
+      // Mark as isRead then it moves to isRead=true
       await request(app.getHttpServer())
-        .patch(`/api/v1/notifications/${created.id}/read`)
+        .post(`/api/v1/notifications/${created.id}/read`)
         .set(bearerAuth(token))
         .expect(200);
 
-      const readNow = await request(app.getHttpServer())
-        .get('/api/v1/notifications?lido=true')
+      const isReadNow = await request(app.getHttpServer())
+        .get('/api/v1/notifications?isRead=true')
         .set(bearerAuth(token))
         .expect(200);
-      expect(readNow.body.items.some((n: any) => n.id === created.id)).toBe(true);
+      expect(isReadNow.body.items.some((n: any) => n.id === created.id)).toBe(true);
     });
 
     it('should expose type field for type filter consumers', async () => {
@@ -179,7 +179,7 @@ describe('Notifications (integration)', () => {
         .post('/api/v1/notifications')
         .set(bearerAuth(token))
         .send({
-          type: 'BUDGET',
+          type: 'CONVERSATION',
           title: 'Tipo BUDGET',
           message: 'orçamento',
         })
@@ -189,7 +189,7 @@ describe('Notifications (integration)', () => {
         .post('/api/v1/notifications')
         .set(bearerAuth(token))
         .send({
-          type: 'NEW_MESSAGE',
+          type: 'SERVICE',
           title: 'Tipo NEW_MESSAGE',
           message: 'mensagem',
         })
@@ -201,16 +201,16 @@ describe('Notifications (integration)', () => {
         .expect(200);
 
       const types = list.body.items.map((n: any) => n.type);
-      expect(types).toContain('BUDGET');
-      expect(types).toContain('NEW_MESSAGE');
+      expect(types).toContain('CONVERSATION');
+      expect(types).toContain('SERVICE');
       // Client-side type filter still works because type is persisted and returned
-      const budgetOnly = list.body.items.filter((n: any) => n.type === 'BUDGET');
+      const budgetOnly = list.body.items.filter((n: any) => n.type === 'CONVERSATION');
       expect(budgetOnly.length).toBeGreaterThanOrEqual(1);
     });
   });
 
   describe('PATCH /notifications/:id/read', () => {
-    it('should mark own notification as read', async () => {
+    it('should mark own notification as isRead', async () => {
       const { token } = await clientAuth();
 
       const created = (
@@ -218,7 +218,7 @@ describe('Notifications (integration)', () => {
           .post('/api/v1/notifications')
           .set(bearerAuth(token))
           .send({
-            type: 'BUDGET',
+            type: 'CONVERSATION',
             title: 'Marcar lida',
             message: 'teste',
           })
@@ -226,11 +226,11 @@ describe('Notifications (integration)', () => {
       ).body;
 
       const patched = await request(app.getHttpServer())
-        .patch(`/api/v1/notifications/${created.id}/read`)
+        .post(`/api/v1/notifications/${created.id}/read`)
         .set(bearerAuth(token))
         .expect(200);
 
-      expect(patched.body.read).toBe(true);
+      expect(patched.body.isRead).toBe(true);
       expect(patched.body.id).toBe(created.id);
     });
 
@@ -243,7 +243,7 @@ describe('Notifications (integration)', () => {
           .post('/api/v1/notifications')
           .set(bearerAuth(owner.token))
           .send({
-            type: 'BUDGET',
+            type: 'CONVERSATION',
             title: 'Não é sua',
             message: 'isolamento',
           })
@@ -251,14 +251,14 @@ describe('Notifications (integration)', () => {
       ).body;
 
       await request(app.getHttpServer())
-        .patch(`/api/v1/notifications/${created.id}/read`)
+        .post(`/api/v1/notifications/${created.id}/read`)
         .set(bearerAuth(intruder.token))
         .expect(400);
     });
 
-    it('should return 401 without token for read', async () => {
+    it('should return 401 without token for isRead', async () => {
       await request(app.getHttpServer())
-        .patch('/api/v1/notifications/00000000-0000-0000-0000-000000000000/read')
+        .post('/api/v1/notifications/00000000-0000-0000-0000-000000000000/read')
         .expect(401);
     });
   });
