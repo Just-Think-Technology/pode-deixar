@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   DollarSign,
   MessageSquare,
-  Star,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,8 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import EmptyState from "@/components/shared/empty-state";
+import StarDisplay from "@/components/shared/reviews/star-display";
+import ReviewsSection from "@/components/shared/reviews/reviews-section";
 import type { ProviderPublicProfile } from "@/lib/client/provider/types";
-import { cn } from "@/lib/utils";
+import { buildLocalSummary } from "@/lib/client/reviews/mappers";
 
 type ClientProviderProfilePageProps = {
   profile: ProviderPublicProfile | null;
@@ -39,22 +40,16 @@ function getInitials(name: string) {
     .join("");
 }
 
-function StarRating({ rating, total }: { rating: number; total: number }) {
+function HeaderRating({ rating, total }: { rating: number; total: number }) {
+  if (total === 0) {
+    return (
+      <span className="text-sm text-muted-foreground">Ainda sem avaliações</span>
+    );
+  }
+
   return (
     <div className="flex items-center gap-1.5">
-      <div className="flex items-center">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Star
-            key={i}
-            className={cn(
-              "size-4",
-              i < Math.round(rating)
-                ? "fill-amber-400 text-amber-400"
-                : "fill-muted text-muted",
-            )}
-          />
-        ))}
-      </div>
+      <StarDisplay value={rating} />
       <span className="text-sm font-medium text-foreground">
         {rating.toFixed(1)}
       </span>
@@ -126,7 +121,7 @@ export default function ClientProviderProfilePage({
                 {profile.user.complete_name}
               </h1>
 
-              <StarRating rating={profile.rating} total={profile.total_reviews} />
+              <HeaderRating rating={profile.rating} total={profile.total_reviews} />
 
               <div className="mt-2 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
                 {profile.is_available ? (
@@ -228,6 +223,11 @@ export default function ClientProviderProfilePage({
             />
           )}
         </section>
+
+        <ReviewsSection
+          providerUserId={profile.user.id}
+          initialSummary={buildLocalSummary(profile.rating, profile.total_reviews)}
+        />
       </div>
 
       <div className="sticky bottom-0 -mx-4 mt-8 border-t bg-background px-4 py-4">

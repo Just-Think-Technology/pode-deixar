@@ -30,42 +30,34 @@
 	}
 
 	handle /api/v1/auth/* {
-		uri strip_prefix /api/v1
 		reverse_proxy auth:3001
 	}
 
 	handle /api/v1/profiles/* {
-		uri strip_prefix /api/v1
 		reverse_proxy users:3002
 	}
 
 	handle /api/v1/providers/* {
-		uri strip_prefix /api/v1
 		reverse_proxy users:3002
 	}
 
 	handle /api/v1/categories* {
-		uri strip_prefix /api/v1
 		reverse_proxy users:3002
 	}
 
 	handle /api/v1/services/* {
-		uri strip_prefix /api/v1
 		reverse_proxy service-orders:3003
 	}
 
 	handle /api/v1/proposals/* {
-		uri strip_prefix /api/v1
 		reverse_proxy service-orders:3003
 	}
 
 	handle /api/v1/payments/* {
-		uri strip_prefix /api/v1
 		reverse_proxy payments:3004
 	}
 
 	handle /api/v1/reviews/* {
-		uri strip_prefix /api/v1
 		reverse_proxy reviews:3005
 	}
 
@@ -113,56 +105,56 @@
 	handle /api/auth/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri strip_prefix /api
+		uri replace /api/ /api/v1/ 1
 		reverse_proxy auth:3001
 	}
 
 	handle /api/profiles/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri strip_prefix /api
+		uri replace /api/ /api/v1/ 1
 		reverse_proxy users:3002
 	}
 
 	handle /api/providers/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri strip_prefix /api
+		uri replace /api/ /api/v1/ 1
 		reverse_proxy users:3002
 	}
 
 	handle /api/categories* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri strip_prefix /api
+		uri replace /api/ /api/v1/ 1
 		reverse_proxy users:3002
 	}
 
 	handle /api/services/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri strip_prefix /api
+		uri replace /api/ /api/v1/ 1
 		reverse_proxy service-orders:3003
 	}
 
 	handle /api/proposals/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri strip_prefix /api
+		uri replace /api/ /api/v1/ 1
 		reverse_proxy service-orders:3003
 	}
 
 	handle /api/payments/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri strip_prefix /api
+		uri replace /api/ /api/v1/ 1
 		reverse_proxy payments:3004
 	}
 
 	handle /api/reviews/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri strip_prefix /api
+		uri replace /api/ /api/v1/ 1
 		reverse_proxy reviews:3005
 	}
 
