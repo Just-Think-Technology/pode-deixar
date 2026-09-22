@@ -273,4 +273,60 @@ export class ReviewsRepository {
       select: { id: true, title: true },
     });
   }
+
+  // --- Review responses ---
+
+  findReviewResponseByReviewId(reviewId: string) {
+    return this.prisma.reviewResponse.findUnique({
+      where: { reviewId },
+    });
+  }
+
+  createReviewResponse(reviewId: string, message: string) {
+    return this.prisma.reviewResponse.create({
+      data: { reviewId, message },
+    });
+  }
+
+  updateReviewResponse(reviewId: string, message: string) {
+    return this.prisma.reviewResponse.update({
+      where: { reviewId },
+      data: { message },
+    });
+  }
+
+  // --- Review reports ---
+
+  findReviewReport(reviewId: string, reporterId: string) {
+    return this.prisma.reviewReport.findUnique({
+      where: { reviewId_reporterId: { reviewId, reporterId } },
+    });
+  }
+
+  findReportsByReporter(reviewIds: string[], reporterId: string) {
+    if (reviewIds.length === 0) {
+      return Promise.resolve(
+        [] as Awaited<ReturnType<typeof this.prisma.reviewReport.findMany>>,
+      );
+    }
+    return this.prisma.reviewReport.findMany({
+      where: { reviewId: { in: reviewIds }, reporterId },
+    });
+  }
+
+  createReviewReport(data: {
+    reviewId: string;
+    reporterId: string;
+    reason: string;
+    description?: string | null;
+  }) {
+    return this.prisma.reviewReport.create({
+      data: {
+        reviewId: data.reviewId,
+        reporterId: data.reporterId,
+        reason: data.reason as any,
+        description: data.description ?? null,
+      },
+    });
+  }
 }
