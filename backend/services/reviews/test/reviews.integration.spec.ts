@@ -231,4 +231,118 @@ describe('Reviews (integration)', () => {
       expect(response.body.rating).toBe(4);
     });
   });
+
+  describe('GET /reviews/provider/:providerId and /summary', () => {
+    it('returns provider listing with pagination meta and privacy', async () => {
+      const client = await createTestUser(prisma, { role: 'CLIENT', completeName: 'Ana Silva Costa' });
+      await prisma.clientProfile.upsert({
+        where: { userId: client.id },
+        update: { avatarUrl: 'https://cdn.example/a.png' },
+        create: { userId: client.id, avatarUrl: 'https://cdn.example/a.png' },
+      });
+      const provider = await createTestUser(prisma, { role: 'PROVIDER' });
+      const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
+      await request(app.getHttpServer())
+        .post('/api/v1/reviews')
+        .set(bearerAuth(mintToken(client)))
+        .send({ serviceOrderId: order.id, rating: 5 })
+        .expect(201);
+      const list = await request(app.getHttpServer())
+        .get(`/api/v1/reviews/provider/${provider.id}?page=1&limit=10`)
+        .set(bearerAuth(mintToken(client)))
+        .expect(200);
+      expect(list.body.data[0]).not.toHaveProperty('reviewer_id');
+      expect(list.body.data[0].reviewer.display_name).toBe('Ana C.');
+      expect(list.body.meta).toEqual(expect.objectContaining({ total: expect.any(Number), hasMore: expect.any(Boolean) }));
+      const summary = await request(app.getHttpServer())
+        .get(`/api/v1/reviews/provider/${provider.id}/summary`)
+        .set(bearerAuth(mintToken(client)))
+        .expect(200);
+      expect(summary.body.total).toBe(1);
+      expect(summary.body.average).toBe(5);
+      expect(summary.body.distribution['5']).toBe(1);
+    });
+
+    it('excludes CANCELLED and filters COMPLETED+PAID only', async () => {
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const provider = await createTestUser(prisma, { role: 'PROVIDER' });
+      const cat = await prisma.category.create({ data: { name: `CatI ${Date.now()}_${Math.random()}`, slug: `cati-${Date.now()}_${Math.random()}` } });
+      const cancelled = await prisma.serviceOrder.create({
+        data: { title: 'Canc', description: 'desc', categoryId: cat.id, clientId: client.id, providerId: provider.id, status: 'CANCELLED' },
+      });
+      await prisma.payment.create({ data: { serviceOrderId: cancelled.id, amount: 100, method: 'PIX', status: 'PAID' } });
+      await prisma.review.create({ data: { serviceOrderId: cancelled.id, reviewerId: client.id, revieweeId: provider.id, rating: 1, comment: 'hidden' } });
+      const list = await request(app.getHttpServer())
+        .get(`/api/v1/reviews/provider/${provider.id}`)
+        .set(bearerAuth(mintToken(client)))
+        .expect(200);
+      expect((list.body.data as any[]).some((r) => r.comment === 'hidden')).toBe(false);
+    });
+  });
+
+  describe('GET /reviews/received, responses and reports', () => {
+    it('enforces provider-only received (403 for CLIENT) and supports pagination', async () => {
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const provider = await createTestUser(prisma, { role: 'PROVIDER' });
+      await request(app.getHttpServer()).get('/api/v1/reviews/received').set(bearerAuth(mintToken(client))).expect(403);
+      const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
+      await request(app.getHttpServer()).post('/api/v1/reviews').set(bearerAuth(mintToken(client))).send({ serviceOrderId: order.id, rating: 5 }).expect(201);
+      const rec = await request(app.getHttpServer()).get('/api/v1/reviews/received').set(bearerAuth(mintToken(provider))).expect(200);
+      expect(rec.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(rec.body.data[0]).toHaveProperty('report_status');
+      expect(rec.body.data[0]).not.toHaveProperty('reviewer_id');
+    });
+
+    it('creates response (201), 409 duplicate, 403 non-reviewee, embeds in provider listing', async () => {
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const provider = await createTestUser(prisma, { role: 'PROVIDER' });
+      const intruder = await createTestUser(prisma, { role: 'CLIENT' });
+      const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
+      const reviewId = (await request(app.getHttpServer()).post('/api/v1/reviews').set(bearerAuth(mintToken(client))).send({ serviceOrderId: order.id, rating: 5 }).expect(201)).body.id as string;
+      await request(app.getHttpServer()).post(`/api/v1/reviews/${reviewId}/response`).set(bearerAuth(mintToken(intruder))).send({ message: 'x' }).expect(403);
+      const created = await request(app.getHttpServer()).post(`/api/v1/reviews/${reviewId}/response`).set(bearerAuth(mintToken(provider))).send({ message: 'Obrigado!' }).expect(201);
+      expect(created.body.message).toBe('Obrigado!');
+      await request(app.getHttpServer()).post(`/api/v1/reviews/${reviewId}/response`).set(bearerAuth(mintToken(provider))).send({ message: 'dup' }).expect(409);
+      const updated = await request(app.getHttpServer()).patch(`/api/v1/reviews/${reviewId}/response`).set(bearerAuth(mintToken(provider))).send({ message: 'Atualizado' }).expect(200);
+      expect(updated.body.message).toBe('Atualizado');
+      const listing = await request(app.getHttpServer()).get(`/api/v1/reviews/provider/${provider.id}`).set(bearerAuth(mintToken(client))).expect(200);
+      expect(listing.body.data.find((r: any) => r.id === reviewId).response.message).toBe('Atualizado');
+    });
+
+    it('creates report (201), 409 duplicate, content stays visible, 403 non-reviewee', async () => {
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const provider = await createTestUser(prisma, { role: 'PROVIDER' });
+      const intruder = await createTestUser(prisma, { role: 'CLIENT' });
+      const order = await createCompletedPaidOrder(prisma, client.id, provider.id);
+      const reviewId = (await request(app.getHttpServer()).post('/api/v1/reviews').set(bearerAuth(mintToken(client))).send({ serviceOrderId: order.id, rating: 1, comment: 'report me' }).expect(201)).body.id as string;
+      await request(app.getHttpServer()).post(`/api/v1/reviews/${reviewId}/reports`).set(bearerAuth(mintToken(intruder))).send({ reason: 'SPAM' }).expect(403);
+      const rep = await request(app.getHttpServer()).post(`/api/v1/reviews/${reviewId}/reports`).set(bearerAuth(mintToken(provider))).send({ reason: 'OFENSA' }).expect(201);
+      expect(rep.body.status).toBe('PENDING');
+      await request(app.getHttpServer()).post(`/api/v1/reviews/${reviewId}/reports`).set(bearerAuth(mintToken(provider))).send({ reason: 'SPAM' }).expect(409);
+      const listing = await request(app.getHttpServer()).get(`/api/v1/reviews/provider/${provider.id}`).set(bearerAuth(mintToken(client))).expect(200);
+      expect(listing.body.data.find((r: any) => r.id === reviewId).comment).toBe('report me');
+    });
+
+    it('recalculates provider rating after POST/PATCH/DELETE (reviews → users)', async () => {
+      const client = await createTestUser(prisma, { role: 'CLIENT' });
+      const provider = await createTestUser(prisma, { role: 'PROVIDER' });
+      await prisma.providerProfile.upsert({ where: { userId: provider.id }, update: {}, create: { userId: provider.id, bio: 'bio' } });
+      const o1 = await createCompletedPaidOrder(prisma, client.id, provider.id);
+      const o2 = await createCompletedPaidOrder(prisma, client.id, provider.id);
+      const r1 = (await request(app.getHttpServer()).post('/api/v1/reviews').set(bearerAuth(mintToken(client))).send({ serviceOrderId: o1.id, rating: 5 }).expect(201)).body.id as string;
+      let prof = await prisma.providerProfile.findUnique({ where: { userId: provider.id } });
+      expect(prof?.rating).toBe(5);
+      await request(app.getHttpServer()).post('/api/v1/reviews').set(bearerAuth(mintToken(client))).send({ serviceOrderId: o2.id, rating: 3 }).expect(201);
+      prof = await prisma.providerProfile.findUnique({ where: { userId: provider.id } });
+      expect(prof?.rating).toBeCloseTo(4, 1);
+      await request(app.getHttpServer()).patch(`/api/v1/reviews/${r1}`).set(bearerAuth(mintToken(client))).send({ rating: 1 }).expect(200);
+      prof = await prisma.providerProfile.findUnique({ where: { userId: provider.id } });
+      expect(prof?.rating).toBeCloseTo(2, 1);
+      await request(app.getHttpServer()).delete(`/api/v1/reviews/${r1}`).set(bearerAuth(mintToken(client))).expect(200);
+      prof = await prisma.providerProfile.findUnique({ where: { userId: provider.id } });
+      expect(prof?.rating).toBe(3);
+      const summary = await request(app.getHttpServer()).get(`/api/v1/reviews/provider/${provider.id}/summary`).set(bearerAuth(mintToken(client))).expect(200);
+      expect(summary.body.average).toBe(3);
+    });
+  });
 });
