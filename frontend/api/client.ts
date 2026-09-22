@@ -80,6 +80,15 @@ export async function apiFetch<T>(
         503,
       );
     }
+    // Fetch failures (refused connection, CORS, gateway restarting during
+    // stack-up) surface as TypeError — translate so the raw NetworkError
+    // never reaches the UI.
+    if (err instanceof TypeError) {
+      throw new ApiError(
+        "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente — se persistir, contate o suporte.",
+        503,
+      );
+    }
     throw err;
   } finally {
     clearTimeout(timeoutId);

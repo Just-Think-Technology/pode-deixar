@@ -168,13 +168,16 @@ describe('api/client (HTTP integration)', () => {
       await expect(apiFetch('/x')).resolves.toBeNull()
     })
 
-    it('propagates the original network failure', async () => {
-      fetchMock.mockRejectedValue(new TypeError('network down'))
+    it('maps network failure to a friendly 503', async () => {
+      fetchMock.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource'))
 
       const err: any = await apiFetch('/x').catch((e) => e)
 
-      expect(err).toBeInstanceOf(TypeError)
-      expect(err.message).toBe('network down')
+      expect(err).toBeInstanceOf(ApiError)
+      expect(err.status).toBe(503)
+      expect(err.message).toBe(
+        'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente — se persistir, contate o suporte.',
+      )
     })
 
     it('maps timeout (abort) to 503', async () => {
