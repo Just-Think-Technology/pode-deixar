@@ -10,6 +10,8 @@ import { ReviewsRepository } from "./reviews.repository";
 import { ReviewsLoggerService } from "../shared/reviews-logger.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
+import { FindByProviderQueryDto } from "./dto/find-by-provider-query.dto";
+import { toSkipTake } from "@pode-deixar/validation";
 
 const EDIT_WINDOW_MINUTES = 5;
 const MS_PER_MINUTE = 60 * 1000;
@@ -144,15 +146,100 @@ export class ReviewsService {
     return reviews.map((r) => this.formatReview(r));
   }
 
-  // Public listing is capped to deter scraping.
-  async findByProvider(providerId: string, limit?: number) {
-    const take = Math.min(Math.max(limit ?? 50, 1), 50);
-    const reviews = await this.repository.findReviewsByReviewee(
-      providerId,
+  // Provider listing — paginated, COMPLETED+PAID only, privacy-shaped, IDs hidden
+  async findByProvider(providerId: string, query?: FindByProviderQueryDto) {
+    const providerUserId =
+      await this.repository.resolveProviderUserId(providerId);
+    if (!providerUserId) {
+      throw new NotFoundException("Prestador não encontrado");
+    }
+
+    const page = Math.floor(query?.page ?? 1);
+    const requestedLimit = query?.limit ?? 10;
+    const { skip, take } = toSkipTake({ page, limit: requestedLimit }, 10);
+    const safePage = page < 1 || !Number.isFinite(page) ? 1 : page;
+
+    const total = await this.repository.countFilteredReviews(providerUserId);
+
+    if (total === 0) {
+      return {
+        data: [],
+        meta: { total: 0, page: safePage, limit: take, hasMore: false },
+      };
+    }
+
+    const reviews = await this.repository.findFilteredReviews(
+      providerUserId,
+      skip,
       take,
     );
 
-    return reviews.map((r) => this.formatReview(r));
+    const reviewerIds = [...new Set(reviews.map((r) => r.reviewerId))];
+    const { userMap, avatarMap } =
+      await this.repository.findReviewerProfiles(reviewerIds);
+
+    const data = reviews.map((r) => {
+      const fullName = userMap.get(r.reviewerId) ?? null;
+      const displayName = this.repository.formatDisplayName(fullName);
+      const avatarUrl = avatarMap.get(r.reviewerId) ?? null;
+      const response = (r as any).response as
+        { message: string; createdAt: Date } | null | undefined;
+      return {
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment ?? null,
+        created_at: r.createdAt,
+        reviewer: { display_name: displayName, avatar_url: avatarUrl },
+        response: response
+          ? { message: response.message, created_at: response.createdAt }
+          : null,
+      };
+    });
+
+    const hasMore = skip + take < total;
+
+    return {
+      data,
+      meta: { total, page: safePage, limit: take, hasMore },
+    };
+  }
+
+  // Provider summary — aggregate+groupBy on revieweeId, filter COMPLETED+PAID
+  async getProviderSummary(providerId: string) {
+    const providerUserId =
+      await this.repository.resolveProviderUserId(providerId);
+    if (!providerUserId) {
+      throw new NotFoundException("Prestador não encontrado");
+    }
+
+    const [aggregate, groups] = await Promise.all([
+      this.repository.aggregateFilteredReviews(providerUserId),
+      this.repository.groupByRatingFiltered(providerUserId),
+    ]);
+
+    const total = aggregate._count._all;
+    const average = total === 0 ? null : (aggregate._avg.rating ?? null);
+
+    const distribution: Record<number, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
+    for (const g of groups as Array<{
+      rating: number;
+      _count: { rating: number };
+    }>) {
+      distribution[g.rating] = g._count.rating;
+    }
+
+    return {
+      provider_id: providerId,
+      average,
+      total,
+      distribution,
+    };
   }
 
   async findByOrder(orderId: string, userId: string) {

@@ -171,20 +171,37 @@ export class ReviewsController {
 
 @ApiTags("Reviews")
 @Controller("reviews/provider/:providerId")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth()
 export class PublicReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
+  @Get("summary")
+  @Roles("CLIENT", "PROVIDER")
+  @ApiOperation({ summary: "Get provider reviews summary" })
+  @ApiParam({ name: "providerId", description: "Provider ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Provider review summary returned successfully",
+  })
+  @ApiResponse({ status: 404, description: "Provider not found" })
+  async getSummary(@Param("providerId", ParseUUIDPipe) providerId: string) {
+    return this.reviewsService.getProviderSummary(providerId);
+  }
+
   @Get()
-  @ApiOperation({ summary: "List provider reviews (public)" })
+  @Roles("CLIENT", "PROVIDER")
+  @ApiOperation({ summary: "List provider reviews (paginated)" })
   @ApiParam({ name: "providerId", description: "Provider ID" })
   @ApiResponse({
     status: 200,
     description: "Provider review list returned successfully",
   })
+  @ApiResponse({ status: 404, description: "Provider not found" })
   async findByProvider(
     @Param("providerId", ParseUUIDPipe) providerId: string,
-    @Query() query?: FindByProviderQueryDto,
+    @Query() query: FindByProviderQueryDto,
   ) {
-    return this.reviewsService.findByProvider(providerId, query?.limit);
+    return this.reviewsService.findByProvider(providerId, query);
   }
 }

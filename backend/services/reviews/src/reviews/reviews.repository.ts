@@ -62,6 +62,105 @@ export class ReviewsRepository {
     });
   }
 
+  // --- Provider summary and listing (COMPLETED+PAID only) ---
+
+  async resolveProviderUserId(providerId: string): Promise<string | null> {
+    const profile = await this.prisma.providerProfile.findUnique({
+      where: { id: providerId },
+      select: { userId: true },
+    });
+    if (profile) {
+      return profile.userId;
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: providerId },
+      select: { id: true },
+    });
+    if (user) {
+      return user.id;
+    }
+    return null;
+  }
+
+  private filteredWhere(revieweeUserId: string) {
+    return {
+      revieweeId: revieweeUserId,
+      serviceOrder: {
+        status: "COMPLETED" as const,
+        payments: { some: { status: "PAID" as const } },
+      },
+    };
+  }
+
+  countFilteredReviews(revieweeUserId: string) {
+    return this.prisma.review.count({
+      where: this.filteredWhere(revieweeUserId),
+    });
+  }
+
+  aggregateFilteredReviews(revieweeUserId: string) {
+    return this.prisma.review.aggregate({
+      where: this.filteredWhere(revieweeUserId),
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+  }
+
+  groupByRatingFiltered(revieweeUserId: string) {
+    return this.prisma.review.groupBy({
+      by: ["rating"],
+      where: this.filteredWhere(revieweeUserId),
+      _count: { rating: true },
+    });
+  }
+
+  findFilteredReviews(revieweeUserId: string, skip: number, take: number) {
+    return this.prisma.review.findMany({
+      where: this.filteredWhere(revieweeUserId),
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+      include: { response: true },
+    });
+  }
+
+  async findReviewerProfiles(reviewerIds: string[]) {
+    if (reviewerIds.length === 0) {
+      return {
+        userMap: new Map<string, string>(),
+        avatarMap: new Map<string, string | null>(),
+      };
+    }
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: reviewerIds } },
+      select: { id: true, completeName: true },
+    });
+    const clientProfiles = await this.prisma.clientProfile.findMany({
+      where: { userId: { in: reviewerIds } },
+      select: { userId: true, avatarUrl: true },
+    });
+    const userMap = new Map<string, string>(
+      users.map((u) => [u.id, u.completeName]),
+    );
+    const avatarMap = new Map<string, string | null>(
+      clientProfiles.map((p) => [p.userId, p.avatarUrl]),
+    );
+    return { userMap, avatarMap };
+  }
+
+  // Privacy helper — first name + initial from completeName, avatar from ClientProfile
+  formatDisplayName(fullName: string | null | undefined): string {
+    const normalized = fullName?.trim();
+    if (!normalized) {
+      return "Cliente";
+    }
+    const parts = normalized.split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0];
+    }
+    return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+  }
+
   findReviewsByOrder(orderId: string) {
     return this.prisma.review.findMany({
       where: { serviceOrderId: orderId },
