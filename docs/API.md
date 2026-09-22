@@ -11,21 +11,21 @@ Base contract for the Pode Deixar platform (5 Nest services behind the Caddy gat
 ## Versioning
 
 - **Current:** `v1` at `/api/v1/*`. This is the canonical prefix for all clients.
-- **Routing:** each Nest service sets `app.setGlobalPrefix('api/v1', { exclude: ['health', 'health/ready', 'health/live'] })` (`backend/shared/logger/bootstrap.ts:46`, re-asserted in `backend/services/*/src/main.ts:onAppCreated`). Controllers remain unprefixed; Caddy strips the prefix before proxying.
-- **Gateway:** `deploy/Caddyfile.docker` and `deploy/Caddyfile.production` expose `handle /api/v1/* { uri strip_prefix /api/v1; reverse_proxy <service> }` per domain (see table below) plus `handle /api/v1/<service>/health* { uri strip_prefix /api/v1/<service>; }` for health. Direct probes bypass the gateway at `http://<service>:<port>/health`, `/health/ready`, `/health/live` (excluded from the Nest prefix).
+- **Routing:** each Nest service sets `app.setGlobalPrefix('api/v1', { exclude: ['health', 'health/ready', 'health/live'] })` (`backend/shared/logger/bootstrap.ts:46`, re-asserted in `backend/services/*/src/main.ts:onAppCreated`). Caddy forwards `/api/v1/*` unchanged so the upstream sees the versioned path.
+- **Gateway:** `deploy/Caddyfile.docker` and `deploy/Caddyfile.production` expose `handle /api/v1/* { reverse_proxy <service> }` per domain (see table below) plus `handle /api/v1/<service>/health* { uri strip_prefix /api/v1/<service>; }` for health (stripped because health is excluded from the Nest prefix). Legacy `handle /api/*` rewrites to `/api/v1/*` (`uri replace /api/ /api/v1/ 1`, health handles strip to `/health`). Direct probes bypass the gateway at `http://<service>:<port>/health`, `/health/ready`, `/health/live`.
 - **Legacy (deprecated):** `handle /api/*` is kept for backward compatibility. Every legacy handle returns `Deprecation: true` and `Sunset: Sat, 31 Dec 2026 23:59:59 GMT` (RFC 8594 / Sunset RFC 9110). Clients must migrate to `/api/v1/*` before Sunset; after Sunset the gateway may return `410 Gone` or remove the legacy handles.
 - **Optional header:** `Accept: application/vnd.pode-deixar.v1+json` is reserved for future content-negotiation. The URL prefix is authoritative; the header is not yet enforced.
 - **Evolution rule:** breaking changes (removed/renamed fields, auth or contract changes) require a new prefix `/api/v2/*` (new `setGlobalPrefix` + new Caddy handles). Non-breaking additive changes stay on `v1`. `v1` is kept for at least one full release after `v2` ships.
 
 ```http
-# versioned (preferred)
+# versioned (preferred, forwarded unchanged)
 GET /api/v1/auth/health        -> auth:3001/health
-GET /api/v1/profiles/me        -> users:3002/profiles/me
-GET /api/v1/services           -> service-orders:3003/services
+GET /api/v1/profiles/me        -> users:3002/api/v1/profiles/me
+GET /api/v1/services           -> service-orders:3003/api/v1/services
 
-# legacy (deprecated, same upstream, extra headers)
+# legacy (deprecated, rewritten to /api/v1/*, extra headers)
 GET /api/auth/health           -> auth:3001/health  + Deprecation: true, Sunset: Sat, 31 Dec 2026 23:59:59 GMT
-GET /api/profiles/me           -> users:3002/profiles/me  + Deprecation: true, Sunset: Sat, 31 Dec 2026 23:59:59 GMT
+GET /api/profiles/me           -> users:3002/api/v1/profiles/me  + Deprecation: true, Sunset: Sat, 31 Dec 2026 23:59:59 GMT
 ```
 
 ## Authentication
