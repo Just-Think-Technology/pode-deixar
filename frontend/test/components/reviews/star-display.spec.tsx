@@ -12,9 +12,10 @@ describe('StarDisplay', () => {
     expect(screen.getByRole('img')).toHaveAttribute('aria-label', '4,8 de 5')
   })
 
-  it('renders five stars without rounding the value up', () => {
+  it('renders background and foreground rows with fractional width', () => {
     const { container } = render(<StarDisplay value={4.8} />)
 
-    expect(container.querySelectorAll('svg').length).toBe(5)
+    expect(container.querySelectorAll('svg').length).toBe(10)
+    expect(container.querySelector('.absolute')?.getAttribute('style')).toContain('96%')
   })
 })

@@ -46,7 +46,7 @@ describe('ReviewList', () => {
   })
 
   it('shows loading state while fetching more reviews', () => {
-    render(<ReviewList reviews={reviews} hasMore isLoadingMore />)
+    render(<ReviewList reviews={reviews} hasMore isLoadingMore onLoadMore={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: 'Carregando…' })).toBeDisabled()
   })
