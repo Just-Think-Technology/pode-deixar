@@ -11,8 +11,9 @@ function jsonResponse(data: unknown, status = 200) {
   })
 }
 
-async function loadReviewsApi() {
+async function loadReviewsApi(useMock = false) {
   vi.resetModules()
+  vi.stubEnv('NEXT_PUBLIC_USE_MOCK', useMock ? 'true' : '')
   vi.stubEnv('NEXT_PUBLIC_BACKEND_URL', 'http://api.test')
   vi.stubGlobal('fetch', fetchMock)
   return import('@/api/client/reviews')
@@ -66,5 +67,15 @@ describe('api/client/reviews', () => {
     await expect(api.getProviderReviews('provider-1')).rejects.toMatchObject({
       status: 500,
     })
+  })
+
+  it('returns mock reviews without fetch in mock mode', async () => {
+    const api = await loadReviewsApi(true)
+
+    const result = await api.getProviderReviews('u1', 10)
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(result.length).toBeGreaterThan(0)
+    expect(result[0]).toMatchObject({ id: 'r1', rating: 5 })
   })
 })
