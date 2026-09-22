@@ -23,6 +23,13 @@ export async function POST() {
   }
 
   try {
+    const { resetMockWorkerReviews } = await import("@/mock/worker/reviews");
+    resetMockWorkerReviews();
+  } catch {
+    // ignore
+  }
+
+  try {
     const { resetMockTracking } = await import("@/mock/tracking");
     // optional: tracking mocks may expose reset
     if (typeof resetMockTracking === "function") resetMockTracking();

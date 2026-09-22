@@ -48,7 +48,7 @@ describe('ReviewResponse', () => {
     })
 
     expect(screen.getByRole('button', { name: 'Responder' })).toBeDisabled()
-    expect(screen.getByText('500 caracteres')).toBeInTheDocument()
+    expect(screen.getByText(/500 caracteres/)).toBeInTheDocument()
   })
 
   it('submits the reply and shows success state', async () => {

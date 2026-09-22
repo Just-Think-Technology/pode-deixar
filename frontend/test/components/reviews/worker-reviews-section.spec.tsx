@@ -47,7 +47,10 @@ const summary = {
 describe('WorkerReviewsSection', () => {
   beforeEach(() => {
     vi.mocked(getMyReviewsAction).mockResolvedValue(mockReviews)
-    vi.mocked(replyToReviewAction).mockResolvedValue(undefined)
+    vi.mocked(replyToReviewAction).mockResolvedValue({
+      message: 'Obrigado!',
+      createdAt: '2026-09-13T10:00:00.000Z',
+    })
     vi.mocked(reportReviewAction).mockResolvedValue(undefined)
   })
 

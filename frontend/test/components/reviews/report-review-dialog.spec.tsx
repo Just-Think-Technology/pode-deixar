@@ -28,7 +28,7 @@ describe('ReportReviewDialog', () => {
     render(<ReportReviewDialog {...baseProps} onReport={onReport} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Denunciar' }))
-    fireEvent.click(screen.getByLabelText(/baixo calão/i))
+    fireEvent.click(screen.getByRole('radio', { name: /baixo calão/i }))
     fireEvent.change(screen.getByPlaceholderText(/detalhes/i), {
       target: { value: 'Contém palavrões.' },
     })
@@ -58,7 +58,7 @@ describe('ReportReviewDialog', () => {
     render(<ReportReviewDialog {...baseProps} onReport={onReport} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Denunciar' }))
-    fireEvent.click(screen.getByLabelText(/ofensa/i))
+    fireEvent.click(screen.getByRole('radio', { name: /ofensa/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Enviar denúncia' }))
 
     await waitFor(() => {

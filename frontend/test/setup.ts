@@ -38,3 +38,15 @@ global.requestAnimationFrame = global.requestAnimationFrame || function (cb: Fun
 global.cancelAnimationFrame = global.cancelAnimationFrame || function (id: number) {
   clearTimeout(id)
 }
+
+// jsdom has no constructible PointerEvent; base-ui interactive primitives
+// (radio, dialog triggers) build one on click and throw without this shim
+try {
+  new (window as any).PointerEvent('click')
+} catch {
+  (window as any).PointerEvent = class PointerEvent extends MouseEvent {
+    constructor(type: string, params?: MouseEventInit) {
+      super(type, params)
+    }
+  }
+}
