@@ -49,6 +49,8 @@ import {
   getApiErrorMessage,
   mapApiErrorToFieldErrors,
 } from "@/lib/auth/errors";
+import { buildLocalSummary } from "@/lib/client/reviews/mappers";
+import WorkerReviewsSection from "@/components/shared/reviews/worker-reviews-section";
 import type {
   UpdateProviderProfilePayload,
   UserProfile,
@@ -586,10 +588,11 @@ export default function WorkerProfilePage({
         </TabsContent>
 
         <TabsContent value="reviews">
-          <TabPlaceholder
-            icon={Star}
-            title="Avaliações em breve"
-            description="Em breve você poderá visualizar e responder às avaliações dos clientes."
+          <WorkerReviewsSection
+            initialSummary={buildLocalSummary(
+              profile?.rating ?? 0,
+              profile?.total_reviews ?? 0,
+            )}
           />
         </TabsContent>
       </Tabs>

@@ -142,7 +142,16 @@ export async function getWorkerProfileAction(): Promise<{ user: UserProfile }> {
     return { user: mapProfileResponseToUserProfile(profile) };
   } catch (err) {
     if (!USE_MOCK) throw err;
-    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
+    // In mock mode a mock session cookie never validates against the real
+    // backend (401 → refresh failure), so any failure falls back to the
+    // mock profile instead of redirecting to login.
+    if (
+      err instanceof ApiError &&
+      (err.status === 401 ||
+        err.status === 404 ||
+        err.status === 501 ||
+        err.status === 503)
+    ) {
       const session = await getAuthSession();
       return {
         user: buildMockProfile({
@@ -151,6 +160,18 @@ export async function getWorkerProfileAction(): Promise<{ user: UserProfile }> {
           email: session?.user.email ?? "usuario@example.com",
         }),
       };
+    }
+    if (err instanceof Error && USE_MOCK) {
+      const session = await getAuthSession();
+      if (session) {
+        return {
+          user: buildMockProfile({
+            id: session.user.id,
+            complete_name: session.user.complete_name,
+            email: session.user.email,
+          }),
+        };
+      }
     }
     throw err;
   }

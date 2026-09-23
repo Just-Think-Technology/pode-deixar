@@ -182,7 +182,7 @@ test.describe("Toast + Central de Notificações (Task 9)", () => {
     await expect(page.getByText(/Proposta aceita|Pagamento confirmado/).first()).toBeVisible({ timeout: 5000 });
 
     await page.getByRole("tab", { name: "Conversas" }).click();
-    await expect(page.getByText("Nova mensagem")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Nova mensagem").first()).toBeVisible({ timeout: 5000 });
 
     // Close and reopen to ensure no stale overlay flakiness
     await page.keyboard.press("Escape");
