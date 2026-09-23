@@ -43,7 +43,8 @@ test("worker reports an abusive review", async ({ page }) => {
 });
 
 test("pending report disables a new report", async ({ page }) => {
-  await expect(
-    page.getByRole("button", { name: "Denúncia em análise" }),
-  ).toBeDisabled();
+  const pendingReport = page.getByRole("button", {
+    name: "Denúncia em análise",
+  });
+  await expect(pendingReport.first()).toBeDisabled();
 });
