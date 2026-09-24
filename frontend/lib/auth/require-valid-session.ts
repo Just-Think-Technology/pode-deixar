@@ -5,7 +5,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 
 import { verifyAccessToken } from "@/api/auth/verify";
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import {
   type AppArea,
   AREA_REQUIRED_ROLE,

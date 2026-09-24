@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getCategories } from "@/api/client/categories";
 import { getProviderPublicProfile } from "@/api/client/provider";
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import ClientRequestQuotePage from "@/components/pages/client-request-quote-page";
 import type { Category } from "@/lib/client/quote/types";
 import type { ProviderPublicProfile } from "@/lib/client/provider/types";

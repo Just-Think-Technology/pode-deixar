@@ -11,6 +11,9 @@ vi.mock('@/lib/auth/session.server', () => ({
 vi.mock('@/api/client', () => ({
   getApiBaseUrl: () => 'https://api.test/api/v1',
 }))
+vi.mock('@/api/client/http', () => ({
+  getApiBaseUrl: () => 'https://api.test/api/v1',
+}))
 
 import { getAccessToken } from '@/lib/auth/session.server'
 import {
