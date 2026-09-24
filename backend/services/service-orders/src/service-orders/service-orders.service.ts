@@ -1,4 +1,5 @@
-// Service orders service — order lifecycle, proposals and photos
+// Service orders service — thin orchestrator for order lifecycle
+
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 
 import {
@@ -17,15 +18,24 @@ import { HireProviderServiceDto } from "./dto/hire-provider-service.dto";
 import {
   sanitizeAddress,
   formatAddress,
-  formatAddressSummary,
 } from "./dto/service-order-address.dto";
-import {
-  normalizePagination,
-  PaginationQuery,
-  validateImageFile,
-} from "@pode-deixar/validation";
+import { normalizePagination, PaginationQuery } from "@pode-deixar/validation";
 import { MinioService } from "@pode-deixar/storage";
 import { PhotosRepository } from "../photos/photos.repository";
+import { OrderPricing } from "./order-pricing.service";
+import { OrderTrackingAssembler } from "./order-tracking-assembler.service";
+import { OrderPhotoPipeline } from "./order-photo-pipeline.service";
+import {
+  toNumber,
+  formatOrder,
+  formatPhotos,
+  formatCompletionHistory,
+  formatOpenOrderListItem,
+  formatOrderWithProposals,
+  formatAgendaItem,
+  buildCompletionOrderBase,
+} from "./mappers/service-order.mappers";
+import { validateImageFile } from "@pode-deixar/validation";
 import sharp from "sharp";
 
 const MAX_AGENDA_WINDOW_DAYS = 92;
@@ -41,6 +51,9 @@ export class ServiceOrdersService {
   constructor(
     private repository: ServiceOrdersRepository,
     private servicesLogger: ServicesLoggerService,
+    @Optional() private pricing?: OrderPricing,
+    @Optional() private trackingAssembler?: OrderTrackingAssembler,
+    @Optional() private photoPipeline?: OrderPhotoPipeline,
     @Optional() private photosRepository?: PhotosRepository,
     @Optional() private minio?: MinioService,
   ) {}
@@ -49,114 +62,16 @@ export class ServiceOrdersService {
     return this.servicesLogger;
   }
 
-  private toNumber(value: unknown): number | null {
-    if (value == null) {
-      return null;
+  private resolveToNumber(value: unknown): number | null {
+    if (this.pricing) {
+      return this.pricing.toNumber(value);
     }
-    if (typeof value === "number") {
-      return value;
-    }
-    // Prisma Decimal
-    const decimal = value as { toNumber?: () => number };
-    if (typeof decimal.toNumber === "function") {
-      return decimal.toNumber();
-    }
-    const num = Number(value);
-    return Number.isNaN(num) ? null : num;
-  }
-
-  private formatOrder(order: any) {
-    return {
-      id: order.id,
-      client_id: order.clientId,
-      provider_id: order.providerId ?? null,
-      provider_service_id: order.providerServiceId ?? null,
-      agreed_price: order.agreedPrice ?? null,
-      title: order.title,
-      description: order.description,
-      category_id: order.categoryId,
-      category: order.category
-        ? {
-            id: order.category.id,
-            name: order.category.name,
-            slug: order.category.slug,
-          }
-        : null,
-      budget_min: order.budgetMin,
-      budget_max: order.budgetMax,
-      address: formatAddress(order.address),
-      status: order.status,
-      scheduled_at: order.scheduledAt ?? null,
-      scheduled_end_at: order.scheduledEndAt ?? null,
-      completed_at: order.completedAt ?? null,
-      completed_by: order.completedBy ?? null,
-      observations: order.observations ?? null,
-      created_at: order.createdAt,
-      updated_at: order.updatedAt,
-    };
-  }
-
-  // Exposed `url` is the authenticated view endpoint since the bucket is not public.
-  private formatPhotos(photos: any[] | undefined) {
-    return (photos ?? []).map((p: any) => ({
-      id: p.id,
-      url: `/api/services/photos/${p.id}/view`,
-      created_at: p.createdAt ?? undefined,
-    }));
-  }
-
-  private formatCompletionHistory(order: any, photos: any[]) {
-    return {
-      order_id: order.id,
-      completed_at: order.completedAt ? order.completedAt.toISOString() : null,
-      completed_by: order.completedBy ?? null,
-      observations: order.observations ?? null,
-      photos: photos.map((p: any) => ({
-        id: p.id,
-        url: `/api/services/photos/${p.id}/view`,
-      })),
-    };
+    return toNumber(value);
   }
 
   private async buildCompletionOrderPayload(order: any) {
     const client = await this.repository.findUserById(order.clientId);
-    const amount = this.toNumber(order.agreedPrice);
-    return {
-      ...this.formatOrder(order),
-      // Aliases expected by the completion screen (CompletionOrder)
-      order_id: order.id,
-      client_name: client?.completeName ?? "Cliente",
-      scheduled_at: order.scheduledAt ? order.scheduledAt.toISOString() : null,
-      scheduled_end_at: order.scheduledEndAt
-        ? order.scheduledEndAt.toISOString()
-        : null,
-      amount: amount ?? 0,
-      order_status: order.status,
-      photos: this.formatPhotos(order.photos),
-    };
-  }
-
-  // Showcase items use a brief address to avoid exposing street/number/ZIP.
-  private formatOpenOrderListItem(order: any) {
-    return {
-      ...this.formatOrder(order),
-      address: formatAddressSummary(order.address),
-    };
-  }
-
-  private formatOrderWithProposals(order: any) {
-    return {
-      ...this.formatOrder(order),
-      proposals: order.proposals.map((p: any) => ({
-        id: p.id,
-        provider_id: p.providerId,
-        price: p.price,
-        description: p.description,
-        estimated_duration: p.estimatedDuration,
-        status: p.status,
-        created_at: p.createdAt,
-      })),
-    };
+    return buildCompletionOrderBase(order, client);
   }
 
   private async validateProvider(providerId: string, clientId: string) {
@@ -197,7 +112,7 @@ export class ServiceOrdersService {
 
     this.loggerService.logServiceOrderCreated(clientId, order.id, ip);
 
-    return this.formatOrder(order);
+    return formatOrder(order);
   }
 
   async findReceivedByProvider(
@@ -211,14 +126,14 @@ export class ServiceOrdersService {
       take,
     );
 
-    return orders.map((o) => this.formatOrder(o));
+    return orders.map((o) => formatOrder(o));
   }
 
   async findByClient(clientId: string, pagination?: PaginationQuery) {
     const { skip, take } = normalizePagination(pagination);
     const orders = await this.repository.findByClient(clientId, skip, take);
 
-    return orders.map((o) => this.formatOrder(o));
+    return orders.map((o) => formatOrder(o));
   }
 
   async findById(id: string) {
@@ -228,7 +143,7 @@ export class ServiceOrdersService {
       throw new NotFoundException("Pedido de serviço não encontrado");
     }
 
-    return this.formatOrderWithProposals(order);
+    return formatOrderWithProposals(order);
   }
 
   async findByIdForClient(orderId: string, clientId: string) {
@@ -242,7 +157,7 @@ export class ServiceOrdersService {
       throw new ForbiddenException("Pedido não pertence ao cliente");
     }
 
-    return this.formatOrderWithProposals(order);
+    return formatOrderWithProposals(order);
   }
 
   async findByIdWithAccess(orderId: string, userId: string, role: string) {
@@ -254,11 +169,11 @@ export class ServiceOrdersService {
 
     if (role === "CLIENT" && order.clientId === userId) {
       const payload = await this.buildCompletionOrderPayload(order);
-      const withProposals = this.formatOrderWithProposals(order);
+      const withProposals = formatOrderWithProposals(order);
       return {
         ...payload,
         proposals: withProposals.proposals,
-        photos: this.formatPhotos(order.photos),
+        photos: formatPhotos(order.photos),
       };
     }
 
@@ -283,7 +198,7 @@ export class ServiceOrdersService {
               created_at: proposal.createdAt,
             },
           ],
-          photos: this.formatPhotos(order.photos),
+          photos: formatPhotos(order.photos),
         };
       }
 
@@ -304,7 +219,7 @@ export class ServiceOrdersService {
       take,
     );
 
-    return orders.map((o) => this.formatOpenOrderListItem(o));
+    return orders.map((o) => formatOpenOrderListItem(o));
   }
 
   async update(
@@ -341,7 +256,7 @@ export class ServiceOrdersService {
 
     this.loggerService.logServiceOrderUpdated(clientId, orderId, ip);
 
-    return this.formatOrder(order);
+    return formatOrder(order);
   }
 
   async cancel(clientId: string, orderId: string, ip?: string) {
@@ -365,7 +280,7 @@ export class ServiceOrdersService {
 
     this.loggerService.logServiceOrderCancelled(clientId, orderId, ip);
 
-    return this.formatOrder(order);
+    return formatOrder(order);
   }
 
   async cancelWithReason(
@@ -441,7 +356,7 @@ export class ServiceOrdersService {
       );
     }
 
-    return this.formatOrder(order);
+    return formatOrder(order);
   }
 
   async start(providerId: string, orderId: string) {
@@ -572,44 +487,50 @@ export class ServiceOrdersService {
       );
     }
 
-    // Handle multipart photos if provided
+    // Handle multipart photos via deep module when available
     let uploadedCount = 0;
-    if (files && Array.isArray(files) && files.length > 0) {
-      if (files.length > 10) {
-        throw new BadRequestException("Máximo de 10 fotos por upload");
-      }
-
-      for (const file of files) {
-        validateImageFile(file.originalname, file.buffer);
-      }
-
-      const webpBuffers: Buffer[] = [];
-      for (const file of files) {
-        try {
-          const webpBuffer = await sharp(file.buffer, {
-            limitInputPixels: SHARP_PIXEL_LIMIT,
-          })
-            .webp({ quality: 80 })
-            .toBuffer();
-          webpBuffers.push(webpBuffer);
-        } catch {
-          throw new BadRequestException(
-            `Imagem inválida ou corrompida: "${file.originalname}"`,
-          );
+    if (this.photoPipeline) {
+      const result = await this.photoPipeline.handleUpload(orderId, files);
+      uploadedCount = result.uploadedCount;
+    } else {
+      // Fallback: legacy inline pipeline (keeps old tests green when pipeline not injected)
+      if (files && Array.isArray(files) && files.length > 0) {
+        if (files.length > 10) {
+          throw new BadRequestException("Máximo de 10 fotos por upload");
         }
-      }
 
-      if (!this.photosRepository || !this.minio) {
-        throw new BadRequestException("Serviço de fotos indisponível");
-      }
+        for (const file of files) {
+          validateImageFile(file.originalname, file.buffer);
+        }
 
-      await this.photosRepository.uploadPhotos(
-        orderId,
-        webpBuffers,
-        (fileName, buffer, mimeType) =>
-          this.minio!.uploadFile(fileName, buffer, mimeType),
-      );
-      uploadedCount = files.length;
+        const webpBuffers: Buffer[] = [];
+        for (const file of files) {
+          try {
+            const webpBuffer = await sharp(file.buffer, {
+              limitInputPixels: SHARP_PIXEL_LIMIT,
+            })
+              .webp({ quality: 80 })
+              .toBuffer();
+            webpBuffers.push(webpBuffer);
+          } catch {
+            throw new BadRequestException(
+              `Imagem inválida ou corrompida: "${file.originalname}"`,
+            );
+          }
+        }
+
+        if (!this.photosRepository || !this.minio) {
+          throw new BadRequestException("Serviço de fotos indisponível");
+        }
+
+        await this.photosRepository.uploadPhotos(
+          orderId,
+          webpBuffers,
+          (fileName, buffer, mimeType) =>
+            this.minio!.uploadFile(fileName, buffer, mimeType),
+        );
+        uploadedCount = files.length;
+      }
     }
 
     // Enforce at least one photo total (existing + newly uploaded)
@@ -729,7 +650,7 @@ export class ServiceOrdersService {
     }
 
     const photos = await this.repository.findPhotosByOrderId(orderId);
-    return this.formatCompletionHistory(order, photos);
+    return formatCompletionHistory(order, photos);
   }
 
   async getCompletionHistory(orderId: string, userId: string, role: string) {
@@ -763,7 +684,7 @@ export class ServiceOrdersService {
     }
 
     const photos = await this.repository.findPhotosByOrderId(orderId);
-    return this.formatCompletionHistory(order, photos);
+    return formatCompletionHistory(order, photos);
   }
 
   async hireFromProvider(
@@ -816,7 +737,7 @@ export class ServiceOrdersService {
       },
     );
 
-    return this.formatOrder(order);
+    return formatOrder(order);
   }
 
   async findProviderAgenda(providerId: string, from: string, to: string) {
@@ -847,30 +768,7 @@ export class ServiceOrdersService {
       toDate,
     );
 
-    return orders.map((o) => this.formatAgendaItem(o));
-  }
-
-  private formatAgendaItem(order: any) {
-    const payment = order.payments?.[0] ?? null;
-
-    return {
-      id: order.id,
-      order_id: order.id,
-      title: order.title,
-      description: order.description,
-      scheduled_at: order.scheduledAt,
-      scheduled_end_at: order.scheduledEndAt ?? null,
-      order_status: order.status,
-      address: formatAddress(order.address),
-      photos: this.formatPhotos(order.photos),
-      payment: payment
-        ? {
-            status: payment.status,
-            amount: payment.amount,
-            paid_at: payment.paidAt,
-          }
-        : null,
-    };
+    return orders.map((o) => formatAgendaItem(o));
   }
 
   async getTracking(
@@ -907,20 +805,24 @@ export class ServiceOrdersService {
       }
     }
 
-    return this.toContractTracking(order, userId, role);
+    if (this.trackingAssembler) {
+      return this.trackingAssembler.assemble(order, userId, role);
+    }
+
+    // Fallback when assembler not injected — keep legacy pure path for old tests
+    return this.toContractTrackingFallback(order, userId, role);
   }
 
-  private async toContractTracking(
+  private async toContractTrackingFallback(
     order: any,
     _viewerId: string,
     role: string,
   ) {
-    // Gross amount from agreedPrice or accepted proposal price
     const rawGross =
       order.agreedPrice ??
       order.proposals?.find((p: any) => p.status === "ACCEPTED")?.price ??
       null;
-    const gross = this.toNumber(rawGross);
+    const gross = this.resolveToNumber(rawGross);
 
     const feeRate = Number(process.env.PLATFORM_FEE_RATE ?? "0.10");
     const feeAmount =
@@ -930,7 +832,6 @@ export class ServiceOrdersService {
         ? Math.round((gross - feeAmount) * 100) / 100
         : null;
 
-    // Counterpart lookup
     const counterpartId = role === "CLIENT" ? order.providerId : order.clientId;
     let counterpartUser: any = null;
     if (counterpartId) {
@@ -949,7 +850,6 @@ export class ServiceOrdersService {
         null,
     };
 
-    // Proposal: accepted or first
     const accepted = order.proposals?.find((p: any) => p.status === "ACCEPTED");
     const reference = accepted ?? order.proposals?.[0] ?? null;
     let proposal: any = null;
@@ -958,7 +858,7 @@ export class ServiceOrdersService {
       proposal = {
         id: reference.id,
         providerId: reference.providerId,
-        price: this.toNumber(reference.price) ?? 0,
+        price: this.resolveToNumber(reference.price) ?? 0,
         description: reference.description,
         estimatedDuration: reference.estimatedDuration ?? null,
         acceptedAt: isAccepted
@@ -969,14 +869,13 @@ export class ServiceOrdersService {
       };
     }
 
-    // Payment: latest (first in array, orderBy createdAt desc)
     const paymentRecord = order.payments?.[0] ?? null;
     const payment = paymentRecord
       ? {
           id: paymentRecord.id,
           status: paymentRecord.status,
           method: paymentRecord.method ?? null,
-          amount: this.toNumber(paymentRecord.amount),
+          amount: this.resolveToNumber(paymentRecord.amount),
           paidAt: paymentRecord.paidAt
             ? new Date(paymentRecord.paidAt).toISOString()
             : null,
@@ -989,7 +888,6 @@ export class ServiceOrdersService {
           paidAt: null,
         };
 
-    // Review: first
     const reviewRecord = order.reviews?.[0] ?? null;
     const review = reviewRecord
       ? {
@@ -1002,7 +900,6 @@ export class ServiceOrdersService {
         }
       : null;
 
-    // Evidence: only when COMPLETED
     let evidence: any = null;
     if (order.status === "COMPLETED" && order.completedAt) {
       evidence = {
@@ -1014,8 +911,6 @@ export class ServiceOrdersService {
           url: `/api/services/photos/${p.id}/view`,
         })),
       };
-    } else {
-      evidence = null;
     }
 
     const address =
@@ -1061,7 +956,6 @@ export class ServiceOrdersService {
         : null,
     };
 
-    // Fee redaction for CLIENT (AppSec): omit feeAmount/netAmount
     if (role === "CLIENT") {
       base.feeAmount = undefined;
       base.netAmount = undefined;

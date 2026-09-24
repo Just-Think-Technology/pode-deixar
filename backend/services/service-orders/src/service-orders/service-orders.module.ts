@@ -16,6 +16,9 @@ import { MinioModule } from "../storage/minio.module";
 
 import { ServiceOrdersRepository } from "./service-orders.repository";
 import { PhotosRepository } from "../photos/photos.repository";
+import { OrderPricing } from "./order-pricing.service";
+import { OrderTrackingAssembler } from "./order-tracking-assembler.service";
+import { OrderPhotoPipeline } from "./order-photo-pipeline.service";
 
 @Module({
   // --- Imports ---
@@ -35,7 +38,14 @@ import { PhotosRepository } from "../photos/photos.repository";
 
   // --- Providers ---
 
-  providers: [ServiceOrdersService, ServiceOrdersRepository, PhotosRepository],
+  providers: [
+    ServiceOrdersService,
+    ServiceOrdersRepository,
+    PhotosRepository,
+    OrderPricing,
+    OrderTrackingAssembler,
+    OrderPhotoPipeline,
+  ],
   exports: [ServiceOrdersService],
 })
 export class ServiceOrdersModule {}
