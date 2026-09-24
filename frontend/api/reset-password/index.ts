@@ -1,6 +1,6 @@
 // Password recovery API — password reset fetcher
 
-import { apiFetch } from "@/api/client";
+import { apiFetch } from "@/api/client/http";
 import type {
   ResetPasswordPayload,
   ResetPasswordResponse,
@@ -8,8 +8,12 @@ import type {
 
 export type { ResetPasswordPayload };
 
+export const RESET_PASSWORD_ROUTES = {
+  reset: "/auth/reset-password",
+} as const;
+
 export function resetPassword(payload: ResetPasswordPayload) {
-  return apiFetch<ResetPasswordResponse>("/auth/reset-password", {
+  return apiFetch<ResetPasswordResponse>(RESET_PASSWORD_ROUTES.reset, {
     method: "POST",
     body: JSON.stringify(payload),
   });

@@ -1,6 +1,6 @@
 // Client search API — professional search with mock fallback
 
-import { apiFetchAuth, ApiError } from "@/api/client";
+import { apiFetchAuth, ApiError } from "@/api/client/http";
 import { mockSearchProfessionals } from "@/mock/client/search";
 import type {
   ProviderSearchResult,
@@ -9,6 +9,10 @@ import type {
 } from "@/lib/client/search/types";
 
 export type { SearchProfessionalsPayload, SearchProfessionalsResponse };
+
+export const SEARCH_ROUTES = {
+  search: "/providers/search",
+} as const;
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
@@ -63,7 +67,7 @@ export async function searchProfessionals(
   if (payload.limit != null) params.set("limit", String(payload.limit));
 
   const qs = params.toString();
-  const path = `/providers/search${qs ? `?${qs}` : ""}`;
+  const path = `${SEARCH_ROUTES.search}${qs ? `?${qs}` : ""}`;
 
   const response = await apiFetchAuth<SearchProvidersApiResponse | ProviderSearchResult[]>(
     path,

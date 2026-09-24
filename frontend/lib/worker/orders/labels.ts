@@ -1,4 +1,4 @@
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 
 export function formatCompletionAmount(value: number): string {
   return new Intl.NumberFormat("pt-BR", {

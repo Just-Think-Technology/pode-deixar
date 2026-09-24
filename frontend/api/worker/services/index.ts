@@ -1,6 +1,6 @@
 // Worker services API — provider service fetchers
 
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth } from "@/api/client/http";
 import type {
   CreateServicePayload,
   CreateServiceResponse,

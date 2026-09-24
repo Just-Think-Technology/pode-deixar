@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import ClientProviderProfilePage from "@/components/pages/client-provider-profile-page";
 import { getProviderPublicProfile } from "@/api/client/provider";
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import type { ProviderPublicProfile } from "@/lib/client/provider/types";
 
 type Props = {

@@ -3,7 +3,7 @@
 "use server";
 
 import { getAccessToken } from "@/lib/auth/session.server";
-import { getApiBaseUrl } from "@/api/client";
+import { getApiBaseUrl } from "@/api/client/http";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_MIME = new Set([

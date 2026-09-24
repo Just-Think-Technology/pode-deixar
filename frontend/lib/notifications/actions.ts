@@ -10,11 +10,10 @@ import {
   type GetNotificationsParams,
   type Notification,
 } from "@/api/notifications";
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
+import { withTokenRefresh } from "@/api/client/with-token-refresh";
 import {
-  getAccessToken,
   getAuthSession,
-  refreshAuthSession,
 } from "@/lib/auth/session.server";
 import {
   getMockNotifications,
@@ -24,28 +23,6 @@ import {
 } from "@/mock/notifications";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
-
-// --- Helpers ---
-
-async function withTokenRefresh<T>(fn: (token: string) => Promise<T>): Promise<T> {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-
-  try {
-    return await fn(token);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      const refreshed = await refreshAuthSession();
-      if (!refreshed?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
-      }
-      return fn(refreshed.access_token);
-    }
-    throw err;
-  }
-}
 
 // --- Public API ---
 

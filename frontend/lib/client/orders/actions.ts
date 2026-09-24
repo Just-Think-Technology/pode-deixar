@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import {
   acceptProposal,
   rejectProposal,
@@ -13,10 +13,7 @@ import {
   getMyServiceOrderById,
   getMyServiceOrders,
 } from "@/api/client/service-orders";
-import {
-  getAccessToken,
-  refreshAuthSession,
-} from "@/lib/auth/session.server";
+import { withTokenRefresh } from "@/api/client/with-token-refresh";
 import type {
   ClientOrder,
   ClientProposal,
@@ -29,28 +26,6 @@ import {
 } from "@/mock/client/orders";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
-
-async function withTokenRefresh<T>(
-  fn: (token: string) => Promise<T>,
-): Promise<T> {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-
-  try {
-    return await fn(token);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      const refreshed = await refreshAuthSession();
-      if (!refreshed?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
-      }
-      return await fn(refreshed.access_token);
-    }
-    throw err;
-  }
-}
 
 function isInfraError(err: unknown): boolean {
   return (

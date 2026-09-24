@@ -1,6 +1,6 @@
 // Worker proposals API — sent proposal fetchers
 
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth } from "@/api/client/http";
 import type {
   WorkerProposal,
   WorkerProposalsListResponse,

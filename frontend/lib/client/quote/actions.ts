@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import { createServiceOrder } from "@/api/client/service-orders";
 import { getAccessToken } from "@/lib/auth/session.server";
 import type {

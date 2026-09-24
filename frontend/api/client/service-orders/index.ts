@@ -1,6 +1,6 @@
 // Client service orders API — order creation and lookup fetchers
 
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth } from "@/api/client/http";
 import type {
   ClientOrder,
   ClientOrdersListResponse,

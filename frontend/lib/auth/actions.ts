@@ -16,7 +16,7 @@ import {
   getWorkerServices,
   updateWorkerService,
 } from "@/api/worker/services";
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import type {
   CreateServicePayload,
   CreateServiceResponse,
@@ -34,12 +34,11 @@ import type {
 
 import {
   clearAuthSession,
-  getAccessToken,
   getAuthSession,
-  refreshAuthSession,
   saveAuthSession,
   updateAuthSessionUser,
 } from "@/lib/auth/session.server";
+import { withTokenRefresh } from "@/api/client/with-token-refresh";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
@@ -112,28 +111,6 @@ export async function resetPasswordAction(
   await saveAuthSession(loginData);
 
   return { role: loginData.user.role };
-}
-
-async function withTokenRefresh<T>(
-  fn: (token: string) => Promise<T>,
-): Promise<T> {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-
-  try {
-    return await fn(token);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      const refreshed = await refreshAuthSession();
-      if (!refreshed?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
-      }
-      return await fn(refreshed.access_token);
-    }
-    throw err;
-  }
 }
 
 export async function getWorkerProfileAction(): Promise<{ user: UserProfile }> {

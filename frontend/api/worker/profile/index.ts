@@ -1,6 +1,6 @@
 // Worker profile API — profile fetch and update fetchers
 
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth } from "@/api/client/http";
 import type {
   CreateProviderProfilePayload,
   ProfileResponse,

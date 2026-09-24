@@ -1,6 +1,6 @@
 // Notifications API — fetchers for user notifications
 
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth } from "@/api/client/http";
 
 // --- Types ---
 
