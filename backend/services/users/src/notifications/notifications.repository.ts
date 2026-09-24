@@ -3,6 +3,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "@pode-deixar/prisma";
 import { NotificationType } from "@prisma/client";
+import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
 
 // --- Types ---
 
@@ -33,7 +34,11 @@ export interface ExistsRecentOptions {
 
 @Injectable()
 export class NotificationsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly shared: SharedNotificationsService;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.shared = new SharedNotificationsService(this.prisma);
+  }
 
   /**
    * Creates a notification.
@@ -114,33 +119,11 @@ export class NotificationsRepository {
 
   /**
    * Checks if a recent notification exists within the dedup window.
-   * Dedup key: same user + type + title + contractId/conversationId within windowMs.
+   * Delegates to shared notifications module — single home for dedup logic.
    * @param opts - Dedup lookup options
    * @returns True if a recent duplicate exists
    */
   async existsRecent(opts: ExistsRecentOptions): Promise<boolean> {
-    const windowMs = opts.windowMs ?? 60000;
-    const since = new Date(Date.now() - windowMs);
-
-    const where: Record<string, unknown> = {
-      userId: opts.userId,
-      type: opts.type,
-      title: opts.title,
-      createdAt: { gte: since },
-    };
-
-    if (opts.contractId) {
-      where.contractId = opts.contractId;
-    }
-
-    if (opts.conversationId) {
-      where.conversationId = opts.conversationId;
-    }
-
-    const existing = await this.prisma.notification.findFirst({
-      where,
-    });
-
-    return Boolean(existing);
+    return this.shared.existsRecent(opts);
   }
 }
