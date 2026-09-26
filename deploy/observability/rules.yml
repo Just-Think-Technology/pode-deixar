@@ -1,0 +1,45 @@
+# Alert rules for the RED dashboards (fatia 1).
+# Dashboard-only by decision: firing state is visible in the Prometheus and
+# Grafana UIs (both loopback + SSH tunnel). Adding email later means adding
+# Alertmanager with an SMTP receiver — the rules below need no change.
+
+groups:
+  - name: pode-deixar.red
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Serviço fora do ar: {{ $labels.job }}'
+
+      - alert: High5xxRate
+        expr: |
+          sum by (job) (rate(http_requests_total{status_code=~"5.."}[5m]))
+            / sum by (job) (rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Taxa de 5xx acima de 5% em {{ $labels.job }}'
+
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(0.95, sum by (job, le) (rate(http_request_duration_seconds_bucket[5m]))) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Latência p95 acima de 1s em {{ $labels.job }}'
+
+      - alert: DiskFull
+        expr: |
+          node_filesystem_avail_bytes{mountpoint="/"}
+            / node_filesystem_size_bytes{mountpoint="/"} < 0.15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Disco do host abaixo de 15% livre'

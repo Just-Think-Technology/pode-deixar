@@ -66,7 +66,10 @@ describe('HttpMetricsMiddleware', () => {
     );
 
     const exposition = await metrics.getMetrics();
-    expect(exposition).not.toContain('http_requests_total');
+    // prom-client always renders HELP/TYPE headers; skipped paths must leave
+    // no observed sample series behind.
+    expect(exposition).not.toContain('http_requests_total{');
+    expect(exposition).not.toContain('http_request_duration_seconds_bucket{');
   });
 });
 
