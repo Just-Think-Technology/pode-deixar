@@ -1,9 +1,13 @@
-// Notifications repository — data access for notifications
+// Notifications repository — data access for notifications (deep module for users.notifications)
 
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { PrismaService } from "@pode-deixar/prisma";
 import { NotificationType } from "@prisma/client";
-import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
+import {
+  INotificationPort,
+  NOTIFICATION_PORT,
+} from "@pode-deixar/notifications";
+import { NotificationsService } from "@pode-deixar/notifications";
 
 // --- Types ---
 
@@ -34,18 +38,54 @@ export interface ExistsRecentOptions {
 
 @Injectable()
 export class NotificationsRepository {
-  private readonly shared: SharedNotificationsService;
+  private readonly notificationsPort: INotificationPort;
+  private readonly hasInjectedPort: boolean;
 
-  constructor(private readonly prisma: PrismaService) {
-    this.shared = new SharedNotificationsService(this.prisma);
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(NOTIFICATION_PORT)
+    notificationsPort?: INotificationPort,
+  ) {
+    // Deep module owns prisma.notification reads/updates;
+    // writes (create) delegate to explicit UsersNotificationsAdapter when injected,
+    // keeping DB seam explicit via interface while retaining shared DB
+    this.hasInjectedPort = !!notificationsPort;
+    this.notificationsPort =
+      notificationsPort ?? new NotificationsService(this.prisma);
   }
 
   /**
-   * Creates a notification.
+   * Creates a notification — when UsersNotificationsAdapter is injected, delegates
+   * via INotificationPort to keep DB seam explicit (shared DB, interface makes it visible).
+   * Fallback direct write is for contexts without DI (unit tests without module wiring)
+   * and represents the deep module's authoritative write path.
    * @param data - Notification creation data
-   * @returns Created notification
+   * @returns Created notification or null when deduped via port
    */
-  create(data: CreateNotificationData) {
+  async create(data: CreateNotificationData) {
+    if (this.hasInjectedPort) {
+      const result = await this.notificationsPort.notify({
+        userId: data.userId,
+        type: data.type,
+        title: data.title,
+        message: data.message,
+        contractId: data.contractId ?? null,
+        conversationId: data.conversationId ?? null,
+        dedupKey: data.contractId ?? data.conversationId ?? null,
+        ttl: 60000,
+      });
+      if (result) {
+        return result as Awaited<
+          ReturnType<typeof this.prisma.notification.create>
+        >;
+      }
+      // Port returned null (duplicate/rate-limited) — preserve prior create contract by returning null
+      return null as unknown as Awaited<
+        ReturnType<typeof this.prisma.notification.create>
+      >;
+    }
+
     return this.prisma.notification.create({
       data: {
         userId: data.userId,
@@ -119,11 +159,17 @@ export class NotificationsRepository {
 
   /**
    * Checks if a recent notification exists within the dedup window.
-   * Delegates to shared notifications module — single home for dedup logic.
+   * Delegates to explicit UsersNotificationsAdapter — single home for dedup logic.
    * @param opts - Dedup lookup options
    * @returns True if a recent duplicate exists
    */
   async existsRecent(opts: ExistsRecentOptions): Promise<boolean> {
-    return this.shared.existsRecent(opts);
+    const port = this.notificationsPort as unknown as {
+      existsRecent?: (opts: ExistsRecentOptions) => Promise<boolean>;
+    };
+    if (port.existsRecent) {
+      return port.existsRecent(opts);
+    }
+    return false;
   }
 }

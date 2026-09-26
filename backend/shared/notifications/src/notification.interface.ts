@@ -43,6 +43,21 @@ export interface INotificationPort {
     ttl?: number,
   ): Promise<unknown | null>;
   notify(options: NotifyOptions): Promise<unknown | null>;
+
+  /**
+   * Checks for a recent duplicate within the dedup window.
+   * Exposed for adapters and repositories that need explicit dedup checks.
+   * @param opts - Dedup lookup options
+   * @returns True if duplicate exists
+   */
+  existsRecent?(opts: {
+    userId: string;
+    type: string;
+    title: string;
+    contractId?: string | null;
+    conversationId?: string | null;
+    windowMs?: number;
+  }): Promise<boolean>;
 }
 
 export const NOTIFICATION_PORT = Symbol("NOTIFICATION_PORT");

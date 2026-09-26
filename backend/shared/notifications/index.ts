@@ -3,4 +3,5 @@
 export * from "./src/notification.interface";
 export * from "./src/notification.service";
 export * from "./src/notification.adapter";
+export * from "./src/users-notifications.adapter";
 export * from "./src/notification.module";
