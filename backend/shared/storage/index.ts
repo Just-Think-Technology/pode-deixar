@@ -13,3 +13,9 @@ export {
   createImageFileInterceptor,
 } from "./src/image-upload.interceptor";
 export type { ImageUploadOptions } from "./src/image-upload.interceptor";
+export {
+  ImagePipeline,
+  SHARP_PIXEL_LIMIT,
+  WEBP_QUALITY,
+} from "./src/image-pipeline.service";
+export type { ImagePipelinePort } from "./src/image-pipeline.service";

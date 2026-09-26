@@ -20,8 +20,6 @@ import {
   formatAddress,
 } from "./dto/service-order-address.dto";
 import { normalizePagination, PaginationQuery } from "@pode-deixar/validation";
-import { MinioService } from "@pode-deixar/storage";
-import { PhotosRepository } from "../photos/photos.repository";
 import { OrderPricing } from "./order-pricing.service";
 import { OrderTrackingAssembler } from "./order-tracking-assembler.service";
 import { OrderPhotoPipeline } from "./order-photo-pipeline.service";
@@ -35,14 +33,11 @@ import {
   formatAgendaItem,
   buildCompletionOrderBase,
 } from "./mappers/service-order.mappers";
-import { validateImageFile } from "@pode-deixar/validation";
-import sharp from "sharp";
 
 const MAX_AGENDA_WINDOW_DAYS = 92;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MAX_OBSERVATIONS_LENGTH = 2000;
 const MAX_CANCEL_REASON_LENGTH = 500;
-const SHARP_PIXEL_LIMIT = 25_000_000;
 
 @Injectable()
 export class ServiceOrdersService {
@@ -54,8 +49,6 @@ export class ServiceOrdersService {
     @Optional() private pricing?: OrderPricing,
     @Optional() private trackingAssembler?: OrderTrackingAssembler,
     @Optional() private photoPipeline?: OrderPhotoPipeline,
-    @Optional() private photosRepository?: PhotosRepository,
-    @Optional() private minio?: MinioService,
   ) {}
 
   private get loggerService(): ServicesLoggerService {
@@ -487,50 +480,13 @@ export class ServiceOrdersService {
       );
     }
 
-    // Handle multipart photos via deep module when available
+    // Handle multipart photos via deep ImagePipeline (validate + sharp 25M + webp 80 + upload)
     let uploadedCount = 0;
     if (this.photoPipeline) {
       const result = await this.photoPipeline.handleUpload(orderId, files);
       uploadedCount = result.uploadedCount;
-    } else {
-      // Fallback: legacy inline pipeline (keeps old tests green when pipeline not injected)
-      if (files && Array.isArray(files) && files.length > 0) {
-        if (files.length > 10) {
-          throw new BadRequestException("Máximo de 10 fotos por upload");
-        }
-
-        for (const file of files) {
-          validateImageFile(file.originalname, file.buffer);
-        }
-
-        const webpBuffers: Buffer[] = [];
-        for (const file of files) {
-          try {
-            const webpBuffer = await sharp(file.buffer, {
-              limitInputPixels: SHARP_PIXEL_LIMIT,
-            })
-              .webp({ quality: 80 })
-              .toBuffer();
-            webpBuffers.push(webpBuffer);
-          } catch {
-            throw new BadRequestException(
-              `Imagem inválida ou corrompida: "${file.originalname}"`,
-            );
-          }
-        }
-
-        if (!this.photosRepository || !this.minio) {
-          throw new BadRequestException("Serviço de fotos indisponível");
-        }
-
-        await this.photosRepository.uploadPhotos(
-          orderId,
-          webpBuffers,
-          (fileName, buffer, mimeType) =>
-            this.minio!.uploadFile(fileName, buffer, mimeType),
-        );
-        uploadedCount = files.length;
-      }
+    } else if (files && Array.isArray(files) && files.length > 0) {
+      throw new BadRequestException("Serviço de fotos indisponível");
     }
 
     // Enforce at least one photo total (existing + newly uploaded)

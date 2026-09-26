@@ -19,6 +19,7 @@ import { PhotosRepository } from "../photos/photos.repository";
 import { OrderPricing } from "./order-pricing.service";
 import { OrderTrackingAssembler } from "./order-tracking-assembler.service";
 import { OrderPhotoPipeline } from "./order-photo-pipeline.service";
+import { ImagePipeline } from "@pode-deixar/storage";
 
 @Module({
   // --- Imports ---
@@ -45,6 +46,7 @@ import { OrderPhotoPipeline } from "./order-photo-pipeline.service";
     OrderPricing,
     OrderTrackingAssembler,
     OrderPhotoPipeline,
+    ImagePipeline,
   ],
   exports: [ServiceOrdersService],
 })

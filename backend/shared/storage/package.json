@@ -12,7 +12,9 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.800.0",
     "@aws-sdk/s3-request-presigner": "^3.800.0",
-    "multer": "^2.3.0"
+    "@pode-deixar/validation": "workspace:*",
+    "multer": "^2.3.0",
+    "sharp": "^0.35.4"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",

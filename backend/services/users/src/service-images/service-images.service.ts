@@ -8,10 +8,9 @@ import {
 } from "@nestjs/common";
 import { ServiceImagesRepository } from "./service-images.repository";
 import { MinioService } from "@pode-deixar/storage";
+import { ImagePipeline } from "@pode-deixar/storage";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { randomUUID } from "crypto";
-import sharp from "sharp";
-import { validateImageFile } from "@pode-deixar/validation";
 
 @Injectable()
 export class ServiceImagesService {
@@ -19,6 +18,7 @@ export class ServiceImagesService {
     private repository: ServiceImagesRepository,
     private minio: MinioService,
     private usersLogger: UsersLoggerService,
+    private imagePipeline: ImagePipeline,
   ) {}
 
   // --- Private Helpers ---
@@ -85,16 +85,17 @@ export class ServiceImagesService {
   ) {
     await this.getProviderService(providerProfileId, serviceId);
 
-    validateImageFile(file.originalname, file.buffer);
-
     let sanitizedBuffer: Buffer;
     try {
-      sanitizedBuffer = await sharp(file.buffer, {
-        limitInputPixels: 25_000_000,
-      })
-        .webp({ quality: 80 })
-        .toBuffer();
-    } catch {
+      sanitizedBuffer = await this.imagePipeline.processFile(file);
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        // Preserve service-specific message for this context
+        if (error.message.includes("Imagem inválida ou corrompida")) {
+          throw new BadRequestException("Arquivo de imagem inválido");
+        }
+        throw error;
+      }
       throw new BadRequestException("Arquivo de imagem inválido");
     }
 
