@@ -2,7 +2,11 @@
 
 const FETCH_TIMEOUT = 10_000;
 
-export const API_PREFIX = '/api/v1';
+// Single home for the API version: deploy sets NEXT_PUBLIC_API_VERSION
+// (backend API_VERSION + Caddy {$API_VERSION}); unset means current v1.
+export const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION ?? 'v1';
+
+export const API_PREFIX = `/api/${API_VERSION}`;
 
 export function getApiBaseUrl(): string {
   const internalUrl = process.env.BACKEND_INTERNAL_URL;
@@ -16,11 +20,13 @@ export function getApiBaseUrl(): string {
       "NEXT_PUBLIC_BACKEND_URL não está definida no .env",
     );
   }
-  // Normalize: strip trailing slash and legacy /api or /api/v1 suffix to avoid
-  // duplication (e.g. http://localhost:8080/api -> http://localhost:8080/api/v1)
+  // Normalize: strip trailing slash and legacy /api or /api/<version>
+  // suffix to avoid duplication
+  // (e.g. http://localhost:8080/api -> http://localhost:8080/api/v1)
+  const versionedSuffix = new RegExp(`/api/${API_VERSION}$`);
   const normalized = rawBaseUrl
     .replace(/\/+$/, '')
-    .replace(/\/api\/v1$/, '')
+    .replace(versionedSuffix, '')
     .replace(/\/api$/, '');
   return `${normalized}${API_PREFIX}`;
 }

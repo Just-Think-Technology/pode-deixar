@@ -291,6 +291,8 @@ services:
     image: caddy:2-alpine
     ports:
       - "127.0.0.1:8080:8080"
+    environment:
+      API_VERSION: ${API_VERSION:-v1}
     volumes:
       - ./Caddyfile.docker:/etc/caddy/Caddyfile:ro
     depends_on:
