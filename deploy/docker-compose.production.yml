@@ -187,7 +187,7 @@ services:
   # Admin password comes from GF_SECURITY_ADMIN_PASSWORD in the env file
   # (native name: compose interpolation cannot map it from another variable).
   grafana:
-    image: grafana/grafana:11
+    image: grafana/grafana:11.6.0
     user: "0:0"
     cap_drop:
       - ALL
