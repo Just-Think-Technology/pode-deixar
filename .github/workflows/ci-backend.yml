@@ -368,10 +368,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # PGDATABASE must point at an existing DB here: libpq connects to it
+      # before CREATE DATABASE runs, and role_check does not exist yet.
       - name: Create scratch database
         run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE role_check;"
         env:
           PGPASSWORD: postgres
+          PGDATABASE: postgres
 
       - name: Apply Prisma migrations to scratch database
         run: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
