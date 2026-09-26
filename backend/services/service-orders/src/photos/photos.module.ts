@@ -12,6 +12,7 @@ import { PrismaModule } from "@pode-deixar/prisma";
 import { MinioModule } from "../storage/minio.module";
 
 import { PhotosRepository } from "./photos.repository";
+import { ImagePipeline } from "@pode-deixar/storage";
 
 @Module({
   // --- Imports ---
@@ -37,6 +38,6 @@ import { PhotosRepository } from "./photos.repository";
 
   // --- Providers ---
 
-  providers: [PhotosService, PhotosRepository],
+  providers: [PhotosService, PhotosRepository, ImagePipeline],
 })
 export class PhotosModule {}

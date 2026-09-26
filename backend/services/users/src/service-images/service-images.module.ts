@@ -6,11 +6,13 @@ import { ServiceImagesService } from "./service-images.service";
 import { PrismaModule } from "@pode-deixar/prisma";
 
 import { ServiceImagesRepository } from "./service-images.repository";
+import { ImagePipeline } from "@pode-deixar/storage";
+import { MinioModule } from "../storage/minio.module";
 
 @Module({
   // --- Imports ---
 
-  imports: [PrismaModule],
+  imports: [PrismaModule, MinioModule],
 
   // --- Controllers ---
 
@@ -18,7 +20,7 @@ import { ServiceImagesRepository } from "./service-images.repository";
 
   // --- Providers ---
 
-  providers: [ServiceImagesService, ServiceImagesRepository],
+  providers: [ServiceImagesService, ServiceImagesRepository, ImagePipeline],
   exports: [ServiceImagesService],
 })
 export class ServiceImagesModule {}

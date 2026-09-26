@@ -3,7 +3,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PhotosService } from "../src/photos/photos.service";
 import { PhotosRepository } from "../src/photos/photos.repository";
-import { MinioService } from "@pode-deixar/storage";
+import { MinioService, ImagePipeline } from "@pode-deixar/storage";
 import {
   BadRequestException,
   ForbiddenException,
@@ -56,15 +56,22 @@ describe("PhotosService", () => {
   };
 
   beforeEach(async () => {
+    // Use real ImagePipeline via interface — single home for validate + sharp 25M + webp 80
+    const imagePipeline = new ImagePipeline();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PhotosService,
         { provide: PhotosRepository, useValue: mockRepository },
         { provide: MinioService, useValue: mockMinio },
+        { provide: ImagePipeline, useValue: imagePipeline },
       ],
     }).compile();
 
     service = module.get<PhotosService>(PhotosService);
+    // Verify via interface (ImagePipelinePort) — ensures tests program to interface
+    const viaInterface: import("@pode-deixar/storage").ImagePipelinePort =
+      imagePipeline;
+    expect(typeof viaInterface.processFiles).toBe("function");
     jest.clearAllMocks();
   });
 

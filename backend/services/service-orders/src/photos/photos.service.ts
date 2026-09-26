@@ -8,18 +8,14 @@ import {
 } from "@nestjs/common";
 import { PhotosRepository } from "./photos.repository";
 import { MinioService } from "@pode-deixar/storage";
-import sharp from "sharp";
-import { validateImageFile } from "@pode-deixar/validation";
-
-// Pixel cap guards against decompression bombs while still covering phone
-// photos without exhausting worker memory.
-const SHARP_PIXEL_LIMIT = 25_000_000;
+import { ImagePipeline } from "@pode-deixar/storage";
 
 @Injectable()
 export class PhotosService {
   constructor(
     private repository: PhotosRepository,
     private minio: MinioService,
+    private imagePipeline: ImagePipeline,
   ) {}
 
   async upload(
@@ -55,28 +51,7 @@ export class PhotosService {
       throw new BadRequestException("Máximo de 10 fotos por upload");
     }
 
-    // Validação canônica de imagem (extensão + magic bytes) no pacote
-    // compartilhado — mesma regra do upload de avatar/serviço do users.
-    for (const file of files) {
-      validateImageFile(file.originalname, file.buffer);
-    }
-
-    const webpBuffers: Buffer[] = [];
-
-    for (const file of files) {
-      try {
-        const webpBuffer = await sharp(file.buffer, {
-          limitInputPixels: SHARP_PIXEL_LIMIT,
-        })
-          .webp({ quality: 80 })
-          .toBuffer();
-        webpBuffers.push(webpBuffer);
-      } catch {
-        throw new BadRequestException(
-          `Imagem inválida ou corrompida: "${file.originalname}"`,
-        );
-      }
-    }
+    const webpBuffers = await this.imagePipeline.processFiles(files);
 
     // Enforce the quota and create rows in one transaction to prevent overruns
     // under concurrent uploads.
@@ -117,26 +92,7 @@ export class PhotosService {
       throw new BadRequestException("Máximo de 10 fotos por upload");
     }
 
-    for (const file of files) {
-      validateImageFile(file.originalname, file.buffer);
-    }
-
-    const webpBuffers: Buffer[] = [];
-
-    for (const file of files) {
-      try {
-        const webpBuffer = await sharp(file.buffer, {
-          limitInputPixels: SHARP_PIXEL_LIMIT,
-        })
-          .webp({ quality: 80 })
-          .toBuffer();
-        webpBuffers.push(webpBuffer);
-      } catch {
-        throw new BadRequestException(
-          `Imagem inválida ou corrompida: "${file.originalname}"`,
-        );
-      }
-    }
+    const webpBuffers = await this.imagePipeline.processFiles(files);
 
     return this.repository.uploadPhotos(
       orderId,
