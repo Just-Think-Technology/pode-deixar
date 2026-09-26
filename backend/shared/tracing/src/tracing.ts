@@ -75,7 +75,16 @@ export function initTracing(serviceName: string): void {
     traceExporter: new OTLPTraceExporter({
       url: `${resolveOtlpEndpoint()}/v1/traces`,
     }),
-    instrumentations: [getNodeAutoInstrumentations()],
+    instrumentations: [
+      getNodeAutoInstrumentations({
+        // The pino mixin in @pode-deixar/logger already writes traceId/spanId
+        // from the span active on each line. The pino instrumentation would
+        // duplicate those fields and bind the context of the first log call
+        // to the logger instance, tagging later unrelated lines with a stale
+        // traceId.
+        '@opentelemetry/instrumentation-pino': { enabled: false },
+      }),
+    ],
     sampler: new ParentBasedSampler({
       root: new TraceIdRatioBasedSampler(resolveSampleRatio()),
     }),
