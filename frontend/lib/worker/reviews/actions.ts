@@ -8,10 +8,7 @@ import {
   replyToReview,
   reportReview,
 } from "@/api/worker/reviews";
-import {
-  getAccessToken,
-  refreshAuthSession,
-} from "@/lib/auth/session.server";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import type {
   MyReview,
   ReportReviewPayload,
@@ -25,35 +22,13 @@ import {
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
-async function withTokenRefresh<T>(
-  fn: (token: string) => Promise<T>,
-): Promise<T> {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-
-  try {
-    return await fn(token);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      const refreshed = await refreshAuthSession();
-      if (!refreshed?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
-      }
-      return await fn(refreshed.access_token);
-    }
-    throw err;
-  }
-}
-
 export async function getMyReviewsAction(): Promise<MyReview[]> {
   if (USE_MOCK) {
     return mockGetMyReviews();
   }
 
   try {
-    return await withTokenRefresh((token) => getMyReviews(token));
+    return await withServerTokenRefresh((token) => getMyReviews(token));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (
@@ -85,7 +60,7 @@ export async function replyToReviewAction(
   }
 
   try {
-    return await withTokenRefresh((token) =>
+    return await withServerTokenRefresh((token) =>
       replyToReview(token, reviewId, { message }),
     );
   } catch (err) {
@@ -120,7 +95,7 @@ export async function reportReviewAction(
   }
 
   try {
-    await withTokenRefresh((token) => reportReview(token, reviewId, payload));
+    await withServerTokenRefresh((token) => reportReview(token, reviewId, payload));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (

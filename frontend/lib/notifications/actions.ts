@@ -11,7 +11,7 @@ import {
   type Notification,
 } from "@/api/notifications";
 import { ApiError } from "@/api/client/http";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import {
   getAuthSession,
 } from "@/lib/auth/session.server";
@@ -50,7 +50,7 @@ export async function getNotificationsAction(
     if (params?.isRead !== undefined) notifications = notifications.filter((n) => n.isRead === params.isRead);
     return notifications;
   }
-  return withTokenRefresh((token) => getNotifications(token, params));
+  return withServerTokenRefresh((token) => getNotifications(token, params));
 }
 
 /**
@@ -61,7 +61,7 @@ export async function markReadAction(id: string) {
   if (USE_MOCK) {
     return mockMarkNotificationRead(id);
   }
-  return withTokenRefresh((token) => markNotificationRead(token, id));
+  return withServerTokenRefresh((token) => markNotificationRead(token, id));
 }
 
 /**
@@ -76,7 +76,7 @@ export async function markAllReadAction() {
       return mockMarkAllRead();
     }
   }
-  return withTokenRefresh((token) => markAllRead(token));
+  return withServerTokenRefresh((token) => markAllRead(token));
 }
 
 /**
@@ -92,5 +92,5 @@ export async function countUnreadAction(): Promise<{ count: number }> {
       return { count: getMockUnreadCount() };
     }
   }
-  return withTokenRefresh((token) => countUnread(token));
+  return withServerTokenRefresh((token) => countUnread(token));
 }

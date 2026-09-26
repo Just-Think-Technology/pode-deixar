@@ -15,7 +15,7 @@ import {
 import {
   getAuthSession,
 } from "@/lib/auth/session.server";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import type {
   ContractTracking,
   SubmitReviewInput,
@@ -62,7 +62,7 @@ export async function getContractTrackingAction(
   }
 
   try {
-    return await withTokenRefresh(async (token) => {
+    return await withServerTokenRefresh(async (token) => {
       const tracking = await getContractTracking(token, orderId, role);
       return resolveEvidencePhotoUrls(token, tracking);
     });
@@ -116,7 +116,7 @@ export async function startServiceAction(
     return tracking;
   }
 
-  const tracking = await withTokenRefresh((token) =>
+  const tracking = await withServerTokenRefresh((token) =>
     startTrackedService(token, orderId),
   );
   revalidateTracking(orderId);
@@ -143,7 +143,7 @@ export async function finishServiceAction(
     return tracking;
   }
 
-  const tracking = await withTokenRefresh((token) =>
+  const tracking = await withServerTokenRefresh((token) =>
     finishTrackedService(token, orderId, {
       photos,
       observations: normalized,
@@ -176,7 +176,7 @@ export async function submitReviewAction(
     return review;
   }
 
-  const review = await withTokenRefresh((token) =>
+  const review = await withServerTokenRefresh((token) =>
     submitTrackedReview(token, orderId, payload),
   );
   revalidateTracking(orderId);

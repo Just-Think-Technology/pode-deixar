@@ -3,7 +3,7 @@
 "use server";
 
 import { ApiError } from "@/api/client/http";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import { createProposal } from "@/api/worker/proposals";
 import {
   getReceivedRequests,
@@ -38,7 +38,7 @@ export async function getReceivedRequestsAction(): Promise<WorkerRequest[]> {
   }
 
   try {
-    return await withTokenRefresh((token) => getReceivedRequests(token));
+    return await withServerTokenRefresh((token) => getReceivedRequests(token));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
@@ -56,7 +56,7 @@ export async function getReceivedRequestByIdAction(
   }
 
   try {
-    return await withTokenRefresh((token) => getRequestById(token, orderId));
+    return await withServerTokenRefresh((token) => getRequestById(token, orderId));
   } catch (err) {
     if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
       return null;
@@ -77,7 +77,7 @@ export async function createProposalAction(
   }
 
   try {
-    return await withTokenRefresh((token) => createProposal(token, payload));
+    return await withServerTokenRefresh((token) => createProposal(token, payload));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (isInfraError(err)) {

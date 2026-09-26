@@ -11,7 +11,7 @@ import {
   createPayment,
   getPaymentStatus,
 } from "@/api/client/payments";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import type {
   ChargeResponse,
   CreatePaymentPayload,
@@ -57,7 +57,7 @@ export async function createPaymentAction(
   }
 
   try {
-    return await withTokenRefresh((token) => createPayment(token, payload));
+    return await withServerTokenRefresh((token) => createPayment(token, payload));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
@@ -75,7 +75,7 @@ export async function chargePaymentAction(
   }
 
   try {
-    return await withTokenRefresh((token) => chargePayment(token, paymentId));
+    return await withServerTokenRefresh((token) => chargePayment(token, paymentId));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
@@ -93,7 +93,7 @@ export async function getPaymentStatusAction(
   }
 
   try {
-    return await withTokenRefresh((token) =>
+    return await withServerTokenRefresh((token) =>
       getPaymentStatus(token, paymentId),
     );
   } catch (err) {
@@ -137,7 +137,7 @@ export async function startCheckoutAction(
   }
 
   try {
-    const payment = await withTokenRefresh((token) =>
+    const payment = await withServerTokenRefresh((token) =>
       createPayment(token, {
         serviceOrderId,
         method,
@@ -145,7 +145,7 @@ export async function startCheckoutAction(
         ...(scheduledEndAt ? { scheduledEndAt } : {}),
       }),
     );
-    const charge = await withTokenRefresh((token) =>
+    const charge = await withServerTokenRefresh((token) =>
       chargePayment(token, payment.id),
     );
     return { payment, charge };

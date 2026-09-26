@@ -3,7 +3,7 @@
 "use server";
 
 import { ApiError } from "@/api/client/http";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import { getMyProposals } from "@/api/worker/proposals";
 import type { WorkerProposal } from "@/lib/worker/proposal/types";
 import {
@@ -19,7 +19,7 @@ export async function getMyProposalsAction(): Promise<WorkerProposal[]> {
   }
 
   try {
-    return await withTokenRefresh((token) => getMyProposals(token));
+    return await withServerTokenRefresh((token) => getMyProposals(token));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (
@@ -47,7 +47,7 @@ export async function getMyProposalByIdAction(
   }
 
   try {
-    const proposals = await withTokenRefresh((token) => getMyProposals(token));
+    const proposals = await withServerTokenRefresh((token) => getMyProposals(token));
     return proposals.find((proposal) => proposal.id === proposalId) ?? null;
   } catch (err) {
     if (!USE_MOCK) throw err;

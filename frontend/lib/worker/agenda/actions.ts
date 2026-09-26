@@ -3,7 +3,7 @@
 "use server";
 
 import { ApiError } from "@/api/client/http";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import { getAgendaEvents } from "@/api/worker/agenda";
 import type {
   WorkerAgendaEvent,
@@ -20,5 +20,5 @@ export async function getAgendaEventsAction(
     return getMockAgendaEvents(range);
   }
 
-  return withTokenRefresh((token) => getAgendaEvents(token, range));
+  return withServerTokenRefresh((token) => getAgendaEvents(token, range));
 }

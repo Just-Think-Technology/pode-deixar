@@ -38,7 +38,7 @@ import {
   saveAuthSession,
   updateAuthSessionUser,
 } from "@/lib/auth/session.server";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
@@ -115,7 +115,7 @@ export async function resetPasswordAction(
 
 export async function getWorkerProfileAction(): Promise<{ user: UserProfile }> {
   try {
-    const profile = await withTokenRefresh((token) => getWorkerProfile(token));
+    const profile = await withServerTokenRefresh((token) => getWorkerProfile(token));
     return { user: mapProfileResponseToUserProfile(profile) };
   } catch (err) {
     if (!USE_MOCK) throw err;
@@ -172,7 +172,7 @@ function buildStubProfile(
 export async function updateWorkerProfileAction(
   payload: UpdateProviderProfilePayload,
 ): Promise<UpdateWorkerProfileResult> {
-  const profileResponse = await withTokenRefresh((token) => getWorkerProfile(token));
+  const profileResponse = await withServerTokenRefresh((token) => getWorkerProfile(token));
   const currentProfile = mapProfileResponseToUserProfile(profileResponse);
 
   let message = "Perfil atualizado com sucesso.";
@@ -180,11 +180,11 @@ export async function updateWorkerProfileAction(
 
   try {
     if (currentProfile.profile_id) {
-      const response = await withTokenRefresh((token) => updateWorkerProfile(token, payload));
+      const response = await withServerTokenRefresh((token) => updateWorkerProfile(token, payload));
       updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
       message = "Perfil atualizado com sucesso.";
     } else {
-      const response = await withTokenRefresh((token) => createWorkerProfile(token, payload));
+      const response = await withServerTokenRefresh((token) => createWorkerProfile(token, payload));
       updatedUser = response ? mapProfileResponseToUserProfile(response) : currentProfile;
       message = "Perfil profissional criado com sucesso!";
     }
@@ -215,7 +215,7 @@ export async function updateWorkerProfileAction(
 
 export async function deleteWorkerAccountAction(): Promise<void> {
   try {
-    await withTokenRefresh((token) => deleteWorkerAccount(token));
+    await withServerTokenRefresh((token) => deleteWorkerAccount(token));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (!(err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503))) {
@@ -230,7 +230,7 @@ export async function createServiceAction(
   payload: CreateServicePayload,
 ): Promise<CreateServiceResponse> {
   try {
-    return await withTokenRefresh((token) => createWorkerService(token, payload));
+    return await withServerTokenRefresh((token) => createWorkerService(token, payload));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
@@ -256,7 +256,7 @@ export async function createServiceAction(
 
 export async function getWorkerServicesAction(): Promise<ServicesListResponse> {
   try {
-    return await withTokenRefresh((token) => getWorkerServices(token));
+    return await withServerTokenRefresh((token) => getWorkerServices(token));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
@@ -272,7 +272,7 @@ export async function updateServiceAction(
   payload: UpdateServicePayload,
 ): Promise<void> {
   try {
-    await withTokenRefresh((token) => updateWorkerService(token, serviceId, payload));
+    await withServerTokenRefresh((token) => updateWorkerService(token, serviceId, payload));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {
@@ -286,7 +286,7 @@ export async function deleteServiceAction(
   serviceId: string,
 ): Promise<void> {
   try {
-    await withTokenRefresh((token) => deleteWorkerService(token, serviceId));
+    await withServerTokenRefresh((token) => deleteWorkerService(token, serviceId));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status === 503)) {

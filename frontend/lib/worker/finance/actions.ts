@@ -3,7 +3,7 @@
 "use server";
 
 import { ApiError } from "@/api/client/http";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import {
   getWorkerFinanceDashboard,
   listWorkerFinanceItems,
@@ -25,7 +25,7 @@ export async function getWorkerFinanceDashboardAction(): Promise<WorkerFinanceDa
     return mockGetFinanceDashboard();
   }
 
-  return withTokenRefresh((token) => getWorkerFinanceDashboard(token));
+  return withServerTokenRefresh((token) => getWorkerFinanceDashboard(token));
 }
 
 export async function listWorkerFinanceItemsAction(
@@ -35,5 +35,5 @@ export async function listWorkerFinanceItemsAction(
     return mockListFinanceItems(status);
   }
 
-  return withTokenRefresh((token) => listWorkerFinanceItems(token, status));
+  return withServerTokenRefresh((token) => listWorkerFinanceItems(token, status));
 }

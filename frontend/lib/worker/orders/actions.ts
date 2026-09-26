@@ -11,7 +11,7 @@ import {
   getWorkerOrderDetail,
   uploadWorkerOrderPhoto,
 } from "@/api/worker/orders";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import { hasAllowedMagicBytes } from "@/lib/auth/image-validation";
 import type {
   CompleteOrderResult,
@@ -41,7 +41,7 @@ export async function getCompletionOrderAction(
     return getMockCompletionOrder(orderId);
   }
 
-  return withTokenRefresh((token) => getWorkerOrderDetail(token, orderId));
+  return withServerTokenRefresh((token) => getWorkerOrderDetail(token, orderId));
 }
 
 export async function getCompletionHistoryAction(
@@ -52,7 +52,7 @@ export async function getCompletionHistoryAction(
   }
 
   try {
-    return await withTokenRefresh((token) =>
+    return await withServerTokenRefresh((token) =>
       getWorkerOrderCompletion(token, orderId),
     );
   } catch (err) {
@@ -70,7 +70,7 @@ export async function resolveOrderPhotoUrlAction(
   // No shared server cache on purpose: presigned URLs grant
   // bearer-independent access, so they must not leak across users.
   // Callers cache per browser session instead.
-  const result = await withTokenRefresh((token) =>
+  const result = await withServerTokenRefresh((token) =>
     getOrderPhotoViewUrl(token, photoId),
   );
   if (!result?.url) {
@@ -109,7 +109,7 @@ export async function uploadCompletionPhotoAction(
 
   const uploadData = new FormData();
   uploadData.append("file", file);
-  return withTokenRefresh((token) =>
+  return withServerTokenRefresh((token) =>
     uploadWorkerOrderPhoto(token, orderId, uploadData),
   );
 }
@@ -123,7 +123,7 @@ export async function removeCompletionPhotoAction(
     return;
   }
 
-  return withTokenRefresh((token) =>
+  return withServerTokenRefresh((token) =>
     deleteWorkerOrderPhoto(token, orderId, photoId),
   );
 }
@@ -147,7 +147,7 @@ export async function completeOrderAction(
     return history;
   }
 
-  const history = await withTokenRefresh((token) =>
+  const history = await withServerTokenRefresh((token) =>
     completeWorkerOrder(token, orderId, { observations: observations.trim() }),
   );
   revalidatePath("/worker/agenda");

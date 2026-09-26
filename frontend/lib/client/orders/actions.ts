@@ -13,7 +13,7 @@ import {
   getMyServiceOrderById,
   getMyServiceOrders,
 } from "@/api/client/service-orders";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import type {
   ClientOrder,
   ClientProposal,
@@ -43,7 +43,7 @@ export async function getMyOrdersAction(): Promise<ClientOrder[]> {
   }
 
   try {
-    return await withTokenRefresh((token) => getMyServiceOrders(token));
+    return await withServerTokenRefresh((token) => getMyServiceOrders(token));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
@@ -61,7 +61,7 @@ export async function getMyOrderByIdAction(
   }
 
   try {
-    return await withTokenRefresh((token) =>
+    return await withServerTokenRefresh((token) =>
       getMyServiceOrderById(token, orderId),
     );
   } catch (err) {
@@ -92,7 +92,7 @@ export async function acceptProposalAction(
   }
 
   try {
-    const result = await withTokenRefresh((token) =>
+    const result = await withServerTokenRefresh((token) =>
       acceptProposal(token, proposalId),
     );
     revalidatePath("/client/orders");
@@ -122,7 +122,7 @@ export async function rejectProposalAction(
   }
 
   try {
-    const result = await withTokenRefresh((token) =>
+    const result = await withServerTokenRefresh((token) =>
       rejectProposal(token, proposalId),
     );
     revalidatePath("/client/orders");

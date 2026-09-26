@@ -1,4 +1,8 @@
 // Single withTokenRefresh helper — deduplicated token refresh for server actions
+//
+// Client-safe: this module never references server-only session helpers
+// (not even lazily — Next traces dynamic imports into browser bundles).
+// Server actions use withServerTokenRefresh from lib/auth/server-token-refresh.
 
 import { ApiError } from "@/api/client/http";
 
@@ -10,33 +14,21 @@ export type TokenRefreshDeps = {
   isUnauthorizedError: (error: unknown) => boolean;
 };
 
-async function getDefaultDeps(): Promise<TokenRefreshDeps> {
-  const { getAccessToken, refreshAuthSession } = await import(
-    "@/lib/auth/session.server"
-  );
-  return {
-    getAccessToken,
-    refreshSession: refreshAuthSession,
-    isUnauthorizedError: (err) => err instanceof ApiError && err.status === 401,
-  };
-}
-
 /**
  * Calls fn with a valid access token, refreshing once on 401.
- * Single authoritative implementation — all server actions must import
- * this helper instead of defining local copies.
+ * Single authoritative implementation — server actions use
+ * withServerTokenRefresh (real session deps); tests inject deps.
  *
  * @param fn - Function receiving the access token
- * @param deps - Injectable deps for tests (defaults to real session helpers)
+ * @param deps - Session deps (required; injected for tests)
  * @returns Result of fn
  * @throws Error when no session or refresh fails
  */
 export async function withTokenRefresh<T>(
   fn: (token: string) => Promise<T>,
-  deps?: TokenRefreshDeps,
+  deps: TokenRefreshDeps,
 ): Promise<T> {
-  const resolvedDeps = deps ?? (await getDefaultDeps());
-  const token = await resolvedDeps.getAccessToken();
+  const token = await deps.getAccessToken();
   if (!token) {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
@@ -44,8 +36,8 @@ export async function withTokenRefresh<T>(
   try {
     return await fn(token);
   } catch (err) {
-    if (resolvedDeps.isUnauthorizedError(err)) {
-      const refreshed = await resolvedDeps.refreshSession();
+    if (deps.isUnauthorizedError(err)) {
+      const refreshed = await deps.refreshSession();
       if (!refreshed?.access_token) {
         throw new Error("Sessão expirada. Faça login novamente.");
       }
@@ -53,4 +45,13 @@ export async function withTokenRefresh<T>(
     }
     throw err;
   }
+}
+
+/**
+ * Default 401 predicate for TokenRefreshDeps.
+ * @param error - Caught error
+ * @returns True for HTTP 401 API errors
+ */
+export function isApiUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
 }

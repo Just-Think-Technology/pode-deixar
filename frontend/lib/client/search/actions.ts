@@ -3,7 +3,7 @@
 "use server";
 
 import { ApiError } from "@/api/client/http";
-import { withTokenRefresh } from "@/api/client/with-token-refresh";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import { searchProfessionals } from "@/api/client/search";
 import type {
   SearchProfessionalsPayload,
@@ -17,7 +17,7 @@ export async function searchProfessionalsAction(
   payload: SearchProfessionalsPayload,
 ): Promise<SearchProfessionalsResponse> {
   try {
-    return await withTokenRefresh((token) => searchProfessionals(payload, token));
+    return await withServerTokenRefresh((token) => searchProfessionals(payload, token));
   } catch (err) {
     if (
       err instanceof ApiError &&
