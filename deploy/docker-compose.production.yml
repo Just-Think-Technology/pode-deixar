@@ -209,6 +209,39 @@ services:
     depends_on:
       - prometheus
 
+  # --- Loki ---
+  # Log aggregation (JSON stdout from services via Promtail). Internal-only,
+  # no published ports; queried by Grafana over the compose network.
+  loki:
+    image: grafana/loki:3
+    user: "0:0"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./observability/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+
+  # --- Promtail ---
+  # Ships every container's stdout to Loki. Needs the Docker socket for
+  # discovery and the containers log path; both read-only mounts.
+  promtail:
+    image: grafana/promtail:3
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./observability/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail_positions:/positions
+    depends_on:
+      - loki
+
   # --- Node Exporter ---
   # Host CPU/RAM/disk for the DiskFull rule; read-only host mounts, no ports.
   node-exporter:
@@ -295,3 +328,5 @@ volumes:
   caddy_config:
   prometheus_data:
   grafana_data:
+  loki_data:
+  promtail_positions:
