@@ -38,12 +38,15 @@ export async function bootstrapService(
     logger: false,
   });
 
-  // API versioning — all controller routes are served under /api/v1; health
-  // probes stay at /health (+ /health/ready, /health/live) for Caddy
-  // (handle /api/v1/*/health* → strip to /health) and direct k8s probes.
+  // API versioning — single home for the version: deploy sets API_VERSION
+  // (Caddy {$API_VERSION} + NEXT_PUBLIC_API_VERSION); unset means current v1.
+  // All controller routes are served under /api/<version>; health probes stay
+  // at /health (+ /health/ready, /health/live) for Caddy
+  // (handle /api/<version>/*/health* → strip to /health) and direct probes.
   // Documented choice: health excluded from prefix; alternative would version it
-  // as /api/v1/health and require Caddy health handles to strip /api/v1 only.
-  app.setGlobalPrefix('api/v1', {
+  // as /api/<version>/health and require Caddy health handles to strip it only.
+  const apiVersion = process.env.API_VERSION ?? 'v1';
+  app.setGlobalPrefix(`api/${apiVersion}`, {
     exclude: ['health', 'health/ready', 'health/live'],
   });
 

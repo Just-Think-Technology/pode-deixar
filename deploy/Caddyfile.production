@@ -3,66 +3,66 @@
 # Automatic HTTPS (requires published 80/443 and DNS pointing to the VPS).
 
 {$API_DOMAIN} {
-	# --- API v1 (versioned) ---
-	handle /api/v1/auth/health* {
-		uri strip_prefix /api/v1/auth
+	# --- API versioned ({$API_VERSION}, default v1) ---
+	handle /api/{$API_VERSION:v1}/auth/health* {
+		uri strip_prefix /api/{$API_VERSION:v1}/auth
 		reverse_proxy auth:3001
 	}
 
-	handle /api/v1/users/health* {
-		uri strip_prefix /api/v1/users
+	handle /api/{$API_VERSION:v1}/users/health* {
+		uri strip_prefix /api/{$API_VERSION:v1}/users
 		reverse_proxy users:3002
 	}
 
-	handle /api/v1/services/health* {
-		uri strip_prefix /api/v1/services
+	handle /api/{$API_VERSION:v1}/services/health* {
+		uri strip_prefix /api/{$API_VERSION:v1}/services
 		reverse_proxy service-orders:3003
 	}
 
-	handle /api/v1/payments/health* {
-		uri strip_prefix /api/v1/payments
+	handle /api/{$API_VERSION:v1}/payments/health* {
+		uri strip_prefix /api/{$API_VERSION:v1}/payments
 		reverse_proxy payments:3004
 	}
 
-	handle /api/v1/reviews/health* {
-		uri strip_prefix /api/v1/reviews
+	handle /api/{$API_VERSION:v1}/reviews/health* {
+		uri strip_prefix /api/{$API_VERSION:v1}/reviews
 		reverse_proxy reviews:3005
 	}
 
-	handle /api/v1/auth/* {
+	handle /api/{$API_VERSION:v1}/auth/* {
 		reverse_proxy auth:3001
 	}
 
-	handle /api/v1/profiles/* {
+	handle /api/{$API_VERSION:v1}/profiles/* {
 		reverse_proxy users:3002
 	}
 
-	handle /api/v1/providers/* {
+	handle /api/{$API_VERSION:v1}/providers/* {
 		reverse_proxy users:3002
 	}
 
-	handle /api/v1/categories* {
+	handle /api/{$API_VERSION:v1}/categories* {
 		reverse_proxy users:3002
 	}
 
-	handle /api/v1/services/* {
+	handle /api/{$API_VERSION:v1}/services/* {
 		reverse_proxy service-orders:3003
 	}
 
-	handle /api/v1/proposals/* {
+	handle /api/{$API_VERSION:v1}/proposals/* {
 		reverse_proxy service-orders:3003
 	}
 
-	handle /api/v1/payments/* {
+	handle /api/{$API_VERSION:v1}/payments/* {
 		reverse_proxy payments:3004
 	}
 
-	handle /api/v1/reviews/* {
+	handle /api/{$API_VERSION:v1}/reviews/* {
 		reverse_proxy reviews:3005
 	}
 
-	handle /api/v1/storage/* {
-		uri strip_prefix /api/v1/storage
+	handle /api/{$API_VERSION:v1}/storage/* {
+		uri strip_prefix /api/{$API_VERSION:v1}/storage
 		reverse_proxy minio:9000
 	}
 
@@ -105,56 +105,56 @@
 	handle /api/auth/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri replace /api/ /api/v1/ 1
+		uri replace /api/ /api/{$API_VERSION:v1}/ 1
 		reverse_proxy auth:3001
 	}
 
 	handle /api/profiles/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri replace /api/ /api/v1/ 1
+		uri replace /api/ /api/{$API_VERSION:v1}/ 1
 		reverse_proxy users:3002
 	}
 
 	handle /api/providers/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri replace /api/ /api/v1/ 1
+		uri replace /api/ /api/{$API_VERSION:v1}/ 1
 		reverse_proxy users:3002
 	}
 
 	handle /api/categories* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri replace /api/ /api/v1/ 1
+		uri replace /api/ /api/{$API_VERSION:v1}/ 1
 		reverse_proxy users:3002
 	}
 
 	handle /api/services/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri replace /api/ /api/v1/ 1
+		uri replace /api/ /api/{$API_VERSION:v1}/ 1
 		reverse_proxy service-orders:3003
 	}
 
 	handle /api/proposals/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri replace /api/ /api/v1/ 1
+		uri replace /api/ /api/{$API_VERSION:v1}/ 1
 		reverse_proxy service-orders:3003
 	}
 
 	handle /api/payments/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri replace /api/ /api/v1/ 1
+		uri replace /api/ /api/{$API_VERSION:v1}/ 1
 		reverse_proxy payments:3004
 	}
 
 	handle /api/reviews/* {
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
-		uri replace /api/ /api/v1/ 1
+		uri replace /api/ /api/{$API_VERSION:v1}/ 1
 		reverse_proxy reviews:3005
 	}
 
