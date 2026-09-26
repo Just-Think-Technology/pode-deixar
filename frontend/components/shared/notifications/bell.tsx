@@ -2,10 +2,10 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BellIcon } from "lucide-react";
 
-import type { Notification, NotificationType } from "@/api/notifications";
+import type { NotificationType } from "@/api/notifications";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,20 +18,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import NotificationItem from "./notification-item";
-import {
-  countUnreadAction,
-  getNotificationsAction,
-  markReadAction,
-} from "@/lib/notifications/actions";
+import { useNotifications } from "@/lib/notifications/use-notifications";
 
 type BellProps = {
-  notifications?: Notification[];
-  isLoading?: boolean;
-  error?: string | null;
-  onRetry?: () => void;
   role?: "CLIENT" | "PROVIDER" | "ADMIN";
-  onMarkRead?: (id: string) => void;
-  unreadCount?: number;
 };
 
 const CONVERSATION: NotificationType = "CONVERSATION";
@@ -39,94 +29,27 @@ const SERVICE: NotificationType = "SERVICE";
 
 // --- Component ---
 
-export default function Bell({
-  notifications: externalNotifications,
-  isLoading: externalIsLoading,
-  error: externalError,
-  onRetry: externalOnRetry,
-  role,
-  onMarkRead,
-  unreadCount: externalUnreadCount,
-}: BellProps) {
+export default function Bell({ role }: BellProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<NotificationType>(CONVERSATION);
-  const [internalNotifications, setInternalNotifications] = useState<Notification[]>([]);
-  const [internalIsLoading, setInternalIsLoading] = useState(false);
-  const [internalError, setInternalError] = useState<string | null>(null);
-  const [internalUnreadCount, setInternalUnreadCount] = useState<number | null>(null);
-
-  const isControlled = externalNotifications !== undefined;
-
-  const notifications = isControlled ? externalNotifications : internalNotifications;
-  const isLoading = isControlled ? externalIsLoading ?? false : internalIsLoading;
-  const error = isControlled ? externalError ?? null : internalError;
-
-  const fetchNotifications = useCallback(async () => {
-    if (isControlled) {
-      externalOnRetry?.();
-      return;
-    }
-
-    setInternalIsLoading(true);
-    setInternalError(null);
-    try {
-      const data = await getNotificationsAction();
-      setInternalNotifications(data);
-      try {
-        const result = await countUnreadAction();
-        setInternalUnreadCount(result.count);
-      } catch {
-        // fallback to local count when count endpoint fails
-        setInternalUnreadCount(null);
-      }
-    } catch {
-      setInternalError("Erro ao carregar notificações");
-    } finally {
-      setInternalIsLoading(false);
-    }
-  }, [isControlled, externalOnRetry]);
-
-  useEffect(() => {
-    if (!isControlled) {
-      fetchNotifications();
-    }
-  }, [fetchNotifications, isControlled]);
-
-  const unreadCount = useMemo(() => {
-    if (externalUnreadCount !== undefined) return externalUnreadCount;
-    if (internalUnreadCount !== null) return internalUnreadCount;
-    return notifications.filter((n) => !n.isRead).length;
-  }, [externalUnreadCount, internalUnreadCount, notifications]);
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    error,
+    refresh,
+    markRead,
+  } = useNotifications();
 
   const filteredByTab = useMemo(
     () => notifications.filter((n) => n.type === activeTab),
     [notifications, activeTab],
   );
 
-  async function handleMarkRead(id: string) {
-    if (onMarkRead) {
-      onMarkRead(id);
-      return;
-    }
-
-    try {
-      await markReadAction(id);
-      if (!isControlled) {
-        setInternalNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)),
-        );
-        setInternalUnreadCount((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
-      }
-    } catch {
-      // silent — keep item unread when marking fails
-    }
-  }
-
-  function handleRetry() {
-    if (externalOnRetry) {
-      externalOnRetry();
-    } else {
-      fetchNotifications();
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (nextOpen) {
+      void refresh();
     }
   }
 
@@ -147,7 +70,7 @@ export default function Bell({
           <AlertTitle>Erro</AlertTitle>
           <AlertDescription className="flex flex-col gap-2">
             <span>{error}</span>
-            <Button size="sm" variant="outline" onClick={handleRetry}>
+            <Button size="sm" variant="outline" onClick={() => void refresh()}>
               Tentar novamente
             </Button>
           </AlertDescription>
@@ -173,7 +96,7 @@ export default function Bell({
             key={notification.id}
             notification={notification}
             role={role}
-            onRead={handleMarkRead}
+            onRead={(id) => void markRead(id)}
           />
         ))}
       </div>
@@ -181,7 +104,7 @@ export default function Bell({
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger
         render={
           <Button variant="ghost" size="icon" aria-label="Notificações" className="relative" />
