@@ -36,5 +36,6 @@ scrape_configs:
       - labels:
           service:
           level:
-      - output:
-          source: msg
+      # The whole JSON line is kept, not just msg: the traceId/spanId written by
+      # the logger must stay in the line for the TraceID derived field to link a
+      # log entry to its trace. Non-JSON lines ship untouched, without labels.

@@ -106,6 +106,13 @@ exists.
 * Grafana reads Loki via the provisioned `Loki` datasource; the `logs.json`
   dashboard has error rate, error stream and a free-text search (e.g.
   `orderId`).
+* Promtail keeps the **whole** JSON line, not just `msg`: `traceId`/`spanId`
+  must stay in the line for the `TraceID` derived field to link a log entry to
+  its trace in Tempo. The dashboard only has data in staging/production —
+  services log pretty (not JSON) locally, so nothing is parsed into labels.
+* Promtail is EOL (Grafana publishes no 3.7.x tag; `:3` resolves to 3.6.8,
+  which works against Loki 3.7.8). It stays pinned at 3.6.8; the successor is
+  Grafana Alloy, a separate migration.
 * Log lines carry `traceId`/`spanId` (written by the pino mixin in
   `@pode-deixar/logger` when a span is active), which fatia 3 links to Tempo.
 
