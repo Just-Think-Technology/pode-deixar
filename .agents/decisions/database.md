@@ -21,8 +21,8 @@
   - `role_payments`: payments, payment_webhook_events,
     payment_status_history, service_orders (status sync on payment events),
     notifications
-  - `role_reviews`: reviews, notifications, client_profiles,
-    provider_profiles (rating aggregates)
+  - `role_reviews`: reviews, review_responses, review_reports,
+    notifications, client_profiles, provider_profiles (rating aggregates)
 - **Connection split:** `DATABASE_URL` uses the service role (runtime);
   `DIRECT_DATABASE_URL` stays privileged — Prisma Migrate (`migrate deploy`
   at auth startup) and `pg_dump` backup use it, never the role

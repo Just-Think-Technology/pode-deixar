@@ -26,10 +26,9 @@
 --                         counter_proposals, order_photos, notifications
 --   role_payments:        payments, payment_webhook_events,
 --                         payment_status_history, service_orders, notifications
---   role_reviews:         reviews, notifications, client_profiles,
---                         provider_profiles (rating aggregates)
--- When JTT-108 (review responses/reports) merges, extend role_reviews here
--- and in the check script.
+--   role_reviews:         reviews, review_responses, review_reports,
+--                         notifications, client_profiles, provider_profiles
+--                         (rating aggregates)
 
 -- --- Roles (LOGIN so services can connect) ---
 
@@ -98,7 +97,8 @@ GRANT INSERT, UPDATE, DELETE ON TABLE
   TO role_payments;
 
 GRANT INSERT, UPDATE, DELETE ON TABLE
-  reviews, notifications, client_profiles, provider_profiles
+  reviews, review_responses, review_reports, notifications,
+  client_profiles, provider_profiles
   TO role_reviews;
 
 -- --- Future tables: readers keep SELECT, writers stay restricted ---

@@ -13,13 +13,13 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_BACKEND=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 
-TABLES="users client_profiles provider_profiles categories provider_services service_images service_orders order_timeline_events proposals counter_proposals order_photos reviews payments payment_webhook_events payment_status_history token_blacklist notifications"
+TABLES="users client_profiles provider_profiles categories provider_services service_images service_orders order_timeline_events proposals counter_proposals order_photos reviews review_responses review_reports payments payment_webhook_events payment_status_history token_blacklist notifications"
 
 ALLOW_auth="users token_blacklist client_profiles provider_profiles"
 ALLOW_users="client_profiles provider_profiles provider_services service_images categories notifications"
 ALLOW_service_orders="service_orders order_timeline_events proposals counter_proposals order_photos notifications"
 ALLOW_payments="payments payment_webhook_events payment_status_history service_orders notifications"
-ALLOW_reviews="reviews notifications client_profiles provider_profiles"
+ALLOW_reviews="reviews review_responses review_reports notifications client_profiles provider_profiles"
 
 ROLE_auth="role_auth"
 ROLE_users="role_users"
@@ -47,6 +47,8 @@ model_to_table() {
     counterProposal) echo counter_proposals ;;
     orderPhoto) echo order_photos ;;
     review) echo reviews ;;
+    reviewResponse) echo review_responses ;;
+    reviewReport) echo review_reports ;;
     payment) echo payments ;;
     paymentWebhookEvent) echo payment_webhook_events ;;
     paymentStatusHistory) echo payment_status_history ;;
