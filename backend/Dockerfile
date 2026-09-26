@@ -17,6 +17,7 @@ COPY shared/security/package.json ./shared/security/
 COPY shared/validation/package.json ./shared/validation/
 COPY shared/prisma/package.json ./shared/prisma/
 COPY shared/storage/package.json ./shared/storage/
+COPY shared/notifications/package.json ./shared/notifications/
 COPY services/auth/package.json ./services/auth/
 COPY services/users/package.json ./services/users/
 COPY services/service-orders/package.json ./services/service-orders/
@@ -38,8 +39,9 @@ COPY shared/security ./shared/security
 COPY shared/validation ./shared/validation
 COPY shared/prisma ./shared/prisma
 COPY shared/storage ./shared/storage
+COPY shared/notifications ./shared/notifications
 COPY services/auth ./services/auth
-RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/email build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/auth build
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/email build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/notifications build && pnpm run --filter @pode-deixar/auth build
 RUN printf '#!/bin/sh\nMAX_RETRIES=6\nRETRY_DELAY=5\nretry=0\nwhile [ $retry -lt $MAX_RETRIES ]; do\n  if pnpm exec prisma migrate deploy --schema=prisma/schema.prisma; then\n    echo "=== [entrypoint] Migrations applied successfully ==="\n    break\n  fi\n  retry=$((retry + 1))\n  if [ $retry -lt $MAX_RETRIES ]; then\n    echo "=== [entrypoint] Migration attempt $retry failed, retrying in ${RETRY_DELAY}s... ==="\n    sleep $RETRY_DELAY\n  else\n    echo "=== [entrypoint] All migration attempts failed. Starting service anyway... ==="\n  fi\ndone\nexec "$@"' > /entrypoint.sh && chmod +x /entrypoint.sh
 # Why: non-root user enforcement (chown + mkdir) done in subsequent steps
 RUN chown -R node:node /app && mkdir -p /home/node && chown node:node /home/node
@@ -57,8 +59,9 @@ COPY shared/security ./shared/security
 COPY shared/validation ./shared/validation
 COPY shared/prisma ./shared/prisma
 COPY shared/storage ./shared/storage
+COPY shared/notifications ./shared/notifications
 COPY services/users ./services/users
-RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/users build
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/notifications build && pnpm run --filter @pode-deixar/users build
 # Why: non-root user enforcement (chown + mkdir) done in subsequent steps
 RUN chown -R node:node /app && mkdir -p /home/node && chown node:node /home/node
 ENV HOME=/home/node
@@ -74,8 +77,9 @@ COPY shared/security ./shared/security
 COPY shared/validation ./shared/validation
 COPY shared/prisma ./shared/prisma
 COPY shared/storage ./shared/storage
+COPY shared/notifications ./shared/notifications
 COPY services/service-orders ./services/service-orders
-RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/service-orders build
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/notifications build && pnpm run --filter @pode-deixar/service-orders build
 # Why: non-root user enforcement (chown + mkdir) done in subsequent steps
 RUN chown -R node:node /app && mkdir -p /home/node && chown node:node /home/node
 ENV HOME=/home/node
@@ -90,8 +94,9 @@ COPY shared/security ./shared/security
 COPY shared/validation ./shared/validation
 COPY shared/prisma ./shared/prisma
 COPY shared/storage ./shared/storage
+COPY shared/notifications ./shared/notifications
 COPY services/payments ./services/payments
-RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/payments build
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/notifications build && pnpm run --filter @pode-deixar/payments build
 # Why: non-root user enforcement (chown + mkdir) done in subsequent steps
 RUN chown -R node:node /app && mkdir -p /home/node && chown node:node /home/node
 ENV HOME=/home/node
@@ -106,8 +111,9 @@ COPY shared/security ./shared/security
 COPY shared/validation ./shared/validation
 COPY shared/prisma ./shared/prisma
 COPY shared/storage ./shared/storage
+COPY shared/notifications ./shared/notifications
 COPY services/reviews ./services/reviews
-RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/reviews build
+RUN pnpm install --no-frozen-lockfile && pnpm run --filter @pode-deixar/logger build && pnpm run --filter @pode-deixar/security build && pnpm run --filter @pode-deixar/validation build && pnpm run --filter @pode-deixar/prisma build && pnpm run --filter @pode-deixar/storage build && pnpm run --filter @pode-deixar/notifications build && pnpm run --filter @pode-deixar/reviews build
 # Why: non-root user enforcement (chown + mkdir) done in subsequent steps
 RUN chown -R node:node /app && mkdir -p /home/node && chown node:node /home/node
 ENV HOME=/home/node
