@@ -19,6 +19,8 @@ export interface OrderTrackingAssemblerPort {
  * Assembles the consolidated ContractTracking DTO from a hydrated order.
  * Keeps proposal/payment/review/evidence selection rules in one place
  * and delegates pricing math to OrderPricing.
+ * Exposes the authoritative DB timeline (OrderTimelineEvent) so the
+ * frontend renders backend timestamps instead of recomputing them.
  */
 @Injectable()
 export class OrderTrackingAssembler implements OrderTrackingAssemblerPort {
@@ -48,6 +50,8 @@ export class OrderTrackingAssembler implements OrderTrackingAssemblerPort {
     const review = this.buildReview(order);
 
     const evidence = this.buildEvidence(order, counterpart);
+
+    const timeline = this.buildTimeline(order);
 
     const address =
       formatAddress(order.address) ??
@@ -83,6 +87,7 @@ export class OrderTrackingAssembler implements OrderTrackingAssemblerPort {
       payment,
       evidence,
       review,
+      timeline,
       cancelReason: order.cancelReason ?? null,
       cancelledAt: order.cancelledAt
         ? new Date(order.cancelledAt).toISOString()
@@ -182,6 +187,20 @@ export class OrderTrackingAssembler implements OrderTrackingAssemblerPort {
         ? new Date(reviewRecord.createdAt).toISOString()
         : new Date().toISOString(),
     };
+  }
+
+  private buildTimeline(order: any) {
+    const events = order.timelineEvents;
+    if (!Array.isArray(events)) {
+      return [];
+    }
+    return events.map((event: any) => ({
+      key: event.eventKey,
+      occurredAt: event.createdAt
+        ? new Date(event.createdAt).toISOString()
+        : null,
+      actorId: event.actorId ?? null,
+    }));
   }
 
   private buildEvidence(order: any, counterpart: any) {

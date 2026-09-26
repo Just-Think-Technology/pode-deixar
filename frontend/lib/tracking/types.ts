@@ -96,6 +96,10 @@ export type ContractTracking = {
   cancelReason: string | null;
   cancelledAt: string | null;
   createdAt: string | null;
+  // Authoritative DB timeline (OrderTimelineEvent) exposed by the backend.
+  // Absent on older orders and mocks — timeline-builder falls back to
+  // deriving timestamps from status flags when an entry is missing.
+  timeline?: BackendTimelineEntry[] | null;
 };
 
 export type TimelineEvent = {
@@ -104,6 +108,15 @@ export type TimelineEvent = {
   occurredAt: string | null;
   description: string | null;
   actorName: string | null;
+};
+
+export type BackendTimelineEntry = {
+  // Free-form DB eventKey (SERVICE_STARTED, SERVICE_COMPLETED,
+  // EVIDENCES_ADDED, CANCELLED, ...) — only entries matching a
+  // TimelineEventKey are used as authoritative timestamps.
+  key: string;
+  occurredAt: string | null;
+  actorId: string | null;
 };
 
 export type TrackingActions = {
