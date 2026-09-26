@@ -1,10 +1,14 @@
 // Bell spec — badge, tabs, loading/empty/error and notification item
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 import Bell from "@/components/shared/notifications/bell";
 import NotificationItem from "@/components/shared/notifications/notification-item";
+import {
+  countUnreadAction,
+  getNotificationsAction,
+} from "@/lib/notifications/actions";
 import type { Notification } from "@/api/notifications";
 
 // Mock next/navigation router
@@ -19,6 +23,9 @@ vi.mock("@/lib/notifications/actions", () => ({
   countUnreadAction: vi.fn().mockResolvedValue({ count: 0 }),
   markReadAction: vi.fn().mockResolvedValue({ count: 1 }),
 }));
+
+const mockList = vi.mocked(getNotificationsAction);
+const mockCount = vi.mocked(countUnreadAction);
 
 // Mock dropdown menu portal to avoid Base UI portal handling in jsdom
 vi.mock("@/components/ui/dropdown-menu", async () => {
@@ -60,19 +67,19 @@ function makeNotification(overrides: Partial<Notification> = {}): Notification {
 describe("Bell component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockList.mockResolvedValue([]);
+    mockCount.mockResolvedValue({ count: 0 });
   });
 
   it("shows unread badge and separates tabs", async () => {
-    render(
-      <Bell
-        notifications={[
-          makeNotification({ id: "1", type: "CONVERSATION", isRead: false }),
-          makeNotification({ id: "2", type: "SERVICE", isRead: true, conversationId: null, contractId: "ord-1" }),
-        ]}
-      />,
-    );
+    mockList.mockResolvedValue([
+      makeNotification({ id: "1", type: "CONVERSATION", isRead: false }),
+      makeNotification({ id: "2", type: "SERVICE", isRead: true, conversationId: null, contractId: "ord-1" }),
+    ]);
+    mockCount.mockResolvedValue({ count: 1 });
+    render(<Bell />);
 
-    expect(screen.getByText("1")).toBeVisible();
+    expect(await screen.findByText("1")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: /notificações/i }));
 
@@ -80,18 +87,9 @@ describe("Bell component", () => {
     expect(screen.getByRole("tab", { name: "Serviços" })).toBeVisible();
   });
 
-  it("shows skeleton when loading", () => {
-    render(<Bell notifications={[]} isLoading={true} />);
-
-    // open dropdown to reveal content
-    // content is rendered without needing click because controlled mode still renders tabs; but loading skeleton is inside TabsContent which requires dropdown open?
-    // For controlled loading, skeleton is rendered inside DropdownMenuContent which may be hidden until open.
-    // Force open via prop? Instead test that badge not shown and loading handled when opened
-    // We trigger open and check skeleton
-  });
-
   it("renders loading skeleton inside tabs when open", async () => {
-    render(<Bell notifications={[]} isLoading={true} />);
+    mockList.mockReturnValue(new Promise(() => {}));
+    render(<Bell />);
 
     fireEvent.click(screen.getByRole("button", { name: /notificações/i }));
 
@@ -101,67 +99,62 @@ describe("Bell component", () => {
   });
 
   it("renders error alert with retry", async () => {
-    const onRetry = vi.fn();
-    render(<Bell notifications={[]} error="Erro ao carregar notificações" onRetry={onRetry} />);
+    mockList.mockRejectedValue(new Error("offline"));
+    render(<Bell />);
 
     fireEvent.click(screen.getByRole("button", { name: /notificações/i }));
 
-    expect(screen.getByText("Erro ao carregar notificações")).toBeVisible();
+    expect(await screen.findByText("Erro ao carregar notificações")).toBeVisible();
     const retry = screen.getByRole("button", { name: "Tentar novamente" });
     expect(retry).toBeVisible();
+
+    mockList.mockResolvedValue([]);
     fireEvent.click(retry);
-    expect(onRetry).toHaveBeenCalled();
+    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
   });
 
   it("shows empty state when no notifications for tab", async () => {
-    render(<Bell notifications={[]} />);
+    render(<Bell />);
 
     fireEvent.click(screen.getByRole("button", { name: /notificações/i }));
 
-    expect(screen.getByText("Você não possui novas notificações.")).toBeVisible();
+    expect(await screen.findByText("Você não possui novas notificações.")).toBeVisible();
   });
 
   it("renders notification items filtered by tab", async () => {
-    render(
-      <Bell
-        notifications={[
-          makeNotification({ id: "1", type: "CONVERSATION", title: "Conversa 1" }),
-          makeNotification({ id: "2", type: "SERVICE", title: "Serviço 1", conversationId: null, contractId: "ord-1" }),
-        ]}
-      />,
-    );
+    mockList.mockResolvedValue([
+      makeNotification({ id: "1", type: "CONVERSATION", title: "Conversa 1" }),
+      makeNotification({ id: "2", type: "SERVICE", title: "Serviço 1", conversationId: null, contractId: "ord-1" }),
+    ]);
+    render(<Bell />);
 
     fireEvent.click(screen.getByRole("button", { name: /notificações/i }));
 
     // default tab Conversas should show only Conversa 1
-    expect(screen.getByText("Conversa 1")).toBeVisible();
+    expect(await screen.findByText("Conversa 1")).toBeVisible();
     expect(screen.queryByText("Serviço 1")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "Serviços" }));
     expect(screen.getByText("Serviço 1")).toBeVisible();
   });
 
-  it("shows badge count for multiple unread", () => {
-    render(
-      <Bell
-        notifications={[
-          makeNotification({ id: "1", isRead: false }),
-          makeNotification({ id: "2", isRead: false }),
-          makeNotification({ id: "3", isRead: true }),
-        ]}
-      />,
-    );
+  it("shows badge count for multiple unread", async () => {
+    mockList.mockResolvedValue([
+      makeNotification({ id: "1", isRead: false }),
+      makeNotification({ id: "2", isRead: false }),
+      makeNotification({ id: "3", isRead: true }),
+    ]);
+    mockCount.mockRejectedValue(new Error("offline"));
+    render(<Bell />);
 
-    expect(screen.getByText("2")).toBeVisible();
+    expect(await screen.findByText("2")).toBeVisible();
   });
 
-  it("does not show badge when all read", () => {
-    render(
-      <Bell
-        notifications={[makeNotification({ id: "1", isRead: true })]}
-      />,
-    );
+  it("does not show badge when all read", async () => {
+    mockList.mockResolvedValue([makeNotification({ id: "1", isRead: true })]);
+    render(<Bell />);
 
+    await waitFor(() => expect(mockList).toHaveBeenCalled());
     expect(screen.queryByText("1")).not.toBeInTheDocument();
   });
 });
