@@ -24,6 +24,9 @@ import { ReviewsService } from "./reviews.service";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
 import { FindByProviderQueryDto } from "./dto/find-by-provider-query.dto";
+import { CreateReviewResponseDto } from "./dto/create-review-response.dto";
+import { UpdateReviewResponseDto } from "./dto/update-review-response.dto";
+import { CreateReviewReportDto } from "./dto/create-review-report.dto";
 import { JwtAuthGuard, RolesGuard, Roles } from "@pode-deixar/security";
 
 @ApiTags("Reviews")
@@ -73,6 +76,68 @@ export class ReviewsController {
     }[]
   > {
     return this.reviewsService.findMine(req.user.sub);
+  }
+
+  @Get("received")
+  @Roles("PROVIDER")
+  @ApiOperation({ summary: "List received reviews (provider only)" })
+  @ApiResponse({
+    status: 200,
+    description: "Received review list returned successfully",
+  })
+  @ApiResponse({ status: 403, description: "Only providers may access" })
+  async findReceived(
+    @Request() req: any,
+    @Query() query: FindByProviderQueryDto,
+  ) {
+    return this.reviewsService.findReceived(req.user.sub, query);
+  }
+
+  @Post(":reviewId/response")
+  @Roles("CLIENT", "PROVIDER")
+  @ApiOperation({ summary: "Create response for a review (reviewee only)" })
+  @ApiParam({ name: "reviewId", description: "Review ID" })
+  @ApiResponse({ status: 201, description: "Response created successfully" })
+  @ApiResponse({ status: 404, description: "Review not found" })
+  @ApiResponse({ status: 403, description: "Only reviewee may respond" })
+  @ApiResponse({ status: 409, description: "Response already exists" })
+  async createResponse(
+    @Request() req: any,
+    @Param("reviewId", ParseUUIDPipe) reviewId: string,
+    @Body() dto: CreateReviewResponseDto,
+  ) {
+    return this.reviewsService.createResponse(req.user.sub, reviewId, dto);
+  }
+
+  @Patch(":reviewId/response")
+  @Roles("CLIENT", "PROVIDER")
+  @ApiOperation({ summary: "Update response for a review (reviewee only)" })
+  @ApiParam({ name: "reviewId", description: "Review ID" })
+  @ApiResponse({ status: 200, description: "Response updated successfully" })
+  @ApiResponse({ status: 404, description: "Review or response not found" })
+  @ApiResponse({ status: 403, description: "Only reviewee may respond" })
+  async updateResponse(
+    @Request() req: any,
+    @Param("reviewId", ParseUUIDPipe) reviewId: string,
+    @Body() dto: UpdateReviewResponseDto,
+  ) {
+    return this.reviewsService.updateResponse(req.user.sub, reviewId, dto);
+  }
+
+  @Post(":reviewId/reports")
+  @Roles("CLIENT", "PROVIDER")
+  @ApiOperation({ summary: "Report a review (reviewee only)" })
+  @ApiParam({ name: "reviewId", description: "Review ID" })
+  @ApiResponse({ status: 201, description: "Report created successfully" })
+  @ApiResponse({ status: 404, description: "Review not found" })
+  @ApiResponse({ status: 403, description: "Only reviewee may report" })
+  @ApiResponse({ status: 409, description: "Denúncia já em análise" })
+  async createReport(
+    @Request() req: any,
+    @Param("reviewId", ParseUUIDPipe) reviewId: string,
+    @Body() dto: CreateReviewReportDto,
+  ) {
+    return this.reviewsService.createReport(req.user.sub, reviewId, dto);
   }
 
   @Get("service-order/:orderId")
@@ -171,20 +236,37 @@ export class ReviewsController {
 
 @ApiTags("Reviews")
 @Controller("reviews/provider/:providerId")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@ApiBearerAuth()
 export class PublicReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
+  @Get("summary")
+  @Roles("CLIENT", "PROVIDER")
+  @ApiOperation({ summary: "Get provider reviews summary" })
+  @ApiParam({ name: "providerId", description: "Provider ID" })
+  @ApiResponse({
+    status: 200,
+    description: "Provider review summary returned successfully",
+  })
+  @ApiResponse({ status: 404, description: "Provider not found" })
+  async getSummary(@Param("providerId", ParseUUIDPipe) providerId: string) {
+    return this.reviewsService.getProviderSummary(providerId);
+  }
+
   @Get()
-  @ApiOperation({ summary: "List provider reviews (public)" })
+  @Roles("CLIENT", "PROVIDER")
+  @ApiOperation({ summary: "List provider reviews (paginated)" })
   @ApiParam({ name: "providerId", description: "Provider ID" })
   @ApiResponse({
     status: 200,
     description: "Provider review list returned successfully",
   })
+  @ApiResponse({ status: 404, description: "Provider not found" })
   async findByProvider(
     @Param("providerId", ParseUUIDPipe) providerId: string,
-    @Query() query?: FindByProviderQueryDto,
+    @Query() query: FindByProviderQueryDto,
   ) {
-    return this.reviewsService.findByProvider(providerId, query?.limit);
+    return this.reviewsService.findByProvider(providerId, query);
   }
 }

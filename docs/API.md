@@ -50,6 +50,88 @@ GET /api/profiles/me           -> users:3002/api/v1/profiles/me  + Deprecation: 
 | `/api/v1/storage/*` | `/api/storage/*` | `minio:9000` (SeaweedFS S3) |
 | Health direct | — | `http://<service>:<port>/health` |
 
+## Reviews (reviews:3005)
+
+All review endpoints require `Authorization: Bearer <accessToken>` (`JwtAuthGuard` + `RolesGuard` from `@pode-deixar/security`). Roles allowed per endpoint below. IDs are validated with `ParseUUIDPipe` (400 on malformed).
+
+### POST /api/v1/reviews — Create review
+
+- **Roles:** `CLIENT`, `PROVIDER`
+- **Body:** `CreateReviewDto` `{ serviceOrderId: UUID, rating: 1..5, comment?: string(0..1000) }` — messages in Portuguese.
+- **Guards:** order must be `COMPLETED` + `PAID` (payments), caller must be `clientId` or `providerId` of the order, `!providerId` → 400, duplicate `(order, reviewer)` → 400 (P2002 race → 400).
+- **Success 201:** `{ id, service_order_id, reviewer_id, reviewee_id, rating, comment, created_at, updated_at }` and `reviewee` rating/total recalculated via `ProviderProfile`/`ClientProfile` (`recalculateRating` inside `$transaction`).
+- **Errors:** `401` no token, `403` not a party, `404` order missing, `400` order not completed/paid or rating invalid.
+
+### GET /api/v1/reviews/me — List own reviews
+
+- **Roles:** `CLIENT`, `PROVIDER`
+- **Success 200:** `Review[]` (full shape with ids) ordered `createdAt desc`.
+
+### GET /api/v1/reviews/service-order/:orderId — List order reviews
+
+- **Roles:** `CLIENT`, `PROVIDER`
+- **Guard:** caller must be `clientId` or `providerId` → `403` otherwise, `404` order missing.
+- **Success 200:** `Review[]`.
+
+### PATCH /api/v1/reviews/:reviewId — Edit own review (5-minute window)
+
+- **Roles:** `CLIENT`, `PROVIDER`
+- **Guard:** `reviewerId === sub` → `403`, not found → `404`, `Date.now() > createdAt+5min` → `400`, no field → `400`.
+- **Success 200:** updated review; rating recalculated.
+- **DELETE /api/v1/reviews/:reviewId** — same guards, `200` `{ message }`, rating recalculated.
+
+### GET /api/v1/reviews/provider/:providerId — Provider listing (paginated, privacy-guaranteed)
+
+- **Roles:** `CLIENT`, `PROVIDER` (authenticated, no 403 by role — the resource is public but privacy-shaped)
+- **Params:** `providerId` resolves as `ProviderProfile.id` *or* `User.id` (fallback) → `404` if neither.
+- **Query:** `PageQueryDto` `page?` default 1, `limit?` default 10 `Max(50)` → `400` when `>50` or non-int.
+- **Filter:** only reviews where `serviceOrder.status = COMPLETED` **and** `payments.some(status=PAID)` — `CANCELLED`/`OPEN`/`PENDING` orders never surface; enforced via `countFilteredReviews`/`findFilteredReviews` (`filteredWhere`).
+- **Privacy shape:** each item is `{ id, rating, comment, created_at, reviewer: { display_name, avatar_url }, response: { message, created_at }|null }`. Never exposes `reviewer_id`, `reviewee_id`, `service_order_id`. `display_name` is `firstName + lastInitial.` via `formatDisplayName` (`null`/blank → `"Cliente"`); `avatar_url` from `ClientProfile.avatarUrl` else `null`. `response` is embedded via `include: { response: true }`.
+- **Success 200:** `{ data: ReviewPublic[], meta: { total, page, limit, hasMore } }` where `hasMore = skip+take < total` and `total` from `countFilteredReviews`.
+- **Errors:** `401` no token, `400` bad UUID/limit, `404` provider not found.
+
+### GET /api/v1/reviews/provider/:providerId/summary — Provider reputation
+
+- **Roles:** `CLIENT`, `PROVIDER`
+- **Success 200:** `{ provider_id, average: number|null, total, distribution: {1..5} }`. Computed via `aggregateFilteredReviews` (`_avg.rating`, `_count._all`) + `groupByRatingFiltered` (same `filteredWhere`). `average` is `null` when `total=0`; `distribution` always has keys `1..5` (missing → 0). Same `404`/`401`/`400` semantics as listing.
+
+### GET /api/v1/reviews/received — Provider inbox (provider only)
+
+- **Roles:** `PROVIDER` only → `403` for `CLIENT`.
+- **Query:** same `page`/`limit` as provider listing (defaults 1/10, cap 50).
+- **Filter/Shape:** same `filteredWhere` + privacy shape as provider listing, plus `report_status: "NONE" | "PENDING" | "RESOLVED"` per review (lookup `ReviewReport` by `(reviewId, reporterId=userId)`; `PENDING` → `PENDING`, `DISMISSED`/`UPHELD` → `RESOLVED`, none → `NONE`). `response` embedded. Paginated `meta.hasMore`.
+- **Isolation:** `revieweeId = sub` only — provider B never sees provider A's reviews (`total 0`).
+- **Errors:** `401`/`403`/`400` as above.
+
+### POST /api/v1/reviews/:reviewId/response — Create provider response (reviewee only)
+
+- **Roles:** `CLIENT`, `PROVIDER`
+- **Body:** `CreateReviewResponseDto` `{ message: string(1..500) }` → `400` on empty/too long.
+- **Guards:** review not found → `404`, `review.revieweeId !== sub` → `403`, existing response → `409` (P2002 race → 409).
+- **Success 201:** `{ id, review_id, message, created_at, updated_at }`; visible as `response` in both provider listing and received.
+
+### PATCH /api/v1/reviews/:reviewId/response — Update response (reviewee only)
+
+- **Roles:** `CLIENT`, `PROVIDER`
+- **Guards:** same `404`/`403` as create, response not found → `404`.
+- **Success 200:** updated response.
+
+### POST /api/v1/reviews/:reviewId/reports — Report a review (reviewee only)
+
+- **Roles:** `CLIENT`, `PROVIDER`
+- **Body:** `CreateReviewReportDto` `{ reason: OFENSA|PALAVRAO|PREJUDICAR|SPAM|OUTRO, description?: string(0..1000) }` → `400` on invalid enum.
+- **Guards:** review not found → `404`, `review.revieweeId !== sub` → `403` (reviewer cannot report own review toward provider; intruder → 403), existing report (any status) → `409` "Denúncia já em análise" (P2002 race → 409).
+- **Success 201:** `{ id, review_id, reporter_id, reason, description, status: PENDING, created_at }`.
+- **Visibility:** reports do **not** hide the review — `comment` stays visible in provider listing; `received` exposes `report_status`. Admin moderation (DISMISSED/UPHELD) maps to `RESOLVED` in `received`.
+
+### Reputation recalculation
+
+Every `POST` (create), `PATCH` (update) and `DELETE` of a review runs `recalculateRating(revieweeId, tx)` inside the same `$transaction`: `review.aggregate({ where: { revieweeId }, _avg.rating, _count._all })` then `providerProfile.updateMany` + `clientProfile.updateMany` with `{ rating, totalReviews }`. Cross-service read (`users` service) sees the same rows via shared DB; e2e `provider-journey` asserts `profile.rating`/`total_reviews` after create/patch/delete.
+
+### Privacy & reputation decisions
+
+See ADR: `.agents/decisions/reviews-reputation.md`.
+
 Swagger per service stays at `http://<service>:<port>/api/docs` (not versioned).
 
 ## Frontend usage

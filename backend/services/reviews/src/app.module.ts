@@ -26,6 +26,9 @@ const REVIEWS_FIELD_LABELS: FieldLabels = {
   comment: "Comentário",
   serviceOrderId: "Pedido de serviço",
   providerId: "Prestador",
+  message: "Mensagem",
+  reason: "Motivo",
+  description: "Descrição",
 };
 
 function translateValidationErrors(errors: ValidationError[]): string {

@@ -19,93 +19,93 @@ enum Role {
 }
 
 model User {
-  id                      String             @id @default(uuid())
-  completeName            String             @map("complete_name")
-  email                   String             @unique
-  password                String
-  role                    Role               @default(CLIENT)
-  isActive                Boolean            @default(true) @map("is_active")
-  phone                   String
-  postalCode              String             @map("postal_code")
-  emailVerified           Boolean            @default(false) @map("email_verified")
-  emailVerificationToken  String?            @map("email_verification_token")
-  emailVerificationExpires DateTime?          @map("email_verification_expires")
-  passwordResetToken      String?            @map("password_reset_token")
-  passwordResetExpires    DateTime?          @map("password_reset_expires")
-  refreshToken            String?            @map("refresh_token")
-  refreshTokenFamily      String?            @map("refresh_token_family")
-  failedLoginAttempts     Int                @default(0) @map("failed_login_attempts")
-  lockoutUntil            DateTime?          @map("lockout_until")
-  lastLoginAt             DateTime?          @map("last_login_at")
-  createdAt               DateTime           @default(now()) @map("created_at")
-  updatedAt               DateTime           @updatedAt @map("updated_at")
-  clientProfile           ClientProfile?
-  providerProfile         ProviderProfile?
-  notifications           Notification[]
+  id                       String           @id @default(uuid())
+  completeName             String           @map("complete_name")
+  email                    String           @unique
+  password                 String
+  role                     Role             @default(CLIENT)
+  isActive                 Boolean          @default(true) @map("is_active")
+  phone                    String
+  postalCode               String           @map("postal_code")
+  emailVerified            Boolean          @default(false) @map("email_verified")
+  emailVerificationToken   String?          @map("email_verification_token")
+  emailVerificationExpires DateTime?        @map("email_verification_expires")
+  passwordResetToken       String?          @map("password_reset_token")
+  passwordResetExpires     DateTime?        @map("password_reset_expires")
+  refreshToken             String?          @map("refresh_token")
+  refreshTokenFamily       String?          @map("refresh_token_family")
+  failedLoginAttempts      Int              @default(0) @map("failed_login_attempts")
+  lockoutUntil             DateTime?        @map("lockout_until")
+  lastLoginAt              DateTime?        @map("last_login_at")
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
+  clientProfile            ClientProfile?
+  providerProfile          ProviderProfile?
+  notifications            Notification[]
 
   @@map("users")
 }
 
 model ClientProfile {
-  id          String   @id @default(uuid())
-  userId      String   @unique @map("user_id")
-  avatarUrl   String?  @map("avatar_url")
-  preferences Json?    @default("{}")
-  rating      Float    @default(0)
-  totalReviews Int     @default(0) @map("total_reviews")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  avatarUrl    String?  @map("avatar_url")
+  preferences  Json?    @default("{}")
+  rating       Float    @default(0)
+  totalReviews Int      @default(0) @map("total_reviews")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("client_profiles")
 }
 
 model ProviderProfile {
-  id           String             @id @default(uuid())
-  userId       String             @unique @map("user_id")
-  avatarUrl    String?            @map("avatar_url")
+  id           String            @id @default(uuid())
+  userId       String            @unique @map("user_id")
+  avatarUrl    String?           @map("avatar_url")
   bio          String?
-  hourlyRate   Decimal?           @map("hourly_rate") @db.Decimal(10, 2)
-  skills       String[]           @default([])
-  portfolio    Json?              @default("[]")
-  rating       Float              @default(0)
-  totalReviews Int                @default(0) @map("total_reviews")
-  isAvailable  Boolean            @default(true) @map("is_available")
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hourlyRate   Decimal?          @map("hourly_rate") @db.Decimal(10, 2)
+  skills       String[]          @default([])
+  portfolio    Json?             @default("[]")
+  rating       Float             @default(0)
+  totalReviews Int               @default(0) @map("total_reviews")
+  isAvailable  Boolean           @default(true) @map("is_available")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   services     ProviderService[]
 
   @@map("provider_profiles")
 }
 
 model Category {
-  id          String             @id @default(uuid())
-  name        String             @unique
-  slug        String             @unique
-  description String?
-  icon        String?
-  order       Int                @default(0)
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
-  services    ProviderService[]
+  id            String            @id @default(uuid())
+  name          String            @unique
+  slug          String            @unique
+  description   String?
+  icon          String?
+  order         Int               @default(0)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  services      ProviderService[]
   serviceOrders ServiceOrder[]
 
   @@map("categories")
 }
 
 model ProviderService {
-  id                String           @id @default(uuid())
-  providerProfile   ProviderProfile  @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
-  providerProfileId String           @map("provider_profile_id")
+  id                String          @id @default(uuid())
+  providerProfile   ProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  providerProfileId String          @map("provider_profile_id")
   title             String
-  description       String           @db.Text
-  fixedPrice        Decimal          @db.Decimal(10, 2) @map("fixed_price")
-  categoryId        String           @map("category_id")
-  category          Category         @relation(fields: [categoryId], references: [id])
-  isActive          Boolean          @default(true) @map("is_active")
-  createdAt         DateTime         @default(now()) @map("created_at")
-  updatedAt         DateTime         @updatedAt @map("updated_at")
+  description       String          @db.Text
+  fixedPrice        Decimal         @map("fixed_price") @db.Decimal(10, 2)
+  categoryId        String          @map("category_id")
+  category          Category        @relation(fields: [categoryId], references: [id])
+  isActive          Boolean         @default(true) @map("is_active")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
   images            ServiceImage[]
 
   @@map("provider_services")
@@ -155,62 +155,63 @@ enum PaymentMethod {
 }
 
 model ServiceOrder {
-  id          String             @id @default(uuid())
-  clientId    String             @map("client_id")
-  providerId  String?            @map("provider_id")
-  providerServiceId String?      @map("provider_service_id")
-  agreedPrice Decimal?           @map("agreed_price") @db.Decimal(10, 2)
-  title       String
-  description String             @db.Text
-  categoryId  String             @map("category_id")
-  category    Category           @relation(fields: [categoryId], references: [id])
-  budgetMin   Decimal?           @map("budget_min") @db.Decimal(10, 2)
-  budgetMax   Decimal?           @map("budget_max") @db.Decimal(10, 2)
-  address     Json?              @default("{}")
-  scheduledAt DateTime?          @map("scheduled_at")
-  scheduledEndAt DateTime?       @map("scheduled_end_at")
-  completedAt DateTime?          @map("completed_at")
-  completedBy String?            @map("completed_by")
-  observations String?           @db.Text
-  startedAt    DateTime? @map("started_at")
-  cancelledAt  DateTime? @map("cancelled_at")
-  cancelReason String?   @db.Text @map("cancel_reason")
-  status      ServiceOrderStatus @default(OPEN)
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
-  proposals   Proposal[]
-  photos      OrderPhoto[]
-  payments    Payment[]
-  reviews     Review[]
-  timelineEvents OrderTimelineEvent[]
+  id                String               @id @default(uuid())
+  clientId          String               @map("client_id")
+  providerId        String?              @map("provider_id")
+  providerServiceId String?              @map("provider_service_id")
+  agreedPrice       Decimal?             @map("agreed_price") @db.Decimal(10, 2)
+  title             String
+  description       String               @db.Text
+  categoryId        String               @map("category_id")
+  category          Category             @relation(fields: [categoryId], references: [id])
+  budgetMin         Decimal?             @map("budget_min") @db.Decimal(10, 2)
+  budgetMax         Decimal?             @map("budget_max") @db.Decimal(10, 2)
+  address           Json?                @default("{}")
+  scheduledAt       DateTime?            @map("scheduled_at")
+  scheduledEndAt    DateTime?            @map("scheduled_end_at")
+  completedAt       DateTime?            @map("completed_at")
+  completedBy       String?              @map("completed_by")
+  observations      String?              @db.Text
+  startedAt         DateTime?            @map("started_at")
+  cancelledAt       DateTime?            @map("cancelled_at")
+  cancelReason      String?              @map("cancel_reason") @db.Text
+  status            ServiceOrderStatus   @default(OPEN)
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  proposals         Proposal[]
+  photos            OrderPhoto[]
+  payments          Payment[]
+  reviews           Review[]
+  timelineEvents    OrderTimelineEvent[]
 
   @@map("service_orders")
 }
 
 model OrderTimelineEvent {
-  id             String   @id @default(uuid())
-  serviceOrderId String   @map("service_order_id")
+  id             String       @id @default(uuid())
+  serviceOrderId String       @map("service_order_id")
   serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  eventKey       String   @map("event_key")
-  fromStatus     String?  @map("from_status")
-  toStatus       String?  @map("to_status")
-  actorId        String?  @map("actor_id")
-  reason         String?  @db.Text
-  createdAt      DateTime @default(now()) @map("created_at")
+  eventKey       String       @map("event_key")
+  fromStatus     String?      @map("from_status")
+  toStatus       String?      @map("to_status")
+  actorId        String?      @map("actor_id")
+  reason         String?      @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at")
+
   @@index([serviceOrderId, createdAt])
   @@map("order_timeline_events")
 }
 
 model Proposal {
-  id               String         @id @default(uuid())
-  serviceOrderId   String         @map("service_order_id")
-  providerId       String         @map("provider_id")
-  price            Decimal        @db.Decimal(10, 2)
-  description      String         @db.Text
-  estimatedDuration String?       @map("estimated_duration")
-  status           ProposalStatus @default(PENDING)
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
+  id                String            @id @default(uuid())
+  serviceOrderId    String            @map("service_order_id")
+  providerId        String            @map("provider_id")
+  price             Decimal           @db.Decimal(10, 2)
+  description       String            @db.Text
+  estimatedDuration String?           @map("estimated_duration")
+  status            ProposalStatus    @default(PENDING)
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
   serviceOrder      ServiceOrder      @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
   counterProposals  CounterProposal[]
 
@@ -218,62 +219,103 @@ model Proposal {
 }
 
 model CounterProposal {
-  id               String                @id @default(uuid())
-  proposalId       String                @map("proposal_id")
-  senderId         String                @map("sender_id")
-  price            Decimal               @db.Decimal(10, 2)
-  description      String                @db.Text
-  estimatedDuration String?              @map("estimated_duration")
-  status           CounterProposalStatus @default(PENDING)
-  createdAt        DateTime              @default(now()) @map("created_at")
-  updatedAt        DateTime              @updatedAt @map("updated_at")
-  proposal         Proposal              @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  id                String                @id @default(uuid())
+  proposalId        String                @map("proposal_id")
+  senderId          String                @map("sender_id")
+  price             Decimal               @db.Decimal(10, 2)
+  description       String                @db.Text
+  estimatedDuration String?               @map("estimated_duration")
+  status            CounterProposalStatus @default(PENDING)
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  proposal          Proposal              @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
   @@map("counter_proposals")
 }
 
 model OrderPhoto {
-  id        String   @id @default(uuid())
+  id             String       @id @default(uuid())
   serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
-  serviceOrderId String   @map("service_order_id")
-  url       String
-  createdAt DateTime @default(now()) @map("created_at")
+  serviceOrderId String       @map("service_order_id")
+  url            String
+  createdAt      DateTime     @default(now()) @map("created_at")
 
   @@map("order_photos")
 }
 
 model Review {
-  id            String   @id @default(uuid())
-  serviceOrder  ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Restrict)
-  serviceOrderId String  @map("service_order_id")
-  reviewerId    String   @map("reviewer_id")
-  revieweeId    String   @map("reviewee_id")
-  rating        Int
-  comment       String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String          @id @default(uuid())
+  serviceOrder   ServiceOrder    @relation(fields: [serviceOrderId], references: [id], onDelete: Restrict)
+  serviceOrderId String          @map("service_order_id")
+  reviewerId     String          @map("reviewer_id")
+  revieweeId     String          @map("reviewee_id")
+  rating         Int
+  comment        String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  response       ReviewResponse?
+  reports        ReviewReport[]
 
   @@unique([serviceOrderId, reviewerId])
   @@index([revieweeId])
   @@map("reviews")
 }
 
+enum ReportReason {
+  OFENSA
+  PALAVRAO
+  PREJUDICAR
+  SPAM
+  OUTRO
+}
+
+enum ReportStatus {
+  PENDING
+  DISMISSED
+  UPHELD
+}
+
+model ReviewResponse {
+  id        String   @id @default(cuid())
+  reviewId  String   @unique @map("review_id")
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  message   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("review_responses")
+}
+
+model ReviewReport {
+  id          String       @id @default(cuid())
+  reviewId    String       @map("review_id")
+  review      Review       @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporterId  String       @map("reporter_id")
+  reason      ReportReason
+  description String?      @db.Text
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@unique([reviewId, reporterId])
+  @@map("review_reports")
+}
+
 model Payment {
-  id             String              @id @default(uuid())
-  serviceOrder   ServiceOrder        @relation(fields: [serviceOrderId], references: [id], onDelete: Restrict)
-  serviceOrderId String              @map("service_order_id")
-  amount         Decimal             @db.Decimal(10, 2)
-  currency       String              @default("BRL")
-  method         PaymentMethod       @default(PIX)
-  status         PaymentStatus       @default(PENDING)
-  feeRate        Decimal?            @map("fee_rate") @db.Decimal(10, 4)
-  feeAmount      Decimal?            @map("fee_amount") @db.Decimal(10, 2)
-  netAmount      Decimal?            @map("net_amount") @db.Decimal(10, 2)
-  externalRef    String?             @map("external_ref")
-  idempotencyKey String              @default(uuid()) @map("idempotency_key")
-  paidAt         DateTime?           @map("paid_at")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
+  id             String                 @id @default(uuid())
+  serviceOrder   ServiceOrder           @relation(fields: [serviceOrderId], references: [id], onDelete: Restrict)
+  serviceOrderId String                 @map("service_order_id")
+  amount         Decimal                @db.Decimal(10, 2)
+  currency       String                 @default("BRL")
+  method         PaymentMethod          @default(PIX)
+  status         PaymentStatus          @default(PENDING)
+  feeRate        Decimal?               @map("fee_rate") @db.Decimal(10, 4)
+  feeAmount      Decimal?               @map("fee_amount") @db.Decimal(10, 2)
+  netAmount      Decimal?               @map("net_amount") @db.Decimal(10, 2)
+  externalRef    String?                @map("external_ref")
+  idempotencyKey String                 @default(uuid()) @map("idempotency_key")
+  paidAt         DateTime?              @map("paid_at")
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
   webhookEvents  PaymentWebhookEvent[]
   statusHistory  PaymentStatusHistory[]
 
@@ -295,22 +337,22 @@ model PaymentWebhookEvent {
 }
 
 model PaymentStatusHistory {
-  id           String         @id @default(uuid())
-  payment      Payment        @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  paymentId    String         @map("payment_id")
+  id             String         @id @default(uuid())
+  payment        Payment        @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  paymentId      String         @map("payment_id")
   statusAnterior PaymentStatus? @map("status_anterior")
-  statusNovo    PaymentStatus   @map("status_novo")
-  actor        String         // "MOCK" | "MERCADO_PAGO" | "USER" | "SYSTEM"
-  motivo       String?        @map("motivo")
-  createdAt    DateTime       @default(now()) @map("created_at")
+  statusNovo     PaymentStatus  @map("status_novo")
+  actor          String // "MOCK" | "MERCADO_PAGO" | "USER" | "SYSTEM"
+  motivo         String?        @map("motivo")
+  createdAt      DateTime       @default(now()) @map("created_at")
 
   @@index([paymentId, createdAt])
   @@map("payment_status_history")
 }
 
 model TokenBlacklist {
-  jti        String   @id
-  expiresAt  DateTime @map("expires_at")
+  jti       String   @id
+  expiresAt DateTime @map("expires_at")
 
   @@map("token_blacklist")
 }
@@ -326,7 +368,7 @@ model Notification {
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   type           NotificationType @map("type")
   title          String           @map("title")
-  message        String           @db.Text @map("message")
+  message        String           @map("message") @db.Text
   isRead         Boolean          @default(false) @map("is_read")
   conversationId String?          @map("conversation_id")
   contractId     String?          @map("contract_id")
