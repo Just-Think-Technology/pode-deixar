@@ -2,6 +2,7 @@
 
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "@pode-deixar/prisma";
+import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
 
 export interface CreateProposalData {
   serviceOrderId: string;
@@ -20,7 +21,11 @@ export interface UpdateProposalData {
 
 @Injectable()
 export class ProposalsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly shared: SharedNotificationsService;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.shared = new SharedNotificationsService(this.prisma);
+  }
 
   findOrderById(orderId: string) {
     return this.prisma.serviceOrder.findUnique({
@@ -151,11 +156,10 @@ export class ProposalsRepository {
     ]);
   }
 
-  // --- Notifications (SERVICE) with dedup ---
+  // --- Notifications (SERVICE) via shared port ---
 
   /**
-   * Checks for a recent duplicate SERVICE notification.
-   * Dedup key: same user + type + title + contractId within windowMs.
+   * Checks for a recent duplicate SERVICE notification via shared port.
    */
   async existsRecent(opts: {
     userId: string;
@@ -164,24 +168,11 @@ export class ProposalsRepository {
     contractId?: string | null;
     windowMs?: number;
   }): Promise<boolean> {
-    const windowMs = opts.windowMs ?? 60000;
-    const since = new Date(Date.now() - windowMs);
-    const where: Record<string, unknown> = {
-      userId: opts.userId,
-      type: opts.type,
-      title: opts.title,
-      createdAt: { gte: since },
-    };
-    if (opts.contractId) {
-      where.contractId = opts.contractId;
-    }
-    const existing = await this.prisma.notification.findFirst({ where });
-    return Boolean(existing);
+    return this.shared.existsRecent(opts);
   }
 
   /**
-   * Creates a SERVICE notification unless a duplicate exists within 60s.
-   * Returns null when duplicate detected.
+   * Creates a SERVICE notification via shared port — handles existsRecent + P2002 + rate-limit.
    */
   async notify(dto: {
     userId: string;
@@ -190,24 +181,13 @@ export class ProposalsRepository {
     message: string;
     contractId?: string | null;
   }) {
-    const isDuplicate = await this.existsRecent({
-      userId: dto.userId,
-      type: dto.type,
-      title: dto.title,
-      contractId: dto.contractId ?? null,
-      windowMs: 60000,
-    });
-    if (isDuplicate) {
-      return null;
-    }
-    return this.prisma.notification.create({
-      data: {
-        userId: dto.userId,
-        type: dto.type as any,
-        title: dto.title,
-        message: dto.message,
-        contractId: dto.contractId ?? null,
-      },
-    });
+    return this.shared.notify(
+      dto.userId,
+      dto.type,
+      dto.title,
+      dto.message,
+      dto.contractId ?? null,
+      60000,
+    );
   }
 }

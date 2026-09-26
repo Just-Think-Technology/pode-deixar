@@ -1,5 +1,8 @@
+// Service order repository — data access for orders and proposals
+
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "@pode-deixar/prisma";
+import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
 
 export interface CreateServiceOrderData {
   clientId: string;
@@ -34,7 +37,11 @@ export interface CreateHiredOrderData {
 
 @Injectable()
 export class ServiceOrdersRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly shared: SharedNotificationsService;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.shared = new SharedNotificationsService(this.prisma);
+  }
 
   findProviderUserById(providerId: string) {
     return this.prisma.user.findUnique({
@@ -191,6 +198,9 @@ export class ServiceOrdersRepository {
     });
   }
 
+  /**
+   * Checks dedup via shared notifications port — single home for dedup window.
+   */
   async existsRecent(opts: {
     userId: string;
     type: string;
@@ -198,21 +208,13 @@ export class ServiceOrdersRepository {
     contractId?: string | null;
     windowMs?: number;
   }): Promise<boolean> {
-    const windowMs = opts.windowMs ?? 60000;
-    const since = new Date(Date.now() - windowMs);
-    const where: Record<string, unknown> = {
-      userId: opts.userId,
-      type: opts.type,
-      title: opts.title,
-      createdAt: { gte: since },
-    };
-    if (opts.contractId) {
-      where.contractId = opts.contractId;
-    }
-    const existing = await this.prisma.notification.findFirst({ where });
-    return Boolean(existing);
+    return this.shared.existsRecent(opts);
   }
 
+  /**
+   * Creates deduped notification via shared port — handles existsRecent + P2002 + rate-limit.
+   * Adapter for service layer to keep single home per notification logic.
+   */
   async notify(dto: {
     userId: string;
     type: string;
@@ -220,25 +222,14 @@ export class ServiceOrdersRepository {
     message: string;
     contractId?: string | null;
   }) {
-    const isDuplicate = await this.existsRecent({
-      userId: dto.userId,
-      type: dto.type,
-      title: dto.title,
-      contractId: dto.contractId ?? null,
-      windowMs: 60000,
-    });
-    if (isDuplicate) {
-      return null;
-    }
-    return this.prisma.notification.create({
-      data: {
-        userId: dto.userId,
-        type: dto.type as any,
-        title: dto.title,
-        message: dto.message,
-        contractId: dto.contractId ?? null,
-      },
-    });
+    return this.shared.notify(
+      dto.userId,
+      dto.type,
+      dto.title,
+      dto.message,
+      dto.contractId ?? null,
+      60000,
+    );
   }
 
   async createCompletionNotification(userId: string, orderId: string) {

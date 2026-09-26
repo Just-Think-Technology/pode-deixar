@@ -19,7 +19,7 @@ Single source of truth for product decisions, development rules and architecture
 ```text
 backend/
 ├── prisma/          # Shared schema and migrations
-├── shared/          # Shared packages (logger, email, security, validation, prisma, storage)
+├── shared/          # Shared packages (logger, email, security, validation, prisma, storage, notifications)
 └── services/
     ├── auth/            # :3001 — Authentication
     ├── users/           # :3002 — Profiles and categories
@@ -50,6 +50,9 @@ frontend/
   rules) → repository (Prisma); no Prisma in controllers, DTO on every input
 * Code used by 2+ services is extracted to `backend/shared/` (`@pode-deixar/*`)
   by the task that creates the second usage
+* Notifications dedup (existsRecent + P2002 + rate-limit) live only in `@pode-deixar/notifications`
+  via `notify(userId, type, title, message, dedupKey, ttl)` and `PrismaNotificationAdapter`
+  — services consume the port, never duplicate the logic (orthogonality)
 
 Full rules: [.agents/rules/architecture.md](.agents/rules/architecture.md).
 
@@ -63,7 +66,7 @@ never from the repo root.
 pnpm dev              # Prisma generate + start the 5 services
 pnpm build            # Build shared + services
 pnpm test             # Unit tests of the 5 services (needs local Postgres)
-pnpm test:shared      # Tests of shared packages (logger, email, security, validation, prisma, storage)
+pnpm test:shared      # Tests of shared packages (logger, email, security, validation, prisma, storage, notifications)
 pnpm test:e2e         # Cross-service journeys (needs local Postgres)
 pnpm lint             # ESLint on the 5 services
 pnpm prisma:migrate   # Apply migrations (deploy)

@@ -1,11 +1,12 @@
 // Notifications service — business rules for notification lifecycle
 
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { NotificationType } from "@prisma/client";
 import {
   NotificationsRepository,
   CreateNotificationData,
 } from "./notifications.repository";
+import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
 
 // --- Types ---
 
@@ -27,15 +28,33 @@ export interface ListFilter {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly repository: NotificationsRepository) {}
+  constructor(
+    private readonly repository: NotificationsRepository,
+    @Optional()
+    private readonly shared?: SharedNotificationsService,
+  ) {}
 
   /**
    * Creates a notification unless a duplicate exists within 60s window.
-   * Dedup key: same user + type + title + contractId/conversationId.
+   * Delegates to shared notifications port when available — single home for
+   * existsRecent + P2002 + rate-limit handling.
    * @param dto - Notification data
    * @returns Created notification or null when duplicate detected
    */
   async notify(dto: NotifyDto) {
+    if (this.shared) {
+      return this.shared.notify({
+        userId: dto.userId,
+        type: dto.type,
+        title: dto.title,
+        message: dto.message,
+        dedupKey: dto.contractId ?? dto.conversationId ?? null,
+        contractId: dto.contractId ?? null,
+        conversationId: dto.conversationId ?? null,
+        ttl: 60000,
+      });
+    }
+
     const isDuplicate = await this.repository.existsRecent({
       userId: dto.userId,
       type: dto.type,

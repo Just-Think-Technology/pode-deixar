@@ -3,6 +3,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "@pode-deixar/prisma";
 import { Prisma } from "@prisma/client";
+import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
 
 export interface CreateReviewData {
   serviceOrderId: string;
@@ -21,7 +22,11 @@ type TransactionClient = Prisma.TransactionClient;
 
 @Injectable()
 export class ReviewsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly shared: SharedNotificationsService;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.shared = new SharedNotificationsService(this.prisma);
+  }
 
   findOrderById(orderId: string) {
     return this.prisma.serviceOrder.findUnique({
@@ -116,8 +121,11 @@ export class ReviewsRepository {
     });
   }
 
-  // --- Notification helpers with anti-duplicate ---
+  // --- Notification helpers via shared port ---
 
+  /**
+   * Dedup check via shared notifications port.
+   */
   async existsRecent(opts: {
     userId: string;
     type: string;
@@ -125,21 +133,12 @@ export class ReviewsRepository {
     contractId?: string | null;
     windowMs?: number;
   }): Promise<boolean> {
-    const windowMs = opts.windowMs ?? 60000;
-    const since = new Date(Date.now() - windowMs);
-    const where: Record<string, unknown> = {
-      userId: opts.userId,
-      type: opts.type,
-      title: opts.title,
-      createdAt: { gte: since },
-    };
-    if (opts.contractId) {
-      where.contractId = opts.contractId;
-    }
-    const existing = await this.prisma.notification.findFirst({ where });
-    return Boolean(existing);
+    return this.shared.existsRecent(opts);
   }
 
+  /**
+   * Deduped notification via shared port — handles existsRecent + P2002 + rate-limit.
+   */
   async notify(dto: {
     userId: string;
     type: string;
@@ -147,25 +146,14 @@ export class ReviewsRepository {
     message: string;
     contractId?: string | null;
   }) {
-    const isDuplicate = await this.existsRecent({
-      userId: dto.userId,
-      type: dto.type,
-      title: dto.title,
-      contractId: dto.contractId ?? null,
-      windowMs: 60000,
-    });
-    if (isDuplicate) {
-      return null;
-    }
-    return this.prisma.notification.create({
-      data: {
-        userId: dto.userId,
-        type: dto.type as any,
-        title: dto.title,
-        message: dto.message,
-        contractId: dto.contractId ?? null,
-      },
-    });
+    return this.shared.notify(
+      dto.userId,
+      dto.type,
+      dto.title,
+      dto.message,
+      dto.contractId ?? null,
+      60000,
+    );
   }
 
   findOrderForNotification(orderId: string) {
