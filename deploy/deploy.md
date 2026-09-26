@@ -129,6 +129,14 @@ exists.
 * Dashboards and datasources use fixed uids (`prometheus`, `loki`, `tempo`);
   panels reference the uid directly, because Grafana file provisioning does not
   substitute `${DS_*}` placeholders.
+* Every observability image is pinned (`grafana:11.6.0`, `loki:3.7.8`,
+  `promtail:3.6.8`, `prometheus:v3.15.0`, `tempo:2.10.8`,
+  `node-exporter:v1.12.1`) — a floating major tag pulls a new Grafana
+  provisioner without review.
+* Tempo 2.10 searches the ingester index, not the blocks: traces received
+  before a Tempo restart do not show up in the TraceQL search (the traceId link
+  from Loki still resolves them, since a full block read by id works). The
+  search covers what arrived since the process started.
 * Prometheus, Loki and Tempo run as the uid their image owns (65534 / 10001).
   With `cap_drop: ALL` there is no `CAP_DAC_OVERRIDE`, so `user: "0:0"` cannot
   write their volumes and the containers crash-loop at startup.

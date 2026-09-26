@@ -242,7 +242,7 @@ services:
   # plain localhost in local dev). Grafana lives on host port 3100 here
   # because the dev frontend already owns 3000.
   prometheus:
-    image: prom/prometheus:v3
+    image: prom/prometheus:v3.15.0
     # The image owns /prometheus as nobody; cap_drop ALL removes
     # CAP_DAC_OVERRIDE, so uid 0 could not write the TSDB there.
     user: "65534:65534"
@@ -298,7 +298,7 @@ services:
 
   # --- Loki ---
   loki:
-    image: grafana/loki:3
+    image: grafana/loki:3.7.8
     # cap_drop ALL removes CAP_DAC_OVERRIDE: root cannot write the /loki
     # volume, which the image owns as 10001.
     user: "10001:10001"
@@ -313,7 +313,7 @@ services:
 
   # --- Promtail ---
   promtail:
-    image: grafana/promtail:3
+    image: grafana/promtail:3.6.8
     cap_drop:
       - ALL
     security_opt:
@@ -344,7 +344,7 @@ services:
 
   # --- Node Exporter ---
   node-exporter:
-    image: prom/node-exporter:v1
+    image: prom/node-exporter:v1.12.1
     pid: host
     cap_drop:
       - ALL

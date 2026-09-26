@@ -155,7 +155,7 @@ services:
   # (nobody) because cap_drop ALL removes CAP_DAC_OVERRIDE, so uid 0 cannot
   # write the /prometheus volume the image owns as 65534.
   prometheus:
-    image: prom/prometheus:v3
+    image: prom/prometheus:v3.15.0
     user: "65534:65534"
     cap_drop:
       - ALL
@@ -215,7 +215,7 @@ services:
   # the image user: cap_drop ALL takes away the override that would let uid 0
   # write the /loki volume owned by 10001.
   loki:
-    image: grafana/loki:3
+    image: grafana/loki:3.7.8
     user: "10001:10001"
     cap_drop:
       - ALL
@@ -230,7 +230,7 @@ services:
   # Ships every container's stdout to Loki. Needs the Docker socket for
   # discovery and the containers log path; both read-only mounts.
   promtail:
-    image: grafana/promtail:3
+    image: grafana/promtail:3.6.8
     cap_drop:
       - ALL
     security_opt:
@@ -265,7 +265,7 @@ services:
   # --- Node Exporter ---
   # Host CPU/RAM/disk for the DiskFull rule; read-only host mounts, no ports.
   node-exporter:
-    image: prom/node-exporter:v1
+    image: prom/node-exporter:v1.12.1
     pid: host
     cap_drop:
       - ALL
