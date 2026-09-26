@@ -7,6 +7,7 @@ import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
 import { PrismaModule } from "@pode-deixar/prisma";
+import { NotificationsModule } from "@pode-deixar/notifications";
 import { PaymentsModule } from "./payments/payments.module";
 import { GatewayModule } from "./gateway/gateway.module";
 import { HealthModule } from "@pode-deixar/prisma";
@@ -56,6 +57,7 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
       },
     }),
     PrismaModule,
+    NotificationsModule,
     PaymentsModule,
     GatewayModule,
     HealthModule,

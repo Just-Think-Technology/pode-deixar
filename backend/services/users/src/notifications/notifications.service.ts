@@ -1,12 +1,20 @@
 // Notifications service — business rules for notification lifecycle
 
-import { Injectable, NotFoundException, Optional } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from "@nestjs/common";
 import { NotificationType } from "@prisma/client";
 import {
   NotificationsRepository,
   CreateNotificationData,
 } from "./notifications.repository";
-import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
+import {
+  INotificationPort,
+  NOTIFICATION_PORT,
+} from "@pode-deixar/notifications";
 
 // --- Types ---
 
@@ -31,7 +39,8 @@ export class NotificationsService {
   constructor(
     private readonly repository: NotificationsRepository,
     @Optional()
-    private readonly shared?: SharedNotificationsService,
+    @Inject(NOTIFICATION_PORT)
+    private readonly notificationsPort?: INotificationPort,
   ) {}
 
   /**
@@ -42,8 +51,8 @@ export class NotificationsService {
    * @returns Created notification or null when duplicate detected
    */
   async notify(dto: NotifyDto) {
-    if (this.shared) {
-      return this.shared.notify({
+    if (this.notificationsPort) {
+      return this.notificationsPort.notify({
         userId: dto.userId,
         type: dto.type,
         title: dto.title,

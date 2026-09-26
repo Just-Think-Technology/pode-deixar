@@ -1,9 +1,13 @@
 // Payments repository — charges, webhooks and provider finance with deduped notifications
 
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { PrismaService } from "@pode-deixar/prisma";
 import { PaymentMethod, PaymentStatus, Prisma } from "@prisma/client";
-import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
+import {
+  INotificationPort,
+  NOTIFICATION_PORT,
+} from "@pode-deixar/notifications";
+import { NotificationsService } from "@pode-deixar/notifications";
 
 export interface CreatePaymentData {
   serviceOrderId: string;
@@ -36,10 +40,18 @@ type TransactionClient = Prisma.TransactionClient;
 
 @Injectable()
 export class PaymentsRepository {
-  private readonly shared: SharedNotificationsService;
+  private readonly notificationsPort: INotificationPort;
 
-  constructor(private readonly prisma: PrismaService) {
-    this.shared = new SharedNotificationsService(this.prisma);
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(NOTIFICATION_PORT)
+    notificationsPort?: INotificationPort,
+  ) {
+    // Explicit adapter via INotificationPort keeps DB seam (users.notifications) explicit;
+    // fallback to direct service for tests without module wiring — still via port interface
+    this.notificationsPort =
+      notificationsPort ?? new NotificationsService(this.prisma);
   }
 
   findPaymentWithClient(paymentId: string) {
@@ -254,7 +266,7 @@ export class PaymentsRepository {
   }
 
   /**
-   * Dedup check via shared notifications port.
+   * Dedup check via explicit UsersNotificationsAdapter — makes DB seam explicit via INotificationPort.
    */
   async existsRecent(opts: {
     userId: string;
@@ -263,11 +275,23 @@ export class PaymentsRepository {
     contractId?: string | null;
     windowMs?: number;
   }): Promise<boolean> {
-    return this.shared.existsRecent(opts);
+    const port = this.notificationsPort as unknown as {
+      existsRecent?: (o: {
+        userId: string;
+        type: string;
+        title: string;
+        contractId?: string | null;
+        windowMs?: number;
+      }) => Promise<boolean>;
+    };
+    if (port.existsRecent) {
+      return port.existsRecent(opts);
+    }
+    return false;
   }
 
   /**
-   * Deduped notification via shared port — handles existsRecent + P2002 + rate-limit.
+   * Deduped notification via explicit UsersNotificationsAdapter — handles existsRecent + P2002 + rate-limit.
    */
   async notify(dto: {
     userId: string;
@@ -276,7 +300,7 @@ export class PaymentsRepository {
     message: string;
     contractId?: string | null;
   }) {
-    return this.shared.notify(
+    return this.notificationsPort.notify(
       dto.userId,
       dto.type,
       dto.title,

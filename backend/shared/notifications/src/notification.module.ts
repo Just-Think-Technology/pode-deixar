@@ -4,6 +4,7 @@ import { Global, Module } from "@nestjs/common";
 import { PrismaModule } from "@pode-deixar/prisma";
 import { NotificationsService } from "./notification.service";
 import { PrismaNotificationAdapter } from "./notification.adapter";
+import { UsersNotificationsAdapter } from "./users-notifications.adapter";
 import { NOTIFICATION_PORT } from "./notification.interface";
 
 @Global()
@@ -11,12 +12,18 @@ import { NOTIFICATION_PORT } from "./notification.interface";
   imports: [PrismaModule],
   providers: [
     NotificationsService,
+    UsersNotificationsAdapter,
     PrismaNotificationAdapter,
     {
       provide: NOTIFICATION_PORT,
-      useExisting: PrismaNotificationAdapter,
+      useExisting: UsersNotificationsAdapter,
     },
   ],
-  exports: [NotificationsService, PrismaNotificationAdapter, NOTIFICATION_PORT],
+  exports: [
+    NotificationsService,
+    UsersNotificationsAdapter,
+    PrismaNotificationAdapter,
+    NOTIFICATION_PORT,
+  ],
 })
 export class NotificationsModule {}

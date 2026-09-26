@@ -1,9 +1,13 @@
 // Reviews repository — order ratings and deduped notifications
 
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { PrismaService } from "@pode-deixar/prisma";
 import { Prisma } from "@prisma/client";
-import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
+import {
+  INotificationPort,
+  NOTIFICATION_PORT,
+} from "@pode-deixar/notifications";
+import { NotificationsService } from "@pode-deixar/notifications";
 
 export interface CreateReviewData {
   serviceOrderId: string;
@@ -22,10 +26,17 @@ type TransactionClient = Prisma.TransactionClient;
 
 @Injectable()
 export class ReviewsRepository {
-  private readonly shared: SharedNotificationsService;
+  private readonly notificationsPort: INotificationPort;
 
-  constructor(private readonly prisma: PrismaService) {
-    this.shared = new SharedNotificationsService(this.prisma);
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(NOTIFICATION_PORT)
+    notificationsPort?: INotificationPort,
+  ) {
+    // Explicit adapter via INotificationPort keeps DB seam explicit; fallback for tests
+    this.notificationsPort =
+      notificationsPort ?? new NotificationsService(this.prisma);
   }
 
   findOrderById(orderId: string) {
@@ -121,10 +132,10 @@ export class ReviewsRepository {
     });
   }
 
-  // --- Notification helpers via shared port ---
+  // --- Notification helpers via explicit UsersNotificationsAdapter ---
 
   /**
-   * Dedup check via shared notifications port.
+   * Dedup check via explicit UsersNotificationsAdapter — makes DB seam explicit via INotificationPort.
    */
   async existsRecent(opts: {
     userId: string;
@@ -133,11 +144,23 @@ export class ReviewsRepository {
     contractId?: string | null;
     windowMs?: number;
   }): Promise<boolean> {
-    return this.shared.existsRecent(opts);
+    const port = this.notificationsPort as unknown as {
+      existsRecent?: (o: {
+        userId: string;
+        type: string;
+        title: string;
+        contractId?: string | null;
+        windowMs?: number;
+      }) => Promise<boolean>;
+    };
+    if (port.existsRecent) {
+      return port.existsRecent(opts);
+    }
+    return false;
   }
 
   /**
-   * Deduped notification via shared port — handles existsRecent + P2002 + rate-limit.
+   * Deduped notification via explicit UsersNotificationsAdapter — handles existsRecent + P2002 + rate-limit.
    */
   async notify(dto: {
     userId: string;
@@ -146,7 +169,7 @@ export class ReviewsRepository {
     message: string;
     contractId?: string | null;
   }) {
-    return this.shared.notify(
+    return this.notificationsPort.notify(
       dto.userId,
       dto.type,
       dto.title,

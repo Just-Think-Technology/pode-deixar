@@ -7,6 +7,7 @@ import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
 import { PrismaModule } from "@pode-deixar/prisma";
+import { NotificationsModule } from "@pode-deixar/notifications";
 import { ServiceOrdersModule } from "./service-orders/service-orders.module";
 import { ProposalsModule } from "./proposals/proposals.module";
 import { CounterProposalsModule } from "./counter-proposals/counter-proposals.module";
@@ -64,6 +65,7 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
       },
     }),
     PrismaModule,
+    NotificationsModule,
     ServiceOrdersModule,
     ProposalsModule,
     CounterProposalsModule,

@@ -1,8 +1,12 @@
 // Proposals repository — data access for proposals and deduped service notifications
 
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { PrismaService } from "@pode-deixar/prisma";
-import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
+import {
+  INotificationPort,
+  NOTIFICATION_PORT,
+} from "@pode-deixar/notifications";
+import { NotificationsService } from "@pode-deixar/notifications";
 
 export interface CreateProposalData {
   serviceOrderId: string;
@@ -21,10 +25,17 @@ export interface UpdateProposalData {
 
 @Injectable()
 export class ProposalsRepository {
-  private readonly shared: SharedNotificationsService;
+  private readonly notificationsPort: INotificationPort;
 
-  constructor(private readonly prisma: PrismaService) {
-    this.shared = new SharedNotificationsService(this.prisma);
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(NOTIFICATION_PORT)
+    notificationsPort?: INotificationPort,
+  ) {
+    // Explicit UsersNotificationsAdapter via INotificationPort — makes DB seam explicit
+    this.notificationsPort =
+      notificationsPort ?? new NotificationsService(this.prisma);
   }
 
   findOrderById(orderId: string) {
@@ -156,10 +167,10 @@ export class ProposalsRepository {
     ]);
   }
 
-  // --- Notifications (SERVICE) via shared port ---
+  // --- Notifications (SERVICE) via explicit UsersNotificationsAdapter ---
 
   /**
-   * Checks for a recent duplicate SERVICE notification via shared port.
+   * Checks for a recent duplicate SERVICE notification via explicit adapter.
    */
   async existsRecent(opts: {
     userId: string;
@@ -168,11 +179,23 @@ export class ProposalsRepository {
     contractId?: string | null;
     windowMs?: number;
   }): Promise<boolean> {
-    return this.shared.existsRecent(opts);
+    const port = this.notificationsPort as unknown as {
+      existsRecent?: (o: {
+        userId: string;
+        type: string;
+        title: string;
+        contractId?: string | null;
+        windowMs?: number;
+      }) => Promise<boolean>;
+    };
+    if (port.existsRecent) {
+      return port.existsRecent(opts);
+    }
+    return false;
   }
 
   /**
-   * Creates a SERVICE notification via shared port — handles existsRecent + P2002 + rate-limit.
+   * Creates a SERVICE notification via explicit UsersNotificationsAdapter — handles existsRecent + P2002 + rate-limit.
    */
   async notify(dto: {
     userId: string;
@@ -181,7 +204,7 @@ export class ProposalsRepository {
     message: string;
     contractId?: string | null;
   }) {
-    return this.shared.notify(
+    return this.notificationsPort.notify(
       dto.userId,
       dto.type,
       dto.title,
