@@ -2,6 +2,7 @@
 
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
+import { context, trace } from '@opentelemetry/api';
 import fs = require('fs');
 import path = require('path');
 
@@ -171,6 +172,17 @@ function buildStreams(
   return streams;
 }
 
+// Reads the OpenTelemetry span active on this async context, if any.
+// Without an initialized SDK the context is empty and no fields are added,
+// so tracing stays fully optional per environment.
+function traceContextMixin(): Record<string, unknown> {
+  const spanContext = trace.getSpanContext(context.active());
+  if (!spanContext || !trace.isSpanContextValid(spanContext)) {
+    return {};
+  }
+  return { traceId: spanContext.traceId, spanId: spanContext.spanId };
+}
+
 function wrapWithEventSanitization(baseLogger: PinoLogger) {
   const proxyLogger = Object.create(baseLogger);
   const levelNames = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
@@ -221,6 +233,7 @@ export function createLogger(serviceName: string, featureName?: string, options:
       level,
       base: { service: serviceName },
       timestamp: pino.stdTimeFunctions.isoTime,
+      mixin: traceContextMixin,
       formatters: {
         level(label) {
           return { level: label };

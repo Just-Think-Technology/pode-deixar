@@ -11,7 +11,7 @@
         "name": "service",
         "label": "Serviço",
         "type": "query",
-        "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+        "datasource": { "type": "loki", "uid": "loki" },
         "definition": "label_values(service)",
         "query": { "query": "label_values(service)", "refId": "ServiceVarQuery" },
         "multi": true,
@@ -32,7 +32,7 @@
       "id": 1,
       "title": "Taxa de erros por serviço",
       "type": "timeseries",
-      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "datasource": { "type": "loki", "uid": "loki" },
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
       "targets": [
         {
@@ -46,7 +46,7 @@
       "id": 2,
       "title": "Stream de erros",
       "type": "logs",
-      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "datasource": { "type": "loki", "uid": "loki" },
       "gridPos": { "x": 0, "y": 8, "w": 24, "h": 12 },
       "targets": [
         {

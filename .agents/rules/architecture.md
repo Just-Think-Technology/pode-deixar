@@ -52,7 +52,9 @@ outside the task scope (see "Never do" 13 in AGENTS.md).
   storage, validation messages (`translateValidationErrors`), image validation
   (`validateImageFile`), Prisma error mapping (`resolvePrismaError`),
   auth guards (`JwtAuthGuard`, `RolesGuard`, `Roles`), token payload and
-  revocation checks (`assertTokenPayload`, `checkTokenRevocation`) and the
+  revocation checks (`assertTokenPayload`, `checkTokenRevocation`), the
+  observability pairs (`@pode-deixar/metrics` for `/metrics` + Prometheus,
+  `@pode-deixar/tracing` for the OpenTelemetry SDK bootstrap) and the
   shared `GlobalExceptionFilter` (masks Prisma internals, generic 500)
 - **Auth guards (JWT + roles) live only in `@pode-deixar/security`.**
   The auth service keeps specialized versions (IP logging on denial,

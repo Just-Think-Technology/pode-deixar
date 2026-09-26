@@ -243,7 +243,9 @@ services:
   # because the dev frontend already owns 3000.
   prometheus:
     image: prom/prometheus:v3
-    user: "0:0"
+    # The image owns /prometheus as nobody; cap_drop ALL removes
+    # CAP_DAC_OVERRIDE, so uid 0 could not write the TSDB there.
+    user: "65534:65534"
     cap_drop:
       - ALL
     security_opt:
@@ -260,6 +262,7 @@ services:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./observability/rules.yml:/etc/prometheus/rules.yml:ro
       - /etc/pode-deixar/metrics_token:/etc/prometheus/metrics_token:ro
+      - prometheus_data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"
     depends_on:
@@ -296,7 +299,9 @@ services:
   # --- Loki ---
   loki:
     image: grafana/loki:3
-    user: "0:0"
+    # cap_drop ALL removes CAP_DAC_OVERRIDE: root cannot write the /loki
+    # volume, which the image owns as 10001.
+    user: "10001:10001"
     cap_drop:
       - ALL
     security_opt:
@@ -321,6 +326,21 @@ services:
       - promtail_positions:/positions
     depends_on:
       - loki
+
+  # --- Tempo ---
+  tempo:
+    image: grafana/tempo:2.10.8
+    # cap_drop ALL removes CAP_DAC_OVERRIDE: root cannot write the /var/tempo
+    # volume, which the image owns as 10001.
+    user: "10001:10001"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/tempo/tempo.yml
+    volumes:
+      - ./observability/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/var/tempo
 
   # --- Node Exporter ---
   node-exporter:
@@ -415,3 +435,4 @@ volumes:
   grafana_data:
   loki_data:
   promtail_positions:
+  tempo_data:

@@ -106,8 +106,32 @@ exists.
 * Grafana reads Loki via the provisioned `Loki` datasource; the `logs.json`
   dashboard has error rate, error stream and a free-text search (e.g.
   `orderId`).
-* `traceId` correlation stays scoped to fatia 3 (needs OpenTelemetry
-  propagation — there is no trace id to attach yet).
+* Log lines carry `traceId`/`spanId` (written by the pino mixin in
+  `@pode-deixar/logger` when a span is active), which fatia 3 links to Tempo.
+
+## Observability (fatia 3 — traces)
+
+* `deploy/observability/tempo.yml` (single binary, local storage, 15-day
+  retention) receives OTLP/HTTP straight from the SDK — no collector.
+  Internal-only: no published port, queried by Grafana over the compose network
+  (`tempo:3200` for queries, `tempo:4318` for OTLP).
+* `@pode-deixar/tracing` boots the SDK (`NodeSDK` + auto-instrumentation) as the
+  first import of each `main.ts`, and `@pode-deixar/logger` adds `traceId`/
+  `spanId` to every JSON line inside a span. Tempo and the logger therefore
+  share the trace id — the `TraceID` derived field in the `Loki` datasource
+  turns a log line into a link to its trace.
+* Sampling is `ParentBased(TraceIdRatio)`: `OTEL_TRACES_SAMPLER_ARG=1.0` in
+  `.env.dev` (every local trace), `0.1` elsewhere. `OTEL_ENABLED=false` skips
+  SDK startup entirely — a service never blocks on a missing collector.
+* Coverage: HTTP server/client spans and Nest handlers (the `auto-instrumentations-node`
+  set). Prisma queries are **not** spanned — the Rust query engine bypasses
+  `pg`; instrumenting it means manual spans around repository calls.
+* Dashboards and datasources use fixed uids (`prometheus`, `loki`, `tempo`);
+  panels reference the uid directly, because Grafana file provisioning does not
+  substitute `${DS_*}` placeholders.
+* Prometheus, Loki and Tempo run as the uid their image owns (65534 / 10001).
+  With `cap_drop: ALL` there is no `CAP_DAC_OVERRIDE`, so `user: "0:0"` cannot
+  write their volumes and the containers crash-loop at startup.
 
 One-off steps when adopting this setup (in addition to the storage keys
 below): on each Docker host, write the shared scrape token to a root-only
@@ -119,6 +143,9 @@ openssl rand -hex 32 > /etc/pode-deixar/metrics_token
 chmod 600 /etc/pode-deixar/metrics_token
 # METRICS_TOKEN in .env.dev / .env.staging / .env.production must hold the
 # same value; GF_SECURITY_ADMIN_PASSWORD likewise (strong, per environment).
+# The real .env.staging / .env.production also need the tracing trio from
+# .env.example: OTEL_ENABLED, OTEL_EXPORTER_OTLP_ENDPOINT (http://tempo:4318)
+# and OTEL_TRACES_SAMPLER_ARG.
 ```
 
 ## Rules

@@ -151,12 +151,12 @@ services:
 
   # --- Prometheus ---
   # Internal-only metrics; Prometheus and Grafana UIs bind host loopback
-  # (reached via SSH tunnel), with no Caddy route. Runs as root because the
-  # official scratch image cannot chown named volumes; contained by cap_drop
-  # ALL + no-new-privileges + loopback-only ports.
+  # (reached via SSH tunnel), with no Caddy route. Runs as the image user
+  # (nobody) because cap_drop ALL removes CAP_DAC_OVERRIDE, so uid 0 cannot
+  # write the /prometheus volume the image owns as 65534.
   prometheus:
     image: prom/prometheus:v3
-    user: "0:0"
+    user: "65534:65534"
     cap_drop:
       - ALL
     security_opt:
@@ -211,10 +211,12 @@ services:
 
   # --- Loki ---
   # Log aggregation (JSON stdout from services via Promtail). Internal-only,
-  # no published ports; queried by Grafana over the compose network.
+  # no published ports; queried by Grafana over the compose network. Runs as
+  # the image user: cap_drop ALL takes away the override that would let uid 0
+  # write the /loki volume owned by 10001.
   loki:
     image: grafana/loki:3
-    user: "0:0"
+    user: "10001:10001"
     cap_drop:
       - ALL
     security_opt:
@@ -241,6 +243,24 @@ services:
       - promtail_positions:/positions
     depends_on:
       - loki
+
+  # --- Tempo ---
+  # Distributed traces via OTLP/HTTP straight from the SDK (no collector).
+  # Internal-only: queried by Grafana, fed by services over the compose
+  # network. Retention 15 days (block_retention in tempo.yml). Runs as the
+  # image user: cap_drop ALL takes away the override that would let uid 0
+  # write the /var/tempo volume owned by 10001.
+  tempo:
+    image: grafana/tempo:2.10.8
+    user: "10001:10001"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/tempo/tempo.yml
+    volumes:
+      - ./observability/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/var/tempo
 
   # --- Node Exporter ---
   # Host CPU/RAM/disk for the DiskFull rule; read-only host mounts, no ports.
@@ -330,3 +350,4 @@ volumes:
   grafana_data:
   loki_data:
   promtail_positions:
+  tempo_data:

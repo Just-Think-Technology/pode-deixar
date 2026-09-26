@@ -1,3 +1,4 @@
+import "./tracing";
 import { AppModule } from "./app.module";
 import { bootstrapService } from "@pode-deixar/logger";
 

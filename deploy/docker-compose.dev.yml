@@ -70,6 +70,7 @@ services:
       - ../backend/shared/security:/app/shared/security
       - ../backend/shared/validation:/app/shared/validation
       - ../backend/shared/metrics:/app/shared/metrics
+      - ../backend/shared/tracing:/app/shared/tracing
       - ../backend/shared/prisma:/app/shared/prisma
       - ../backend/prisma:/app/prisma
     depends_on:
@@ -104,6 +105,7 @@ services:
       - ../backend/shared/security:/app/shared/security
       - ../backend/shared/validation:/app/shared/validation
       - ../backend/shared/metrics:/app/shared/metrics
+      - ../backend/shared/tracing:/app/shared/tracing
       - ../backend/shared/prisma:/app/shared/prisma
       - ../backend/shared/storage:/app/shared/storage
       - ../backend/prisma:/app/prisma
@@ -138,6 +140,7 @@ services:
       - ../backend/shared/security:/app/shared/security
       - ../backend/shared/validation:/app/shared/validation
       - ../backend/shared/metrics:/app/shared/metrics
+      - ../backend/shared/tracing:/app/shared/tracing
       - ../backend/shared/prisma:/app/shared/prisma
       - ../backend/shared/storage:/app/shared/storage
       - ../backend/prisma:/app/prisma
@@ -172,6 +175,7 @@ services:
       - ../backend/shared/security:/app/shared/security
       - ../backend/shared/validation:/app/shared/validation
       - ../backend/shared/metrics:/app/shared/metrics
+      - ../backend/shared/tracing:/app/shared/tracing
       - ../backend/shared/prisma:/app/shared/prisma
       - ../backend/prisma:/app/prisma
 
@@ -203,6 +207,7 @@ services:
       - ../backend/shared/security:/app/shared/security
       - ../backend/shared/validation:/app/shared/validation
       - ../backend/shared/metrics:/app/shared/metrics
+      - ../backend/shared/tracing:/app/shared/tracing
       - ../backend/shared/prisma:/app/shared/prisma
       - ../backend/prisma:/app/prisma
 

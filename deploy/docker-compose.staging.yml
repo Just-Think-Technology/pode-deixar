@@ -58,6 +58,11 @@ services:
       - ./backend/shared/metrics/src:/app/shared/metrics/src
       - ./backend/shared/metrics/tsconfig.json:/app/shared/metrics/tsconfig.json
 
+      # --- Tracing ---
+      - ./backend/shared/tracing/index.ts:/app/shared/tracing/index.ts
+      - ./backend/shared/tracing/src:/app/shared/tracing/src
+      - ./backend/shared/tracing/tsconfig.json:/app/shared/tracing/tsconfig.json
+
       # --- Prisma ---
       - ./backend/prisma:/app/prisma
 
@@ -105,6 +110,11 @@ services:
       - ./backend/shared/metrics/index.ts:/app/shared/metrics/index.ts
       - ./backend/shared/metrics/src:/app/shared/metrics/src
       - ./backend/shared/metrics/tsconfig.json:/app/shared/metrics/tsconfig.json
+
+      # --- Tracing ---
+      - ./backend/shared/tracing/index.ts:/app/shared/tracing/index.ts
+      - ./backend/shared/tracing/src:/app/shared/tracing/src
+      - ./backend/shared/tracing/tsconfig.json:/app/shared/tracing/tsconfig.json
 
       # --- Prisma ---
       - ./backend/prisma:/app/prisma
@@ -155,6 +165,11 @@ services:
       - ./backend/shared/metrics/index.ts:/app/shared/metrics/index.ts
       - ./backend/shared/metrics/src:/app/shared/metrics/src
       - ./backend/shared/metrics/tsconfig.json:/app/shared/metrics/tsconfig.json
+
+      # --- Tracing ---
+      - ./backend/shared/tracing/index.ts:/app/shared/tracing/index.ts
+      - ./backend/shared/tracing/src:/app/shared/tracing/src
+      - ./backend/shared/tracing/tsconfig.json:/app/shared/tracing/tsconfig.json
 
       # --- Prisma ---
       - ./backend/prisma:/app/prisma
@@ -207,6 +222,11 @@ services:
       - ./backend/shared/metrics/src:/app/shared/metrics/src
       - ./backend/shared/metrics/tsconfig.json:/app/shared/metrics/tsconfig.json
 
+      # --- Tracing ---
+      - ./backend/shared/tracing/index.ts:/app/shared/tracing/index.ts
+      - ./backend/shared/tracing/src:/app/shared/tracing/src
+      - ./backend/shared/tracing/tsconfig.json:/app/shared/tracing/tsconfig.json
+
       # --- Prisma ---
       - ./backend/prisma:/app/prisma
 
@@ -254,6 +274,11 @@ services:
       - ./backend/shared/metrics/index.ts:/app/shared/metrics/index.ts
       - ./backend/shared/metrics/src:/app/shared/metrics/src
       - ./backend/shared/metrics/tsconfig.json:/app/shared/metrics/tsconfig.json
+
+      # --- Tracing ---
+      - ./backend/shared/tracing/index.ts:/app/shared/tracing/index.ts
+      - ./backend/shared/tracing/src:/app/shared/tracing/src
+      - ./backend/shared/tracing/tsconfig.json:/app/shared/tracing/tsconfig.json
 
       # --- Prisma ---
       - ./backend/prisma:/app/prisma

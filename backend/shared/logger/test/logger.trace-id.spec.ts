@@ -2,6 +2,13 @@ import fs = require('fs');
 import os = require('os');
 import path = require('path');
 import { context, trace } from '@opentelemetry/api';
+import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
+
+// Mirrors what NodeSDK.start() does in production: without an enabled
+// context manager the API defaults to Noop and `with` cannot propagate.
+context.setGlobalContextManager(
+  new AsyncLocalStorageContextManager().enable(),
+);
 import { createLogger } from '../index';
 
 // Every JSON log line inside an active span must carry traceId/spanId so
