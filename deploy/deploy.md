@@ -53,9 +53,13 @@ exists.
   containers `postgres:5432`), local SeaweedFS S3 (`seaweedfs`), Redis, Mailpit,
   Caddy, and daily local database backups.
 * Development configuration comes from `.env.dev` (versioned: localhost-only
-  and disposable values); `DATABASE_URL` is configured to use the local
-  Postgres instance.
+  and disposable values); each service `DATABASE_URL` uses its
+  least-privilege role (dev passwords default in compose), while
+  `DIRECT_DATABASE_URL` stays privileged for migrations.
 * `auth` runs `prisma migrate deploy` on startup against the local database.
+* Fresh volumes seed the roles automatically (`init-roles.sh`); existing
+  volumes need one manual `backend/scripts/apply-db-roles.sh` run against
+  the local Postgres (or `docker compose down -v` for a clean slate).
 * Mailpit (`:8025`) is local-only. `dist` directories for the `shared` packages
   are generated inside the container (`prestart:dev` + `watch:*` scripts for
   each service). Never mount the host's `dist` directory, as the volume would
@@ -70,6 +74,17 @@ exists.
 * `auth` runs `prisma migrate deploy` on startup against the Neon database for
   each environment; never run destructive operations manually against staging
   or production.
+* One-off step when adopting this setup: seed the least-privilege service
+  roles on each Neon database BEFORE starting the stack — from a machine with
+  the owner URL, run `backend/scripts/apply-db-roles.sh` with `DATABASE_URL`
+  set to the privileged owner URL, `DB_MIGRATOR` to the Neon owner role, and
+  the five `DB_ROLE_*_PASSWORD` secrets (same values embedded in the
+  `DB_*_URL` entries below). Re-run after any migration that adds tables.
+* One-off step when adopting this setup: add per-service `DB_*_URL` entries
+  (role credentials + `?sslmode=require`) alongside the matching
+  `DB_ROLE_*_PASSWORD` values to the real `.env.staging` /
+  `.env.production` files (secrets in GitHub Environments, never in git).
+  `DIRECT_DATABASE_URL` stays privileged (migrations + backup only).
 * One-off step when adopting this setup: add `STORAGE_ACCESS_KEY` /
   `STORAGE_SECRET_KEY` (fallback `MINIO_ACCESS_KEY` /
   `MINIO_SECRET_KEY`) to the real `.env.staging` / `.env.production` files.

@@ -192,7 +192,7 @@ new service): [.agents/rules/task-checklists.md](.agents/rules/task-checklists.m
 * [Ownership and data access](.agents/decisions/ownership-access.md) — ownership validation, 403 semantics, proposal visibility, directed orders
 * [Order photos](.agents/decisions/order-photos.md) — SeaweedFS S3, webp via sharp, limits, dedicated upload endpoint
 * [Payments](.agents/decisions/payments.md) — PIX/credit-card status, tokenization path, webhook idempotency, structured logging
-* [Database](.agents/decisions/database.md) — least-privilege role
+* [Database](.agents/decisions/database.md) — per-service least-privilege roles (SELECT everywhere, writes allow-listed, `db-roles` CI job)
 * [API versioning](.agents/decisions/api-versioning.md) — URL `v1` via `/api/v1/*`, legacy `/api/*` with `Deprecation`/`Sunset` until `2026-12-31`, `v2` on breaking changes
 
 ## Deploy
