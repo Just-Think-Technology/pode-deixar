@@ -45,6 +45,7 @@ jobs:
               - 'backend/package.json'
               - 'backend/pnpm-workspace.yaml'
               - 'backend/tsconfig*.json'
+              - 'backend/Dockerfile*'
               - 'backend/prisma/schema.prisma'
               - 'backend/shared/**'
             auth:
