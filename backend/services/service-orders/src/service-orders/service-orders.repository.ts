@@ -1,8 +1,12 @@
 // Service order repository — data access for orders and proposals
 
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { PrismaService } from "@pode-deixar/prisma";
-import { NotificationsService as SharedNotificationsService } from "@pode-deixar/notifications";
+import {
+  INotificationPort,
+  NOTIFICATION_PORT,
+} from "@pode-deixar/notifications";
+import { NotificationsService } from "@pode-deixar/notifications";
 
 export interface CreateServiceOrderData {
   clientId: string;
@@ -37,10 +41,17 @@ export interface CreateHiredOrderData {
 
 @Injectable()
 export class ServiceOrdersRepository {
-  private readonly shared: SharedNotificationsService;
+  private readonly notificationsPort: INotificationPort;
 
-  constructor(private readonly prisma: PrismaService) {
-    this.shared = new SharedNotificationsService(this.prisma);
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(NOTIFICATION_PORT)
+    notificationsPort?: INotificationPort,
+  ) {
+    // Explicit UsersNotificationsAdapter via INotificationPort — keeps DB seam explicit
+    this.notificationsPort =
+      notificationsPort ?? new NotificationsService(this.prisma);
   }
 
   findProviderUserById(providerId: string) {
@@ -199,7 +210,7 @@ export class ServiceOrdersRepository {
   }
 
   /**
-   * Checks dedup via shared notifications port — single home for dedup window.
+   * Checks dedup via explicit UsersNotificationsAdapter — single home for dedup window.
    */
   async existsRecent(opts: {
     userId: string;
@@ -208,11 +219,23 @@ export class ServiceOrdersRepository {
     contractId?: string | null;
     windowMs?: number;
   }): Promise<boolean> {
-    return this.shared.existsRecent(opts);
+    const port = this.notificationsPort as unknown as {
+      existsRecent?: (o: {
+        userId: string;
+        type: string;
+        title: string;
+        contractId?: string | null;
+        windowMs?: number;
+      }) => Promise<boolean>;
+    };
+    if (port.existsRecent) {
+      return port.existsRecent(opts);
+    }
+    return false;
   }
 
   /**
-   * Creates deduped notification via shared port — handles existsRecent + P2002 + rate-limit.
+   * Creates deduped notification via explicit UsersNotificationsAdapter — handles existsRecent + P2002 + rate-limit.
    * Adapter for service layer to keep single home per notification logic.
    */
   async notify(dto: {
@@ -222,7 +245,7 @@ export class ServiceOrdersRepository {
     message: string;
     contractId?: string | null;
   }) {
-    return this.shared.notify(
+    return this.notificationsPort.notify(
       dto.userId,
       dto.type,
       dto.title,
