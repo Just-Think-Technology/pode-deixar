@@ -45,6 +45,7 @@ jobs:
               - 'backend/package.json'
               - 'backend/pnpm-workspace.yaml'
               - 'backend/tsconfig*.json'
+              - 'backend/Dockerfile*'
               - 'backend/prisma/schema.prisma'
               - 'backend/shared/**'
             auth:
@@ -473,6 +474,32 @@ jobs:
         run: |
           cosign sign --yes \
             "${{ env.IMAGE_REF }}@${{ steps.docker_build.outputs.digest }}"
+
+  # PR-only guard: the image job pushes only on develop, so Dockerfile
+  # breakage (e.g. a new shared package missing COPY/build) surfaced only
+  # post-merge. This builds (no push) the affected service stages on PRs.
+  docker-build-check:
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build service image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          target: ${{ matrix.service }}-build
+          push: false
 
   codeql:
     needs: changes
