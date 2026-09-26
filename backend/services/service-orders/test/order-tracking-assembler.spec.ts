@@ -154,4 +154,37 @@ describe("OrderTrackingAssembler", () => {
     const result2 = await assembler.assemble(inProgress, "provider-1", "PROVIDER");
     expect(result2.evidence).toBeNull();
   });
+
+  it("exposes authoritative DB timeline events", async () => {
+    mockPricing.buildPricing.mockReturnValue({ grossAmount: 180, feeAmount: 18, netAmount: 162 });
+    mockRepository.findUserById.mockResolvedValue({ id: "client-1", completeName: "Ana Costa" });
+
+    const order = makeOrder({
+      timelineEvents: [
+        {
+          eventKey: "SERVICE_STARTED",
+          createdAt: new Date("2026-09-20T10:05:00.000Z"),
+          actorId: "provider-1",
+        },
+      ],
+    });
+    const result = await assembler.assemble(order, "provider-1", "PROVIDER");
+
+    expect(result.timeline).toEqual([
+      {
+        key: "SERVICE_STARTED",
+        occurredAt: "2026-09-20T10:05:00.000Z",
+        actorId: "provider-1",
+      },
+    ]);
+  });
+
+  it("returns empty timeline when order has no DB events", async () => {
+    mockPricing.buildPricing.mockReturnValue({ grossAmount: 180, feeAmount: 18, netAmount: 162 });
+    mockRepository.findUserById.mockResolvedValue({ id: "client-1", completeName: "Ana Costa" });
+
+    const result = await assembler.assemble(makeOrder(), "provider-1", "PROVIDER");
+
+    expect(result.timeline).toEqual([]);
+  });
 });

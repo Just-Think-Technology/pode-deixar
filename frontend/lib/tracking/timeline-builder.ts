@@ -24,10 +24,23 @@ function isDirectHire(tracking: ContractTracking): boolean {
   return tracking.orderStatus !== "OPEN" && tracking.proposal == null;
 }
 
+function backendOccurredAt(
+  tracking: ContractTracking,
+  key: TimelineEventKey,
+): string | null {
+  const entry = tracking.timeline?.find((item) => item.key === key);
+  return entry?.occurredAt ?? null;
+}
+
 function eventOccurred(
   tracking: ContractTracking,
   key: TimelineEventKey,
 ): boolean {
+  // A backend timeline entry marks the event done even when the
+  // derived flags disagree (authoritative write-time wins).
+  if (backendOccurredAt(tracking, key) != null) {
+    return true;
+  }
   switch (key) {
     case "REQUEST_SENT":
       return tracking.createdAt != null;
@@ -54,6 +67,13 @@ function eventOccurredAt(
   tracking: ContractTracking,
   key: TimelineEventKey,
 ): string | null {
+  // Prefer the authoritative backend timestamp when the DB timeline
+  // recorded this event; fall back to deriving it from status flags
+  // for older orders and mocks without a timeline.
+  const authoritative = backendOccurredAt(tracking, key);
+  if (authoritative != null) {
+    return authoritative;
+  }
   switch (key) {
     case "REQUEST_SENT":
       return tracking.createdAt;

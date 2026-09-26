@@ -127,6 +127,51 @@ describe("lib/tracking/timeline-builder", () => {
       expect(events.some((event) => event.state === "cancelled")).toBe(true);
       expect(events.some((event) => event.state === "current")).toBe(false);
     });
+
+    it("prefere o timestamp autoritativo do backend quando presente", () => {
+      const events = buildTimelineEvents(
+        buildTracking({
+          startedAt: "2026-09-20T14:05:00",
+          timeline: [
+            {
+              key: "SERVICE_STARTED",
+              occurredAt: "2026-09-20T14:07:30",
+              actorId: "provider-1",
+            },
+          ],
+        }),
+      );
+      const started = events.find((event) => event.key === "SERVICE_STARTED");
+      expect(started?.state).toBe("done");
+      expect(started?.occurredAt).toBe("2026-09-20T14:07:30");
+    });
+
+    it("marca concluído via timeline do backend mesmo sem flag derivada", () => {
+      const events = buildTimelineEvents(
+        buildTracking({
+          startedAt: null,
+          timeline: [
+            {
+              key: "SERVICE_STARTED",
+              occurredAt: "2026-09-20T14:07:30",
+              actorId: "provider-1",
+            },
+          ],
+        }),
+      );
+      const started = events.find((event) => event.key === "SERVICE_STARTED");
+      expect(started?.state).toBe("done");
+      expect(started?.occurredAt).toBe("2026-09-20T14:07:30");
+    });
+
+    it("deriva da flag quando a timeline do backend está ausente", () => {
+      const events = buildTimelineEvents(
+        buildTracking({ startedAt: "2026-09-20T14:05:00" }),
+      );
+      const started = events.find((event) => event.key === "SERVICE_STARTED");
+      expect(started?.state).toBe("done");
+      expect(started?.occurredAt).toBe("2026-09-20T14:05:00");
+    });
   });
 
   describe("getAvailableActions", () => {

@@ -324,8 +324,10 @@ export class ServiceOrdersService {
         "CANCELLED",
         userId,
       );
-    } catch (_error) {
-      void _error;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to record CANCELLED timeline event for order ${orderId}: ${error}`,
+      );
     }
 
     this.loggerService.logServiceOrderCancelled(userId, orderId, ip);
@@ -400,8 +402,10 @@ export class ServiceOrdersService {
         "IN_PROGRESS",
         providerId,
       );
-    } catch (_error) {
-      void _error;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to record SERVICE_STARTED timeline event for order ${orderId}: ${error}`,
+      );
     }
 
     this.loggerService.logInfo(
@@ -518,8 +522,10 @@ export class ServiceOrdersService {
         null,
         providerId,
       );
-    } catch (_error) {
-      void _error;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to record completion timeline events for order ${orderId}: ${error}`,
+      );
     }
 
     this.loggerService.logServiceOrderCompleted(providerId, orderId, ip);
