@@ -161,6 +161,13 @@ function buildStreams(
     streams.push({ level: level as pino.Level, stream: prettyStdout });
   }
 
+  if (isProd && !isTest) {
+    // Machine-readable stdout for log aggregation (Loki via Promtail):
+    // raw pino JSON lines with service/level/event, one object per line.
+    // Human-readable pretty output stays in the local log files only.
+    streams.push({ level: level as pino.Level, stream: process.stdout });
+  }
+
   return streams;
 }
 

@@ -293,6 +293,35 @@ services:
     depends_on:
       - prometheus
 
+  # --- Loki ---
+  loki:
+    image: grafana/loki:3
+    user: "0:0"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./observability/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+
+  # --- Promtail ---
+  promtail:
+    image: grafana/promtail:3
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./observability/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail_positions:/positions
+    depends_on:
+      - loki
+
   # --- Node Exporter ---
   node-exporter:
     image: prom/node-exporter:v1
@@ -384,3 +413,5 @@ volumes:
   redis_data:
   prometheus_data:
   grafana_data:
+  loki_data:
+  promtail_positions:
