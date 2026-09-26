@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import {
   finishTrackedService,
   getContractTracking,
@@ -13,10 +13,9 @@ import {
   submitTrackedReview,
 } from "@/api/tracking";
 import {
-  getAccessToken,
   getAuthSession,
-  refreshAuthSession,
 } from "@/lib/auth/session.server";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import type {
   ContractTracking,
   SubmitReviewInput,
@@ -32,28 +31,6 @@ import {
 } from "@/mock/tracking";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
-
-async function withTokenRefresh<T>(
-  fn: (token: string) => Promise<T>,
-): Promise<T> {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-
-  try {
-    return await fn(token);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      const refreshed = await refreshAuthSession();
-      if (!refreshed?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
-      }
-      return await fn(refreshed.access_token);
-    }
-    throw err;
-  }
-}
 
 function revalidateTracking(orderId: string): void {
   revalidatePath(`/client/orders/${orderId}/tracking`);
@@ -85,7 +62,7 @@ export async function getContractTrackingAction(
   }
 
   try {
-    return await withTokenRefresh(async (token) => {
+    return await withServerTokenRefresh(async (token) => {
       const tracking = await getContractTracking(token, orderId, role);
       return resolveEvidencePhotoUrls(token, tracking);
     });
@@ -139,7 +116,7 @@ export async function startServiceAction(
     return tracking;
   }
 
-  const tracking = await withTokenRefresh((token) =>
+  const tracking = await withServerTokenRefresh((token) =>
     startTrackedService(token, orderId),
   );
   revalidateTracking(orderId);
@@ -166,7 +143,7 @@ export async function finishServiceAction(
     return tracking;
   }
 
-  const tracking = await withTokenRefresh((token) =>
+  const tracking = await withServerTokenRefresh((token) =>
     finishTrackedService(token, orderId, {
       photos,
       observations: normalized,
@@ -199,7 +176,7 @@ export async function submitReviewAction(
     return review;
   }
 
-  const review = await withTokenRefresh((token) =>
+  const review = await withServerTokenRefresh((token) =>
     submitTrackedReview(token, orderId, payload),
   );
   revalidateTracking(orderId);

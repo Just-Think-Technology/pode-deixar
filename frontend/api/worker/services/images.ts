@@ -1,7 +1,13 @@
 // Worker service images API — image upload fetcher
 
-import { apiFetchAuth, getApiBaseUrl } from "@/api/client";
+import { apiFetchAuth, getApiBaseUrl } from "@/api/client/http";
 import type { ServiceImage } from "@/lib/auth/types";
+
+export const SERVICE_IMAGES_ROUTES = {
+  upload: (serviceId: string) => `/providers/me/services/${serviceId}/images`,
+  byId: (serviceId: string, imageId: string) =>
+    `/providers/me/services/${serviceId}/images/${imageId}`,
+} as const;
 
 export async function uploadServiceImage(
   accessToken: string,
@@ -11,7 +17,7 @@ export async function uploadServiceImage(
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${getApiBaseUrl()}/providers/me/services/${serviceId}/images`, {
+  const res = await fetch(`${getApiBaseUrl()}${SERVICE_IMAGES_ROUTES.upload(serviceId)}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -37,7 +43,7 @@ export async function listServiceImages(
   serviceId: string,
 ): Promise<ServiceImage[]> {
   return apiFetchAuth<ServiceImage[]>(
-    `/providers/me/services/${serviceId}/images`,
+    SERVICE_IMAGES_ROUTES.upload(serviceId),
     accessToken,
   );
 }
@@ -48,7 +54,7 @@ export async function deleteServiceImage(
   imageId: string,
 ): Promise<void> {
   await apiFetchAuth<void>(
-    `/providers/me/services/${serviceId}/images/${imageId}`,
+    SERVICE_IMAGES_ROUTES.byId(serviceId, imageId),
     accessToken,
     { method: "DELETE" },
   );

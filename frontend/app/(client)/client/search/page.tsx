@@ -1,6 +1,6 @@
 // purpose: Client search route — renders search page with categories
 import { getCategories } from "@/api/client/categories";
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import ClientSearchPage from "@/components/pages/client-search-page";
 import { mapCategoriesToPopular } from "@/lib/client/search/category-display";
 import type { PopularCategory } from "@/lib/client/search/types";

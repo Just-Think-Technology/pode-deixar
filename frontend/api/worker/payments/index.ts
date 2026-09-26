@@ -6,6 +6,11 @@ import {
 } from "@/mock/worker/payments";
 import type { WorkerPaymentStatusResponse } from "@/lib/worker/payments/types";
 
+export const WORKER_PAYMENTS_ROUTES = {
+  byProposal: (proposalId: string) => `/payments/by-proposal/${proposalId}`,
+  list: "/payments/provider/me",
+} as const;
+
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 /**

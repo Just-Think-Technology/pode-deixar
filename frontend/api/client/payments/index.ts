@@ -1,6 +1,6 @@
 // Client payments API — charge, status, and mock webhook confirmation
 
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth } from "@/api/client/http";
 import type {
   ChargeResponse,
   CreatePaymentPayload,

@@ -1,4 +1,4 @@
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth } from "@/api/client/http";
 import type {
   CompleteOrderInput,
   CompleteOrderResult,

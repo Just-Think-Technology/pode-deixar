@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import {
   completeWorkerOrder,
   deleteWorkerOrderPhoto,
@@ -11,7 +11,7 @@ import {
   getWorkerOrderDetail,
   uploadWorkerOrderPhoto,
 } from "@/api/worker/orders";
-import { getAccessToken, refreshAuthSession } from "@/lib/auth/session.server";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import { hasAllowedMagicBytes } from "@/lib/auth/image-validation";
 import type {
   CompleteOrderResult,
@@ -34,28 +34,6 @@ import {
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
-async function withTokenRefresh<T>(
-  fn: (token: string) => Promise<T>,
-): Promise<T> {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-
-  try {
-    return await fn(token);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      const refreshed = await refreshAuthSession();
-      if (!refreshed?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
-      }
-      return await fn(refreshed.access_token);
-    }
-    throw err;
-  }
-}
-
 export async function getCompletionOrderAction(
   orderId: string,
 ): Promise<CompletionOrder | null> {
@@ -63,7 +41,7 @@ export async function getCompletionOrderAction(
     return getMockCompletionOrder(orderId);
   }
 
-  return withTokenRefresh((token) => getWorkerOrderDetail(token, orderId));
+  return withServerTokenRefresh((token) => getWorkerOrderDetail(token, orderId));
 }
 
 export async function getCompletionHistoryAction(
@@ -74,7 +52,7 @@ export async function getCompletionHistoryAction(
   }
 
   try {
-    return await withTokenRefresh((token) =>
+    return await withServerTokenRefresh((token) =>
       getWorkerOrderCompletion(token, orderId),
     );
   } catch (err) {
@@ -92,7 +70,7 @@ export async function resolveOrderPhotoUrlAction(
   // No shared server cache on purpose: presigned URLs grant
   // bearer-independent access, so they must not leak across users.
   // Callers cache per browser session instead.
-  const result = await withTokenRefresh((token) =>
+  const result = await withServerTokenRefresh((token) =>
     getOrderPhotoViewUrl(token, photoId),
   );
   if (!result?.url) {
@@ -131,7 +109,7 @@ export async function uploadCompletionPhotoAction(
 
   const uploadData = new FormData();
   uploadData.append("file", file);
-  return withTokenRefresh((token) =>
+  return withServerTokenRefresh((token) =>
     uploadWorkerOrderPhoto(token, orderId, uploadData),
   );
 }
@@ -145,7 +123,7 @@ export async function removeCompletionPhotoAction(
     return;
   }
 
-  return withTokenRefresh((token) =>
+  return withServerTokenRefresh((token) =>
     deleteWorkerOrderPhoto(token, orderId, photoId),
   );
 }
@@ -169,7 +147,7 @@ export async function completeOrderAction(
     return history;
   }
 
-  const history = await withTokenRefresh((token) =>
+  const history = await withServerTokenRefresh((token) =>
     completeWorkerOrder(token, orderId, { observations: observations.trim() }),
   );
   revalidatePath("/worker/agenda");

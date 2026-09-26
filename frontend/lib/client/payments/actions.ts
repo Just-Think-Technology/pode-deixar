@@ -4,17 +4,14 @@
 
 import { revalidatePath } from "next/cache";
 
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import {
   chargePayment,
   confirmPaymentMock,
   createPayment,
   getPaymentStatus,
 } from "@/api/client/payments";
-import {
-  getAccessToken,
-  refreshAuthSession,
-} from "@/lib/auth/session.server";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import type {
   ChargeResponse,
   CreatePaymentPayload,
@@ -31,28 +28,6 @@ import {
 } from "@/mock/client/payments";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
-
-async function withTokenRefresh<T>(
-  fn: (token: string) => Promise<T>,
-): Promise<T> {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-
-  try {
-    return await fn(token);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      const refreshed = await refreshAuthSession();
-      if (!refreshed?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
-      }
-      return await fn(refreshed.access_token);
-    }
-    throw err;
-  }
-}
 
 function isInfraError(err: unknown): boolean {
   return (
@@ -82,7 +57,7 @@ export async function createPaymentAction(
   }
 
   try {
-    return await withTokenRefresh((token) => createPayment(token, payload));
+    return await withServerTokenRefresh((token) => createPayment(token, payload));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
@@ -100,7 +75,7 @@ export async function chargePaymentAction(
   }
 
   try {
-    return await withTokenRefresh((token) => chargePayment(token, paymentId));
+    return await withServerTokenRefresh((token) => chargePayment(token, paymentId));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (isInfraError(err)) {
@@ -118,7 +93,7 @@ export async function getPaymentStatusAction(
   }
 
   try {
-    return await withTokenRefresh((token) =>
+    return await withServerTokenRefresh((token) =>
       getPaymentStatus(token, paymentId),
     );
   } catch (err) {
@@ -162,7 +137,7 @@ export async function startCheckoutAction(
   }
 
   try {
-    const payment = await withTokenRefresh((token) =>
+    const payment = await withServerTokenRefresh((token) =>
       createPayment(token, {
         serviceOrderId,
         method,
@@ -170,7 +145,7 @@ export async function startCheckoutAction(
         ...(scheduledEndAt ? { scheduledEndAt } : {}),
       }),
     );
-    const charge = await withTokenRefresh((token) =>
+    const charge = await withServerTokenRefresh((token) =>
       chargePayment(token, payment.id),
     );
     return { payment, charge };

@@ -2,12 +2,9 @@
 
 "use server";
 
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
+import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import { getMyProposals } from "@/api/worker/proposals";
-import {
-  getAccessToken,
-  refreshAuthSession,
-} from "@/lib/auth/session.server";
 import type { WorkerProposal } from "@/lib/worker/proposal/types";
 import {
   getMockProposalById,
@@ -16,35 +13,13 @@ import {
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
-async function withTokenRefresh<T>(
-  fn: (token: string) => Promise<T>,
-): Promise<T> {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
-  }
-
-  try {
-    return await fn(token);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      const refreshed = await refreshAuthSession();
-      if (!refreshed?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
-      }
-      return await fn(refreshed.access_token);
-    }
-    throw err;
-  }
-}
-
 export async function getMyProposalsAction(): Promise<WorkerProposal[]> {
   if (USE_MOCK) {
     return getMockProposals();
   }
 
   try {
-    return await withTokenRefresh((token) => getMyProposals(token));
+    return await withServerTokenRefresh((token) => getMyProposals(token));
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (
@@ -72,7 +47,7 @@ export async function getMyProposalByIdAction(
   }
 
   try {
-    const proposals = await withTokenRefresh((token) => getMyProposals(token));
+    const proposals = await withServerTokenRefresh((token) => getMyProposals(token));
     return proposals.find((proposal) => proposal.id === proposalId) ?? null;
   } catch (err) {
     if (!USE_MOCK) throw err;

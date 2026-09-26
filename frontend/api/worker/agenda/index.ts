@@ -1,6 +1,6 @@
 // Worker agenda API — scheduled event fetchers
 
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth } from "@/api/client/http";
 import type {
   WorkerAgendaEvent,
   WorkerAgendaRange,

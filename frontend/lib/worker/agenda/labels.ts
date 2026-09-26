@@ -3,7 +3,7 @@
 import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-import { ApiError } from "@/api/client";
+import { ApiError } from "@/api/client/http";
 import type {
   WorkerAgendaAddress,
   WorkerAgendaEvent,

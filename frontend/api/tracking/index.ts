@@ -1,6 +1,6 @@
 // Tracking API — contract detail, status transitions and review fetchers
 
-import { apiFetchAuth } from "@/api/client";
+import { apiFetchAuth } from "@/api/client/http";
 import type {
   ContractTracking,
   SubmitReviewInput,
