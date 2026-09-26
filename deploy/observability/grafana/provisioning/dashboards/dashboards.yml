@@ -1,0 +1,13 @@
+# Grafana dashboard provisioning — RED dashboards from YAML/JSON files.
+
+apiVersion: 1
+
+providers:
+  - name: pode-deixar
+    folder: Pode Deixar
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

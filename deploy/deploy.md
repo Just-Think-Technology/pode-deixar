@@ -76,12 +76,42 @@ exists.
   SeaweedFS S3 reads `STORAGE_*`, and the deploy files no longer
   interpolate `MINIO_ROOT_*`.
 
+## Observability (fatia 1 — métricas)
+
+* `deploy/observability/` holds `prometheus.yml` (5 scrape jobs + self +
+  node-exporter), `rules.yml` (`ServiceDown`, `High5xxRate`, `HighP95Latency`,
+  `DiskFull`) and Grafana provisioning + RED dashboard. Config in git, secrets
+  never in git.
+* `/metrics` on every service is internal-only: no Caddy route, no published
+  port, plus a bearer guard (`MetricsGuard`, fail-closed). Prometheus scrapes
+  over the compose network with the token from a host file (see one-off step).
+* Prometheus/Grafana UIs bind host loopback only (`127.0.0.1:9090` /
+  `127.0.0.1:3000`, dev Grafana on `:3100` because the dev frontend owns
+  `:3000`) — reach them via SSH tunnel, e.g.
+  `ssh -L 3000:127.0.0.1:3000 <vps>`. Retention is 15 days (`--storage.tsdb.retention.time`).
+* Alert rules are dashboard-only by decision (firing state visible in the
+  Prometheus/Grafana UIs). Adding email later means adding Alertmanager with
+  an SMTP receiver — the rules need no change.
+
+One-off steps when adopting this setup (in addition to the storage keys
+below): on each Docker host, write the shared scrape token to a root-only
+host file and set the Grafana admin password in the real env file:
+
+```bash
+install -d -m 755 /etc/pode-deixar
+openssl rand -hex 32 > /etc/pode-deixar/metrics_token
+chmod 600 /etc/pode-deixar/metrics_token
+# METRICS_TOKEN in .env.dev / .env.staging / .env.production must hold the
+# same value; GF_SECURITY_ADMIN_PASSWORD likewise (strong, per environment).
+```
+
 ## Rules
 
 * One Compose file per environment (`staging` / `production`); staging
   includes the production file and only swaps the environment configuration.
-* No published ports except Caddy 80/443; no local Postgres, frontend, or
-  Mailpit in the deploy files.
+* No publicly published ports except Caddy 80/443; loopback-only ports
+  (`127.0.0.1`) are allowed for internal UIs (Prometheus, Grafana). No local
+  Postgres, frontend, or Mailpit in the deploy files.
 * One Redis instance per stack; `auth` runs `prisma migrate deploy` on startup.
 * Renaming a stack `name` orphans its volumes. Migrating SeaweedFS data requires a
   manual volume copy (`seaweedfs_data`) before dropping the old volumes.

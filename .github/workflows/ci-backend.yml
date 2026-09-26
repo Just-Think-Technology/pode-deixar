@@ -177,7 +177,7 @@ jobs:
       # createResponseLoggerInterceptor and app init fails. Prisma builds
       # first: logger imports security, which imports prisma, so relying on
       # any other order is fragile.
-      - run: pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/storage build
+      - run: pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/storage build && pnpm --filter @pode-deixar/metrics build
 
       - run: pnpm run --filter @pode-deixar/${{ matrix.service }} lint
 
@@ -245,7 +245,7 @@ jobs:
       # build as the quick job; e2e additionally imports @pode-deixar/storage
       # directly, so prisma/storage are included too). Prisma builds first:
       # logger imports security, which imports prisma.
-      - run: pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/storage build
+      - run: pnpm --filter @pode-deixar/prisma build && pnpm --filter @pode-deixar/logger build && pnpm --filter @pode-deixar/email build && pnpm --filter @pode-deixar/security build && pnpm --filter @pode-deixar/validation build && pnpm --filter @pode-deixar/storage build && pnpm --filter @pode-deixar/metrics build
 
       - name: Create E2E test database
         run: |
@@ -310,6 +310,7 @@ jobs:
           pnpm --filter @pode-deixar/email build
           pnpm --filter @pode-deixar/security build
           pnpm --filter @pode-deixar/validation build
+          pnpm --filter @pode-deixar/metrics build
 
       - run: pnpm run test:shared
 
