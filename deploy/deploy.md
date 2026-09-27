@@ -130,9 +130,13 @@ exists.
 * Sampling is `ParentBased(TraceIdRatio)`: `OTEL_TRACES_SAMPLER_ARG=1.0` in
   `.env.dev` (every local trace), `0.1` elsewhere. `OTEL_ENABLED=false` skips
   SDK startup entirely — a service never blocks on a missing collector.
-* Coverage: HTTP server/client spans and Nest handlers (the `auto-instrumentations-node`
-  set). Prisma queries are **not** spanned — the Rust query engine bypasses
-  `pg`; instrumenting it means manual spans around repository calls.
+* Coverage: HTTP server/client spans, Nest handlers (the
+  `auto-instrumentations-node` set) and **one span per Prisma operation**
+  (`findUnique User`, `queryRaw`, …). Prisma's Rust query engine bypasses `pg`,
+  so the spans come from a client extension built in `@pode-deixar/tracing` and
+  applied once in `@pode-deixar/prisma` (`PrismaService`). Spans carry the model
+  and the operation only — arguments and statements are never recorded, since
+  they can carry personal data.
 * Dashboards and datasources use fixed uids (`prometheus`, `loki`, `tempo`);
   panels reference the uid directly, because Grafana file provisioning does not
   substitute `${DS_*}` placeholders.
