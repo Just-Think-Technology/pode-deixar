@@ -3,6 +3,7 @@
 import {
   DEFAULT_OTLP_ENDPOINT,
   DEFAULT_SAMPLE_RATIO,
+  buildInstrumentations,
   buildResource,
   resolveOtlpEndpoint,
   resolveSampleRatio,
@@ -52,5 +53,18 @@ describe('tracing config', () => {
 
     process.env.OTEL_TRACES_SAMPLER_ARG = 'not-a-number';
     expect(resolveSampleRatio()).toBe(DEFAULT_SAMPLE_RATIO);
+  });
+
+  // Regression guard: re-enabling the pino instrumentation would duplicate
+  // traceId/spanId on every log line and pin the first log call's context to
+  // the logger, tagging unrelated later lines with a stale traceId. The pino
+  // mixin in @pode-deixar/logger is the only source of those fields.
+  it('excludes the pino instrumentation but keeps the HTTP one', () => {
+    const names = buildInstrumentations().map(
+      (instrumentation) => instrumentation.getConfig().name,
+    );
+
+    expect(names).not.toContain('@opentelemetry/instrumentation-pino');
+    expect(names).toContain('@opentelemetry/instrumentation-http');
   });
 });
