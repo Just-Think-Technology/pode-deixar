@@ -60,6 +60,12 @@ outside the task scope (see "Never do" 13 in AGENTS.md).
   The auth service keeps specialized versions (IP logging on denial,
   access-token type check, DB user lookup); users/service-orders/payments/
   reviews use the shared guards, strategy helpers and exception filter
+- **Prisma spans live only in `@pode-deixar/tracing`**
+  (`buildPrismaTracingExtension()`, one CLIENT span per operation), applied
+  once in `@pode-deixar/prisma` (`PrismaService` returns the extended client
+  from its constructor). Services never wrap repository calls in spans
+  themselves — the Rust query engine bypasses the instrumented `pg` driver, so
+  a client extension is the only seam that sees every query.
 - **Second-use rule:** code needed by a second service is extracted to
   `backend/shared/` by the task creating the second usage — no third copy
 

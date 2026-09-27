@@ -9,3 +9,8 @@ export {
   resolveOtlpEndpoint,
   resolveSampleRatio,
 } from './src/tracing';
+export {
+  buildPrismaTracingExtension,
+  type PrismaOperationRequest,
+  type PrismaQueryExtension,
+} from './src/prisma-tracing';
