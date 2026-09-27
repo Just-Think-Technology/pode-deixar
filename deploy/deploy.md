@@ -155,7 +155,12 @@ host file and set the Grafana admin password in the real env file:
 ```bash
 install -d -m 755 /etc/pode-deixar
 openssl rand -hex 32 > /etc/pode-deixar/metrics_token
-chmod 600 /etc/pode-deixar/metrics_token
+# Prometheus runs as uid/gid 65534 (cap_drop ALL takes away the override that
+# would let root write its TSDB volume), so the token must be readable by that
+# group — root-only 600 makes every scrape fail with "unable to read
+# authorization credentials".
+chown root:65534 /etc/pode-deixar/metrics_token
+chmod 640 /etc/pode-deixar/metrics_token
 # METRICS_TOKEN in .env.dev / .env.staging / .env.production must hold the
 # same value; GF_SECURITY_ADMIN_PASSWORD likewise (strong, per environment).
 # The real .env.staging / .env.production also need the tracing trio from

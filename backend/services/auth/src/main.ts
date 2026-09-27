@@ -15,13 +15,10 @@ async function bootstrap() {
     swaggerPath: 'api',
     enableSwaggerInProduction: false,
     onAppCreated: (app) => {
-      // API versioning is set in @pode-deixar/logger bootstrapService as
-      // app.setGlobalPrefix('api/v1', { exclude: ['health', 'health/ready', 'health/live'] });
-      // — health stays at /health for probes; see bootstrap.ts and Caddyfile.docker.
-      // Re-asserting here is idempotent and documents the versioning contract per service.
-      app.setGlobalPrefix('api/v1', {
-        exclude: ['health', 'health/ready', 'health/live'],
-      });
+      // API versioning (and the health/metrics exclusions) is owned by
+      // @pode-deixar/logger bootstrapService — see bootstrap.ts and
+      // Caddyfile.docker. Do not re-assert it here: a second setGlobalPrefix
+      // replaces the exclude list and silently moves /metrics under the prefix.
       // Global validation pipe (already handled in module, but keeping for compatibility)
       app.useGlobalPipes(
         new ValidationPipe({

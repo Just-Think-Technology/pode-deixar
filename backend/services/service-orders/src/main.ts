@@ -11,13 +11,6 @@ async function bootstrap() {
     defaultPort: 3003,
     swaggerTitle: "Pode Deixar - Services Service",
     swaggerDescription: "Service order and proposal API",
-    onAppCreated: (app) => {
-      // API versioning — also set centrally in @pode-deixar/logger bootstrapService;
-      // health excluded at /health (+ /ready, /live) for Caddy probes.
-      app.setGlobalPrefix("api/v1", {
-        exclude: ["health", "health/ready", "health/live"],
-      });
-    },
   });
 }
 
