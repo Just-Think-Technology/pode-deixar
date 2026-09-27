@@ -57,6 +57,23 @@ export function buildResource(serviceName: string) {
 let started = false;
 
 /**
+ * Auto-instrumentation set used by every service.
+ *
+ * The pino instrumentation stays out on purpose: the mixin in
+ * @pode-deixar/logger already writes traceId/spanId from the span active on
+ * each line, while the instrumentation would duplicate those fields and bind
+ * the context of the first log call to the logger instance, tagging later
+ * unrelated lines with a stale traceId.
+ *
+ * @returns Node auto-instrumentations, without the pino one
+ */
+export function buildInstrumentations(): ReturnType<typeof getNodeAutoInstrumentations> {
+  return getNodeAutoInstrumentations({
+    '@opentelemetry/instrumentation-pino': { enabled: false },
+  });
+}
+
+/**
  * Starts the OpenTelemetry SDK with HTTP/Express auto-instrumentation and
  * OTLP/HTTP export to the internal Tempo. Idempotent; skipped when
  * OTEL_ENABLED=false. Call once, as the first import of each service entry
@@ -75,16 +92,7 @@ export function initTracing(serviceName: string): void {
     traceExporter: new OTLPTraceExporter({
       url: `${resolveOtlpEndpoint()}/v1/traces`,
     }),
-    instrumentations: [
-      getNodeAutoInstrumentations({
-        // The pino mixin in @pode-deixar/logger already writes traceId/spanId
-        // from the span active on each line. The pino instrumentation would
-        // duplicate those fields and bind the context of the first log call
-        // to the logger instance, tagging later unrelated lines with a stale
-        // traceId.
-        '@opentelemetry/instrumentation-pino': { enabled: false },
-      }),
-    ],
+    instrumentations: [buildInstrumentations()],
     sampler: new ParentBasedSampler({
       root: new TraceIdRatioBasedSampler(resolveSampleRatio()),
     }),

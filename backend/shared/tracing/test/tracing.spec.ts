@@ -59,12 +59,16 @@ describe('tracing config', () => {
   // traceId/spanId on every log line and pin the first log call's context to
   // the logger, tagging unrelated later lines with a stale traceId. The pino
   // mixin in @pode-deixar/logger is the only source of those fields.
-  it('excludes the pino instrumentation but keeps the HTTP one', () => {
-    const names = buildInstrumentations().map(
-      (instrumentation) => instrumentation.getConfig().name,
+  it('excludes the pino instrumentation but keeps the HTTP and Nest ones', () => {
+    // The config object carries no instrumentation name, so the class name is
+    // the identifier; the presence assertions keep the check from passing on
+    // an empty list.
+    const classNames = buildInstrumentations().map(
+      (instrumentation) => instrumentation.constructor.name,
     );
 
-    expect(names).not.toContain('@opentelemetry/instrumentation-pino');
-    expect(names).toContain('@opentelemetry/instrumentation-http');
+    expect(classNames).not.toContain('PinoInstrumentation');
+    expect(classNames).toContain('HttpInstrumentation');
+    expect(classNames).toContain('NestInstrumentation');
   });
 });
