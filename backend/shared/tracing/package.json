@@ -24,6 +24,7 @@
     "@nestjs/core": "^11.0.0"
   },
   "devDependencies": {
+    "@opentelemetry/sdk-trace-node": "^2.11.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.19.11",
     "cross-env": "^10.1.0",
