@@ -4,6 +4,7 @@
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
+  "description": "Filtra por serviço e por rota (template da rota, ex.: /api/v1/services/:orderId). Em \"Rota = All\" o filtro vale para as rotas da aplicação (/api/*), deixando de fora /metrics e /health/ready: o scrape do Prometheus a cada 15s por serviço afogaria a lista. Para ver as de infra, selecione a rota no filtro. O Tempo roda sem TraceQL metrics, então as listas de valores vêm da API de tags (http.route é intrinsic de span).",
   "time": { "from": "now-1h", "to": "now" },
   "templating": {
     "list": [
@@ -12,10 +13,23 @@
         "label": "Serviço",
         "type": "query",
         "datasource": { "type": "tempo", "uid": "tempo" },
-        "definition": "label_values(resource.service.name)",
-        "query": { "query": "label_values(resource.service.name)", "refId": "ServiceVarQuery" },
+        "definition": "tag_values(resource.service.name)",
+        "query": { "type": 1, "label": "service.name", "refId": "ServiceVarQuery" },
         "multi": true,
         "includeAll": true,
+        "allValue": ".+",
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "route",
+        "label": "Rota",
+        "type": "query",
+        "datasource": { "type": "tempo", "uid": "tempo" },
+        "definition": "tag_values(span.http.route)",
+        "query": { "type": 1, "label": "http.route", "refId": "RouteVarQuery" },
+        "multi": true,
+        "includeAll": true,
+        "allValue": "/api/.*",
         "current": { "selected": true, "text": "All", "value": "$__all" }
       },
       {
@@ -31,14 +45,16 @@
     {
       "id": 1,
       "title": "Traces acima do corte",
-      "type": "traces",
+      "description": "Lista de traces que passam do corte de duração. A coluna Trace ID abre o trace no Explore (waterfall e spans). O painel nativo de traces do Grafana 11.6 não renderiza a resposta de busca do Tempo 2.10 (\"No data found in response\") com o mesmo datasource e consulta, então a lista é uma tabela.",
+      "type": "table",
       "datasource": { "type": "tempo", "uid": "tempo" },
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 16 },
       "targets": [
         {
           "refId": "A",
           "queryType": "traceql",
-          "query": "{ resource.service.name =~ \"$service\" && duration > ${minDuration} }",
+          "query": "{ resource.service.name =~ \"$service\" && span.http.route =~ \"$route\" && duration > ${minDuration} }",
+          "resultFormat": "table",
           "limit": 20
         }
       ]
