@@ -8,6 +8,7 @@ exports.bootstrapService = exports.BaseDomainLogger = exports.createResponseLogg
 exports.createLogger = createLogger;
 const pino_1 = __importDefault(require("pino"));
 const pino_pretty_1 = __importDefault(require("pino-pretty"));
+const api_1 = require("@opentelemetry/api");
 const fs = require("fs");
 const path = require("path");
 const DEFAULT_RETAIN_DAYS = 14;
@@ -124,7 +125,23 @@ function buildStreams(level, isProd, isTest, logsRoot, filePath) {
         });
         streams.push({ level: level, stream: prettyStdout });
     }
+    if (isProd && !isTest) {
+        // Machine-readable stdout for log aggregation (Loki via Promtail):
+        // raw pino JSON lines with service/level/event, one object per line.
+        // Human-readable pretty output stays in the local log files only.
+        streams.push({ level: level, stream: process.stdout });
+    }
     return streams;
+}
+// Reads the OpenTelemetry span active on this async context, if any.
+// Without an initialized SDK the context is empty and no fields are added,
+// so tracing stays fully optional per environment.
+function traceContextMixin() {
+    const spanContext = api_1.trace.getSpanContext(api_1.context.active());
+    if (!spanContext || !api_1.trace.isSpanContextValid(spanContext)) {
+        return {};
+    }
+    return { traceId: spanContext.traceId, spanId: spanContext.spanId };
 }
 function wrapWithEventSanitization(baseLogger) {
     const proxyLogger = Object.create(baseLogger);
@@ -155,6 +172,7 @@ function createLogger(serviceName, featureName, options = {}) {
         level,
         base: { service: serviceName },
         timestamp: pino_1.default.stdTimeFunctions.isoTime,
+        mixin: traceContextMixin,
         formatters: {
             level(label) {
                 return { level: label };

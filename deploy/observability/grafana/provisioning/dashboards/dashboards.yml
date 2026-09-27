@@ -1,0 +1,16 @@
+# Grafana dashboard provisioning — RED dashboards from YAML/JSON files.
+# Panels reference the datasource by its fixed uid (prometheus, loki, tempo,
+# set in provisioning/datasources); a ${DS_*} placeholder here would stay
+# literal and every panel would render without a datasource.
+
+apiVersion: 1
+
+providers:
+  - name: pode-deixar
+    folder: Pode Deixar
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

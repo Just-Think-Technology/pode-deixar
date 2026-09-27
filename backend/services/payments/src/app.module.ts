@@ -11,6 +11,7 @@ import { NotificationsModule } from "@pode-deixar/notifications";
 import { PaymentsModule } from "./payments/payments.module";
 import { GatewayModule } from "./gateway/gateway.module";
 import { HealthModule } from "@pode-deixar/prisma";
+import { MetricsModule } from "@pode-deixar/metrics";
 import { SharedModule } from "./shared/shared.module";
 import { CommonModule } from "./shared/common.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
@@ -61,6 +62,7 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
     PaymentsModule,
     GatewayModule,
     HealthModule,
+    MetricsModule,
     CommonModule,
     SharedModule,
   ],

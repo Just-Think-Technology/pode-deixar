@@ -2,6 +2,7 @@
 
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
+import { context, trace } from '@opentelemetry/api';
 import fs = require('fs');
 import path = require('path');
 
@@ -161,7 +162,25 @@ function buildStreams(
     streams.push({ level: level as pino.Level, stream: prettyStdout });
   }
 
+  if (isProd && !isTest) {
+    // Machine-readable stdout for log aggregation (Loki via Promtail):
+    // raw pino JSON lines with service/level/event, one object per line.
+    // Human-readable pretty output stays in the local log files only.
+    streams.push({ level: level as pino.Level, stream: process.stdout });
+  }
+
   return streams;
+}
+
+// Reads the OpenTelemetry span active on this async context, if any.
+// Without an initialized SDK the context is empty and no fields are added,
+// so tracing stays fully optional per environment.
+function traceContextMixin(): Record<string, unknown> {
+  const spanContext = trace.getSpanContext(context.active());
+  if (!spanContext || !trace.isSpanContextValid(spanContext)) {
+    return {};
+  }
+  return { traceId: spanContext.traceId, spanId: spanContext.spanId };
 }
 
 function wrapWithEventSanitization(baseLogger: PinoLogger) {
@@ -214,6 +233,7 @@ export function createLogger(serviceName: string, featureName?: string, options:
       level,
       base: { service: serviceName },
       timestamp: pino.stdTimeFunctions.isoTime,
+      mixin: traceContextMixin,
       formatters: {
         level(label) {
           return { level: label };

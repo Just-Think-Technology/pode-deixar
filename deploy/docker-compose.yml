@@ -237,6 +237,130 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- Prometheus ---
+  # Same internal-only posture as production (loopback UIs via SSH tunnel or
+  # plain localhost in local dev). Grafana lives on host port 3300 here: the
+  # dev frontend owns 3000 and the frontend e2e server owns 3100, which would
+  # otherwise make Playwright reuse Grafana as its dev server.
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    # The image owns /prometheus as nobody; cap_drop ALL removes
+    # CAP_DAC_OVERRIDE, so uid 0 could not write the TSDB there.
+    user: "65534:65534"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: America/Sao_Paulo
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/rules.yml:/etc/prometheus/rules.yml:ro
+      - /etc/pode-deixar/metrics_token:/etc/prometheus/metrics_token:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      - auth
+      - users
+      - service-orders
+      - payments
+      - reviews
+
+  # --- Grafana ---
+  grafana:
+    image: grafana/grafana:11.6.0
+    user: "0:0"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - ../.env.dev
+    environment:
+      TZ: America/Sao_Paulo
+      GF_SECURITY_ADMIN_USER: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3300:3000"
+    depends_on:
+      - prometheus
+
+  # --- Loki ---
+  loki:
+    image: grafana/loki:3.7.8
+    # cap_drop ALL removes CAP_DAC_OVERRIDE: root cannot write the /loki
+    # volume, which the image owns as 10001.
+    user: "10001:10001"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./observability/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+
+  # --- Promtail ---
+  promtail:
+    image: grafana/promtail:3.6.8
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./observability/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail_positions:/positions
+    depends_on:
+      - loki
+
+  # --- Tempo ---
+  tempo:
+    image: grafana/tempo:2.10.8
+    # cap_drop ALL removes CAP_DAC_OVERRIDE: root cannot write the /var/tempo
+    # volume, which the image owns as 10001.
+    user: "10001:10001"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/tempo/tempo.yml
+    volumes:
+      - ./observability/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/var/tempo
+
+  # --- Node Exporter ---
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    pid: host
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro,rslave
+
   # --- PostgreSQL Backup ---
   postgres-backup:
     image: postgres:16-alpine
@@ -308,3 +432,8 @@ volumes:
   postgres_data:
   backup_data:
   redis_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  promtail_positions:
+  tempo_data:
