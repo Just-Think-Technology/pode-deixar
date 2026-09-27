@@ -86,8 +86,8 @@ exists.
   port, plus a bearer guard (`MetricsGuard`, fail-closed). Prometheus scrapes
   over the compose network with the token from a host file (see one-off step).
 * Prometheus/Grafana UIs bind host loopback only (`127.0.0.1:9090` /
-  `127.0.0.1:3000`, dev Grafana on `:3100` because the dev frontend owns
-  `:3000`) — reach them via SSH tunnel, e.g.
+  `127.0.0.1:3000`, dev Grafana on `:3300` because the dev frontend owns
+  `:3000` and the frontend e2e server owns `:3100`) — reach them via SSH tunnel, e.g.
   `ssh -L 3000:127.0.0.1:3000 <vps>`. Retention is 15 days (`--storage.tsdb.retention.time`).
 * Alert rules are dashboard-only by decision (firing state visible in the
   Prometheus/Grafana UIs). Adding email later means adding Alertmanager with

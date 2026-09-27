@@ -239,8 +239,9 @@ services:
 
   # --- Prometheus ---
   # Same internal-only posture as production (loopback UIs via SSH tunnel or
-  # plain localhost in local dev). Grafana lives on host port 3100 here
-  # because the dev frontend already owns 3000.
+  # plain localhost in local dev). Grafana lives on host port 3300 here: the
+  # dev frontend owns 3000 and the frontend e2e server owns 3100, which would
+  # otherwise make Playwright reuse Grafana as its dev server.
   prometheus:
     image: prom/prometheus:v3.15.0
     # The image owns /prometheus as nobody; cap_drop ALL removes
@@ -292,7 +293,7 @@ services:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "127.0.0.1:3100:3000"
+      - "127.0.0.1:3300:3000"
     depends_on:
       - prometheus
 
