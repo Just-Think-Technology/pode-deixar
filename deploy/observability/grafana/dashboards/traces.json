@@ -45,7 +45,8 @@
     {
       "id": 1,
       "title": "Traces acima do corte",
-      "type": "traces",
+      "description": "Lista de traces que passam do corte de duração. A coluna Trace ID abre o trace no Explore (waterfall e spans). O painel nativo de traces do Grafana 11.6 não renderiza a resposta de busca do Tempo 2.10 (\"No data found in response\") com o mesmo datasource e consulta, então a lista é uma tabela.",
+      "type": "table",
       "datasource": { "type": "tempo", "uid": "tempo" },
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 16 },
       "targets": [
@@ -53,6 +54,7 @@
           "refId": "A",
           "queryType": "traceql",
           "query": "{ resource.service.name =~ \"$service\" && span.http.route =~ \"$route\" && duration > ${minDuration} }",
+          "resultFormat": "table",
           "limit": 20
         }
       ]
