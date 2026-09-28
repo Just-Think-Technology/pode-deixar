@@ -1,11 +1,17 @@
 // Worker reviews API — received reviews, replies, and reports fetchers
 
 import { apiFetchAuth } from "@/api/client";
-import { mapProviderReview } from "@/lib/client/reviews/mappers";
+import {
+  mapProviderReview,
+  mapReviewResponse,
+} from "@/lib/client/reviews/mappers";
+import type {
+  RawReviewsPage,
+  ReviewsPage,
+} from "@/lib/client/reviews/types";
 import type {
   MyReview,
   RawMyReview,
-  RawReviewResponse,
   ReplyToReviewPayload,
   ReportReviewPayload,
   ReportStatus,
@@ -18,20 +24,15 @@ import {
 } from "@/mock/worker/reviews";
 
 export const WORKER_REVIEWS_ROUTES = {
-  received: "/reviews/received",
+  received: (page: number, limit: number) =>
+    `/reviews/received?page=${page}&limit=${limit}`,
   response: (reviewId: string) => `/reviews/${reviewId}/response`,
   reports: (reviewId: string) => `/reviews/${reviewId}/reports`,
 } as const;
 
+export const RECEIVED_REVIEWS_PAGE_SIZE = 10;
+
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
-
-function mapReviewResponse(raw: RawReviewResponse): ReviewResponse | null {
-  if (!raw) {
-    return null;
-  }
-
-  return { message: raw.message, createdAt: raw.created_at };
-}
 
 function mapReportStatus(raw: RawMyReview): ReportStatus {
   return raw.report_status ?? "NONE";
@@ -45,18 +46,56 @@ export function mapMyReview(raw: RawMyReview): MyReview {
   };
 }
 
-export async function getMyReviews(accessToken: string): Promise<MyReview[]> {
+export type ReceivedReviewsQuery = {
+  page?: number;
+  limit?: number;
+};
+
+export async function getMyReviews(
+  accessToken: string,
+  query: ReceivedReviewsQuery = {},
+): Promise<ReviewsPage<MyReview>> {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? RECEIVED_REVIEWS_PAGE_SIZE;
+
   if (USE_MOCK) {
-    return mockGetMyReviews();
+    const all = mockGetMyReviews();
+    const start = (page - 1) * limit;
+    const slice = all.slice(start, start + limit);
+
+    return {
+      data: slice,
+      meta: {
+        total: all.length,
+        page,
+        limit,
+        hasMore: start + limit < all.length,
+      },
+    };
   }
 
-  const raw = await apiFetchAuth<RawMyReview[]>(
-    WORKER_REVIEWS_ROUTES.received,
+  const raw = await apiFetchAuth<RawReviewsPage<RawMyReview>>(
+    WORKER_REVIEWS_ROUTES.received(page, limit),
     accessToken,
     { method: "GET" },
   );
 
-  return raw.map(mapMyReview);
+  return {
+    data: raw.data.map(mapMyReview),
+    meta: {
+      total: raw.meta.total,
+      page: raw.meta.page,
+      limit: raw.meta.limit,
+      hasMore: raw.meta.hasMore,
+    },
+  };
+}
+
+function toReviewResponse(raw: {
+  message: string;
+  created_at: string;
+}): ReviewResponse {
+  return { message: raw.message, createdAt: raw.created_at };
 }
 
 export async function replyToReview(
@@ -67,7 +106,12 @@ export async function replyToReview(
   if (USE_MOCK) {
     const updated = mockReplyToReview(reviewId, payload.message);
 
-    return updated?.response ?? { message: payload.message, createdAt: new Date().toISOString() };
+    return (
+      updated?.response ?? {
+        message: payload.message,
+        createdAt: new Date().toISOString(),
+      }
+    );
   }
 
   const raw = await apiFetchAuth<{ message: string; created_at: string }>(
@@ -76,7 +120,32 @@ export async function replyToReview(
     { method: "POST", body: JSON.stringify(payload) },
   );
 
-  return { message: raw.message, createdAt: raw.created_at };
+  return toReviewResponse(raw);
+}
+
+export async function updateReviewResponse(
+  accessToken: string,
+  reviewId: string,
+  payload: ReplyToReviewPayload,
+): Promise<ReviewResponse> {
+  if (USE_MOCK) {
+    const updated = mockReplyToReview(reviewId, payload.message);
+
+    return (
+      updated?.response ?? {
+        message: payload.message,
+        createdAt: new Date().toISOString(),
+      }
+    );
+  }
+
+  const raw = await apiFetchAuth<{ message: string; created_at: string }>(
+    WORKER_REVIEWS_ROUTES.response(reviewId),
+    accessToken,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+
+  return toReviewResponse(raw);
 }
 
 export async function reportReview(

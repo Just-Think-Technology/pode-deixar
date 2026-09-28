@@ -3,7 +3,12 @@
 import type {
   ProviderReview,
   RawProviderReview,
+  RawReviewResponse,
+  RawReviewsPage,
+  RawReviewsSummary,
   ReviewDistribution,
+  ReviewResponse,
+  ReviewsPage,
   ReviewsSummary,
 } from "./types";
 
@@ -44,6 +49,16 @@ export function formatReviewDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
+export function mapReviewResponse(
+  raw: RawReviewResponse | undefined,
+): ReviewResponse | null {
+  if (!raw) {
+    return null;
+  }
+
+  return { message: raw.message, createdAt: raw.created_at };
+}
+
 export function mapProviderReview(raw: RawProviderReview): ProviderReview {
   const rawName =
     raw.reviewer?.display_name ?? raw.reviewer?.complete_name ?? null;
@@ -56,6 +71,35 @@ export function mapProviderReview(raw: RawProviderReview): ProviderReview {
     reviewer: {
       displayName: toDisplayName(rawName),
       avatarUrl: raw.reviewer?.avatar_url ?? null,
+    },
+    response: mapReviewResponse(raw.response),
+  };
+}
+
+export function mapReviewsPage(
+  raw: RawReviewsPage<RawProviderReview>,
+): ReviewsPage<ProviderReview> {
+  return {
+    data: raw.data.map(mapProviderReview),
+    meta: {
+      total: raw.meta.total,
+      page: raw.meta.page,
+      limit: raw.meta.limit,
+      hasMore: raw.meta.hasMore,
+    },
+  };
+}
+
+export function mapReviewsSummary(raw: RawReviewsSummary): ReviewsSummary {
+  return {
+    average: raw.average,
+    total: raw.total,
+    distribution: {
+      1: raw.distribution["1"] ?? 0,
+      2: raw.distribution["2"] ?? 0,
+      3: raw.distribution["3"] ?? 0,
+      4: raw.distribution["4"] ?? 0,
+      5: raw.distribution["5"] ?? 0,
     },
   };
 }

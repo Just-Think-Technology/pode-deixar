@@ -13,13 +13,24 @@ export type ReviewReviewer = {
   avatarUrl: string | null;
 };
 
+export type ReviewResponse = {
+  message: string;
+  createdAt: string;
+};
+
 export type ProviderReview = {
   id: string;
   rating: number;
   comment: string | null;
   createdAt: string;
   reviewer: ReviewReviewer;
+  response?: ReviewResponse | null;
 };
+
+export type RawReviewResponse = {
+  message: string;
+  created_at: string;
+} | null;
 
 export type RawProviderReview = {
   id: string;
@@ -35,4 +46,32 @@ export type RawProviderReview = {
     complete_name?: string | null;
     avatar_url?: string | null;
   } | null;
+  response?: RawReviewResponse;
+};
+
+export type RawReviewsPage<T> = {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  };
+};
+
+export type ReviewsPage<T> = {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  };
+};
+
+export type RawReviewsSummary = {
+  provider_id: string;
+  average: number | null;
+  total: number;
+  distribution: Record<string, number>;
 };

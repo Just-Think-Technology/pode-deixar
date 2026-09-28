@@ -3,12 +3,11 @@
 import type {
   ProviderReview,
   RawProviderReview,
+  RawReviewResponse,
+  ReviewResponse,
 } from "@/lib/client/reviews/types";
 
-export type ReviewResponse = {
-  message: string;
-  createdAt: string;
-};
+export type { ReviewResponse, RawReviewResponse };
 
 export type ReportStatus = "NONE" | "PENDING" | "RESOLVED";
 
@@ -23,11 +22,6 @@ export type MyReview = ProviderReview & {
   response: ReviewResponse | null;
   reportStatus: ReportStatus;
 };
-
-export type RawReviewResponse = {
-  message: string;
-  created_at: string;
-} | null;
 
 export type RawMyReview = RawProviderReview & {
   response?: RawReviewResponse;

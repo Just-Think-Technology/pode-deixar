@@ -1,6 +1,9 @@
 // Provider reviews mocks — seeded review lists for profile display
 
-import type { RawProviderReview } from "@/lib/client/reviews/types";
+import type {
+  RawProviderReview,
+  ReviewsSummary,
+} from "@/lib/client/reviews/types";
 
 const MOCK_REVIEWS_BY_PROVIDER: Record<string, RawProviderReview[]> = {
   u1: [
@@ -126,4 +129,36 @@ export function mockGetProviderReviews(
   limit: number,
 ): RawProviderReview[] {
   return (MOCK_REVIEWS_BY_PROVIDER[providerUserId] ?? []).slice(0, limit);
+}
+
+export function mockGetProviderReviewsSummary(
+  providerUserId: string,
+): ReviewsSummary {
+  const all = MOCK_REVIEWS_BY_PROVIDER[providerUserId] ?? [];
+
+  if (all.length === 0) {
+    return {
+      average: null,
+      total: 0,
+      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    };
+  }
+
+  const distribution: ReviewsSummary["distribution"] = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+  };
+  let sum = 0;
+
+  for (const review of all) {
+    sum += review.rating;
+    if (review.rating >= 1 && review.rating <= 5) {
+      distribution[review.rating as 1 | 2 | 3 | 4 | 5] += 1;
+    }
+  }
+
+  return { average: sum / all.length, total: all.length, distribution };
 }
