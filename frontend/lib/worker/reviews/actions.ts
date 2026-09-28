@@ -7,6 +7,7 @@ import {
   getMyReviews,
   replyToReview,
   reportReview,
+  updateReviewResponse,
 } from "@/api/worker/reviews";
 import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import type {
@@ -22,13 +23,18 @@ import {
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
+const RECEIVED_FIRST_PAGE_LIMIT = 50;
+
 export async function getMyReviewsAction(): Promise<MyReview[]> {
   if (USE_MOCK) {
     return mockGetMyReviews();
   }
 
   try {
-    return await withServerTokenRefresh((token) => getMyReviews(token));
+    const page = await withServerTokenRefresh((token) =>
+      getMyReviews(token, { page: 1, limit: RECEIVED_FIRST_PAGE_LIMIT }),
+    );
+    return page.data;
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (
@@ -60,9 +66,18 @@ export async function replyToReviewAction(
   }
 
   try {
-    return await withServerTokenRefresh((token) =>
-      replyToReview(token, reviewId, { message }),
-    );
+    return await withServerTokenRefresh(async (token) => {
+      try {
+        return await replyToReview(token, reviewId, { message });
+      } catch (err) {
+        // Response created elsewhere (e.g. another session) — fall back to
+        // updating so the worker intent ("my response is this message") holds
+        if (err instanceof ApiError && err.status === 409) {
+          return await updateReviewResponse(token, reviewId, { message });
+        }
+        throw err;
+      }
+    });
   } catch (err) {
     if (!USE_MOCK) throw err;
     if (

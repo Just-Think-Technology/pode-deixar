@@ -4,7 +4,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { getProviderReviews, INITIAL_REVIEWS_LIMIT, REVIEWS_PAGE_SIZE } from "@/api/client/reviews";
+import {
+  INITIAL_REVIEWS_LIMIT,
+  REVIEWS_PAGE_SIZE,
+} from "@/api/client/reviews";
 import { ApiError } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +15,10 @@ import type {
   ProviderReview,
   ReviewsSummary,
 } from "@/lib/client/reviews/types";
+import {
+  getProviderReviewsAction,
+  getProviderReviewsSummaryAction,
+} from "@/lib/client/reviews/actions";
 import ReviewList from "./review-list";
 import ReviewSummary from "./review-summary";
 
@@ -29,26 +36,36 @@ export default function ReviewsSection({
   initialSummary,
 }: ReviewsSectionProps) {
   const [reviews, setReviews] = useState<ProviderReview[]>([]);
-  const [limit, setLimit] = useState(INITIAL_REVIEWS_LIMIT);
+  const [summary, setSummary] = useState<ReviewsSummary>(initialSummary);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
 
-  const loadReviews = useCallback(
-    async (nextLimit: number, append: boolean) => {
-      const fetched = await getProviderReviews(providerUserId, nextLimit);
-      // Backend caps the page; a full page hints at more reviews available
-      setHasMore(fetched.length >= nextLimit && fetched.length > 0);
+  const loadPage = useCallback(
+    async (nextPage: number, append: boolean) => {
+      const limit =
+        nextPage === 1 ? INITIAL_REVIEWS_LIMIT : REVIEWS_PAGE_SIZE;
+      const result = await getProviderReviewsAction(
+        providerUserId,
+        nextPage,
+        limit,
+      );
+      setHasMore(result.meta.hasMore);
+      setPage(result.meta.page);
 
       if (append) {
         setReviews((current) => {
           const known = new Set(current.map((review) => review.id));
-          return [...current, ...fetched.filter((review) => !known.has(review.id))];
+          return [
+            ...current,
+            ...result.data.filter((review) => !known.has(review.id)),
+          ];
         });
       } else {
-        setReviews(fetched);
+        setReviews(result.data);
       }
     },
     [providerUserId],
@@ -62,7 +79,14 @@ export default function ReviewsSection({
       setError(null);
 
       try {
-        await loadReviews(INITIAL_REVIEWS_LIMIT, false);
+        const [summaryResult] = await Promise.all([
+          getProviderReviewsSummaryAction(providerUserId).catch(() => null),
+          loadPage(1, false),
+        ]);
+
+        if (!cancelled && summaryResult) {
+          setSummary(summaryResult);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(toSectionError(err, "Não foi possível carregar as avaliações."));
@@ -79,30 +103,26 @@ export default function ReviewsSection({
     return () => {
       cancelled = true;
     };
-  }, [loadReviews]);
+  }, [loadPage, providerUserId]);
 
   const handleRetry = useCallback(() => {
     setIsLoading(true);
     setError(null);
 
-    loadReviews(INITIAL_REVIEWS_LIMIT, false)
+    loadPage(1, false)
       .catch((err: unknown) => {
         setError(toSectionError(err, "Não foi possível carregar as avaliações."));
       })
       .finally(() => {
         setIsLoading(false);
       });
-  }, [loadReviews]);
+  }, [loadPage]);
 
   const handleLoadMore = useCallback(() => {
-    const nextLimit = limit + REVIEWS_PAGE_SIZE;
     setIsLoadingMore(true);
     setLoadMoreError(null);
 
-    loadReviews(nextLimit, true)
-      .then(() => {
-        setLimit(nextLimit);
-      })
+    loadPage(page + 1, true)
       .catch((err: unknown) => {
         setLoadMoreError(
           toSectionError(err, "Não foi possível carregar mais avaliações."),
@@ -111,7 +131,7 @@ export default function ReviewsSection({
       .finally(() => {
         setIsLoadingMore(false);
       });
-  }, [limit, loadReviews]);
+  }, [loadPage, page]);
 
   // Summary stays visible while the list loads so average and total persist
   const showListError = error !== null && reviews.length === 0 && !isLoading;
@@ -120,7 +140,7 @@ export default function ReviewsSection({
     <section aria-label="Avaliações">
       <h2 className="mb-3 text-lg font-semibold text-foreground">Avaliações</h2>
       <div className="space-y-4">
-        <ReviewSummary summary={initialSummary} />
+        <ReviewSummary summary={summary} />
 
         {showListError ? (
           <Card>

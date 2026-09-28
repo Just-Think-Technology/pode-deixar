@@ -29,33 +29,37 @@ describe('api/worker/reviews', () => {
     vi.unstubAllGlobals()
   })
 
-  it('fetches received reviews with auth and maps response plus report status', async () => {
+  it('fetches a paginated received page with auth and maps response plus report status', async () => {
     const api = await loadWorkerReviewsApi()
     fetchMock.mockResolvedValue(
-      jsonResponse([
-        {
-          id: 'r1',
-          rating: 5,
-          comment: 'Ótimo serviço.',
-          created_at: '2026-09-12T10:00:00.000Z',
-          reviewer: { display_name: 'Carlos Mendes', avatar_url: null },
-          response: null,
-          report_status: 'NONE',
-        },
-      ]),
+      jsonResponse({
+        data: [
+          {
+            id: 'r1',
+            rating: 5,
+            comment: 'Ótimo serviço.',
+            created_at: '2026-09-12T10:00:00.000Z',
+            reviewer: { display_name: 'Carlos Mendes', avatar_url: null },
+            response: null,
+            report_status: 'NONE',
+          },
+        ],
+        meta: { total: 1, page: 1, limit: 10, hasMore: false },
+      }),
     )
 
-    const result = await api.getMyReviews('tok-abc')
+    const result = await api.getMyReviews('tok-abc', { page: 1, limit: 10 })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'http://api.test/api/v1/reviews/received',
+      'http://api.test/api/v1/reviews/received?page=1&limit=10',
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer tok-abc',
         }),
       }),
     )
-    expect(result).toEqual([
+    expect(result.meta).toEqual({ total: 1, page: 1, limit: 10, hasMore: false })
+    expect(result.data).toEqual([
       {
         id: 'r1',
         rating: 5,
@@ -91,6 +95,31 @@ describe('api/worker/reviews', () => {
       }),
     )
     expect(result).toMatchObject({ message: 'Obrigado pela avaliação!' })
+  })
+
+  it('patches an existing response', async () => {
+    const api = await loadWorkerReviewsApi()
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        message: 'Resposta atualizada!',
+        created_at: '2026-09-14T10:00:00.000Z',
+      }),
+    )
+
+    const result = await api.updateReviewResponse('tok-abc', 'r1', {
+      message: 'Resposta atualizada!',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://api.test/api/v1/reviews/r1/response',
+      expect.objectContaining({
+        method: 'PATCH',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer tok-abc',
+        }),
+      }),
+    )
+    expect(result).toMatchObject({ message: 'Resposta atualizada!' })
   })
 
   it('posts a report with reason for a received review', async () => {

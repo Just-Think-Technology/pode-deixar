@@ -4,7 +4,6 @@
 
 import { useRouter } from "next/navigation";
 import {
-  Briefcase,
   Mail,
   MapPin,
   Phone,
@@ -31,13 +30,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -73,28 +65,6 @@ function getInitials(name: string): string {
     .slice(0, 2)
     .join("")
     .toUpperCase();
-}
-
-function TabPlaceholder({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof Briefcase;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Empty className="border border-dashed border-border/80 bg-muted/20">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <Icon />
-        </EmptyMedia>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-    </Empty>
-  );
 }
 
 export default function WorkerProfilePage({
