@@ -7,6 +7,7 @@ import {
   listWorkerPayments,
 } from "@/api/worker/payments";
 import { getAccessToken } from "@/lib/auth/session.server";
+import { FRIENDLY_MESSAGES } from "@/lib/errors/messages";
 import type { WorkerPaymentStatusResponse } from "@/lib/worker/payments/types";
 import {
   mockGetPaymentByProposalId,
@@ -24,7 +25,7 @@ export async function getWorkerPaymentStatusByProposalAction(
 
   const token = await getAccessToken();
   if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error(FRIENDLY_MESSAGES.unauthenticated);
   }
 
   return getPaymentStatusByProposal(token, proposalId);
@@ -39,7 +40,7 @@ export async function listWorkerPaymentsAction(): Promise<
 
   const token = await getAccessToken();
   if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error(FRIENDLY_MESSAGES.unauthenticated);
   }
 
   return listWorkerPayments(token);

@@ -1,6 +1,7 @@
 // Client search API — professional search with mock fallback
 
 import { apiFetchAuth, ApiError } from "@/api/client/http";
+import { FRIENDLY_MESSAGES } from "@/lib/errors/messages";
 import { mockSearchProfessionals } from "@/mock/client/search";
 import type {
   ProviderSearchResult,
@@ -57,7 +58,7 @@ export async function searchProfessionals(
   }
 
   if (!accessToken) {
-    throw new ApiError("Sessão expirada. Faça login novamente.", 401);
+    throw new ApiError(FRIENDLY_MESSAGES.unauthenticated, 401);
   }
 
   const params = new URLSearchParams();

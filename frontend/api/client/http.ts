@@ -1,5 +1,8 @@
 // Deep HTTP client — base URL, timeout fetch, API error and authed fetch
 
+import { extractBackendMessages } from "@/lib/errors/classify";
+import { messageForCandidates } from "@/lib/errors/messages";
+
 const FETCH_TIMEOUT = 10_000;
 
 // Single home for the API version: deploy sets NEXT_PUBLIC_API_VERSION
@@ -65,16 +68,13 @@ export async function apiFetch<T>(
     const data = await res.json().catch(() => null);
 
     if (!res.ok) {
-      const message =
-        typeof data?.message === "string"
-          ? data.message
-          : Array.isArray(data?.message)
-            ? data.message.join(", ")
-            : res.status === 401
-              ? "Sessão expirada. Faça login novamente."
-              : res.status === 403
-                ? "Você não tem permissão para realizar esta ação. Se precisar, faça login com o perfil correto."
-                : "Não foi possível completar. Verifique sua conexão e tente novamente — se persistir, contate o suporte.";
+      // Interpret every backend error shape in one place: message as
+      // string or array, errors[] (shared filter) and error (auth
+      // filter). Raw backend text never reaches the UI unsanitized —
+      // messageForStatus keeps safe business messages and replaces
+      // technical ones with friendly PT-BR copy.
+      const candidates = extractBackendMessages(data);
+      const message = messageForCandidates(res.status, candidates);
       throw new ApiError(message, res.status, data);
     }
 

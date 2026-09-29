@@ -45,7 +45,7 @@ describe('withTokenRefresh (interface)', () => {
     const deps = makeDeps({ getAccessToken: vi.fn().mockResolvedValue(null) })
     const fn = vi.fn()
 
-    await expect(withTokenRefresh(fn, deps)).rejects.toThrow('Sessão expirada')
+    await expect(withTokenRefresh(fn, deps)).rejects.toThrow('Sua sessão expirou')
     expect(fn).not.toHaveBeenCalled()
   })
 
@@ -53,7 +53,7 @@ describe('withTokenRefresh (interface)', () => {
     const deps = makeDeps({ refreshSession: vi.fn().mockResolvedValue(null) })
     const fn = vi.fn().mockRejectedValue(new ApiError('Sessão expirada', 401))
 
-    await expect(withTokenRefresh(fn, deps)).rejects.toThrow('Sessão expirada')
+    await expect(withTokenRefresh(fn, deps)).rejects.toThrow('Sua sessão expirou')
   })
 
   it('does not retry on non-401 errors', async () => {
