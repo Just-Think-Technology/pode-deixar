@@ -5,6 +5,7 @@
 // Server actions use withServerTokenRefresh from lib/auth/server-token-refresh.
 
 import { ApiError } from "@/api/client/http";
+import { FRIENDLY_MESSAGES } from "@/lib/errors/messages";
 
 // --- Interface for testability ---
 
@@ -30,7 +31,7 @@ export async function withTokenRefresh<T>(
 ): Promise<T> {
   const token = await deps.getAccessToken();
   if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error(FRIENDLY_MESSAGES.unauthenticated);
   }
 
   try {
@@ -39,7 +40,7 @@ export async function withTokenRefresh<T>(
     if (deps.isUnauthorizedError(err)) {
       const refreshed = await deps.refreshSession();
       if (!refreshed?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
+        throw new Error(FRIENDLY_MESSAGES.unauthenticated);
       }
       return fn(refreshed.access_token);
     }
