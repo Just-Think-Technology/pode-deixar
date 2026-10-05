@@ -23,6 +23,7 @@ services:
       NODE_ENV: production
       FRONTEND_URL: ${FRONTEND_URL:-https://app.pode-deixar.com}
       TZ: America/Sao_Paulo
+      DATABASE_URL: ${DB_AUTH_URL:?DB_AUTH_URL must be set in .env.production}
     depends_on:
       minio:
         condition: service_healthy
@@ -42,6 +43,7 @@ services:
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
+      DATABASE_URL: ${DB_USERS_URL:?DB_USERS_URL must be set in .env.production}
     depends_on:
       minio:
         condition: service_healthy
@@ -61,6 +63,7 @@ services:
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
+      DATABASE_URL: ${DB_SERVICE_ORDERS_URL:?DB_SERVICE_ORDERS_URL must be set in .env.production}
     depends_on:
       minio:
         condition: service_healthy
@@ -80,6 +83,7 @@ services:
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
+      DATABASE_URL: ${DB_PAYMENTS_URL:?DB_PAYMENTS_URL must be set in .env.production}
 
   # --- Reviews Service ---
   reviews:
@@ -96,6 +100,7 @@ services:
     environment:
       NODE_ENV: production
       TZ: America/Sao_Paulo
+      DATABASE_URL: ${DB_REVIEWS_URL:?DB_REVIEWS_URL must be set in .env.production}
 
   # --- MinIO ---
   minio:
