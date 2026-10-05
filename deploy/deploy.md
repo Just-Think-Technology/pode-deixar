@@ -96,8 +96,8 @@ exists.
 ## Observability (fatia 2 — logs)
 
 * `deploy/observability/loki.yml` (single binary, filesystem, 15-day
-  retention) + `promtail.yml` (Docker discovery, JSON pipeline). Loki and
-  Promtail are internal-only, no published ports.
+  retention) + `deploy/observability/alloy/config.alloy` (Docker discovery,
+  JSON pipeline). Loki and Alloy are internal-only, no published ports.
 * Services log raw JSON lines to stdout **in production only** (pretty output
   stays in local files / non-prod consoles). Only `service` + `level` become
   Loki labels — `orderId`/`paymentId`/event stay searchable in the body, never
@@ -106,13 +106,23 @@ exists.
 * Grafana reads Loki via the provisioned `Loki` datasource; the `logs.json`
   dashboard has error rate, error stream and a free-text search (e.g.
   `orderId`).
-* Promtail keeps the **whole** JSON line, not just `msg`: `traceId`/`spanId`
-  must stay in the line for the `TraceID` derived field to link a log entry to
-  its trace in Tempo. The dashboard only has data in staging/production —
-  services log pretty (not JSON) locally, so nothing is parsed into labels.
-* Promtail is EOL (Grafana publishes no 3.7.x tag; `:3` resolves to 3.6.8,
-  which works against Loki 3.7.8). It stays pinned at 3.6.8; the successor is
-  Grafana Alloy, a separate migration.
+* Alloy keeps the **whole** JSON line, not just `msg`: the `stage.json` only
+  extracts, it does not rewrite the line, so `traceId`/`spanId` stay in it for
+  the `TraceID` derived field to link a log entry to its trace in Tempo. The
+  dashboard only has data in staging/production — services log pretty (not
+  JSON) locally, so nothing is parsed into labels.
+* Alloy replaced the EOL Promtail (Grafana published no 3.7.x tag; `:3` resolved
+  to 3.6.8) with the same discovery, the same `container`/`compose_service`
+  labels and the same JSON pipeline, so the datasource and the dashboards did
+  not change. It reads the Docker API instead of the log files under
+  `/var/lib/docker/containers`, which drops one host mount but adds a
+  discovery requirement: **a container has to be discovered while it is still
+  running.** `refresh_interval = 500ms` covers the one-shot jobs — `minio-setup`
+  exits in well under a second and its output is lost at 1s — and a container
+  removed with `docker run --rm` is never shipped (the stack does not use it).
+  On the first start after a deploy the volume is empty, so the previous
+  container output is re-read and Loki drops what is older than its acceptance
+  window (`entry too far behind`); steady state is clean.
 * Log lines carry `traceId`/`spanId` (written by the pino mixin in
   `@pode-deixar/logger` when a span is active), which fatia 3 links to Tempo.
 
@@ -141,7 +151,7 @@ exists.
   panels reference the uid directly, because Grafana file provisioning does not
   substitute `${DS_*}` placeholders.
 * Every observability image is pinned (`grafana:11.6.0`, `loki:3.7.8`,
-  `promtail:3.6.8`, `prometheus:v3.15.0`, `tempo:2.10.8`,
+  `alloy:v1.20.0`, `prometheus:v3.15.0`, `tempo:2.10.8`,
   `node-exporter:v1.12.1`) — a floating major tag pulls a new Grafana
   provisioner without review.
 * Tempo 2.10 searches the ingester index, not the blocks: traces received

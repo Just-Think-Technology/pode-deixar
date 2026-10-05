@@ -226,21 +226,26 @@ services:
       - ./observability/loki.yml:/etc/loki/loki.yml:ro
       - loki_data:/loki
 
-  # --- Promtail ---
+  # --- Alloy ---
   # Ships every container's stdout to Loki. Needs the Docker socket for
-  # discovery and the containers log path; both read-only mounts.
-  promtail:
-    image: grafana/promtail:3.6.8
+  # discovery and log tailing; a single read-only mount.
+  alloy:
+    image: grafana/alloy:v1.20.0
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    command: -config.file=/etc/promtail/promtail.yml
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/alloy-data
+      - /etc/alloy/config.alloy
     volumes:
-      - ./observability/promtail.yml:/etc/promtail/promtail.yml:ro
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - promtail_positions:/positions
+      # Mounted outside /var/lib/alloy: that path belongs to uid 473 in the
+      # image, and with cap_drop ALL root has no DAC_OVERRIDE to write it.
+      - alloy_data:/alloy-data
     depends_on:
       - loki
 
@@ -349,5 +354,5 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
-  promtail_positions:
+  alloy_data:
   tempo_data:
