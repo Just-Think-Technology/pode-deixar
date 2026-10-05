@@ -6,6 +6,11 @@ overrides:
   # CVE transitiva via @nestjs/platform-express (DoS em multipart <2.3.0):
   # força a versão corrigida em toda a árvore.
   multer: ^2.3.0
+  # CVE transitiva via @nestjs/terminus (getAuthContext pode devolver
+  # certificado não autorizado): versão corrigida é >=1.14.5. As faixas dos
+  # pais aceitam — ^1.14.3 (otlp-grpc-exporter-base) e ^1.11.1 (dockerode) —,
+  # mas o pnpm mantém a 1.14.4, então a resolução precisa ser forçada.
+  "@grpc/grpc-js": ^1.14.5
 allowBuilds:
   "@prisma/client": true
   "@prisma/engines": true
@@ -16,3 +21,8 @@ allowBuilds:
   cpu-features: true
   protobufjs: true
   ssh2: true
+minimumReleaseAgeExclude:
+  # nodemailer 10.0.15 é o patch que fecha GHSA-v53p-9fqp-m79j (>=10.0.6) e
+  # GHSA-prgh-xp8r-p3m5 (>=10.0.5). Publicado no mesmo dia do bump, então sai
+  # da janela de idade mínima por opção explícita — o lockfile fixa a versão.
+  - nodemailer@10.0.15
