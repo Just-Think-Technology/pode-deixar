@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Lock, Mail, MapPin, Phone } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
-import { toast } from "sonner";
+
+import { showError, showSuccess, showWarning } from "@/lib/toast";
 
 import { login } from "@/api/login";
 import { register } from "@/api/register";
@@ -37,7 +38,7 @@ import {
     getApiErrorMessage,
     isEmailNotVerifiedError,
     mapApiErrorToFieldErrors,
-} from "@/lib/auth/errors";
+} from "@/lib/errors";
 import { parseLoginForm, parseRegisterForm } from "@/lib/auth/map-form";
 import { saveAuthSessionAction } from "@/lib/auth/actions";
 import type { PublicRole } from "@/lib/auth/types";
@@ -285,12 +286,12 @@ function useAuthFormSubmit() {
                 }
 
                 if (isEmailNotVerifiedError(err)) {
-                    toast.error("Verifique seu e-mail antes de entrar.", {
+                    showError("Verifique seu e-mail antes de entrar.", {
                         description:
                             "Acesse o link enviado ou a página de verificação.",
                     });
                 } else {
-                    toast.error(message);
+                    showError(message);
                 }
             } finally {
                 setLoading(false);
@@ -325,7 +326,7 @@ function useLoginHandler(authRole: AuthRole) {
         const data = await login(payload);
         assertLoginRole(data.user.role, expectedRole, role.label);
         await saveAuthSessionAction(data);
-        toast.success(data.message);
+        showSuccess(data.message);
         router.push(role.postLoginHref);
     };
 }
@@ -365,7 +366,7 @@ function handleValidationError(
         };
         setFieldErrors(fieldErrors);
         const first = Object.values(fieldErrors)[0];
-        if (first) toast.error(first);
+        if (first) showError(first);
         return true;
     }
     return false;
@@ -504,13 +505,12 @@ export function ClientRegisterForm() {
             const { data, email } = await registerHandler(form);
             if (data.emailSent === false) {
                 setPendingResendEmail(email);
-                toast.warning("Conta criada, mas o email demorou — verifique spam ou reenvie.", {
+                showWarning("Conta criada, mas o email demorou — verifique spam ou reenvie.", {
                     description: "Clique em Reenviar verificação abaixo.",
-                    duration: 6000,
                 });
                 return;
             }
-            toast.success(data.message);
+            showSuccess(data.message);
             router.push(role.postRegisterLoginHref);
         } catch (err) {
             if (!handleValidationError(err, setFieldErrors))
@@ -522,7 +522,7 @@ export function ClientRegisterForm() {
         if (!pendingResendEmail || resendCooldown > 0) return;
         try {
             await resendVerification({ email: pendingResendEmail });
-            toast.success("Se o email existir, um novo link foi enviado.");
+            showSuccess("Se o email existir, um novo link foi enviado.");
             setResendCooldown(60);
             const id = setInterval(() => {
                 setResendCooldown((c) => {
@@ -531,7 +531,7 @@ export function ClientRegisterForm() {
                 });
             }, 1000);
         } catch (err) {
-            toast.error(getApiErrorMessage(err));
+            showError(err);
         }
     };
 
@@ -649,13 +649,12 @@ export function WorkerRegisterForm() {
             const { data, email } = await registerHandler(form);
             if (data.emailSent === false) {
                 setPendingResendEmail(email);
-                toast.warning("Conta criada, mas o email demorou — verifique spam ou reenvie.", {
+                showWarning("Conta criada, mas o email demorou — verifique spam ou reenvie.", {
                     description: "Clique em Reenviar verificação abaixo.",
-                    duration: 6000,
                 });
                 return;
             }
-            toast.success(data.message);
+            showSuccess(data.message);
             router.push(role.postRegisterLoginHref);
         } catch (err) {
             if (!handleValidationError(err, setFieldErrors))
@@ -667,7 +666,7 @@ export function WorkerRegisterForm() {
         if (!pendingResendEmail || resendCooldown > 0) return;
         try {
             await resendVerification({ email: pendingResendEmail });
-            toast.success("Se o email existir, um novo link foi enviado.");
+            showSuccess("Se o email existir, um novo link foi enviado.");
             setResendCooldown(60);
             const id = setInterval(() => {
                 setResendCooldown((c) => {
@@ -676,7 +675,7 @@ export function WorkerRegisterForm() {
                 });
             }, 1000);
         } catch (err) {
-            toast.error(getApiErrorMessage(err));
+            showError(err);
         }
     };
 

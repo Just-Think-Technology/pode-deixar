@@ -68,7 +68,7 @@ describe("lib/toast wrappers", () => {
     showError(err);
 
     expect(toastMocks.error).toHaveBeenCalledWith(
-      "Sessão expirada. Faça login novamente.",
+      "Sua sessão expirou. Entre novamente para continuar.",
       expect.any(Object),
     );
   });
@@ -79,7 +79,7 @@ describe("lib/toast wrappers", () => {
     showError(err);
 
     expect(toastMocks.error).toHaveBeenCalledWith(
-      "Não foi possível completar. Tente novamente.",
+      "Ocorreu um erro inesperado. Tente novamente.",
       expect.objectContaining({ duration: 5000 }),
     );
   });
@@ -101,7 +101,7 @@ describe("lib/toast wrappers", () => {
     showError(err);
 
     const calledMessage = (toastMocks.error.mock.calls[0] as unknown[] | undefined)?.[0] as string;
-    expect(calledMessage).toBe("Erro com stack");
+    expect(calledMessage).toBe("Ocorreu um erro inesperado. Tente novamente.");
     expect(calledMessage).not.toContain("\n");
     expect(toastMocks.error).toHaveBeenCalledWith(
       expect.not.stringContaining("at something"),
@@ -167,7 +167,7 @@ describe("lib/toast wrappers", () => {
   it("showError handles unknown with generic fallback", () => {
     showError(null);
     expect(toastMocks.error).toHaveBeenCalledWith(
-      "Ocorreu um erro inesperado. Verifique sua conexão e tente novamente — se persistir, contate o suporte.",
+      "Ocorreu um erro inesperado. Tente novamente.",
       expect.objectContaining({ duration: 5000 }),
     );
   });

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { ApiError } from "@/api/client/http";
 import { createServiceOrder } from "@/api/client/service-orders";
 import { getAccessToken } from "@/lib/auth/session.server";
+import { FRIENDLY_MESSAGES } from "@/lib/errors/messages";
 import type {
   CreateServiceOrderPayload,
   ServiceOrder,
@@ -18,7 +19,7 @@ const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 async function requireAccessToken(): Promise<string> {
   const token = await getAccessToken();
   if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error(FRIENDLY_MESSAGES.unauthenticated);
   }
   return token;
 }

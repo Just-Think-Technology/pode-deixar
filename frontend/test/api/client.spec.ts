@@ -125,7 +125,7 @@ describe('api/client (HTTP integration)', () => {
 
       expect(err).toBeInstanceOf(ApiError)
       expect(err.status).toBe(401)
-      expect(err.message).toBe('Sessão expirada. Faça login novamente.')
+      expect(err.message).toBe('Sua sessão expirou. Entre novamente para continuar.')
     })
 
     it('maps 403 to missing permission', async () => {
@@ -136,7 +136,7 @@ describe('api/client (HTTP integration)', () => {
       expect(err).toBeInstanceOf(ApiError)
       expect(err.status).toBe(403)
       expect(err.message).toBe(
-        'Você não tem permissão para realizar esta ação. Se precisar, faça login com o perfil correto.',
+        'Você não tem permissão para realizar esta ação.',
       )
     })
 
@@ -152,6 +152,59 @@ describe('api/client (HTTP integration)', () => {
       expect(err.body).toEqual({ message: 'Pedido não encontrado' })
     })
 
+    it('reads the errors array from the shared exception filter', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(
+          { message: 'Bad Request', errors: ['Email deve ser um email válido'] },
+          400,
+        ),
+      )
+
+      const err: any = await apiFetch('/x').catch((e) => e)
+
+      expect(err.status).toBe(400)
+      expect(err.message).toBe('Email deve ser um email válido')
+    })
+
+    it('sanitizes technical backend messages', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(
+          { message: 'Validation failed: providerId must be a UUID' },
+          400,
+        ),
+      )
+
+      const err: any = await apiFetch('/x').catch((e) => e)
+
+      expect(err.status).toBe(400)
+      expect(err.message).toBe('Verifique os dados informados e tente novamente.')
+      expect(err.body).toEqual({
+        message: 'Validation failed: providerId must be a UUID',
+      })
+    })
+
+    it('keeps safe business messages for conflicts', async () => {
+      fetchMock.mockResolvedValue(
+        jsonResponse({ message: 'Este serviço já foi finalizado.' }, 409),
+      )
+
+      const err: any = await apiFetch('/x').catch((e) => e)
+
+      expect(err.status).toBe(409)
+      expect(err.message).toBe('Este serviço já foi finalizado.')
+    })
+
+    it('maps 429 to rate-limit guidance', async () => {
+      fetchMock.mockResolvedValue(jsonResponse({}, 429))
+
+      const err: any = await apiFetch('/x').catch((e) => e)
+
+      expect(err.status).toBe(429)
+      expect(err.message).toBe(
+        'Muitas tentativas. Aguarde um momento e tente novamente.',
+      )
+    })
+
     it('concatenates backend messages when array', async () => {
       fetchMock.mockResolvedValue(
         jsonResponse({ message: ['erro a', 'erro b'] }, 400),
@@ -159,7 +212,7 @@ describe('api/client (HTTP integration)', () => {
 
       const err: any = await apiFetch('/x').catch((e) => e)
 
-      expect(err.message).toBe('erro a, erro b')
+      expect(err.message).toBe('erro a; erro b')
     })
 
     it('returns null when the body is not JSON', async () => {
