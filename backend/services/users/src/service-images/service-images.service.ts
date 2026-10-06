@@ -7,7 +7,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { ServiceImagesRepository } from "./service-images.repository";
-import { MinioService } from "@pode-deixar/storage";
+import { StorageService } from "@pode-deixar/storage";
 import { ImagePipeline } from "@pode-deixar/storage";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { randomUUID } from "crypto";
@@ -16,7 +16,7 @@ import { randomUUID } from "crypto";
 export class ServiceImagesService {
   constructor(
     private repository: ServiceImagesRepository,
-    private minio: MinioService,
+    private storage: StorageService,
     private usersLogger: UsersLoggerService,
     private imagePipeline: ImagePipeline,
   ) {}
@@ -101,7 +101,7 @@ export class ServiceImagesService {
 
     const fileName = `${providerProfileId}/${serviceId}/${randomUUID()}.webp`;
 
-    const url = await this.minio.uploadFile(
+    const url = await this.storage.uploadFile(
       fileName,
       sanitizedBuffer,
       "image/webp",
@@ -146,8 +146,8 @@ export class ServiceImagesService {
       throw new BadRequestException("Imagem não pertence a este serviço");
     }
 
-    const fileName = this.minio.extractFileName(image.url);
-    await this.minio.deleteFile(fileName);
+    const fileName = this.storage.extractFileName(image.url);
+    await this.storage.deleteFile(fileName);
 
     await this.repository.deleteServiceImage(imageId);
 

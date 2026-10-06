@@ -11,7 +11,7 @@ import {
   createTestUser,
   mintToken,
   bearerAuth,
-  mockMinio,
+  mockStorage,
   TestAppSetup,
 } from './test-setup';
 import { PrismaService } from "@pode-deixar/prisma";
@@ -185,7 +185,7 @@ describe('Profiles (integration)', () => {
   });
 
   describe('PATCH /profiles/avatar', () => {
-    it('should upload an avatar and save the MinIO URL (mock)', async () => {
+    it('should upload an avatar and save the storage URL (mock)', async () => {
       const { token } = await clientAuth();
       const headers = bearerAuth(token);
 
@@ -209,7 +209,7 @@ describe('Profiles (integration)', () => {
         })
         .expect(200);
 
-      expect(mockMinio.uploadFile).toHaveBeenCalled();
+      expect(mockStorage.uploadFile).toHaveBeenCalled();
       expect(response.body.avatar_url).toContain('/avatars/');
     });
 

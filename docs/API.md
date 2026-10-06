@@ -47,7 +47,7 @@ GET /api/profiles/me           -> users:3002/api/v1/profiles/me  + Deprecation: 
 | `/api/v1/proposals/*` | `/api/proposals/*` | `service-orders:3003` |
 | `/api/v1/payments/*` | `/api/payments/*` | `payments:3004` |
 | `/api/v1/reviews/*` | `/api/reviews/*` | `reviews:3005` |
-| `/api/v1/storage/*` | `/api/storage/*` | `minio:9000` (SeaweedFS S3) |
+| `/api/v1/storage/*` | `/api/storage/*` | `storage:9000` (S3) |
 | Health direct | — | `http://<service>:<port>/health` |
 
 ## Reviews (reviews:3005)

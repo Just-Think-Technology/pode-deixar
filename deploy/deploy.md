@@ -9,10 +9,13 @@
 
 ## Commands
 
+All commands run from the repository root, so every one of them needs the
+`-f deploy/...` path — there is no compose file at the root.
+
 | Environment                        | Command                                                                |
 | ---------------------------------- | ---------------------------------------------------------------------- |
-| Local (images, local Postgres)     | `docker compose up -d --build`                                         |
-| Local (hot-reload, local Postgres) | `docker compose -f deploy/docker-compose.dev.yml up -d --build`        |
+| Local (images, local Postgres)     | `docker compose -f deploy/docker-compose.dev.yml up -d --build`        |
+| Local (hot-reload, local Postgres) | `scripts/stack-up dev` (same file, with mounted source)                |
 | Staging (VPS, hot-reload)          | `docker compose -f deploy/docker-compose.staging.yml up -d --build`    |
 | Production (VPS, images)           | `docker compose -f deploy/docker-compose.production.yml up -d --build` |
 
@@ -85,11 +88,22 @@ exists.
   `DB_ROLE_*_PASSWORD` values to the real `.env.staging` /
   `.env.production` files (secrets in GitHub Environments, never in git).
   `DIRECT_DATABASE_URL` stays privileged (migrations + backup only).
-* One-off step when adopting this setup: add `STORAGE_ACCESS_KEY` /
-  `STORAGE_SECRET_KEY` (fallback `MINIO_ACCESS_KEY` /
-  `MINIO_SECRET_KEY`) to the real `.env.staging` / `.env.production` files.
-  SeaweedFS S3 reads `STORAGE_*`, and the deploy files no longer
-  interpolate `MINIO_ROOT_*`.
+* One-off step when adopting this setup: add the `STORAGE_*` block to the real
+  `.env.staging` / `.env.production` files — `STORAGE_ENDPOINT`,
+  `STORAGE_PORT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, the three
+  `STORAGE_*_BUCKET` names and `STORAGE_PUBLIC_URL`. `STORAGE_*` is the project
+  standard; `MINIO_*` is still read as a deprecated alias, so a host that only
+  has the old names keeps working until you migrate it (see
+  [.agents/decisions/storage-env-names.md](../.agents/decisions/storage-env-names.md)).
+* Two `MINIO_*` names remain in the compose files and are **not** leftovers:
+  `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` are what the MinIO image reads
+  inside the container, fed from `${STORAGE_ACCESS_KEY}` /
+  `${STORAGE_SECRET_KEY}`. Renaming those would stop the storage server from
+  starting.
+* The compose services are `storage` and `storage-setup` (the bucket bootstrap
+  job). The named volume is still `minio_data`: renaming it would create a new
+  empty volume on the hosts and hide the existing buckets, so it is a task of
+  its own.
 
 ## Rules
 

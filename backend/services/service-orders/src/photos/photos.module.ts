@@ -9,7 +9,7 @@ import {
 } from "./photos.controller";
 import { PhotosService } from "./photos.service";
 import { PrismaModule } from "@pode-deixar/prisma";
-import { MinioModule } from "../storage/minio.module";
+import { ServiceStorageModule } from "../storage/storage.module";
 
 import { PhotosRepository } from "./photos.repository";
 import { ImagePipeline } from "@pode-deixar/storage";
@@ -25,7 +25,7 @@ import { ImagePipeline } from "@pode-deixar/storage";
       },
     }),
     PrismaModule,
-    MinioModule,
+    ServiceStorageModule,
   ],
 
   // --- Controllers ---

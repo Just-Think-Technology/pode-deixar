@@ -70,7 +70,7 @@ describe("OrderTrackingAssembler", () => {
           createdAt: new Date("2026-09-14T10:00:00.000Z"),
         },
       ],
-      photos: [{ id: "photo-1", url: "http://minio/photo-1.webp" }],
+      photos: [{ id: "photo-1", url: "http://storage/photo-1.webp" }],
       payments: [
         {
           id: "payment-1",
@@ -144,7 +144,7 @@ describe("OrderTrackingAssembler", () => {
       completedAt: new Date("2026-09-21T10:00:00.000Z"),
       completedBy: "provider-1",
       observations: "ok",
-      photos: [{ id: "p1", url: "http://minio/p1.webp" }],
+      photos: [{ id: "p1", url: "http://storage/p1.webp" }],
     });
     const result = await assembler.assemble(completed, "provider-1", "PROVIDER");
     expect(result.evidence).toBeDefined();

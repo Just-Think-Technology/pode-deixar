@@ -6,7 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from "@pode-deixar/prisma";
-import { MinioService, StorageService } from '@pode-deixar/storage';
+import { StorageService } from '@pode-deixar/storage';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
 // --- Types ---
@@ -18,13 +18,13 @@ export interface TestAppSetup {
   prisma: PrismaService;
 }
 
-// --- MinIO stub ---
-// The real MinioService connects on onModuleInit — unfeasible without MinIO.
+// --- Storage stub ---
+// The real StorageService connects on onModuleInit — unfeasible without object storage.
 
-export const mockMinio = {
+export const mockStorage = {
   uploadFile: jest.fn(
     async (fileName: string, _buffer: Buffer, _mime: string, bucket?: string) =>
-      `http://minio.test/${bucket ?? 'order-photos'}/${fileName}`,
+      `http://storage.test/${bucket ?? 'order-photos'}/${fileName}`,
   ),
   deleteFile: jest.fn(async (_fileName: string, _bucket?: string) => undefined),
   extractFileName: jest.fn(
@@ -33,7 +33,7 @@ export const mockMinio = {
   ),
   generateTemporaryUrl: jest.fn(
     async (fileName: string, bucket?: string) =>
-      `http://minio.test/${bucket ?? 'order-photos'}/${fileName}?X-Amz-Signature=mock`,
+      `http://storage.test/${bucket ?? 'order-photos'}/${fileName}?X-Amz-Signature=mock`,
   ),
 };
 
@@ -46,10 +46,10 @@ export async function setupTestApp(): Promise<TestAppSetup> {
       ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10_000 }]),
     ],
   })
-    .overrideProvider(MinioService)
-    .useValue(mockMinio)
     .overrideProvider(StorageService)
-    .useValue(mockMinio)
+    .useValue(mockStorage)
+    .overrideProvider(StorageService)
+    .useValue(mockStorage)
     // Sensitive endpoints carry strict @Throttle; test flows share one IP and
     // would hit 429. Fake storage that never blocks — the real guard still runs.
     .overrideProvider(ThrottlerStorage)
