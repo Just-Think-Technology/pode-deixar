@@ -17,6 +17,9 @@ overrides:
   # prod: @opentelemetry/auto-instrumentations-node -> resource-detector-gcp ->
   # gcp-metadata -> gaxios -> rimraf -> glob -> minimatch@5.
   "brace-expansion@2.1.4": ^2.1.6
+  # source-map-js: event-loop DoS (GHSA-8hjj-hgm2-q4vw), corrigido em >=1.2.2.
+  # Vem por sanitize-html -> postcss, que aceita ^1.0.2.
+  "source-map-js": ^1.2.2
 allowBuilds:
   "@prisma/client": true
   "@prisma/engines": true
