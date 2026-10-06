@@ -115,7 +115,7 @@ describe("service-order.mappers", () => {
         completedBy: "provider-1",
         observations: "done",
       };
-      const photos = [{ id: "ph1", url: "http://minio/a.webp" }];
+      const photos = [{ id: "ph1", url: "http://storage/a.webp" }];
       const result: any = formatCompletionHistory(order, photos as any);
       expect(result.order_id).toBe("order-1");
       expect(result.completed_by).toBe("provider-1");
@@ -211,7 +211,7 @@ describe("service-order.mappers", () => {
         scheduledEndAt: new Date("2026-08-20T17:00:00Z"),
         status: "IN_PROGRESS",
         address: { city: "SP", state: "SP" },
-        photos: [{ id: "p1", url: "http://minio/p1.webp" }],
+        photos: [{ id: "p1", url: "http://storage/p1.webp" }],
         payments: [{ status: "PAID", amount: 150, paidAt: new Date() }],
       };
       const result: any = formatAgendaItem(order);

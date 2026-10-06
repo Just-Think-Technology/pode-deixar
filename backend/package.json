@@ -16,7 +16,7 @@
     "test:shared": "pnpm run prisma:generate && pnpm run --filter @pode-deixar/logger test && pnpm run --filter @pode-deixar/email test && pnpm run --filter @pode-deixar/security test && pnpm run --filter @pode-deixar/validation test && pnpm run --filter @pode-deixar/tracing test && pnpm run --filter @pode-deixar/prisma test && pnpm run --filter @pode-deixar/storage test && pnpm run --filter @pode-deixar/notifications test && pnpm run --filter @pode-deixar/metrics test",
     "prisma:generate": "prisma generate --schema=prisma/schema.prisma",
     "prisma:migrate": "prisma migrate deploy --schema=prisma/schema.prisma",
-    "lint": "pnpm run --filter @pode-deixar/auth lint && pnpm run --filter @pode-deixar/users lint && pnpm run --filter @pode-deixar/service-orders lint && pnpm run --filter @pode-deixar/payments lint && pnpm run --filter @pode-deixar/reviews lint",
+    "lint": "pnpm run --filter @pode-deixar/logger lint && pnpm run --filter @pode-deixar/email lint && pnpm run --filter @pode-deixar/security lint && pnpm run --filter @pode-deixar/validation lint && pnpm run --filter @pode-deixar/tracing lint && pnpm run --filter @pode-deixar/prisma lint && pnpm run --filter @pode-deixar/storage lint && pnpm run --filter @pode-deixar/notifications lint && pnpm run --filter @pode-deixar/metrics lint && pnpm run --filter @pode-deixar/auth lint && pnpm run --filter @pode-deixar/users lint && pnpm run --filter @pode-deixar/service-orders lint && pnpm run --filter @pode-deixar/payments lint && pnpm run --filter @pode-deixar/reviews lint",
     "proxy:run": "powershell -File scripts/proxy.ps1 run",
     "proxy:start": "powershell -File scripts/proxy.ps1 start",
     "proxy:stop": "powershell -File scripts/proxy.ps1 stop"
@@ -31,10 +31,17 @@
     "e2e"
   ],
   "devDependencies": {
+    "@eslint/js": "^9.18.0",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "dotenv-cli": "^11.0.0",
-    "prisma": "5.22.0"
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "eslint-plugin-security": "^4.0.1",
+    "globals": "^15.14.0",
+    "prisma": "5.22.0",
+    "typescript-eslint": "^8.20.0"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

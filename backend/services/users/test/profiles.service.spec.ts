@@ -4,7 +4,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import { ProfilesService } from "../src/profiles/profiles.service";
 import { ProfilesRepository } from "../src/profiles/profiles.repository";
-import { MinioService } from "@pode-deixar/storage";
+import { StorageService } from "@pode-deixar/storage";
 import { UsersLoggerService } from "../src/shared/users-logger.service";
 import {
   NotFoundException,
@@ -79,7 +79,7 @@ describe("ProfilesService", () => {
     logAvatarUploaded: jest.fn(),
   };
 
-  const mockMinio = {
+  const mockStorage = {
     avatarBucket: "avatars",
     uploadFile: jest.fn(),
     deleteFile: jest.fn(),
@@ -91,7 +91,7 @@ describe("ProfilesService", () => {
       providers: [
         ProfilesService,
         { provide: ProfilesRepository, useValue: mockRepository },
-        { provide: MinioService, useValue: mockMinio },
+        { provide: StorageService, useValue: mockStorage },
         { provide: UsersLoggerService, useValue: mockLogger },
         // ProfilesService resolves its avatar bucket from config.
         { provide: ConfigService, useValue: { get: () => undefined } },
@@ -339,7 +339,7 @@ describe("ProfilesService", () => {
     const expectedUrl =
       "http://localhost:8080/api/storage/avatars/mocked-uuid.png";
 
-    it("should upload client avatar to MinIO and save URL", async () => {
+    it("should upload client avatar to storage and save URL", async () => {
       const existing = {
         id: "client-1",
         userId: "user-1",
@@ -353,9 +353,9 @@ describe("ProfilesService", () => {
         avatarUrl: expectedUrl,
       };
 
-      mockMinio.uploadFile.mockResolvedValue(expectedUrl);
-      mockMinio.extractFileName.mockReturnValue("old-uuid.png");
-      mockMinio.deleteFile.mockResolvedValue(undefined);
+      mockStorage.uploadFile.mockResolvedValue(expectedUrl);
+      mockStorage.extractFileName.mockReturnValue("old-uuid.png");
+      mockStorage.deleteFile.mockResolvedValue(undefined);
       mockRepository.findUserById.mockResolvedValue(mockUser);
       mockRepository.findClientProfileByUserId.mockResolvedValue(existing);
       mockRepository.updateClientAvatar.mockResolvedValue(updated);
@@ -367,15 +367,15 @@ describe("ProfilesService", () => {
         "127.0.0.1",
       );
 
-      expect(mockMinio.uploadFile).toHaveBeenCalledWith(
+      expect(mockStorage.uploadFile).toHaveBeenCalledWith(
         "mocked-uuid.png",
         mockFile().buffer,
         "image/png",
-        mockMinio.avatarBucket,
+        mockStorage.avatarBucket,
       );
-      expect(mockMinio.deleteFile).toHaveBeenCalledWith(
+      expect(mockStorage.deleteFile).toHaveBeenCalledWith(
         "old-uuid.png",
-        mockMinio.avatarBucket,
+        mockStorage.avatarBucket,
       );
       expect(result.avatar_url).toBe(expectedUrl);
       expect(mockLogger.logAvatarUploaded).toHaveBeenCalledWith(
@@ -405,9 +405,9 @@ describe("ProfilesService", () => {
         avatarUrl: expectedUrl,
       };
 
-      mockMinio.uploadFile.mockResolvedValue(expectedUrl);
-      mockMinio.extractFileName.mockReturnValue("old-uuid.png");
-      mockMinio.deleteFile.mockResolvedValue(undefined);
+      mockStorage.uploadFile.mockResolvedValue(expectedUrl);
+      mockStorage.extractFileName.mockReturnValue("old-uuid.png");
+      mockStorage.deleteFile.mockResolvedValue(undefined);
       mockRepository.findUserById.mockResolvedValue(mockProviderUser);
       mockRepository.findProviderProfileByUserId.mockResolvedValue(existing);
       mockRepository.updateProviderAvatar.mockResolvedValue(updated);
@@ -419,7 +419,7 @@ describe("ProfilesService", () => {
         "127.0.0.1",
       );
 
-      expect(mockMinio.uploadFile).toHaveBeenCalled();
+      expect(mockStorage.uploadFile).toHaveBeenCalled();
       expect(result.avatar_url).toBe(expectedUrl);
       expect(mockLogger.logAvatarUploaded).toHaveBeenCalledWith(
         "user-1",
@@ -428,7 +428,7 @@ describe("ProfilesService", () => {
       );
     });
 
-    it("should delete old avatar from MinIO when uploading new one", async () => {
+    it("should delete old avatar from storage when uploading new one", async () => {
       const existing = {
         id: "client-1",
         userId: "user-1",
@@ -442,22 +442,22 @@ describe("ProfilesService", () => {
         avatarUrl: expectedUrl,
       };
 
-      mockMinio.uploadFile.mockResolvedValue(expectedUrl);
-      mockMinio.extractFileName.mockReturnValue("old-uuid.png");
-      mockMinio.deleteFile.mockResolvedValue(undefined);
+      mockStorage.uploadFile.mockResolvedValue(expectedUrl);
+      mockStorage.extractFileName.mockReturnValue("old-uuid.png");
+      mockStorage.deleteFile.mockResolvedValue(undefined);
       mockRepository.findUserById.mockResolvedValue(mockUser);
       mockRepository.findClientProfileByUserId.mockResolvedValue(existing);
       mockRepository.updateClientAvatar.mockResolvedValue(updated);
 
       await service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1");
 
-      expect(mockMinio.extractFileName).toHaveBeenCalledWith(
+      expect(mockStorage.extractFileName).toHaveBeenCalledWith(
         "http://localhost:8080/api/storage/avatars/old-uuid.png",
-        mockMinio.avatarBucket,
+        mockStorage.avatarBucket,
       );
-      expect(mockMinio.deleteFile).toHaveBeenCalledWith(
+      expect(mockStorage.deleteFile).toHaveBeenCalledWith(
         "old-uuid.png",
-        mockMinio.avatarBucket,
+        mockStorage.avatarBucket,
       );
     });
 
@@ -475,14 +475,14 @@ describe("ProfilesService", () => {
         avatarUrl: expectedUrl,
       };
 
-      mockMinio.uploadFile.mockResolvedValue(expectedUrl);
+      mockStorage.uploadFile.mockResolvedValue(expectedUrl);
       mockRepository.findUserById.mockResolvedValue(mockUser);
       mockRepository.findClientProfileByUserId.mockResolvedValue(existing);
       mockRepository.updateClientAvatar.mockResolvedValue(updated);
 
       await service.uploadAvatar("user-1", "CLIENT", mockFile(), "127.0.0.1");
 
-      expect(mockMinio.deleteFile).not.toHaveBeenCalled();
+      expect(mockStorage.deleteFile).not.toHaveBeenCalled();
     });
 
     // Covers the new magic-bytes validation — clients can forge
@@ -503,7 +503,7 @@ describe("ProfilesService", () => {
       await expect(
         service.uploadAvatar("user-1", "CLIENT", falso, "127.0.0.1"),
       ).rejects.toThrow(BadRequestException);
-      expect(mockMinio.uploadFile).not.toHaveBeenCalled();
+      expect(mockStorage.uploadFile).not.toHaveBeenCalled();
     });
 
     it("should throw NotFoundException when profile does not exist", async () => {

@@ -12,7 +12,7 @@ import {
   createCategory,
   mintToken,
   bearerAuth,
-  mockMinio,
+  mockStorage,
   TestAppSetup,
 } from './test-setup';
 import { PrismaService } from '@pode-deixar/prisma';
@@ -261,7 +261,7 @@ describe('Tracking (integration)', () => {
         .set(bearerAuth(provider.token))
         .expect(201);
 
-      expect(mockMinio.uploadFile).toHaveBeenCalledTimes(0);
+      expect(mockStorage.uploadFile).toHaveBeenCalledTimes(0);
 
       const finished = (
         await request(app.getHttpServer())
@@ -276,7 +276,7 @@ describe('Tracking (integration)', () => {
       expect(finished.evidence).toBeDefined();
       expect(finished.evidence.observations).toBe('Concluído com sucesso');
       expect(finished.evidence.photos.length).toBeGreaterThanOrEqual(1);
-      expect(mockMinio.uploadFile).toHaveBeenCalled();
+      expect(mockStorage.uploadFile).toHaveBeenCalled();
     });
 
     it('should return 400 when finishing without any photo', async () => {

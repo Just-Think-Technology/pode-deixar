@@ -7,7 +7,7 @@
   "license": "ISC",
   "scripts": {
     "build": "tsc -b",
-    "lint": "eslint src test --ext .ts",
+    "lint": "eslint .",
     "test": "cross-env NODE_ENV=test jest"
   },
   "dependencies": {

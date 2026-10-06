@@ -8,7 +8,7 @@ import {
   createCategory,
   mintToken,
   bearerAuth,
-  mockMinio,
+  mockStorage,
   E2EApps,
 } from './apps';
 
@@ -142,9 +142,9 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
     expect(photoId).toBeDefined();
     expect(photo.url).toMatch(/^\/api\/services\/photos\/.+\/view$/);
 
-    // MinIO stub: file stored as .webp with image/webp mime, buffer is webp (RIFF/WEBP)
-    expect(mockMinio.uploadFile).toHaveBeenCalledTimes(1);
-    const [fileName, buffer, mime] = mockMinio.uploadFile.mock.calls[0] as unknown as [
+    // Storage stub: file stored as .webp with image/webp mime, buffer is webp (RIFF/WEBP)
+    expect(mockStorage.uploadFile).toHaveBeenCalledTimes(1);
+    const [fileName, buffer, mime] = mockStorage.uploadFile.mock.calls[0] as unknown as [
       string,
       Buffer,
       string,
@@ -266,7 +266,7 @@ describe('Complete service feature (order→proposal→accept→complete + webp 
       .get(`/api/v1/services/photos/${photoId}/view`)
       .expect(401);
 
-    expect(mockMinio.generateTemporaryUrl).toHaveBeenCalled();
+    expect(mockStorage.generateTemporaryUrl).toHaveBeenCalled();
   });
 
   it('9. GET /services/:orderId/tracking → evidence when COMPLETED', async () => {

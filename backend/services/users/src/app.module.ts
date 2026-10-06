@@ -15,7 +15,7 @@ import { CategoriesModule } from "./categories/categories.module";
 import { HealthModule } from "@pode-deixar/prisma";
 import { MetricsModule } from "@pode-deixar/metrics";
 import { SharedModule } from "./shared/shared.module";
-import { MinioModule } from "./storage/minio.module";
+import { ServiceStorageModule } from "./storage/storage.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { createResponseLoggerInterceptor } from "@pode-deixar/logger";
 import { AppController } from "./app.controller";
@@ -77,7 +77,7 @@ function translateValidationErrors(errors: ValidationError[]): string {
     HealthModule,
     MetricsModule,
     SharedModule,
-    MinioModule,
+    ServiceStorageModule,
   ],
 
   // --- Controllers ---

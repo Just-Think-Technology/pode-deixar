@@ -25,7 +25,7 @@ services:
       TZ: America/Sao_Paulo
       DATABASE_URL: ${DB_AUTH_URL:?DB_AUTH_URL must be set in .env.production}
     depends_on:
-      minio:
+      storage:
         condition: service_healthy
 
   # --- Users Service ---
@@ -45,7 +45,7 @@ services:
       TZ: America/Sao_Paulo
       DATABASE_URL: ${DB_USERS_URL:?DB_USERS_URL must be set in .env.production}
     depends_on:
-      minio:
+      storage:
         condition: service_healthy
 
   # --- Service Orders Service ---
@@ -65,7 +65,7 @@ services:
       TZ: America/Sao_Paulo
       DATABASE_URL: ${DB_SERVICE_ORDERS_URL:?DB_SERVICE_ORDERS_URL must be set in .env.production}
     depends_on:
-      minio:
+      storage:
         condition: service_healthy
 
   # --- Payments Service ---
@@ -102,8 +102,8 @@ services:
       TZ: America/Sao_Paulo
       DATABASE_URL: ${DB_REVIEWS_URL:?DB_REVIEWS_URL must be set in .env.production}
 
-  # --- MinIO ---
-  minio:
+  # --- Object storage (S3) ---
+  storage:
     image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: server /data --console-address ":9001"
     env_file:
@@ -117,21 +117,21 @@ services:
       retries: 5
 
   # --- MinIO Client ---
-  minio-setup:
+  storage-setup:
     image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     env_file:
       - ../.env.production
     depends_on:
-      minio:
+      storage:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:$${MINIO_PORT:-9000} $${MINIO_ACCESS_KEY:-minioadmin} $${MINIO_SECRET_KEY:-minioadmin} &&
-      mc mb local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} --ignore-existing &&
-      mc anonymous set public local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} &&
-      mc mb local/$${MINIO_AVATARS_BUCKET:-avatars} --ignore-existing &&
-      mc anonymous set public local/$${MINIO_AVATARS_BUCKET:-avatars} &&
-      mc mb local/$${MINIO_ORDER_PHOTOS_BUCKET:-order-photos} --ignore-existing &&
+      mc alias set local http://storage:$${STORAGE_PORT:-9000} $${STORAGE_ACCESS_KEY:-minioadmin} $${STORAGE_SECRET_KEY:-minioadmin} &&
+      mc mb local/$${STORAGE_SERVICE_IMAGES_BUCKET:-service-images} --ignore-existing &&
+      mc anonymous set public local/$${STORAGE_SERVICE_IMAGES_BUCKET:-service-images} &&
+      mc mb local/$${STORAGE_AVATARS_BUCKET:-avatars} --ignore-existing &&
+      mc anonymous set public local/$${STORAGE_AVATARS_BUCKET:-avatars} &&
+      mc mb local/$${STORAGE_ORDER_PHOTOS_BUCKET:-order-photos} --ignore-existing &&
       echo 'Buckets created successfully'
       "
 

@@ -283,13 +283,13 @@ services:
       # --- Prisma ---
       - ./backend/prisma:/app/prisma
 
-  # --- MinIO ---
-  minio:
+  # --- Object storage (S3) ---
+  storage:
     env_file:
       - ../.env.staging
 
-  # --- MinIO Setup ---
-  minio-setup:
+  # --- Storage buckets setup ---
+  storage-setup:
     env_file:
       - ../.env.staging
 
