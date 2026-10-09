@@ -29,24 +29,22 @@ the service silently falls back to hardcoded defaults. A vendor-neutral name is
 what actually makes the S3 implementation swappable — the failed PR used a
 vendor name for a vendor-neutral goal.
 
-## Deprecated alias
+## Deprecated alias (removed)
 
-`StorageService` still reads `MINIO_*` when the `STORAGE_*` variable is absent,
-because the real `.env.staging` / `.env.production` files on the hosts still
-carry the old names and this repo never opens them. `profiles.service.ts` does
-the same for `STORAGE_AVATARS_BUCKET`.
+`StorageService` accepted `MINIO_*` as a fallback while the real
+`.env.staging` / `.env.production` files on the hosts still carried the old
+names. The fallback is **gone**: `STORAGE_*` is the only name read. Migrating a
+host means editing its real env file, which this repo never opens.
 
-**Removal condition:** drop the alias once every environment's real env file
-uses `STORAGE_*`. Then delete `StorageService.read()`'s fallback branch and the
-`MINIO_*` line in `profiles.service.ts`, and update the spec that covers the
-fallback.
+## The S3 implementation
 
-## What is not being renamed
+The endpoint is a **SeaweedFS S3 gateway** (`chrislusf/seaweedfs`, pinned),
+not MinIO. Two consequences worth knowing:
 
-- `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` in the compose files: those are the
-  variables the MinIO image reads inside the container, fed from
-  `${STORAGE_ACCESS_KEY}` / `${STORAGE_SECRET_KEY}`. Renaming them stops the
-  storage server from starting.
-- The named volume `minio_data`: renaming it creates a new empty volume on the
-  hosts and hides the existing buckets. Migrating a volume is its own task
-  (`docker cp` or a `docker run` with both volumes mounted).
+- **SeaweedFS accepts any credentials by default.** The compose generates an
+  S3 config at startup out of `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` and
+  starts `weed` with `-s3.config`, so the buckets are not open to anything else
+  on the compose network. The config is generated, never committed.
+- The volume is `seaweedfs_data`. A host still carrying `minio_data` needs the
+  data copied across (`docker run` with both volumes mounted, then copy `/data`)
+  — a new volume starts empty and hides the existing buckets.

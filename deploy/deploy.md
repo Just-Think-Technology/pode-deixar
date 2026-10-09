@@ -15,7 +15,7 @@ All commands run from the repository root, so every one of them needs the
 | Environment                        | Command                                                                |
 | ---------------------------------- | ---------------------------------------------------------------------- |
 | Local (images, local Postgres)     | `docker compose -f deploy/docker-compose.dev.yml up -d --build`        |
-| Local (hot-reload, local Postgres) | `scripts/stack-up dev` (same file, with mounted source)                |
+| Local (hot-reload, local Postgres) | `scripts/stack-up dev` (same file, mounted source)                          |
 | Staging (VPS, hot-reload)          | `docker compose -f deploy/docker-compose.staging.yml up -d --build`    |
 | Production (VPS, images)           | `docker compose -f deploy/docker-compose.production.yml up -d --build` |
 
@@ -95,15 +95,23 @@ exists.
   standard; `MINIO_*` is still read as a deprecated alias, so a host that only
   has the old names keeps working until you migrate it (see
   [.agents/decisions/storage-env-names.md](../.agents/decisions/storage-env-names.md)).
-* Two `MINIO_*` names remain in the compose files and are **not** leftovers:
-  `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` are what the MinIO image reads
-  inside the container, fed from `${STORAGE_ACCESS_KEY}` /
-  `${STORAGE_SECRET_KEY}`. Renaming those would stop the storage server from
-  starting.
-* The compose services are `storage` and `storage-setup` (the bucket bootstrap
-  job). The named volume is still `minio_data`: renaming it would create a new
-  empty volume on the hosts and hide the existing buckets, so it is a task of
-  its own.
+* **Object storage is a SeaweedFS S3 gateway** (`chrislusf/seaweedfs`, pinned),
+  not MinIO. Inside the compose network it answers on `storage:8333`
+  (`STORAGE_ENDPOINT=storage`, `STORAGE_PORT=8333`); in dev the host publishes
+  `127.0.0.1:8334` for inspection only. Caddy proxies `/api/v1/storage/*` and the
+  legacy `/api/storage/*` to `storage:8333`.
+* SeaweedFS **accepts any credentials by default**, so the compose generates an
+  S3 IAM config at startup from `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` and
+  starts `weed` with `-s3.config`. The config is generated, never committed.
+  Two identities: `pode-deixar` with full access, and `anonymous` with
+  `Read` scoped to `STORAGE_SERVICE_IMAGES_BUCKET` and `STORAGE_AVATARS_BUCKET`
+  — the browser fetches those URLs directly, which is what `mc anonymous set
+  public` used to do on MinIO. `STORAGE_ORDER_PHOTOS_BUCKET` stays private and
+  is only read through a presigned URL.
+* One-off step when adopting this setup: the named volume is now
+  `seaweedfs_data`. A host still carrying `minio_data` has to copy the data
+  across — a new volume starts empty and hides the existing buckets:
+  `docker run --rm -v <project>_minio_data:/from -v <project>_seaweedfs_data:/to -v "$PWD":/m alpine sh -c 'cp -a /from/. /to/'`.
 
 ## Rules
 

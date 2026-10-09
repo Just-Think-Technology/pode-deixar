@@ -66,39 +66,6 @@ describe("StorageService", () => {
   });
 });
 
-// The MINIO_* names are a deprecated alias kept until the real env files on the
-// hosts are migrated (see .agents/decisions/storage-env-names.md). Drop this
-// suite with the fallback itself.
-describe("StorageService (deprecated MINIO_* alias)", () => {
-  it("reads the bucket from STORAGE_* when it is set", () => {
-    const cfg = {
-      get: (k: string) =>
-        k === "STORAGE_AVATARS_BUCKET" ? "custom-avatars" : undefined,
-    } as unknown as ConfigService;
-    const svc = new StorageService(cfg, {
-      bucketEnvVar: "STORAGE_AVATARS_BUCKET",
-      defaultBucket: "avatars",
-    });
-    expect((svc as unknown as { bucket: string }).bucket).toBe(
-      "custom-avatars",
-    );
-  });
-
-  it("falls back to the historic MINIO_* name when STORAGE_* is absent", () => {
-    const cfg = {
-      get: (k: string) =>
-        k === "MINIO_AVATARS_BUCKET" ? "legacy-avatars" : undefined,
-    } as unknown as ConfigService;
-    const svc = new StorageService(cfg, {
-      bucketEnvVar: "STORAGE_AVATARS_BUCKET",
-      defaultBucket: "avatars",
-    });
-    expect((svc as unknown as { bucket: string }).bucket).toBe(
-      "legacy-avatars",
-    );
-  });
-});
-
 describe("createImageFileInterceptor", () => {
   it("returns an interceptor class", () => {
     const Interceptor = createImageFileInterceptor();

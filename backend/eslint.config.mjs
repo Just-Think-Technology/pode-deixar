@@ -1,14 +1,18 @@
 // @ts-check
 // ESLint config for the @pode-deixar/* shared packages.
 //
-// Scope: it makes `pnpm lint` work in the shared packages, where the script
-// existed but eslint was not a dependency and failed with `spawn ENOENT`.
+// Shared-package lint, at the backend root so the toolchain lives in one place.
 //
-// Two things are deliberately absent, each as its own task:
-// - the type-aware rule sets the services use (recommendedTypeChecked): those
-//   need every package's tsconfig to include its own test folder;
-// - prettier: enforcing it here would reformat ~39 files that were never
-//   linted, so it belongs in a dedicated formatting commit.
+// Scope: make `pnpm lint` work in the shared packages, where the script existed
+// but eslint was not a dependency and failed with `spawn ENOENT`.
+//
+// The services also run the type-aware rule sets and prettier. Turning both on
+// here was measured: 596 `prettier/prettier` plus ~150 real findings across the
+// seven packages (`unbound-method`, `no-unnecessary-type-assertion`,
+// `no-redundant-type-constituents`, `security/detect-unsafe-regex`, …). That is
+// its own task, not something to fold into a rename. Every package's tsconfig
+// already includes its test folder, so enabling them later is only a config
+// change here.
 import eslint from '@eslint/js';
 import securityPlugin from 'eslint-plugin-security';
 import globals from 'globals';

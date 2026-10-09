@@ -44,7 +44,7 @@ if [ "$ENV_KEY" = "dev" ]; then
   echo "  Pagamentos ....... http://localhost:3004"
   echo "  Reviews .......... http://localhost:3005"
   echo "  Mailpit .......... http://localhost:8025 (SMTP :1025)"
-  echo "  Storage S3 ...... http://localhost:9000 (console :9001)"
+  echo "  Storage S3 ...... http://localhost:8334 (S3 do container: storage:8333)"
   echo "  Postgres ......... localhost:15432 (entre containers: postgres:5432)"
 else
   API_DOMAIN="$(ler_env API_DOMAIN || true)"

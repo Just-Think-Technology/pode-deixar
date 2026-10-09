@@ -29,12 +29,8 @@ export class ProfilesService {
     private usersLogger: UsersLoggerService,
     configService: ConfigService,
   ) {
-    // STORAGE_* is the standard; MINIO_* stays as a deprecated alias until the
-    // hosts' real env files are migrated (see .agents/decisions/storage-env-names.md)
     this.avatarBucket =
-      configService.get<string>("STORAGE_AVATARS_BUCKET") ||
-      configService.get<string>("MINIO_AVATARS_BUCKET") ||
-      "avatars";
+      configService.get<string>("STORAGE_AVATARS_BUCKET") || "avatars";
   }
 
   private async getUser(userId: string) {

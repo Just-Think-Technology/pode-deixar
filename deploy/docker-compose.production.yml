@@ -103,22 +103,34 @@ services:
       DATABASE_URL: ${DB_REVIEWS_URL:?DB_REVIEWS_URL must be set in .env.production}
 
   # --- Object storage (S3) ---
+  # SeaweedFS S3 gateway, credentials generated at startup from
+  # STORAGE_ACCESS_KEY/STORAGE_SECRET_KEY (see the base compose for why).
   storage:
-    image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
-    command: server /data --console-address ":9001"
+    image: chrislusf/seaweedfs:3.97
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - >
+        printf '{"identities":[{"name":"anonymous","actions":["Read:%s","Read:%s"]},{"name":"pode-deixar","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","Delete","List","Tagging"]}]}' "$${STORAGE_SERVICE_IMAGES_BUCKET:-service-images}" "$${STORAGE_AVATARS_BUCKET:-avatars}" "$${STORAGE_ACCESS_KEY:?STORAGE_ACCESS_KEY must be set in .env.production}" "$${STORAGE_SECRET_KEY:?STORAGE_SECRET_KEY must be set in .env.production}" > /tmp/s3.json &&
+        exec weed server -dir=/data -s3 -s3.port=$${STORAGE_PORT:-8333} -s3.config=/tmp/s3.json
     env_file:
       - ../.env.production
     volumes:
-      - minio_data:/data
+      - seaweedfs_data:/data
+    # A imagem não tem curl (3.97 traz wget/nc); nc só checa que o S3 está
+    # aceitando conexão, que é o que importa para o job de buckets.
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "nc", "-z", "127.0.0.1", "8333"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 20s
 
-  # --- MinIO Client ---
+  # --- Storage buckets setup ---
+  # mc is only an S3 client here; it works against any S3-compatible endpoint.
   storage-setup:
-    image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    image: quay.io/minio/aistor/mc:latest@sha256:b8a369454c7cffe3aab1cc6e6b3e7e1eb958415ea275315245d994d830299dbb
     env_file:
       - ../.env.production
     depends_on:
@@ -126,11 +138,9 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://storage:$${STORAGE_PORT:-9000} $${STORAGE_ACCESS_KEY:-minioadmin} $${STORAGE_SECRET_KEY:-minioadmin} &&
+      mc alias set local http://storage:$${STORAGE_PORT:-8333} $${STORAGE_ACCESS_KEY:?} $${STORAGE_SECRET_KEY:?} &&
       mc mb local/$${STORAGE_SERVICE_IMAGES_BUCKET:-service-images} --ignore-existing &&
-      mc anonymous set public local/$${STORAGE_SERVICE_IMAGES_BUCKET:-service-images} &&
       mc mb local/$${STORAGE_AVATARS_BUCKET:-avatars} --ignore-existing &&
-      mc anonymous set public local/$${STORAGE_AVATARS_BUCKET:-avatars} &&
       mc mb local/$${STORAGE_ORDER_PHOTOS_BUCKET:-order-photos} --ignore-existing &&
       echo 'Buckets created successfully'
       "
@@ -182,8 +192,7 @@ services:
       echo \"[$$(date)] Backup concluído: $${FILE}\"
 
       find \"$${BACKUP_DIR}\" \
-        -name 'pode_deixar_*.sql.gz' \
-        -mtime +$${BACKUP_RETENTION_DAYS} \
+        -name 'pode_deixar_*.sql.gz' -mtime +$${BACKUP_RETENTION_DAYS} \
         -delete
 
       echo \"[$$(date)] Limpeza de backups antigos (> $${BACKUP_RETENTION_DAYS} dias) concluída\"
@@ -214,7 +223,7 @@ services:
       - reviews
 
 volumes:
-  minio_data:
+  seaweedfs_data:
   backup_data:
   redis_data:
   caddy_data:
