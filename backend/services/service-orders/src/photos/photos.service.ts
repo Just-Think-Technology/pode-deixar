@@ -7,14 +7,14 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { PhotosRepository } from "./photos.repository";
-import { MinioService } from "@pode-deixar/storage";
+import { StorageService } from "@pode-deixar/storage";
 import { ImagePipeline } from "@pode-deixar/storage";
 
 @Injectable()
 export class PhotosService {
   constructor(
     private repository: PhotosRepository,
-    private minio: MinioService,
+    private storage: StorageService,
     private imagePipeline: ImagePipeline,
   ) {}
 
@@ -59,7 +59,7 @@ export class PhotosService {
       orderId,
       webpBuffers,
       (fileName, buffer, mimeType) =>
-        this.minio.uploadFile(fileName, buffer, mimeType),
+        this.storage.uploadFile(fileName, buffer, mimeType),
     );
   }
 
@@ -98,7 +98,7 @@ export class PhotosService {
       orderId,
       webpBuffers,
       (fileName, buffer, mimeType) =>
-        this.minio.uploadFile(fileName, buffer, mimeType),
+        this.storage.uploadFile(fileName, buffer, mimeType),
     );
   }
 
@@ -129,11 +129,11 @@ export class PhotosService {
       throw new NotFoundException("Foto não encontrada");
     }
 
-    const fileName = this.minio.extractFileName(photo.url);
+    const fileName = this.storage.extractFileName(photo.url);
 
     await this.repository.deletePhoto(photoId);
 
-    await this.minio.deleteFile(fileName).catch(() => {});
+    await this.storage.deleteFile(fileName).catch(() => {});
 
     return { id: photoId };
   }
@@ -170,8 +170,8 @@ export class PhotosService {
   }
 
   private async buildViewResponse(storedUrl: string) {
-    const fileName = this.minio.extractFileName(storedUrl);
-    const url = await this.minio.generateTemporaryUrl(fileName);
+    const fileName = this.storage.extractFileName(storedUrl);
+    const url = await this.storage.generateTemporaryUrl(fileName);
     return { url };
   }
 }

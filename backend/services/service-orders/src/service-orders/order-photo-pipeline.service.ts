@@ -1,9 +1,9 @@
 // Order photo pipeline — deep module for evidence photo validation and conversion
-// Delegates the WebP triple (validate + sharp 25M + webp 80 + minio) to shared ImagePipeline
+// Delegates the WebP triple (validate + sharp 25M + webp 80 + storage) to shared ImagePipeline
 
 import { BadRequestException, Injectable, Optional } from "@nestjs/common";
 import { PhotosRepository } from "../photos/photos.repository";
-import { MinioService } from "@pode-deixar/storage";
+import { StorageService } from "@pode-deixar/storage";
 import { ImagePipeline } from "@pode-deixar/storage";
 
 // --- Interface for test via interface ---
@@ -33,10 +33,10 @@ export class OrderPhotoPipeline implements OrderPhotoPipelinePort {
 
   constructor(
     @Optional() private photosRepository?: PhotosRepository,
-    @Optional() private minio?: MinioService,
+    @Optional() private storage?: StorageService,
     @Optional() imagePipeline?: ImagePipeline,
   ) {
-    this.pipeline = imagePipeline ?? new ImagePipeline(minio);
+    this.pipeline = imagePipeline ?? new ImagePipeline(storage);
   }
 
   validateFiles(files: Express.Multer.File[] | null | undefined): void {
@@ -58,7 +58,7 @@ export class OrderPhotoPipeline implements OrderPhotoPipelinePort {
   }
 
   async uploadPhotos(orderId: string, webpBuffers: Buffer[]): Promise<any[]> {
-    if (!this.photosRepository || !this.minio) {
+    if (!this.photosRepository || !this.storage) {
       throw new BadRequestException("Serviço de fotos indisponível");
     }
     if (webpBuffers.length === 0) {
@@ -68,7 +68,7 @@ export class OrderPhotoPipeline implements OrderPhotoPipelinePort {
       orderId,
       webpBuffers,
       (fileName, buffer, mimeType) =>
-        this.minio!.uploadFile(fileName, buffer, mimeType),
+        this.storage!.uploadFile(fileName, buffer, mimeType),
     );
   }
 
@@ -81,7 +81,7 @@ export class OrderPhotoPipeline implements OrderPhotoPipelinePort {
     }
     const webpBuffers = await this.pipeline.processFiles(files);
 
-    if (!this.photosRepository || !this.minio) {
+    if (!this.photosRepository || !this.storage) {
       throw new BadRequestException("Serviço de fotos indisponível");
     }
 
@@ -89,7 +89,7 @@ export class OrderPhotoPipeline implements OrderPhotoPipelinePort {
       orderId,
       webpBuffers,
       (fileName, buffer, mimeType) =>
-        this.minio!.uploadFile(fileName, buffer, mimeType),
+        this.storage!.uploadFile(fileName, buffer, mimeType),
     );
     return { uploadedCount: files.length, photos };
   }

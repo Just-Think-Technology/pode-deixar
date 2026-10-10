@@ -1,0 +1,79 @@
+// Grafana Alloy — ships every container's stdout to Loki.
+//
+// Replaces the EOL Promtail (no 3.7.x tag is published; 3.6.8 was the ceiling)
+// keeping the same discovery, the same labels and the same JSON pipeline, so
+// the Loki datasource and the TraceID derived field keep working. Logs are read
+// through the Docker API, which means the socket is the only host mount needed
+// (Promtail also mounted /var/lib/docker/containers).
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+  // Alloy tails the Docker API instead of reading the log files under
+  // /var/lib/docker/containers, so a container has to be discovered while it
+  // is still running — Promtail had no such window because it read the files
+  // after the fact. 500ms is measured, not arbitrary: minio-setup creates the
+  // buckets and exits in well under a second, and at 1s its output never
+  // reached Loki. Two discovery calls per second is negligible next to the
+  // value of seeing why a one-shot job failed.
+  refresh_interval = "500ms"
+}
+
+// Container name and compose service. The second one needed a fix while
+// porting: Promtail (and the first draft of this file) read
+// __meta_docker_compose_service, which no discovery ever sets — compose labels
+// arrive as __meta_docker_container_label_<label>, so the rule matched nothing
+// and the label was absent from Loki.
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.+)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "(.+)"
+    target_label  = "compose_service"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.process.containers.receiver]
+}
+
+// Service logs are JSON in production (service/level/event/msg); anything else
+// (Caddy, Redis, boot lines) still ships, just without parsed labels. Only
+// service + level become Loki labels — orderId/paymentId stay searchable in the
+// log body, never in labels (cardinality + LGPD).
+//
+// The json stage only extracts, it does not rewrite the line: the whole JSON
+// line is kept, not just msg, so the traceId/spanId written by the logger stays
+// in the line for the TraceID derived field to link a log entry to its trace.
+// Non-JSON lines ship untouched, without labels.
+loki.process "containers" {
+  stage.json {
+    expressions = {
+      service = "service",
+      level   = "level",
+    }
+  }
+
+  stage.labels {
+    values = {
+      service = "service",
+      level   = "level",
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

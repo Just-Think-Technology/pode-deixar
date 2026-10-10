@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pnpm run generate && tsc",
     "dev": "tsc --watch",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint .",
     "test": "cross-env NODE_ENV=test jest",
     "generate": "prisma generate --schema=../../prisma/schema.prisma",
     "prisma:generate": "prisma generate --schema=../../prisma/schema.prisma"
@@ -14,6 +14,7 @@
   "dependencies": {
     "@nestjs/swagger": "^11.0.0",
     "@nestjs/terminus": "^11.0.0",
+    "@pode-deixar/tracing": "workspace:*",
     "@prisma/client": "5.22.0"
   },
   "peerDependencies": {

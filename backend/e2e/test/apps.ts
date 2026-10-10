@@ -7,7 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 import request from 'supertest';
 import { AppModule as UsersAppModule } from '../../services/users/src/app.module';
-import { MinioService as SharedMinioService, StorageService as SharedStorageService } from '@pode-deixar/storage';
+import { StorageService } from '@pode-deixar/storage';
 import { AppModule as OrdersAppModule } from '../../services/service-orders/src/app.module';
 import { AppModule as PaymentsAppModule } from '../../services/payments/src/app.module';
 import { AppModule as ReviewsAppModule } from '../../services/reviews/src/app.module';
@@ -34,11 +34,11 @@ export const mockEmail = {
   sendPasswordReset: jest.fn(async () => true),
 };
 
-// --- Storage stub (SeaweedFS S3, MINIO alias kept for backward compat) ---
+// --- Storage stub (S3-compatible object storage) ---
 // The real StorageService connects on onModuleInit — unfeasible without SeaweedFS.
 // The e2e journey uploads no files; the stub only unblocks boot.
 
-export const mockMinio = {
+export const mockStorage = {
   avatarBucket: 'avatars',
   uploadFile: jest.fn(
     async (fileName: string, _buffer: Buffer, _mime: string, bucket?: string) =>
@@ -55,25 +55,17 @@ export const mockMinio = {
   ),
 };
 
-export const mockStorage = mockMinio;
 
 // --- Boot ---
 
-async function bootApp(
-  appModule: any,
-  minioClass?: any,
-): Promise<INestApplication> {
+async function bootApp(appModule: any): Promise<INestApplication> {
   let builder = Test.createTestingModule({
     imports: [
       appModule,
       ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10_000 }]),
     ],
-  });
-  if (minioClass) {
-    builder = builder.overrideProvider(minioClass).useValue(mockMinio);
-    // Also override StorageService alias (MinioService === StorageService)
-    builder = builder.overrideProvider(SharedStorageService).useValue(mockMinio);
-  }
+  }).overrideProvider(StorageService)
+    .useValue(mockStorage);
   // Sensitive endpoints carry strict @Throttle (5 req/min); e2e journeys share
   // one IP and would hit 429. Fake storage that never blocks — the real
   // guard still runs.
@@ -108,8 +100,8 @@ async function bootApp(
  */
 export async function bootApps(): Promise<E2EApps> {
   const [usersApp, ordersApp, paymentsApp, reviewsApp] = await Promise.all([
-    bootApp(UsersAppModule, SharedMinioService),
-    bootApp(OrdersAppModule, SharedMinioService),
+    bootApp(UsersAppModule),
+    bootApp(OrdersAppModule),
     bootApp(PaymentsAppModule),
     bootApp(ReviewsAppModule),
   ]);

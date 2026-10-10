@@ -9,10 +9,13 @@
 
 ## Commands
 
+All commands run from the repository root, so every one of them needs the
+`-f deploy/...` path — there is no compose file at the root.
+
 | Environment                        | Command                                                                |
 | ---------------------------------- | ---------------------------------------------------------------------- |
-| Local (images, local Postgres)     | `docker compose up -d --build`                                         |
-| Local (hot-reload, local Postgres) | `docker compose -f deploy/docker-compose.dev.yml up -d --build`        |
+| Local (images, local Postgres)     | `docker compose -f deploy/docker-compose.dev.yml up -d --build`        |
+| Local (hot-reload, local Postgres) | `scripts/stack-up dev` (same file, with mounted source)                |
 | Staging (VPS, hot-reload)          | `docker compose -f deploy/docker-compose.staging.yml up -d --build`    |
 | Production (VPS, images)           | `docker compose -f deploy/docker-compose.production.yml up -d --build` |
 
@@ -85,18 +88,152 @@ exists.
   `DB_ROLE_*_PASSWORD` values to the real `.env.staging` /
   `.env.production` files (secrets in GitHub Environments, never in git).
   `DIRECT_DATABASE_URL` stays privileged (migrations + backup only).
-* One-off step when adopting this setup: add `STORAGE_ACCESS_KEY` /
-  `STORAGE_SECRET_KEY` (fallback `MINIO_ACCESS_KEY` /
-  `MINIO_SECRET_KEY`) to the real `.env.staging` / `.env.production` files.
-  SeaweedFS S3 reads `STORAGE_*`, and the deploy files no longer
-  interpolate `MINIO_ROOT_*`.
+* One-off step when adopting this setup: add the `STORAGE_*` block to the real
+  `.env.staging` / `.env.production` files — `STORAGE_ENDPOINT`,
+  `STORAGE_PORT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, the three
+  `STORAGE_*_BUCKET` names and `STORAGE_PUBLIC_URL`. `STORAGE_*` is the project
+  standard; `MINIO_*` is still read as a deprecated alias, so a host that only
+  has the old names keeps working until you migrate it (see
+  [.agents/decisions/storage-env-names.md](../.agents/decisions/storage-env-names.md)).
+* Two `MINIO_*` names remain in the compose files and are **not** leftovers:
+  `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` are what the MinIO image reads
+  inside the container, fed from `${STORAGE_ACCESS_KEY}` /
+  `${STORAGE_SECRET_KEY}`. Renaming those would stop the storage server from
+  starting.
+* The compose services are `storage` and `storage-setup` (the bucket bootstrap
+  job). The named volume is still `minio_data`: renaming it would create a new
+  empty volume on the hosts and hide the existing buckets, so it is a task of
+  its own.
+
+## Observability (fatia 1 — métricas)
+
+* `deploy/observability/` holds `prometheus.yml` (5 scrape jobs + self +
+  node-exporter), `rules.yml` (`ServiceDown`, `High5xxRate`, `HighP95Latency`,
+  `DiskFull`) and Grafana provisioning + RED dashboard. Config in git, secrets
+  never in git.
+* `/metrics` on every service is internal-only: no Caddy route, no published
+  port, plus a bearer guard (`MetricsGuard`, fail-closed). Prometheus scrapes
+  over the compose network with the token from a host file (see one-off step).
+* Prometheus/Grafana UIs bind host loopback only (`127.0.0.1:9090` /
+  `127.0.0.1:3000`, dev Grafana on `:3300` because the dev frontend owns
+  `:3000` and the frontend e2e server owns `:3100`) — reach them via SSH tunnel, e.g.
+  `ssh -L 3000:127.0.0.1:3000 <vps>`. Retention is 15 days (`--storage.tsdb.retention.time`).
+* Alert rules are dashboard-only by decision (firing state visible in the
+  Prometheus/Grafana UIs). Adding email later means adding Alertmanager with
+  an SMTP receiver — the rules need no change.
+
+## Observability (fatia 2 — logs)
+
+* `deploy/observability/loki.yml` (single binary, filesystem, 15-day
+  retention) + `deploy/observability/alloy/config.alloy` (Docker discovery,
+  JSON pipeline). Loki and Alloy are internal-only, no published ports.
+* Services log raw JSON lines to stdout **in production only** (pretty output
+  stays in local files / non-prod consoles). Only `service` + `level` become
+  Loki labels — `orderId`/`paymentId`/event stay searchable in the body, never
+  in labels (cardinality + LGPD). Non-JSON lines (Caddy, Redis, boot) still
+  ship, without parsed labels.
+* Grafana reads Loki via the provisioned `Loki` datasource; the `logs.json`
+  dashboard has error rate, error stream and a free-text search (e.g.
+  `orderId`).
+* Alloy keeps the **whole** JSON line, not just `msg`: the `stage.json` only
+  extracts, it does not rewrite the line, so `traceId`/`spanId` stay in it for
+  the `TraceID` derived field to link a log entry to its trace in Tempo. The
+  dashboard only has data in staging/production — services log pretty (not
+  JSON) locally, so nothing is parsed into labels.
+* Alloy replaced the EOL Promtail (Grafana published no 3.7.x tag; `:3` resolved
+  to 3.6.8) with the same discovery, the same `container`/`compose_service`
+  labels and the same JSON pipeline, so the datasource and the dashboards did
+  not change. It reads the Docker API instead of the log files under
+  `/var/lib/docker/containers`, which drops one host mount but adds a
+  discovery requirement: **a container has to be discovered while it is still
+  running.** `refresh_interval = 500ms` covers the one-shot jobs — `minio-setup`
+  exits in well under a second and its output is lost at 1s — and a container
+  removed with `docker run --rm` is never shipped (the stack does not use it).
+  On the first start after a deploy the volume is empty, so the previous
+  container output is re-read and Loki drops what is older than its acceptance
+  window (`entry too far behind`); steady state is clean.
+* Log lines carry `traceId`/`spanId` (written by the pino mixin in
+  `@pode-deixar/logger` when a span is active), which fatia 3 links to Tempo.
+
+## Observability (fatia 3 — traces)
+
+* `deploy/observability/tempo.yml` (single binary, local storage, 15-day
+  retention) receives OTLP/HTTP straight from the SDK — no collector.
+  Internal-only: no published port, queried by Grafana over the compose network
+  (`tempo:3200` for queries, `tempo:4318` for OTLP).
+* `@pode-deixar/tracing` boots the SDK (`NodeSDK` + auto-instrumentation) as the
+  first import of each `main.ts`, and `@pode-deixar/logger` adds `traceId`/
+  `spanId` to every JSON line inside a span. Tempo and the logger therefore
+  share the trace id — the `TraceID` derived field in the `Loki` datasource
+  turns a log line into a link to its trace.
+* Sampling is `ParentBased(TraceIdRatio)`: `OTEL_TRACES_SAMPLER_ARG=1.0` in
+  `.env.dev` (every local trace), `0.1` elsewhere. `OTEL_ENABLED=false` skips
+  SDK startup entirely — a service never blocks on a missing collector.
+* Coverage: HTTP server/client spans, Nest handlers (the
+  `auto-instrumentations-node` set) and **one span per Prisma operation**
+  (`findUnique User`, `queryRaw`, …). Prisma's Rust query engine bypasses `pg`,
+  so the spans come from a client extension built in `@pode-deixar/tracing` and
+  applied once in `@pode-deixar/prisma` (`PrismaService`). Spans carry the model
+  and the operation only — arguments and statements are never recorded, since
+  they can carry personal data.
+* Dashboards and datasources use fixed uids (`prometheus`, `loki`, `tempo`);
+  panels reference the uid directly, because Grafana file provisioning does not
+  substitute `${DS_*}` placeholders.
+* The traces dashboard filters by `span.http.route`, the **route template**
+  (`/api/v1/services/:orderId`) instead of the raw path, so no ids land in the
+  trace index. `Rota = All` expands to `/api/.*`: the scrape hits `/metrics`
+  every 15s per service and would fill the list with traces nobody is looking
+  for — select `/metrics` or `/health/ready` explicitly to inspect them. TraceQL
+  in Tempo 2.10 requires the scoped syntax (`span.http.route`,
+  `resource.service.name`); the unscoped `http.route` form is a parse error.
+* The traces panel is a **table**, not Grafana's native `traces` panel: with the
+  same datasource and query, `traces` answers "No data found in response" against
+  Tempo 2.10 even when the search returns traces. The table lists them and the
+  Trace ID column opens the waterfall in Explore.
+* Tempo runs **without TraceQL metrics** (no `metrics_generator`), so a Tempo
+  dashboard variable has to use the tag values query, `{"type": 1, "label":
+  "<tag>"}` (`1` = LabelValues, with the scope resolved from
+  `/api/v2/search/tags`). The `label_values(...)` string form calls the metrics
+  API and yields an empty dropdown.
+* Every observability image is pinned (`grafana:11.6.0`, `loki:3.7.8`,
+  `alloy:v1.20.0`, `prometheus:v3.15.0`, `tempo:2.10.8`,
+  `node-exporter:v1.12.1`) — a floating major tag pulls a new Grafana
+  provisioner without review.
+* Tempo 2.10 searches the ingester index, not the blocks: traces received
+  before a Tempo restart do not show up in the TraceQL search (the traceId link
+  from Loki still resolves them, since a full block read by id works). The
+  search covers what arrived since the process started.
+* Prometheus, Loki and Tempo run as the uid their image owns (65534 / 10001).
+  With `cap_drop: ALL` there is no `CAP_DAC_OVERRIDE`, so `user: "0:0"` cannot
+  write their volumes and the containers crash-loop at startup.
+
+One-off steps when adopting this setup (in addition to the storage keys
+below): on each Docker host, write the shared scrape token to a root-only
+host file and set the Grafana admin password in the real env file:
+
+```bash
+install -d -m 755 /etc/pode-deixar
+openssl rand -hex 32 > /etc/pode-deixar/metrics_token
+# Prometheus runs as uid/gid 65534 (cap_drop ALL takes away the override that
+# would let root write its TSDB volume), so the token must be readable by that
+# group — root-only 600 makes every scrape fail with "unable to read
+# authorization credentials".
+chown root:65534 /etc/pode-deixar/metrics_token
+chmod 640 /etc/pode-deixar/metrics_token
+# METRICS_TOKEN in .env.dev / .env.staging / .env.production must hold the
+# same value; GF_SECURITY_ADMIN_PASSWORD likewise (strong, per environment).
+# The real .env.staging / .env.production also need the tracing trio from
+# .env.example: OTEL_ENABLED, OTEL_EXPORTER_OTLP_ENDPOINT (http://tempo:4318)
+# and OTEL_TRACES_SAMPLER_ARG.
+```
 
 ## Rules
 
 * One Compose file per environment (`staging` / `production`); staging
   includes the production file and only swaps the environment configuration.
-* No published ports except Caddy 80/443; no local Postgres, frontend, or
-  Mailpit in the deploy files.
+* No publicly published ports except Caddy 80/443; loopback-only ports
+  (`127.0.0.1`) are allowed for internal UIs (Prometheus, Grafana). No local
+  Postgres, frontend, or Mailpit in the deploy files.
 * One Redis instance per stack; `auth` runs `prisma migrate deploy` on startup.
 * Renaming a stack `name` orphans its volumes. Migrating SeaweedFS data requires a
   manual volume copy (`seaweedfs_data`) before dropping the old volumes.

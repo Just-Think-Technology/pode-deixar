@@ -25,7 +25,7 @@ export class PhotosRepository {
 
   // Quota is enforced inside the transaction so concurrent uploads cannot
   // push an order past the limit; storage upload stays with the caller via
-  // uploadFile to keep MinIO out of the persistence layer.
+  // uploadFile to keep object storage out of the persistence layer.
   uploadPhotos(
     orderId: string,
     webpBuffers: Buffer[],

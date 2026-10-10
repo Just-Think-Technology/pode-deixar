@@ -12,7 +12,7 @@ import {
 } from "./service-orders.controller";
 import { PrismaModule } from "@pode-deixar/prisma";
 import { SharedModule } from "../shared/shared.module";
-import { MinioModule } from "../storage/minio.module";
+import { ServiceStorageModule } from "../storage/storage.module";
 
 import { ServiceOrdersRepository } from "./service-orders.repository";
 import { PhotosRepository } from "../photos/photos.repository";
@@ -24,7 +24,7 @@ import { ImagePipeline } from "@pode-deixar/storage";
 @Module({
   // --- Imports ---
 
-  imports: [PrismaModule, SharedModule, MinioModule],
+  imports: [PrismaModule, SharedModule, ServiceStorageModule],
 
   // --- Controllers ---
 

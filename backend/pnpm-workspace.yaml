@@ -11,6 +11,12 @@ overrides:
   # pais aceitam — ^1.14.3 (otlp-grpc-exporter-base) e ^1.11.1 (dockerode) —,
   # mas o pnpm mantém a 1.14.4, então a resolução precisa ser forçada.
   "@grpc/grpc-js": ^1.14.5
+  # brace-expansion: DoS por recursão em grupos aninhados (GHSA-6j4f-fj2g-mc7p) e
+  # em parseCommaParts (GHSA-qhr7-859c-m2p7). O override é por versão de propósito:
+  # a árvore tem as linhas 1.x, 2.x e 5.x, e só a 2.x está vulnerável. Caminho
+  # prod: @opentelemetry/auto-instrumentations-node -> resource-detector-gcp ->
+  # gcp-metadata -> gaxios -> rimraf -> glob -> minimatch@5.
+  "brace-expansion@2.1.4": ^2.1.6
   # source-map-js: event-loop DoS (GHSA-8hjj-hgm2-q4vw), corrigido em >=1.2.2.
   # Vem por sanitize-html -> postcss, que aceita ^1.0.2.
   "source-map-js": ^1.2.2

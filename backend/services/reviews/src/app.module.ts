@@ -7,6 +7,7 @@ import { APP_GUARD, APP_PIPE, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ValidationError } from "class-validator";
 import { PrismaModule, HealthModule } from "@pode-deixar/prisma";
+import { MetricsModule } from "@pode-deixar/metrics";
 import { NotificationsModule } from "@pode-deixar/notifications";
 import { SharedModule } from "./shared/shared.module";
 import { ReviewsModule } from "./reviews/reviews.module";
@@ -58,6 +59,7 @@ function translateValidationErrors(errors: ValidationError[]): string {
     PrismaModule,
     NotificationsModule,
     HealthModule,
+    MetricsModule,
     SharedModule,
     ReviewsModule,
   ],

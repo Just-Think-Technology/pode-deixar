@@ -52,12 +52,20 @@ outside the task scope (see "Never do" 13 in AGENTS.md).
   storage, validation messages (`translateValidationErrors`), image validation
   (`validateImageFile`), Prisma error mapping (`resolvePrismaError`),
   auth guards (`JwtAuthGuard`, `RolesGuard`, `Roles`), token payload and
-  revocation checks (`assertTokenPayload`, `checkTokenRevocation`) and the
+  revocation checks (`assertTokenPayload`, `checkTokenRevocation`), the
+  observability pairs (`@pode-deixar/metrics` for `/metrics` + Prometheus,
+  `@pode-deixar/tracing` for the OpenTelemetry SDK bootstrap) and the
   shared `GlobalExceptionFilter` (masks Prisma internals, generic 500)
 - **Auth guards (JWT + roles) live only in `@pode-deixar/security`.**
   The auth service keeps specialized versions (IP logging on denial,
   access-token type check, DB user lookup); users/service-orders/payments/
   reviews use the shared guards, strategy helpers and exception filter
+- **Prisma spans live only in `@pode-deixar/tracing`**
+  (`buildPrismaTracingExtension()`, one CLIENT span per operation), applied
+  once in `@pode-deixar/prisma` (`PrismaService` returns the extended client
+  from its constructor). Services never wrap repository calls in spans
+  themselves — the Rust query engine bypasses the instrumented `pg` driver, so
+  a client extension is the only seam that sees every query.
 - **Second-use rule:** code needed by a second service is extracted to
   `backend/shared/` by the task creating the second usage — no third copy
 

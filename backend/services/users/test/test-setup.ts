@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from "@pode-deixar/prisma";
-import { MinioService, StorageService } from '@pode-deixar/storage';
+import { StorageService } from '@pode-deixar/storage';
 import { ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
 
 // --- Types ---
@@ -17,11 +17,11 @@ export interface TestAppSetup {
   prisma: PrismaService;
 }
 
-// --- Storage stub (SeaweedFS S3, MINIO alias kept for backward compat) ---
+// --- Storage stub (S3-compatible object storage) ---
 // The real StorageService connects on onModuleInit — unfeasible without SeaweedFS.
 // Mocks network behavior while keeping the service contract.
 
-export const mockMinio = {
+export const mockStorage = {
   avatarBucket: 'avatars',
   uploadFile: jest.fn(
     async (fileName: string, _buffer: Buffer, _mime: string, bucket?: string) =>
@@ -37,11 +37,10 @@ export const mockMinio = {
       `http://seaweedfs.test/${bucket ?? 'avatars'}/${fileName}?X-Amz-Signature=mock`,
   ),
 };
-export const mockStorage = mockMinio;
 
 /**
  * Boots the real Nest app (validation pipeline, guards and production filters).
- * - Stubbed MinioService (no network).
+ * - Stubbed StorageService (no network).
  * - High-limit throttle so it doesn't interfere with tests.
  */
 export async function setupTestApp(): Promise<TestAppSetup> {
@@ -51,10 +50,8 @@ export async function setupTestApp(): Promise<TestAppSetup> {
       ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10_000 }]),
     ],
   })
-    .overrideProvider(MinioService)
-    .useValue(mockMinio)
     .overrideProvider(StorageService)
-    .useValue(mockMinio)
+    .useValue(mockStorage)
     // Sensitive endpoints carry strict @Throttle (5 req/min); test flows share
     // one IP and would hit 429. Fake storage that never blocks — the real
     // guard still runs.

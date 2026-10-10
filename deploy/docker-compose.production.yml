@@ -25,7 +25,7 @@ services:
       TZ: America/Sao_Paulo
       DATABASE_URL: ${DB_AUTH_URL:?DB_AUTH_URL must be set in .env.production}
     depends_on:
-      minio:
+      storage:
         condition: service_healthy
 
   # --- Users Service ---
@@ -45,7 +45,7 @@ services:
       TZ: America/Sao_Paulo
       DATABASE_URL: ${DB_USERS_URL:?DB_USERS_URL must be set in .env.production}
     depends_on:
-      minio:
+      storage:
         condition: service_healthy
 
   # --- Service Orders Service ---
@@ -65,7 +65,7 @@ services:
       TZ: America/Sao_Paulo
       DATABASE_URL: ${DB_SERVICE_ORDERS_URL:?DB_SERVICE_ORDERS_URL must be set in .env.production}
     depends_on:
-      minio:
+      storage:
         condition: service_healthy
 
   # --- Payments Service ---
@@ -102,8 +102,8 @@ services:
       TZ: America/Sao_Paulo
       DATABASE_URL: ${DB_REVIEWS_URL:?DB_REVIEWS_URL must be set in .env.production}
 
-  # --- MinIO ---
-  minio:
+  # --- Object storage (S3) ---
+  storage:
     image: minio/minio:latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: server /data --console-address ":9001"
     env_file:
@@ -117,21 +117,21 @@ services:
       retries: 5
 
   # --- MinIO Client ---
-  minio-setup:
+  storage-setup:
     image: minio/mc:latest@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     env_file:
       - ../.env.production
     depends_on:
-      minio:
+      storage:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:$${MINIO_PORT:-9000} $${MINIO_ACCESS_KEY:-minioadmin} $${MINIO_SECRET_KEY:-minioadmin} &&
-      mc mb local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} --ignore-existing &&
-      mc anonymous set public local/$${MINIO_SERVICE_IMAGES_BUCKET:-service-images} &&
-      mc mb local/$${MINIO_AVATARS_BUCKET:-avatars} --ignore-existing &&
-      mc anonymous set public local/$${MINIO_AVATARS_BUCKET:-avatars} &&
-      mc mb local/$${MINIO_ORDER_PHOTOS_BUCKET:-order-photos} --ignore-existing &&
+      mc alias set local http://storage:$${STORAGE_PORT:-9000} $${STORAGE_ACCESS_KEY:-minioadmin} $${STORAGE_SECRET_KEY:-minioadmin} &&
+      mc mb local/$${STORAGE_SERVICE_IMAGES_BUCKET:-service-images} --ignore-existing &&
+      mc anonymous set public local/$${STORAGE_SERVICE_IMAGES_BUCKET:-service-images} &&
+      mc mb local/$${STORAGE_AVATARS_BUCKET:-avatars} --ignore-existing &&
+      mc anonymous set public local/$${STORAGE_AVATARS_BUCKET:-avatars} &&
+      mc mb local/$${STORAGE_ORDER_PHOTOS_BUCKET:-order-photos} --ignore-existing &&
       echo 'Buckets created successfully'
       "
 
@@ -153,6 +153,143 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # --- Prometheus ---
+  # Internal-only metrics; Prometheus and Grafana UIs bind host loopback
+  # (reached via SSH tunnel), with no Caddy route. Runs as the image user
+  # (nobody) because cap_drop ALL removes CAP_DAC_OVERRIDE, so uid 0 cannot
+  # write the /prometheus volume the image owns as 65534.
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    user: "65534:65534"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      TZ: America/Sao_Paulo
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/rules.yml:/etc/prometheus/rules.yml:ro
+      - /etc/pode-deixar/metrics_token:/etc/prometheus/metrics_token:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      - auth
+      - users
+      - service-orders
+      - payments
+      - reviews
+
+  # --- Grafana ---
+  # Admin password comes from GF_SECURITY_ADMIN_PASSWORD in the env file
+  # (native name: compose interpolation cannot map it from another variable).
+  grafana:
+    image: grafana/grafana:11.6.0
+    user: "0:0"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - ../.env.production
+    environment:
+      TZ: America/Sao_Paulo
+      GF_SECURITY_ADMIN_USER: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+
+  # --- Loki ---
+  # Log aggregation (JSON stdout from services via Promtail). Internal-only,
+  # no published ports; queried by Grafana over the compose network. Runs as
+  # the image user: cap_drop ALL takes away the override that would let uid 0
+  # write the /loki volume owned by 10001.
+  loki:
+    image: grafana/loki:3.7.8
+    user: "10001:10001"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./observability/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+
+  # --- Alloy ---
+  # Ships every container's stdout to Loki. Needs the Docker socket for
+  # discovery and log tailing; a single read-only mount.
+  alloy:
+    image: grafana/alloy:v1.20.0
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/alloy-data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Mounted outside /var/lib/alloy: that path belongs to uid 473 in the
+      # image, and with cap_drop ALL root has no DAC_OVERRIDE to write it.
+      - alloy_data:/alloy-data
+    depends_on:
+      - loki
+
+  # --- Tempo ---
+  # Distributed traces via OTLP/HTTP straight from the SDK (no collector).
+  # Internal-only: queried by Grafana, fed by services over the compose
+  # network. Retention 15 days (block_retention in tempo.yml). Runs as the
+  # image user: cap_drop ALL takes away the override that would let uid 0
+  # write the /var/tempo volume owned by 10001.
+  tempo:
+    image: grafana/tempo:2.10.8
+    user: "10001:10001"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command: -config.file=/etc/tempo/tempo.yml
+    volumes:
+      - ./observability/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/var/tempo
+
+  # --- Node Exporter ---
+  # Host CPU/RAM/disk for the DiskFull rule; read-only host mounts, no ports.
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    pid: host
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro,rslave
 
   # --- Database Backup ---
   db-backup:
@@ -219,3 +356,8 @@ volumes:
   redis_data:
   caddy_data:
   caddy_config:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  alloy_data:
+  tempo_data:

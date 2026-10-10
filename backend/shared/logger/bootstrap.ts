@@ -41,13 +41,14 @@ export async function bootstrapService(
   // API versioning — single home for the version: deploy sets API_VERSION
   // (Caddy {$API_VERSION} + NEXT_PUBLIC_API_VERSION); unset means current v1.
   // All controller routes are served under /api/<version>; health probes stay
-  // at /health (+ /health/ready, /health/live) for Caddy
+  // at /health (+ /health/ready, /health/live) and Prometheus scrapes stay
+  // at /metrics — both internal-only, never routed by Caddy
   // (handle /api/<version>/*/health* → strip to /health) and direct probes.
   // Documented choice: health excluded from prefix; alternative would version it
   // as /api/<version>/health and require Caddy health handles to strip it only.
   const apiVersion = process.env.API_VERSION ?? 'v1';
   app.setGlobalPrefix(`api/${apiVersion}`, {
-    exclude: ['health', 'health/ready', 'health/live'],
+    exclude: ['health', 'health/ready', 'health/live', 'metrics'],
   });
 
   // Explicit body limit — defense-in-depth for DoS (uploads use multipart, not JSON)

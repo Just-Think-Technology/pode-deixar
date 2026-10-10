@@ -4,7 +4,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { BadRequestException } from "@nestjs/common";
 import { OrderPhotoPipeline } from "../src/service-orders/order-photo-pipeline.service";
 import { PhotosRepository } from "../src/photos/photos.repository";
-import { MinioService } from "@pode-deixar/storage";
+import { StorageService } from "@pode-deixar/storage";
 
 // Minimal 1x1 png for sharp (valid image)
 const ONE_PIXEL_PNG = Buffer.from(
@@ -25,8 +25,8 @@ describe("OrderPhotoPipeline", () => {
     }),
   };
 
-  const mockMinio: any = {
-    uploadFile: jest.fn(async (fileName: string) => `http://minio/order-photos/${fileName}`),
+  const mockStorage: any = {
+    uploadFile: jest.fn(async (fileName: string) => `http://storage/order-photos/${fileName}`),
   };
 
   let pipeline: OrderPhotoPipeline;
@@ -36,7 +36,7 @@ describe("OrderPhotoPipeline", () => {
       providers: [
         OrderPhotoPipeline,
         { provide: PhotosRepository, useValue: mockPhotosRepository },
-        { provide: MinioService, useValue: mockMinio },
+        { provide: StorageService, useValue: mockStorage },
       ],
     }).compile();
 
@@ -76,13 +76,13 @@ describe("OrderPhotoPipeline", () => {
       await expect(pipeline.processFiles(files)).rejects.toThrow(BadRequestException);
     });
 
-    it("uploads via repository and minio", async () => {
+    it("uploads via repository and storage", async () => {
       const files = [{ originalname: "photo.png", buffer: ONE_PIXEL_PNG }] as any;
       const result = await pipeline.handleUpload("order-1", files);
       expect(result.uploadedCount).toBe(1);
       expect(result.photos).toHaveLength(1);
       expect(mockPhotosRepository.uploadPhotos).toHaveBeenCalled();
-      expect(mockMinio.uploadFile).toHaveBeenCalled();
+      expect(mockStorage.uploadFile).toHaveBeenCalled();
     });
 
     it("returns empty for null files", async () => {
