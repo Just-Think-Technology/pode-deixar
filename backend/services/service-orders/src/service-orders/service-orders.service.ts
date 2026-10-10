@@ -755,7 +755,10 @@ export class ServiceOrdersService {
       // Only a live bid keeps marketplace access; a directed order is exclusive to
       // its target provider, so a lost bid never unlocks the winner's tracking.
       const hasLiveProposal = proposals.some(
-        (p: any) => p.providerId === userId && p.status !== "REJECTED" && p.status !== "WITHDRAWN",
+        (p: any) =>
+          p.providerId === userId &&
+          p.status !== "REJECTED" &&
+          p.status !== "WITHDRAWN",
       );
       const isDirectedToOther =
         (order as any).providerId != null &&
