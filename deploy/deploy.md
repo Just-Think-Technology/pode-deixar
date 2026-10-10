@@ -93,6 +93,22 @@ exists.
   Prometheus/Grafana UIs). Adding email later means adding Alertmanager with
   an SMTP receiver — the rules need no change.
 
+## Observability (fatia 2 — logs)
+
+* `deploy/observability/loki.yml` (single binary, filesystem, 15-day
+  retention) + `promtail.yml` (Docker discovery, JSON pipeline). Loki and
+  Promtail are internal-only, no published ports.
+* Services log raw JSON lines to stdout **in production only** (pretty output
+  stays in local files / non-prod consoles). Only `service` + `level` become
+  Loki labels — `orderId`/`paymentId`/event stay searchable in the body, never
+  in labels (cardinality + LGPD). Non-JSON lines (Caddy, Redis, boot) still
+  ship, without parsed labels.
+* Grafana reads Loki via the provisioned `Loki` datasource; the `logs.json`
+  dashboard has error rate, error stream and a free-text search (e.g.
+  `orderId`).
+* `traceId` correlation stays scoped to fatia 3 (needs OpenTelemetry
+  propagation — there is no trace id to attach yet).
+
 One-off steps when adopting this setup (in addition to the storage keys
 below): on each Docker host, write the shared scrape token to a root-only
 host file and set the Grafana admin password in the real env file:
