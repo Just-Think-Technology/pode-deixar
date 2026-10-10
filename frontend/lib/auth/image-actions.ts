@@ -4,6 +4,7 @@
 
 import { getAccessToken } from "@/lib/auth/session.server";
 import { getApiBaseUrl } from "@/api/client/http";
+import { FRIENDLY_MESSAGES } from "@/lib/errors/messages";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_MIME = new Set([
@@ -69,7 +70,7 @@ export async function uploadServiceImageAction(
 ) {
   const token = await getAccessToken();
   if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error(FRIENDLY_MESSAGES.unauthenticated);
   }
   assertResourceId(serviceId, "Serviço inválido");
 
@@ -118,7 +119,7 @@ export async function deleteServiceImageAction(
 ) {
   const token = await getAccessToken();
   if (!token) {
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error(FRIENDLY_MESSAGES.unauthenticated);
   }
   assertResourceId(serviceId, "Serviço inválido");
   assertResourceId(imageId, "Imagem inválida");

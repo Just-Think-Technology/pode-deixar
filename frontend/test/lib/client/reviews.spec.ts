@@ -7,6 +7,8 @@ import {
   formatAverage,
   formatReviewDate,
   mapProviderReview,
+  mapReviewsPage,
+  mapReviewsSummary,
   buildLocalSummary,
 } from '@/lib/client/reviews/mappers'
 
@@ -54,6 +56,7 @@ describe('mapProviderReview', () => {
       comment: null,
       createdAt: '2026-09-12T10:00:00.000Z',
       reviewer: { displayName: 'Cliente', avatarUrl: null },
+      response: null,
     })
   })
 
@@ -71,6 +74,78 @@ describe('mapProviderReview', () => {
       avatarUrl: 'https://img/a.png',
     })
     expect(mapped.comment).toBe('Ótimo trabalho.')
+  })
+
+  it('maps the embedded provider response when present', () => {
+    const mapped = mapProviderReview({
+      id: 'r3',
+      rating: 5,
+      comment: 'Bom serviço.',
+      created_at: '2026-09-12T10:00:00.000Z',
+      reviewer: { display_name: 'João Silva', avatar_url: null },
+      response: {
+        message: 'Obrigado!',
+        created_at: '2026-09-13T10:00:00.000Z',
+      },
+    })
+
+    expect(mapped.response).toEqual({
+      message: 'Obrigado!',
+      createdAt: '2026-09-13T10:00:00.000Z',
+    })
+  })
+})
+
+describe('mapReviewsPage', () => {
+  it('maps data and preserves pagination meta', () => {
+    const page = mapReviewsPage({
+      data: [
+        {
+          id: 'r1',
+          rating: 5,
+          comment: null,
+          created_at: '2026-09-12T10:00:00.000Z',
+          reviewer: { display_name: 'Carlos Mendes', avatar_url: null },
+          response: null,
+        },
+      ],
+      meta: { total: 12, page: 1, limit: 10, hasMore: true },
+    })
+
+    expect(page.meta).toEqual({ total: 12, page: 1, limit: 10, hasMore: true })
+    expect(page.data[0]).toMatchObject({
+      id: 'r1',
+      reviewer: { displayName: 'Carlos M.', avatarUrl: null },
+    })
+  })
+})
+
+describe('mapReviewsSummary', () => {
+  it('maps average, total and string-keyed distribution', () => {
+    const summary = mapReviewsSummary({
+      provider_id: 'p1',
+      average: 4.5,
+      total: 2,
+      distribution: { '1': 0, '2': 0, '3': 0, '4': 1, '5': 1 },
+    })
+
+    expect(summary).toEqual({
+      average: 4.5,
+      total: 2,
+      distribution: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 1 },
+    })
+  })
+
+  it('keeps null average for providers without reviews', () => {
+    const summary = mapReviewsSummary({
+      provider_id: 'p1',
+      average: null,
+      total: 0,
+      distribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
+    })
+
+    expect(summary.average).toBeNull()
+    expect(summary.total).toBe(0)
   })
 })
 

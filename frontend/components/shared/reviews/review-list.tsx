@@ -35,7 +35,11 @@ export default function ReviewList({
   return (
     <div className="space-y-4">
       {reviews.map((review) => (
-        <ReviewCard key={review.id} review={review} />
+        <ReviewCard
+          key={review.id}
+          review={review}
+          response={review.response ?? null}
+        />
       ))}
 
       {loadMoreError && (

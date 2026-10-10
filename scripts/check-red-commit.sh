@@ -19,20 +19,34 @@ fi
 
 first_test=""
 first_impl=""
+mixed=""
+
+# A file counts as a test when it belongs to a suite, whatever it is named:
+# specs, __tests__ and anything under a test/tests/e2e directory.
+has_test_file() {
+  grep -Eq '(^|/)(test|tests|e2e)/|\.spec\.|\.test\.|__tests__'
+}
+
+# A file counts as implementation when it is real source (src/, app/, lib/,
+# api/, components/) outside any test directory. Scaffolding — package.json,
+# tsconfig.json, jest.config.js, lockfiles — is neither: a red commit that only
+# adds the skeleton of a new package is still a red commit, and counting it as
+# implementation reported a false violation for every package created this way.
+has_source_file() {
+  grep -Eiq '^(backend|frontend)/.*/(src|app|lib|api|components)/' && ! has_test_file
+}
 
 for sha in "${COMMITS[@]}"; do
   files=$(git show --name-only --pretty="" "$sha")
-  # Heuristic: test files are under test/**, frontend/test/**, backend/**/test/**, e2e/**
-  if echo "$files" | grep -Eq '(\.spec\.|\.test\.|__tests__)' && [ -z "$first_test" ]; then
+
+  if echo "$files" | has_test_file && [ -z "$first_test" ]; then
     first_test="$sha"
   fi
-  # Implementation: any src/** outside test
-  if echo "$files" | grep -Eq '^(backend|frontend)/(services|shared|api|lib|app|components)' && [ -z "$first_impl" ]; then
-    # Ignore commits that only touch tests
-    non_test=$(echo "$files" | grep -vE '(\.spec\.|\.test\.)' | grep -E '^(backend|frontend)/' || true)
-    if [ -n "$non_test" ]; then
-      first_impl="$sha"
-    fi
+  if echo "$files" | has_source_file && [ -z "$first_impl" ]; then
+    first_impl="$sha"
+  fi
+  if [ "$sha" = "$first_test" ] && [ "$sha" = "$first_impl" ]; then
+    mixed="$sha"
   fi
 done
 
@@ -53,6 +67,11 @@ for i in "${!COMMITS[@]}"; do
   if [ "${COMMITS[$i]}" = "$first_test" ]; then test_idx=$i; fi
   if [ "${COMMITS[$i]}" = "$first_impl" ]; then impl_idx=$i; fi
 done
+
+if [ -n "$mixed" ]; then
+  echo "TDD check FAILED: $mixed carries both the specs and the implementation — commit the failing specs first, then the code."
+  exit 1
+fi
 
 if [ "$test_idx" -lt "$impl_idx" ]; then
   echo "TDD red→green OK: first test $first_test precedes first impl $first_impl"

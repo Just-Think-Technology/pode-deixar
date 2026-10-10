@@ -15,6 +15,7 @@ import {
 import {
   getAuthSession,
 } from "@/lib/auth/session.server";
+import { FRIENDLY_MESSAGES } from "@/lib/errors/messages";
 import { withServerTokenRefresh } from "@/lib/auth/server-token-refresh";
 import type {
   ContractTracking,
@@ -42,7 +43,7 @@ function revalidateTracking(orderId: string): void {
 async function requireTrackingRole(role: TrackingRole): Promise<void> {
   const session = await getAuthSession();
   if (!session) {
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error(FRIENDLY_MESSAGES.unauthenticated);
   }
   if (session.user.role !== role) {
     throw new Error(
