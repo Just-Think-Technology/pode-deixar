@@ -156,6 +156,12 @@ export class PhotosService {
         return this.buildViewResponse(photo.url);
       }
 
+      // A directed order belongs to its assigned provider; a dead bid never
+      // grants access to the completion evidence the winner uploaded.
+      if (order.providerId) {
+        throw new ForbiddenException("Acesso negado a esta foto");
+      }
+
       const proposal = await this.repository.findProposalForViewer(
         order.id,
         userId,

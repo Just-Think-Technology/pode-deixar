@@ -265,15 +265,23 @@ services:
       set -e
 
       TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
-      FILE=\"$${BACKUP_DIR}/pode_deixar_$${TIMESTAMP}.sql.gz\"
+      FILE=\"$${BACKUP_DIR}/pode_deixar_$${TIMESTAMP}.sql\"
 
       echo \"[$$(date)] Iniciando backup para $${FILE}\"
 
-      pg_dump -h $${POSTGRES_HOST} \
+      # Write to a .sql first: in a pipeline the exit status is gzip's, so a
+      # failed pg_dump would leave an empty .sql.gz and still report success.
+      if ! pg_dump -h $${POSTGRES_HOST} \
         -U $${POSTGRES_USER} \
-        -d $${POSTGRES_DB} | gzip > \"$${FILE}\"
+        -d $${POSTGRES_DB} > \"$${FILE}.sql\"; then
+        echo \"[$$(date)] FALHA no pg_dump — dump removido\" >&2
+        rm -f \"$${FILE}.sql\"
+        exit 1
+      fi
 
-      echo \"[$$(date)] Backup concluído: $${FILE}\"
+      gzip \"$${FILE}.sql\"
+
+      echo \"[$$(date)] Backup concluído: $${FILE}.gz\"
 
       find \"$${BACKUP_DIR}\" \
         -name 'pode_deixar_*.sql.gz' \

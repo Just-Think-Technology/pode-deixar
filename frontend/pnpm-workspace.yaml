@@ -1,4 +1,19 @@
 dangerouslyAllowAllBuilds: true
+overrides:
+  # next: RCE em next/og ImageResponse e SSRF no otimizador de imagem
+  # (GHSA lewat ImageResponse), corrigidos em >=16.3.8.
+  next: ^16.3.8
+  # sharp: CVE-2026-96889 na dependência librsvg, corrigido em >=0.35.5.
+  sharp: ^0.35.5
+  # proxy-addr: IP spoofing via IPv4-mapped IPv6 (correção >=2.0.8). O
+  # cliente HTTP do Node usa isso para resolver o IP do cliente; um IP
+  # forjado CONTORNARIA o rate limiting por IP.
+  "proxy-addr": ^2.0.8
+  # source-map-js: event-loop DoS (GHSA-8hjj-hgm2-q4vw), corrigido em >=1.2.2.
+  "source-map-js": ^1.2.2
+  # brace-expansion: recursão descontrolada e tempo quadrático,
+  # corrigidos em >=5.0.12.
+  "brace-expansion": ^5.0.12
 minimumReleaseAgeExclude:
   - '@vitest/mocker@5.0.0'
   - '@vitest/spy@5.0.0'
