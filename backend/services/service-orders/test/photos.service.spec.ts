@@ -198,10 +198,10 @@ describe("PhotosService", () => {
       );
     });
 
-    it("should return presigned url for provider with proposal on the order", async () => {
+    it("should return presigned url for provider with proposal on an open order", async () => {
       mockRepository.findPhotoWithOrderById.mockResolvedValue({
         ...mockFoto,
-        serviceOrder: { id: "order-1", clientId: "other-client" },
+        serviceOrder: { id: "order-1", clientId: "other-client", providerId: null },
       });
       mockRepository.findProposalForViewer.mockResolvedValue({ id: "proposal-1" });
       mockMinio.extractFileName.mockReturnValue("order-1/uuid.webp");
@@ -218,6 +218,23 @@ describe("PhotosService", () => {
         "order-1",
         "provider-1",
       );
+    });
+
+    it("should reject a bidder on an order directed to another provider", async () => {
+      mockRepository.findPhotoWithOrderById.mockResolvedValue({
+        ...mockFoto,
+        serviceOrder: {
+          id: "order-1",
+          clientId: "other-client",
+          providerId: "provider-2",
+        },
+      });
+
+      await expect(
+        service.getViewUrl("photo-1", "provider-1", "PROVIDER"),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockRepository.findProposalForViewer).not.toHaveBeenCalled();
+      expect(mockMinio.generateTemporaryUrl).not.toHaveBeenCalled();
     });
 
     it("should throw NotFoundException when photo not found", async () => {

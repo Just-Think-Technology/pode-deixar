@@ -622,18 +622,18 @@ export class ServiceOrdersService {
       throw new NotFoundException("Pedido de serviço não encontrado");
     }
 
-    // Access mirrors findByIdWithAccess
+    // Access mirrors findByIdWithAccess: a directed order is exclusive to its
+    // assigned provider, so no proposal row can unlock the winner's history.
     let hasAccess = false;
     if (role === "CLIENT" && order.clientId === userId) {
       hasAccess = true;
     } else if (role === "PROVIDER") {
       if (order.providerId === userId) {
         hasAccess = true;
+      } else if (order.providerId) {
+        throw new ForbiddenException("Acesso negado a este pedido");
       } else if (order.proposals.some((p) => p.providerId === userId)) {
         hasAccess = true;
-      }
-      if (order.providerId && order.providerId !== userId && !hasAccess) {
-        throw new ForbiddenException("Acesso negado a este pedido");
       }
     }
 
@@ -752,17 +752,20 @@ export class ServiceOrdersService {
     if (role === "PROVIDER") {
       const proposals = (order as any).proposals ?? [];
       const isOwner = (order as any).providerId === userId;
-      const hasProposal = proposals.some((p: any) => p.providerId === userId);
+      // Only a live bid keeps marketplace access; a directed order is exclusive to
+      // its target provider, so a lost bid never unlocks the winner's tracking.
+      const hasLiveProposal = proposals.some(
+        (p: any) => p.providerId === userId && p.status !== "REJECTED" && p.status !== "WITHDRAWN",
+      );
       const isDirectedToOther =
         (order as any).providerId != null &&
         (order as any).providerId !== userId;
 
-      // If directed to another provider and caller has no proposal → 403
-      if (isDirectedToOther && !hasProposal) {
+      if (isDirectedToOther) {
         throw new ForbiddenException("Acesso negado");
       }
 
-      if (!isOwner && !hasProposal) {
+      if (!isOwner && !hasLiveProposal) {
         throw new ForbiddenException("Acesso negado");
       }
     }
