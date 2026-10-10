@@ -163,6 +163,11 @@ services:
       BACKUP_SCHEDULE: "0 3 * * *"
       BACKUP_RETENTION_DAYS: "7"
       BACKUP_DIR: /backups
+      # Fail closed when the dump source is missing: pg_dump with an empty
+      # argument aborts, and an empty archive would silently replace the last
+      # good backup. DIRECT_DATABASE_URL is the privileged URL reserved for
+      # migrations and backups (see .agents/decisions/database.md).
+      DATABASE_URL: ${DIRECT_DATABASE_URL:?DIRECT_DATABASE_URL must be set in .env.production}
     volumes:
       - backup_data:/backups
     entrypoint: >
@@ -173,13 +178,21 @@ services:
       set -e
 
       TIMESTAMP=$$(date +%Y%m%d_%H%M%S)
-      FILE=\"$${BACKUP_DIR}/pode_deixar_$${TIMESTAMP}.sql.gz\"
+      FILE=\"$${BACKUP_DIR}/pode_deixar_$${TIMESTAMP}.sql\"
 
       echo \"[$$(date)] Iniciando backup para $${FILE}\"
 
-      pg_dump \"$${DATABASE_URL}\" | gzip > \"$${FILE}\"
+      # Write to a .sql first: in a pipeline the exit status is gzip's, so a
+      # failed pg_dump would leave an empty .sql.gz and still report success.
+      if ! pg_dump \"$${DATABASE_URL}\" > \"$${FILE}.sql\"; then
+        echo \"[$$(date)] FALHA no pg_dump — dump removido\" >&2
+        rm -f \"$${FILE}.sql\"
+        exit 1
+      fi
 
-      echo \"[$$(date)] Backup concluído: $${FILE}\"
+      gzip \"$${FILE}.sql\"
+
+      echo \"[$$(date)] Backup concluído: $${FILE}.gz\"
 
       find \"$${BACKUP_DIR}\" \
         -name 'pode_deixar_*.sql.gz' \
