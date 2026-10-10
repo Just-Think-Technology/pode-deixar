@@ -179,6 +179,22 @@ exists.
 * Dashboards and datasources use fixed uids (`prometheus`, `loki`, `tempo`);
   panels reference the uid directly, because Grafana file provisioning does not
   substitute `${DS_*}` placeholders.
+* The traces dashboard filters by `span.http.route`, the **route template**
+  (`/api/v1/services/:orderId`) instead of the raw path, so no ids land in the
+  trace index. `Rota = All` expands to `/api/.*`: the scrape hits `/metrics`
+  every 15s per service and would fill the list with traces nobody is looking
+  for — select `/metrics` or `/health/ready` explicitly to inspect them. TraceQL
+  in Tempo 2.10 requires the scoped syntax (`span.http.route`,
+  `resource.service.name`); the unscoped `http.route` form is a parse error.
+* The traces panel is a **table**, not Grafana's native `traces` panel: with the
+  same datasource and query, `traces` answers "No data found in response" against
+  Tempo 2.10 even when the search returns traces. The table lists them and the
+  Trace ID column opens the waterfall in Explore.
+* Tempo runs **without TraceQL metrics** (no `metrics_generator`), so a Tempo
+  dashboard variable has to use the tag values query, `{"type": 1, "label":
+  "<tag>"}` (`1` = LabelValues, with the scope resolved from
+  `/api/v2/search/tags`). The `label_values(...)` string form calls the metrics
+  API and yields an empty dropdown.
 * Every observability image is pinned (`grafana:11.6.0`, `loki:3.7.8`,
   `alloy:v1.20.0`, `prometheus:v3.15.0`, `tempo:2.10.8`,
   `node-exporter:v1.12.1`) — a floating major tag pulls a new Grafana
