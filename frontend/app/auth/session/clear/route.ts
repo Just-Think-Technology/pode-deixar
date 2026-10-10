@@ -7,16 +7,10 @@ import {
   getLoginHrefForArea,
 } from "@/lib/auth/require-role";
 import { clearAuthSession } from "@/lib/auth/session.server";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 
 function resolveArea(value: string | null): AppArea {
   return value === "client" ? "client" : "worker";
-}
-
-function safeRedirectPath(path: string | null, fallback: string): string {
-  if (!path || !path.startsWith("/") || path.startsWith("//")) {
-    return fallback;
-  }
-  return path;
 }
 
 export async function POST(request: NextRequest) {
