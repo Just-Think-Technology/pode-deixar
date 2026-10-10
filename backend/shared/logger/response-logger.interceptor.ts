@@ -29,6 +29,11 @@ export function createResponseLoggerInterceptor(
         originalUrl?: string;
       };
       const route = originalUrl || url;
+      // Prometheus scrapes every few seconds; logging each one would drown
+      // real traffic and persist the (large) exposition payload in log storage.
+      if (route === '/metrics' || route?.endsWith('/metrics')) {
+        return next.handle();
+      }
       const start = Date.now();
 
       return next.handle().pipe(

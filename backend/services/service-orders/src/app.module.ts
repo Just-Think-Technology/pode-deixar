@@ -13,6 +13,7 @@ import { ProposalsModule } from "./proposals/proposals.module";
 import { CounterProposalsModule } from "./counter-proposals/counter-proposals.module";
 import { PhotosModule } from "./photos/photos.module";
 import { HealthModule } from "@pode-deixar/prisma";
+import { MetricsModule } from "@pode-deixar/metrics";
 import { SharedModule } from "./shared/shared.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
 import { createResponseLoggerInterceptor } from "@pode-deixar/logger";
@@ -71,6 +72,7 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
     CounterProposalsModule,
     PhotosModule,
     HealthModule,
+    MetricsModule,
     SharedModule,
   ],
 

@@ -13,6 +13,7 @@ import { ProviderServicesModule } from "./provider-services/provider-services.mo
 import { ServiceImagesModule } from "./service-images/service-images.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { HealthModule } from "@pode-deixar/prisma";
+import { MetricsModule } from "@pode-deixar/metrics";
 import { SharedModule } from "./shared/shared.module";
 import { MinioModule } from "./storage/minio.module";
 import { GlobalExceptionFilter } from "./shared/global-exception.filter";
@@ -74,6 +75,7 @@ function translateValidationErrors(errors: ValidationError[]): string {
     ServiceImagesModule,
     CategoriesModule,
     HealthModule,
+    MetricsModule,
     SharedModule,
     MinioModule,
   ],

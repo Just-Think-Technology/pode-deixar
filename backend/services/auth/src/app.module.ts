@@ -12,6 +12,7 @@ import { AuthModule } from './auth.module';
 import { PrismaModule } from '@pode-deixar/prisma';
 import { CommonModule } from './shared/common.module';
 import { HealthModule } from '@pode-deixar/prisma';
+import { MetricsModule } from '@pode-deixar/metrics';
 import { GlobalExceptionFilter } from './shared/global-exception.filter';
 import { createResponseLoggerInterceptor } from '@pode-deixar/logger';
 import { EmailModule } from '@pode-deixar/email';
@@ -71,6 +72,7 @@ function translateValidationErrors(errors: ValidationError[]): string[] {
     AuthModule,
     CommonModule,
     HealthModule,
+    MetricsModule,
   ],
 
   // --- Controllers ---
