@@ -3,7 +3,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PhotosService } from "../src/photos/photos.service";
 import { PhotosRepository } from "../src/photos/photos.repository";
-import { MinioService, ImagePipeline } from "@pode-deixar/storage";
+import { StorageService, ImagePipeline } from "@pode-deixar/storage";
 import {
   BadRequestException,
   ForbiddenException,
@@ -49,7 +49,7 @@ describe("PhotosService", () => {
     findProposalForViewer: jest.fn(),
   };
 
-  const mockMinio = {
+  const mockStorage = {
     uploadFile: jest.fn(),
     generateTemporaryUrl: jest.fn(),
     extractFileName: jest.fn(),
@@ -62,7 +62,7 @@ describe("PhotosService", () => {
       providers: [
         PhotosService,
         { provide: PhotosRepository, useValue: mockRepository },
-        { provide: MinioService, useValue: mockMinio },
+        { provide: StorageService, useValue: mockStorage },
         { provide: ImagePipeline, useValue: imagePipeline },
       ],
     }).compile();
@@ -183,8 +183,8 @@ describe("PhotosService", () => {
 
     it("should return presigned url for the order owner", async () => {
       mockRepository.findPhotoWithOrderById.mockResolvedValue(mockFoto);
-      mockMinio.extractFileName.mockReturnValue("order-1/uuid.webp");
-      mockMinio.generateTemporaryUrl.mockResolvedValue("https://minio/presigned");
+      mockStorage.extractFileName.mockReturnValue("order-1/uuid.webp");
+      mockStorage.generateTemporaryUrl.mockResolvedValue("https://storage/presigned");
 
       const result = await service.getViewUrl(
         "photo-1",
@@ -192,8 +192,8 @@ describe("PhotosService", () => {
         "CLIENT",
       );
 
-      expect(result).toEqual({ url: "https://minio/presigned" });
-      expect(mockMinio.generateTemporaryUrl).toHaveBeenCalledWith(
+      expect(result).toEqual({ url: "https://storage/presigned" });
+      expect(mockStorage.generateTemporaryUrl).toHaveBeenCalledWith(
         "order-1/uuid.webp",
       );
     });
@@ -204,8 +204,8 @@ describe("PhotosService", () => {
         serviceOrder: { id: "order-1", clientId: "other-client" },
       });
       mockRepository.findProposalForViewer.mockResolvedValue({ id: "proposal-1" });
-      mockMinio.extractFileName.mockReturnValue("order-1/uuid.webp");
-      mockMinio.generateTemporaryUrl.mockResolvedValue("https://minio/presigned");
+      mockStorage.extractFileName.mockReturnValue("order-1/uuid.webp");
+      mockStorage.generateTemporaryUrl.mockResolvedValue("https://storage/presigned");
 
       const result = await service.getViewUrl(
         "photo-1",
@@ -213,7 +213,7 @@ describe("PhotosService", () => {
         "PROVIDER",
       );
 
-      expect(result).toEqual({ url: "https://minio/presigned" });
+      expect(result).toEqual({ url: "https://storage/presigned" });
       expect(mockRepository.findProposalForViewer).toHaveBeenCalledWith(
         "order-1",
         "provider-1",

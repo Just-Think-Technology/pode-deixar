@@ -7,12 +7,12 @@ import { PrismaModule } from "@pode-deixar/prisma";
 
 import { ServiceImagesRepository } from "./service-images.repository";
 import { ImagePipeline } from "@pode-deixar/storage";
-import { MinioModule } from "../storage/minio.module";
+import { ServiceStorageModule } from "../storage/storage.module";
 
 @Module({
   // --- Imports ---
 
-  imports: [PrismaModule, MinioModule],
+  imports: [PrismaModule, ServiceStorageModule],
 
   // --- Controllers ---
 

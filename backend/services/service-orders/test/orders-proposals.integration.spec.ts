@@ -12,7 +12,7 @@ import {
   createCategory,
   mintToken,
   bearerAuth,
-  mockMinio,
+  mockStorage,
   TestAppSetup,
 } from './test-setup';
 import { PrismaService } from "@pode-deixar/prisma";
@@ -252,7 +252,7 @@ describe('Orders & Proposals (integration)', () => {
   });
 
   describe('POST /services/me/:orderId/photos', () => {
-    it('should upload a valid photo and return its URL (MinIO mock)', async () => {
+    it('should upload a valid photo and return its URL (storage mock)', async () => {
       const { token } = await clientAuth();
       const cat = await createCategory(prisma);
       const orderId = (await createOrder(token, cat.id)).body.id;
@@ -266,9 +266,9 @@ describe('Orders & Proposals (integration)', () => {
         })
         .expect(201);
 
-      expect(mockMinio.uploadFile).toHaveBeenCalled();
+      expect(mockStorage.uploadFile).toHaveBeenCalled();
       // Private bucket: the response exposes the authenticated view endpoint,
-      // not the direct MinIO URL.
+      // not the direct storage URL.
       expect(response.body[0].url).toMatch(
         /^\/api\/services\/photos\/.+\/view$/,
       );

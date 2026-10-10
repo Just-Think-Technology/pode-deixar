@@ -75,7 +75,7 @@ describe("ServiceOrdersService.getTracking", () => {
           updatedAt: new Date("2026-09-14T10:00:00.000Z"),
         },
       ],
-      photos: [{ id: "photo-1", url: "http://minio/photo-1.webp", createdAt: new Date() }],
+      photos: [{ id: "photo-1", url: "http://storage/photo-1.webp", createdAt: new Date() }],
       payments: [
         {
           id: "payment-1",

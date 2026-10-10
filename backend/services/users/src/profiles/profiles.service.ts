@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ProfilesRepository } from "./profiles.repository";
-import { MinioService } from "@pode-deixar/storage";
+import { StorageService } from "@pode-deixar/storage";
 import { UsersLoggerService } from "../shared/users-logger.service";
 import { CreateClientProfileDto } from "./dto/create-client-profile.dto";
 import { UpdateClientProfileDto } from "./dto/update-client-profile.dto";
@@ -25,14 +25,12 @@ export class ProfilesService {
 
   constructor(
     private repository: ProfilesRepository,
-    private minio: MinioService,
+    private storage: StorageService,
     private usersLogger: UsersLoggerService,
     configService: ConfigService,
   ) {
     this.avatarBucket =
-      configService.get<string>("STORAGE_AVATARS_BUCKET") ||
-      configService.get<string>("MINIO_AVATARS_BUCKET") ||
-      "avatars";
+      configService.get<string>("STORAGE_AVATARS_BUCKET") || "avatars";
   }
 
   private async getUser(userId: string) {
@@ -250,7 +248,7 @@ export class ProfilesService {
       validateImageFile(file.originalname, file.buffer);
       const ext = extname(file.originalname).toLowerCase();
       const fileName = `${randomUUID()}${ext}`;
-      const url = await this.minio.uploadFile(
+      const url = await this.storage.uploadFile(
         fileName,
         file.buffer,
         file.mimetype,
@@ -258,11 +256,11 @@ export class ProfilesService {
       );
 
       if (existingProfile.avatarUrl) {
-        const oldFileName = this.minio.extractFileName(
+        const oldFileName = this.storage.extractFileName(
           existingProfile.avatarUrl,
           this.avatarBucket,
         );
-        await this.minio
+        await this.storage
           .deleteFile(oldFileName, this.avatarBucket)
           .catch(() => {});
       }
@@ -282,7 +280,7 @@ export class ProfilesService {
       validateImageFile(file.originalname, file.buffer);
       const ext = extname(file.originalname).toLowerCase();
       const fileName = `${randomUUID()}${ext}`;
-      const url = await this.minio.uploadFile(
+      const url = await this.storage.uploadFile(
         fileName,
         file.buffer,
         file.mimetype,
@@ -290,11 +288,11 @@ export class ProfilesService {
       );
 
       if (existingProfile.avatarUrl) {
-        const oldFileName = this.minio.extractFileName(
+        const oldFileName = this.storage.extractFileName(
           existingProfile.avatarUrl,
           this.avatarBucket,
         );
-        await this.minio
+        await this.storage
           .deleteFile(oldFileName, this.avatarBucket)
           .catch(() => {});
       }

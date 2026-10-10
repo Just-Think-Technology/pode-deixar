@@ -1,4 +1,7 @@
-// Storage service — S3-compatible (SeaweedFS) with MinIO fallback envs
+// Storage service — S3-compatible object storage (SeaweedFS S3 gateway)
+//
+// STORAGE_* is the only variable naming the project uses (see
+// .agents/decisions/storage-env-names.md).
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
@@ -12,15 +15,11 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const STORAGE_OPTIONS = "STORAGE_OPTIONS";
-export const MINIO_STORAGE_OPTIONS = STORAGE_OPTIONS;
 
 export interface StorageOptions {
   bucketEnvVar: string;
   defaultBucket: string;
 }
-
-export type MinioStorageOptions = StorageOptions;
-export type MinioModuleOptions = StorageOptions & { global?: boolean };
 
 @Injectable()
 export class StorageService implements OnModuleInit {
@@ -37,52 +36,22 @@ export class StorageService implements OnModuleInit {
     private configService: ConfigService,
     @Inject(STORAGE_OPTIONS) options: StorageOptions,
   ) {
-    const legacyBucketEnvVar = options.bucketEnvVar.startsWith("STORAGE_")
-      ? options.bucketEnvVar.replace(/^STORAGE_/, "MINIO_")
-      : options.bucketEnvVar.startsWith("MINIO_")
-        ? options.bucketEnvVar.replace(/^MINIO_/, "STORAGE_")
-        : `STORAGE_${options.bucketEnvVar}`;
-    // Additional generic fallbacks for historic MINIO_BUCKET / STORAGE_BUCKET
-    const genericFallbacks = ["MINIO_BUCKET", "STORAGE_BUCKET"].filter(
-      (v) => v !== options.bucketEnvVar && v !== legacyBucketEnvVar,
-    );
     this.bucket =
-      this.configService.get<string>(options.bucketEnvVar) ||
-      this.configService.get<string>(legacyBucketEnvVar) ||
-      (genericFallbacks
-        .map((k) => this.configService.get<string>(k))
-        .find((v) => Boolean(v)) as string | undefined) ||
-      options.defaultBucket;
+      this.configService.get<string>(options.bucketEnvVar) || options.defaultBucket;
     this.publicUrl =
-      this.configService.get<string>("STORAGE_PUBLIC_URL") ||
-      this.configService.get<string>("MINIO_PUBLIC_URL") ||
-      "http://localhost:8080/api/storage";
+      this.configService.get<string>("STORAGE_PUBLIC_URL") || "http://localhost:8080/api/storage";
   }
 
   // --- Public API ---
 
   async onModuleInit() {
-    const endpoint =
-      this.configService.get<string>("STORAGE_ENDPOINT") ||
-      this.configService.get<string>("MINIO_ENDPOINT") ||
-      "localhost";
-    const portRaw =
-      this.configService.get<string>("STORAGE_PORT") ||
-      this.configService.get<string>("MINIO_PORT");
+    const endpoint = this.configService.get<string>("STORAGE_ENDPOINT") || "localhost";
+    const portRaw = this.configService.get<string>("STORAGE_PORT");
     const port = portRaw ? Number(portRaw) : 8333;
-    this.accessKey =
-      this.configService.get<string>("STORAGE_ACCESS_KEY") ||
-      this.configService.get<string>("MINIO_ACCESS_KEY") ||
-      "seaweedfs";
-    this.secretKey =
-      this.configService.get<string>("STORAGE_SECRET_KEY") ||
-      this.configService.get<string>("MINIO_SECRET_KEY") ||
-      "seaweedfs";
-    this.region =
-      this.configService.get<string>("STORAGE_REGION") || "us-east-1";
-    const useSSLRaw =
-      this.configService.get<string>("STORAGE_USE_SSL") ||
-      this.configService.get<string>("MINIO_USE_SSL");
+    this.accessKey = this.configService.get<string>("STORAGE_ACCESS_KEY") || "seaweedfs";
+    this.secretKey = this.configService.get<string>("STORAGE_SECRET_KEY") || "seaweedfs";
+    this.region = this.configService.get<string>("STORAGE_REGION") || "us-east-1";
+    const useSSLRaw = this.configService.get<string>("STORAGE_USE_SSL");
     this.useSSL = useSSLRaw === "true" || useSSLRaw === "1";
 
     const protocol = this.useSSL ? "https" : "http";
@@ -103,9 +72,11 @@ export class StorageService implements OnModuleInit {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
     } catch {
       try {
-        await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+        await this.client.send(
+          new CreateBucketCommand({ Bucket: this.bucket }),
+        );
       } catch {
-        // Best effort — bucket may already exist or SeaweedFS auto-creates on PUT
+        // Best effort — the bucket may already exist, or SeaweedFS creates it on PUT
       }
     }
   }
@@ -198,7 +169,3 @@ export class StorageService implements OnModuleInit {
     return parts[parts.length - 1];
   }
 }
-
-// Aliases for backward compatibility
-export const MinioService = StorageService;
-export type MinioService = StorageService;

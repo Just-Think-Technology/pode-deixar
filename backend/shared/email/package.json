@@ -13,7 +13,8 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "test": "cross-env NODE_ENV=test jest"
+    "test": "cross-env NODE_ENV=test jest",
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

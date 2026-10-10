@@ -63,7 +63,7 @@
 
 	handle /api/{$API_VERSION:v1}/storage/* {
 		uri strip_prefix /api/{$API_VERSION:v1}/storage
-		reverse_proxy minio:9000
+		reverse_proxy storage:8333
 	}
 
 	# --- Legacy API (deprecated) ---
@@ -162,6 +162,6 @@
 		header Deprecation "true"
 		header Sunset "Sat, 31 Dec 2026 23:59:59 GMT"
 		uri strip_prefix /api/storage
-		reverse_proxy minio:9000
+		reverse_proxy storage:8333
 	}
 }

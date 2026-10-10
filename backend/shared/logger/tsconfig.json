@@ -16,5 +16,11 @@
     "resolvePackageJsonExports": false,
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
-  "include": ["index.ts", "response-logger.interceptor.ts", "bootstrap.ts", "domain-logger.ts"]
+  "include": [
+    "index.ts",
+    "response-logger.interceptor.ts",
+    "bootstrap.ts",
+    "domain-logger.ts",
+    "test/**/*.ts"
+  ]
 }

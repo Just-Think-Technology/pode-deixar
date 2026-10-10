@@ -158,7 +158,7 @@ export class PhotoViewController {
   @ApiOperation({
     summary: "Get a temporary URL to view an order photo",
     description:
-      "Returns a pre-signed MinIO URL expiring in 15 minutes. Allowed for the owning client, a provider with a proposal on the order, or ADMIN.",
+      "Returns a pre-signed storage URL expiring in 15 minutes. Allowed for the owning client, a provider with a proposal on the order, or ADMIN.",
   })
   @ApiParam({ name: "photoId", description: "Photo ID" })
   @ApiResponse({

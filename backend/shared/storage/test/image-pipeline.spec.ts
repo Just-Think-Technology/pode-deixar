@@ -34,7 +34,7 @@ import sharp from "sharp";
 describe("ImagePipeline via interface", () => {
   let pipeline: ImagePipeline;
   const mockStorage = {
-    uploadFile: jest.fn(async (fileName: string) => `http://minio/${fileName}`),
+    uploadFile: jest.fn(async (fileName: string) => `http://storage/${fileName}`),
   } as unknown as StorageService;
 
   beforeEach(() => {
@@ -120,7 +120,7 @@ describe("ImagePipeline via interface", () => {
       "image/webp",
       undefined,
     );
-    expect(url).toContain("http://minio/");
+    expect(url).toContain("http://storage/");
   });
 
   it("returns empty for null files", async () => {

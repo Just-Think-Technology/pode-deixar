@@ -1,12 +1,9 @@
-export {
-  MINIO_STORAGE_OPTIONS,
-  MinioService,
-} from "./src/minio.service";
-export { STORAGE_OPTIONS, StorageService } from "./src/storage.service";
-export type { MinioStorageOptions, MinioModuleOptions } from "./src/minio.service";
-export type { StorageOptions, MinioModuleOptions as StorageModuleOptions } from "./src/storage.service";
-export { MinioStorageModule, StorageModule } from "./src/minio-storage.module";
-export type { StorageModuleOptions as StorageModuleOptionsAlias } from "./src/minio-storage.module";
+// Storage barrel — S3-compatible object storage (public package exports)
+
+export { StorageModule, STORAGE_OPTIONS } from "./src/storage.module";
+export { StorageService } from "./src/storage.service";
+export type { StorageModuleOptions } from "./src/storage.module";
+export type { StorageOptions } from "./src/storage.service";
 export {
   ALLOWED_IMAGE_MIMES,
   DEFAULT_IMAGE_MAX_SIZE,

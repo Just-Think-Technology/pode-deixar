@@ -12,7 +12,7 @@ import {
   createCategory,
   mintToken,
   bearerAuth,
-  mockMinio,
+  mockStorage,
   TestAppSetup,
 } from './test-setup';
 import { PrismaService } from '@pode-deixar/prisma';
@@ -112,7 +112,7 @@ describe('Photos (integration)', () => {
 
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body[0].url).toMatch(/^\/api\/services\/photos\/.+\/view$/);
-      expect(mockMinio.uploadFile).toHaveBeenCalled();
+      expect(mockStorage.uploadFile).toHaveBeenCalled();
     });
 
     it('should enforce 10-photos-per-order total limit', async () => {
@@ -251,7 +251,7 @@ describe('Photos (integration)', () => {
         .set(bearerAuth(provider.token))
         .expect(200);
 
-      expect(mockMinio.deleteFile).toHaveBeenCalled();
+      expect(mockStorage.deleteFile).toHaveBeenCalled();
 
       // After delete, view should be 404
       await request(app.getHttpServer())

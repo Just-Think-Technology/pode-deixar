@@ -384,7 +384,7 @@ describe("ServiceOrdersService", () => {
         providerId: "provider-1",
         proposals: [],
         photos: [
-          { id: "photo-1", url: "https://minio/order-photos/photo-1.webp" },
+          { id: "photo-1", url: "https://storage/order-photos/photo-1.webp" },
         ],
       });
 
@@ -408,7 +408,7 @@ describe("ServiceOrdersService", () => {
         clientId: "client-1",
         proposals: [],
         photos: [
-          { id: "photo-1", url: "https://minio/order-photos/photo-1.webp" },
+          { id: "photo-1", url: "https://storage/order-photos/photo-1.webp" },
         ],
       });
 
@@ -509,7 +509,7 @@ describe("ServiceOrdersService", () => {
         state: "SP",
         postalCode: "01305-000",
       },
-      photos: [{ id: "photo-1", url: "https://minio/order-photos/p1.webp" }],
+      photos: [{ id: "photo-1", url: "https://storage/order-photos/p1.webp" }],
       payments: [
         {
           status: "PAID",
@@ -695,7 +695,7 @@ describe("ServiceOrdersService", () => {
       };
       mockRepository.completeOrder.mockResolvedValue(completed);
       mockRepository.findPhotosByOrderId.mockResolvedValue([
-        { id: "photo-1", url: "http://minio/order-1/uuid.webp" },
+        { id: "photo-1", url: "http://storage/order-1/uuid.webp" },
       ]);
       mockRepository.createCompletionNotification.mockResolvedValue({});
 

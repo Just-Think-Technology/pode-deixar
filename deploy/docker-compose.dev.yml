@@ -12,11 +12,19 @@ services:
     ports: !override
       - "15432:5432"
 
-  # -- MinIO local (credenciais fixas de dev) --
-  minio:
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+  # -- Storage local --
+  # Sem override: o SeaweedFS gera o config de credenciais a partir do
+  # STORAGE_ACCESS_KEY / STORAGE_SECRET_KEY que vem do .env.dev.
+  #
+  # A porta 8333 no host é só para inspeção: dentro da rede do compose o S3 é
+  # storage:8333 (é o que STORAGE_ENDPOINT/STORAGE_PORT falam). O mapeamento
+  # fica em 8334 porque o 8333 do host pode estar ocupado por outra stack de
+  # desenvolvimento — em staging/produção a porta não é publicada.
+  storage:
+    # !override: sem isso o compose MESCLA com a lista do compose base e tenta
+    # publicar também a 8333.
+    ports: !override
+      - "127.0.0.1:8334:8333"
 
   # -- Frontend (dev, hot-reload) --
   # Imagem de produção no compose base NÃO monta código; sem este override,
@@ -50,10 +58,6 @@ services:
       SMTP_HOST: mailpit
       TZ: America/Sao_Paulo
       CI: "true"
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
     ports: !override
       - "3001:3001"
     command: >
@@ -84,10 +88,6 @@ services:
     environment:
       TZ: America/Sao_Paulo
       CI: "true"
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
     ports: !override
       - "3002:3002"
     command: >
@@ -115,10 +115,6 @@ services:
     environment:
       TZ: America/Sao_Paulo
       CI: "true"
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
     ports: !override
       - "3003:3003"
     # tsbuildinfo incremental + deleteOutDir pode apagar dist e não reemitir
@@ -148,10 +144,6 @@ services:
     environment:
       TZ: America/Sao_Paulo
       CI: "true"
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
     ports: !override
       - "3004:3004"
     command: >
@@ -180,10 +172,6 @@ services:
     environment:
       TZ: America/Sao_Paulo
       CI: "true"
-      # Storage local: acompanha o MinIO de dev acima (como o banco,
-      # que é o Postgres local do compose base)
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
     ports: !override
       - "3005:3005"
     command: >

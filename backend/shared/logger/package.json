@@ -7,7 +7,8 @@
   "license": "ISC",
   "scripts": {
     "build": "tsc -b",
-    "test": "cross-env NODE_ENV=test jest"
+    "test": "cross-env NODE_ENV=test jest",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@nestjs/swagger": "^11.0.0",

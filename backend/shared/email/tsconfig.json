@@ -16,5 +16,8 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
-  "include": ["*.ts"]
+  "include": [
+    "*.ts",
+    "test/**/*.ts"
+  ]
 }
